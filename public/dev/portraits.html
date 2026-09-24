@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>Portraits</title>
+<style>body{background:#15120f;color:#ddd;font:11px serif;margin:8px}#g{display:flex;flex-wrap:wrap;gap:6px}figure{margin:0;text-align:center}img{display:block}</style>
+<div id="g"></div>
+<script type="module">
+import { portraitURL } from '../js/ui/portrait.js';
+import { HOUSES } from '../data/houses.js';
+import { CHARACTERS } from '../data/characters.js';
+import { ANCESTORS } from '../data/families.js';
+const H = Object.fromEntries(HOUSES.map((h) => [h.id, h]));
+const q = new URLSearchParams(location.search);
+let list = [...CHARACTERS, ...ANCESTORS];
+if (q.get('ids')) { const s = q.get('ids').split(','); list = s.map((id) => list.find((c) => c.id === id)).filter(Boolean); }
+const from = Number(q.get('from') || 0), n = Number(q.get('n') || 40);
+const t0 = performance.now();
+for (const c of list.slice(from, from + n)) { const f = document.createElement('figure'); f.innerHTML = `<img style="width:${q.get("size")||128}px" src="${portraitURL(c, H[c.house], Number(q.get("size") || 128))}"><figcaption>${c.name}</figcaption>`; g.append(f); }
+document.title = 'done ' + Math.round(performance.now() - t0) + 'ms';
+</script>
