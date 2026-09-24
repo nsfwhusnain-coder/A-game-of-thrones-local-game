@@ -46,7 +46,17 @@ export const DEFAULT_CONFIG = {
 export function loadConfig() {
   try { return { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) }; } catch { return { ...DEFAULT_CONFIG }; }
 }
+// Accept whatever the player pastes: "localhost:8080", "http://host:8080", ".../v1/chat/completions" all become ".../v1"
+export function normalizeBaseUrl(u) {
+  let s = String(u || '').trim(); if (!s) return s;
+  if (!/^https?:\/\//i.test(s)) s = 'http://' + s;
+  s = s.replace(/\/+$/, '').replace(/\/(chat\/completions|completions|models)$/i, '').replace(/\/+$/, '');
+  try { const url = new URL(s); if (url.pathname === '' || url.pathname === '/') s = s + '/v1'; } catch { /* leave as typed */ }
+  return s;
+}
+
 export function saveConfig(cfg) {
+  if (cfg.baseUrl !== undefined) cfg = { ...cfg, baseUrl: normalizeBaseUrl(cfg.baseUrl) };
   const merged = { ...loadConfig(), ...cfg };
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2));
   return merged;

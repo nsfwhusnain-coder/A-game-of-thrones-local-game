@@ -84,3 +84,44 @@ export function sparkline(values, color = '#c9a44a') {
   const pts = values.map((v, i) => `${(i / (values.length - 1)) * 100},${40 - ((v - min) / span) * 36 - 2}`).join(' ');
   return `<svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none"><polyline fill="none" stroke="${color}" stroke-width="1.5" vector-effect="non-scaling-stroke" points="${pts}"/></svg>`;
 }
+
+// ── Display: UI scale and the player's house colours ──
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } } };
+export function uiScale() { return Number(store.get('ui-scale')) || 1; }
+export function setUiScale(v) { store.set('ui-scale', String(v)); document.documentElement.style.setProperty('--ui-scale', String(v)); }
+export function houseTheming() { return store.get('house-theme') !== 'off'; }
+export function setHouseTheming(on) { store.set('house-theme', on ? 'on' : 'off'); }
+setUiScale(uiScale());
+
+function hexToHsl(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
+  const n = parseInt(m[1], 16); const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2;
+  if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+}
+const THEME_VARS = ['--bg', '--panel', '--panel-solid', '--panel2', '--line', '--line2', '--gold', '--gold2', '--muted', '--red', '--accent'];
+/** Tint the whole interface in a house's colours (Stark steel-blue, Lannister crimson…). Pass null for the default gold. */
+export function applyHouseTheme(house) {
+  const root = document.documentElement.style;
+  const color = house?.color;
+  const hsl = color && houseTheming() ? hexToHsl(color) : null;
+  if (!hsl) { for (const v of THEME_VARS) root.removeProperty(v); return; }
+  const [h, s0] = hsl; const s = Math.max(28, Math.min(70, s0 < 20 ? s0 + 22 : s0)); // grey houses still get a hue
+  const set = (k, v) => root.setProperty(k, v);
+  set('--bg', `hsl(${h} ${Math.round(s * 0.35)}% 5%)`);
+  set('--panel', `hsla(${h} ${Math.round(s * 0.35)}% 8% / 0.94)`);
+  set('--panel-solid', `hsl(${h} ${Math.round(s * 0.35)}% 8%)`);
+  set('--panel2', `hsl(${h} ${Math.round(s * 0.35)}% 12%)`);
+  set('--line', `hsl(${h} ${Math.round(s * 0.5)}% 26%)`);
+  set('--line2', `hsl(${h} ${Math.round(s * 0.55)}% 38%)`);
+  // highlights take the metal of the sigil (the Lannister lion's gold, the Stark direwolf's grey-white)
+  const cands = [house.sigil?.f, house.sigil?.cc].map(hexToHsl).filter(Boolean);
+  const metal = cands.sort((a, b) => Math.min(Math.abs(b[0] - h), 360 - Math.abs(b[0] - h)) * (b[1] / 100 + 0.2) - Math.min(Math.abs(a[0] - h), 360 - Math.abs(a[0] - h)) * (a[1] / 100 + 0.2))[0];
+  const [mh, ms] = metal && (metal[1] > 25 || metal[2] > 70) ? metal : [h, Math.round(s * 0.5)];
+  set('--gold', `hsl(${mh} ${Math.min(70, ms)}% 62%)`);
+  set('--gold2', `hsl(${mh} ${Math.min(60, Math.round(ms * 0.8))}% 83%)`);
+  set('--muted', `hsl(${h} 14% 64%)`);
+  set('--red', `hsl(${h} ${Math.min(75, s + 10)}% 36%)`);
+  set('--accent', color);
+}
