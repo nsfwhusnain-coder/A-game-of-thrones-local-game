@@ -65,7 +65,7 @@ export const DEFAULT_CONFIG = {
   maxTokens: 6000,                    // max tokens for a single response
   contextTokens: 32768,               // your model's context window (e.g. 262144 for 256k)
   jsonMode: false,                    // send response_format: json_object (some servers require a schema; leave off if errors)
-  timeoutSec: 900,
+  timeoutSec: 1800,
   consolidateEvery: 5,                // consolidate turn history into the chronicle every N turns (Pax Historia style)
   keepRecentTurns: 4,                 // how many recent turns stay verbatim in the prompt
   promptDetail: 'full',               // 'full' = every house & character each turn; 'lean' = only what's relevant (much faster on laptops)
@@ -73,6 +73,7 @@ export const DEFAULT_CONFIG = {
   stream: true,                       // stream tokens so the game can show progress (thinking / writing)
   thinking: 'auto',                   // 'auto' = the server's default; 'on' / 'off' toggle reasoning (Qwen3-style chat_template_kwargs)
   thinkingBudget: 6000,               // extra tokens allowed for reasoning on top of maxTokens
+  thinkInAudiences: false,            // let the model think before speaking in audiences and councils (slower)
   ttsUrl: '',                         // optional local text-to-speech server (OpenAI-compatible /v1/audio/speech), e.g. Kokoro-FastAPI http://localhost:8880/v1
   ttsModel: 'kokoro',
   ttsKey: '',
@@ -109,7 +110,9 @@ export async function chat(messages, opts = {}) {
   const cfg = { ...loadConfig(), ...opts.cfgOverride };
   if (cfg.provider === 'mock') return mockResponse(messages, opts);
   if (cfg.provider === 'relay') return relayResponse(messages, opts, cfg);
-  const thinking = opts.thinking || cfg.thinking || 'auto';
+  // audiences, councils, counsel and memory upkeep are quick exchanges: no deliberation unless asked for
+  const quick = ['chat', 'council', 'suggest', 'consolidate'].includes(opts.kind) && !cfg.thinkInAudiences && (cfg.thinking || 'auto') !== 'off';
+  const thinking = opts.thinking || (quick ? 'off' : cfg.thinking || 'auto');
   // long periods produce long chronicles: give them room (plus room to think)
   const spanK = opts.spanDays ? Math.min(2, 1 + Math.max(0, opts.spanDays - 30) / 330) : 1;
   const answerTokens = Math.round((opts.maxTokens ?? cfg.maxTokens) * spanK);

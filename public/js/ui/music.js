@@ -151,3 +151,5 @@ export async function startMusic() {
 }
 /** Change the mood: 'title' | 'court' | 'north' | 'war'. Takes effect at the next bar. */
 export function setMood(m) { if (PROGS[m] && m !== mood) nextMood = m; }
+/** For diagnostics: what the composer is doing. */
+export const musicDebug = () => ({ running: !!ctx, state: ctx?.state, time: ctx?.currentTime, scheduledTo: t, bar, mood, playlist: !!playlist });

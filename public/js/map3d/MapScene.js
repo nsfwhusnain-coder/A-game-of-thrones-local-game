@@ -174,8 +174,8 @@ export class MapScene {
           float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
           col += spec * farK * vec3(1.0, 0.92, 0.75) + fres * farK * vec3(0.05, 0.08, 0.1);
           float foam = smoothstep(0.035, 0.0, d) * (0.55 + 0.45 * sin(uTime * 1.6 + vW.x * 0.3 + vW.z * 0.25));
-          col = mix(col, vec3(0.86, 0.9, 0.88), foam * 0.6 * inside);
-          float alpha = mix(0.55, 0.96, smoothstep(0.0, 0.2, d));
+          col = mix(col, vec3(0.82, 0.88, 0.92), foam * 0.3 * inside);
+          float alpha = mix(0.8, 0.97, smoothstep(0.0, 0.2, d));
           float fogF = smoothstep(fogNear, fogFar, vFogDepth);
           gl_FragColor = vec4(mix(col, fogColor, fogF), alpha);
           #include <colorspace_fragment>

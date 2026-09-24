@@ -75,7 +75,7 @@ function renderFeed(body) {
   $$('.event[data-where]', body).forEach((el) => el.onclick = () => { const w = el.dataset.where; if (s.holdings[w]) { app.map.flyTo(s.holdings[w].pos); app.map.flash(s.holdings[w].pos); } });
 }
 export function ravenHtml(r) {
-  return `<div class="raven-card ${r.read ? '' : 'unread'}"><div class="from">From ${esc(r.fromName)} · ${esc(r.date)}</div>${esc(r.text)}${r.from ? `<div style="margin-top:0.4rem"><button class="btn small" data-talk="${r.from}">Reply</button></div>` : ''}</div>`;
+  return `<div class="raven-card ${r.read ? '' : 'unread'}"><div class="from">From ${esc(r.fromName)} · ${esc(r.date)}</div>${esc(r.text)}<div style="margin-top:0.4rem;display:flex;gap:0.3rem">${r.from ? `<button class="btn small" data-talk="${r.from}">Reply</button>` : ''}<button class="btn small" data-read-aloud="${r.from || ''}" data-text="${esc(r.text)}">🔊 Read aloud</button></div></div>`;
 }
 async function renderLetters(body) {
   const s = app.state;
@@ -138,6 +138,8 @@ function msgHtml(m, c) {
 // Voices: click a line to hear it, or the speaker icon to hear the whole reply
 export function wireVoices(root) {
   root.addEventListener('click', async (e) => {
+    const ra = e.target.closest('[data-read-aloud]');
+    if (ra) { stopSpeaking(); await speak(ra.dataset.text, app.state.characters[ra.dataset.readAloud] || { id: 'maester', age: 60 }); return; }
     const msg = e.target.closest('.msg.npc'); if (!msg) return;
     const who = app.state.characters[msg.dataset.speaker];
     if (e.target.closest('.speak-all')) { stopSpeaking(); for (const p of msg.querySelectorAll('.beat.say')) { p.classList.add('speaking'); await speak(p.textContent, who); p.classList.remove('speaking'); } return; }

@@ -30,14 +30,21 @@ The first launch builds the map, which takes a few seconds. It is cached in your
 1. Start a local model server with an OpenAI-compatible API:
    - **LM Studio**: load a model and start the server (default `http://localhost:1234/v1`)
    - **Ollama**: `ollama serve` (`http://localhost:11434/v1`). Set a large `num_ctx` in *Extra request parameters*.
-   - **llama.cpp**: `llama-server -m model.gguf -c 262144 --port 8080` (`http://localhost:8080/v1`)
+   - **llama.cpp**: `llama-server -m model.gguf -c 262144 --jinja --port 8080 --cache-reuse 256` (`http://localhost:8080/v1`). `--jinja` enables the model's own chat template (needed for Qwen3-style thinking on/off), and `--cache-reuse` lets the server reuse most of the prompt from the last turn, which makes turns much faster.
    - **KoboldCpp, text-generation-webui, vLLM** and similar servers also work.
-2. Open the game and go to **⚙ Model Settings**. Pick your server and set **Context window** to match the context your server was started with (for example `262144` for 256k). Click **Test connection**.
+2. Open the game and go to **⚙ Settings & model endpoint**. Pick your server and set **Context window** to match the context your server was started with (for example `262144` for 256k). Click **Test connection**.
 3. Pick a house and play. Without a model you can use **Mock** mode to explore the UI.
 
 **Laptops:** in Settings, set *World detail per turn* to **Lean**. Prompts get about 45% smaller (only the houses and people that matter to you), so turns are much faster on a MacBook. Use **Full** with a big context and a fast GPU.
 
 **Relay / game-master mode:** set Provider to *Relay*. Every prompt is written to `relay/<n>-<kind>.prompt.md`, and the game waits for you (or any other app or model) to write the answer to `relay/<n>-<kind>.reply.txt`. This is handy for testing prompts or running a human-GMed campaign.
+
+**Reasoning models (Qwen3, QwQ, DeepSeek-R1 and their fine-tunes):** while the world moves, the waiting screen shows what the model is doing: reading the prompt (with a percentage on llama.cpp), thinking (with a token count), or writing (with tokens per second). In Settings:
+- **Thinking**: *Server default*, *On* (deeper turns) or *Off* (fast turns).
+- **Thinking budget**: extra room for the model to think before it answers. Long periods (six moons, a year) automatically get more room to write.
+- Audiences and councils skip the thinking by default, so characters answer quickly. Tick *Also think in audiences* if you prefer.
+
+If a reply is cut off, the game asks the model to finish it. If the model spends its whole budget thinking, the game asks again without thinking. Broken JSON (raw quotes inside dialogue, stray commas) is repaired where possible, and the model is asked once more if not.
 
 **Model advice:** the simulator juggles hundreds of ids and must return valid JSON, so bigger instruct models do much better. Roughly 24B–70B, or a strong MoE. Larger context lets it see the whole world at once. Keep the temperature around 0.7–0.9.
 
@@ -63,6 +70,12 @@ The first launch builds the map, which takes a few seconds. It is cached in your
 - **Feudal levies:** *Call the banners* sends ravens to the vassals you choose. Each lord answers, delays or refuses based on loyalty and the story, and only the lords who answer add men.
 - **A map the story can change:** the simulator can raise new castles, towns and war camps (which claim their own lands on the map), rename places, burn castles to ruins, and mark battlefields and camps as landmarks.
 - **Councils and audiences:** talk to anyone one-on-one (by raven if they are far away), or convene several advisors who each speak in their own voice.
+
+## Sound, voices and scenes
+
+- **Audiences are scenes.** Characters reply with what you see them do (*Lord Tywin sets down his quill and regards you without warmth.*) and what they say to you, in the first person. New replies unfold beat by beat.
+- **Voices.** Every character has a voice of their own: the main cast are shaped by hand (Tywin deep and slow, Robert booming, Arya quick and young), and everyone else by sex, age and homeland. Click any line to hear it, or the speaker icon for the whole reply. Letters can be read aloud too. By default the game uses your system's voices (on a Mac, install extra English voices in *System Settings → Accessibility → Spoken Content*; British ones suit Westeros). For far better voices, run a local speech server with an OpenAI-compatible `/v1/audio/speech` endpoint, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI), and set its URL in *Settings → Sound & voices*. The game will not clone real actors' voices.
+- **Music.** An original score is composed live in your browser: a cello theme over harp and drone, with moods for the court, the cold North and war that follow your situation. To use your own music instead, drop audio files (mp3, ogg, m4a, wav, flac) into `public/music/`. The music button in the top bar turns it on and off.
 
 ## Ruling your house
 
