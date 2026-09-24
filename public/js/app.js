@@ -300,6 +300,7 @@ async function advance() {
     const r = await api(`/games/${app.saveId}/advance`, { body: { span, orders: app.state.orders } });
     app.setState(r.state); setDrawer('feed');
     showTurnReport(r.turn);
+    if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
   } catch (e) { toast(e.message, true); } finally { busy(false); }
 }
 function showTurnReport(t) {

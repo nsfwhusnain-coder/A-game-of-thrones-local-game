@@ -107,8 +107,16 @@ export async function advance(id, { span = '1m', orders } = {}) {
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim()); }
   const chronicle = readChronicle(id);
   const messages = buildJumpPrompt(state, state.orders, span, chronicle, cfg);
-  const { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: (SPANS[span] || SPANS['1m']).days });
-  if (!obj) throw httpError(502, `The simulator's reply could not be parsed (${error}). Raw start: ${String(text).slice(0, 300)}`);
+  let { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: (SPANS[span] || SPANS['1m']).days });
+  let salvaged = false;
+  if (!obj) {
+    // Unreadable even after repair and a retry: the realm still moves on (the ledger, vassals, seasons and marches
+    // run as always), keeping whatever narrative can be salvaged from the reply.
+    salvaged = true;
+    const sum = extractField(text, 'summary');
+    obj = { summary: sum || 'The ravens bring confused and contradictory reports this season; the maesters could make little sense of them.', events: [], changes: [] };
+    console.warn(`turn ${state.meta.turn + 1}: simulator reply unreadable (${error}); the engine advanced the world alone`);
+  }
 
   // Keep an undo point
   fs.writeFileSync(path.join(dir(id), 'prev-state.json'), JSON.stringify(state));
@@ -168,7 +176,7 @@ export async function advance(id, { span = '1m', orders } = {}) {
   const p = state.meta.player;
   const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
   for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house] });
-  const record = { turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw.ms, usage: raw.usage, ledger: state.houses[p].ledger.at(-1) };
+  const record = { turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
   state.history.push(record);
   state.orders = [];
   // If the simulator raised no matter for the player over a moon or more, the realm brings one itself
