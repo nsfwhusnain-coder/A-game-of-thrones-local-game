@@ -208,7 +208,7 @@ export function gatherMusters(state) {
     if (!a.serving || a.march || !a.at) continue;
     const v = state.houses[a.owner]; const liegeId = a.serving; const liege = state.houses[liegeId];
     if (!v || !liege || (v.obligations?.muster && a.at !== v.obligations.muster)) continue;
-    let host = Object.values(state.armies).find((x) => x.owner === liegeId && x.at === a.at && x.type !== 'fleet' && x.id !== a.id);
+    let host = Object.values(state.armies).find((x) => x.owner === liegeId && x.at === a.at && x.type !== 'fleet' && x.id !== a.id && x.status !== 'garrison');
     if (!host) {
       const id = `${liegeId}_banners_${a.at}`.replace(/[^a-z0-9_]/g, '');
       host = state.armies[id] = { id, owner: liegeId, name: `The Banners of ${liege.name}`, commander: a.commander, at: a.at, pos: [...a.pos], dest: null, men: 0, type: 'army', composition: 'Levies and knights of the sworn houses', status: 'mustered', morale: a.morale ?? 70, supply: a.supply ?? 80, asOf: a.asOf };

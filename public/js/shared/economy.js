@@ -241,11 +241,11 @@ export function settle(state, days) {
     const cons = Math.max(0.05, pop * 0.9 + soldiers * 1.3);
     const prod = hs.reduce((s, h) => { const r = h.resources || {}; return s + (h.population / 10000) * ((r.grain || 0) * 0.8 + (r.fish || 0) * 0.5 + (r.horses || 0) * 0.1 + 0.45) * holdingFactor(state, h) * seasonFood(state, h.region) * rnd(0.8, 1.15); }, 0);
     const levyDrain = Math.min(0.35, soldiers / Math.max(0.01, pop) * 3); // men in the field don't till fields
-    const aid = house.id === 'nights_watch' ? (almsFor(state).length ? Math.min(1.05, 0.7 + 0.15 * almsFor(state).length) : 0) * cons : 0; // grain carts up the kingsroad
+    const aid = house.id === 'nights_watch' ? (almsFor(state).length ? Math.min(1.1, 0.85 + 0.15 * almsFor(state).length) : 0) * cons : 0; // grain carts up the kingsroad
     const stores = aid * months + (Number(f.food?.v) || 0) * cons + (prod * (1 - levyDrain) - cons) * months;
     if (!nomad) f.food = { v: Math.round(clamp(stores / cons, 0, 96) * 10) / 10, asOf: date, src, confidence: 'reported' };
     // A prudent steward buys grain when the stores run low — dear in winter, impossible under embargo or siege
-    if (!nomad && f.food.v < 4 && cons > 0.05 && house.id !== 'nights_watch') {
+    if (!nomad && f.food.v < 4 && cons > 0.05) {
       const sieged = hs.some((h) => h.id === house.seat && /besieg/.test(h.status || ''));
       const price = 320 * (state.world?.season === 'winter' ? 2.2 : state.world?.season === 'autumn' ? 1.4 : 1) / Math.max(0.3, tradeModifier(state, house.id));
       const want = Math.min(4 - f.food.v, 2 * months);
@@ -259,6 +259,14 @@ export function settle(state, days) {
       }
     }
     if (!nomad && f.food.v < 2 && pop > 0.3) notes.push({ house: house.id, text: `Hunger stalks the lands of House ${house.name}. The granaries are nearly empty.`, important: true });
+    // Empty granaries kill: the smallfolk starve and riot, and hungry soldiers desert
+    if (!nomad && f.food.v <= 0.05 && stores < 0) {
+      const short = Math.min(1, -stores / Math.max(0.01, cons * months)); // share of needs unmet
+      for (const h of hs) { h.population = Math.round(h.population * (1 - 0.03 * short * months)); h.unrest = clamp(Math.round(h.unrest + 10 * short * months), 0, 100); h.prosperity = clamp(Math.round(h.prosperity - 3 * short * months), 0, 100); }
+      let deserted = 0;
+      for (const a of armies) if (a.type !== 'fleet') { const d = Math.round(a.men * 0.08 * short * months); a.men -= d; deserted += d; a.morale = clamp((a.morale ?? 70) - 10 * short, 0, 100); }
+      notes.push({ house: house.id, text: `Famine in the lands of House ${house.name}: the old and the young die first, the villages riot${deserted ? `, and ${deserted.toLocaleString()} hungry soldiers desert` : ''}.`, important: true });
+    }
 
     // levies regenerate toward what the land can bear
     const raised = armies.filter((a) => a.type !== 'fleet' && !/garrison/i.test(a.status || '')).reduce((s, a) => s + a.men, 0);
