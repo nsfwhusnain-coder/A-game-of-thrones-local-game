@@ -359,9 +359,14 @@ const num = (v) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim(
 
 function findHouse(state, id) {
   if (!id) return null;
-  const s = slug(id).replace(/^house_/, '');
+  const s = slug(id).replace(/^house_/, '').replace(/^the_/, '');
   if (state.houses[s]) return s;
-  for (const h of Object.values(state.houses)) if (slug(h.name) === s) return h.id;
+  for (const h of Object.values(state.houses)) if (slug(h.name) === s || slug(h.name).replace(/^house_/, '') === s) return h.id;
+  // Models often pluralise ("the Freys", "starks") or write "lannisters_of_casterly_rock"
+  const sing = s.replace(/(ies)$/, 'y').replace(/s$/, '');
+  if (sing !== s && state.houses[sing]) return sing;
+  const head = s.split('_of_')[0];
+  if (head !== s) return findHouse(state, head);
   return null;
 }
 function findChar(state, id) {
@@ -377,6 +382,9 @@ function findArmy(state, id) {
   const s = slug(id);
   if (state.armies[s]) return s;
   for (const a of Object.values(state.armies)) if (slug(a.name) === s) return a.id;
+  // A house named as the army: fine when that house fields exactly one host
+  const hid = findHouse(state, s);
+  if (hid) { const own = Object.values(state.armies).filter((a) => a.owner === hid); if (own.length === 1) return own[0].id; }
   return null;
 }
 function posOf(state, place) {
@@ -399,7 +407,12 @@ export function applyChanges(state, changes, ctx = {}) {
   const applied = []; const rejected = [];
   const date = dateStr(state.meta.date);
   const src = ctx.source || 'The simulation';
+  const seen = new Set();
   for (const ch of Array.isArray(changes) ? changes : []) {
+    // Small models sometimes loop and repeat a change verbatim; apply it once
+    const key = JSON.stringify(ch);
+    if (seen.has(key)) continue;
+    seen.add(key);
     try {
       const r = applyOne(state, ch, { date, src, ...ctx });
       if (r) applied.push(r); else rejected.push({ change: ch, reason: 'no effect' });
