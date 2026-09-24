@@ -1,0 +1,472 @@
+// Shared world logic used by both the server (simulation) and the browser (display).
+import { HOUSES, EXTRA_HOLDINGS, PLACE_ALIASES } from '../../data/houses.js';
+import { CHARACTERS } from '../../data/characters.js';
+import { SCENARIOS } from '../../data/scenarios.js';
+import { JUNCTIONS } from '../../data/geography.js';
+
+export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
+export const FIGURE_LABELS = {
+  treasury: 'Treasury', income: 'Income / month', debt: 'Debt', levies: 'Levies (unraised)',
+  menAtArms: 'Men-at-arms', guard: 'Household guard', ships: 'Warships', food: 'Food stores (months)',
+};
+
+const RANK_DEFAULTS = {
+  crown: { treasury: 20000, income: 20000, debt: 0, levies: 15000, menAtArms: 1500, guard: 200, ships: 20, food: 12 },
+  paramount: { treasury: 200000, income: 12000, debt: 0, levies: 12000, menAtArms: 1200, guard: 150, ships: 8, food: 18 },
+  major: { treasury: 30000, income: 1800, debt: 0, levies: 3000, menAtArms: 400, guard: 60, ships: 2, food: 12 },
+  minor: { treasury: 6000, income: 400, debt: 0, levies: 900, menAtArms: 100, guard: 25, ships: 0, food: 10 },
+  city_state: { treasury: 500000, income: 30000, debt: 0, levies: 5000, menAtArms: 1500, guard: 200, ships: 40, food: 12 },
+  order: { treasury: 1000, income: 100, debt: 0, levies: 0, menAtArms: 500, guard: 0, ships: 1, food: 12 },
+  tribe: { treasury: 0, income: 0, debt: 0, levies: 10000, menAtArms: 0, guard: 0, ships: 0, food: 3 },
+  exile: { treasury: 0, income: 0, debt: 0, levies: 0, menAtArms: 0, guard: 0, ships: 0, food: 0 },
+  company: { treasury: 10000, income: 1000, debt: 0, levies: 0, menAtArms: 2000, guard: 0, ships: 0, food: 3 },
+};
+
+// Deterministic small variation so vassals don't all look identical
+function jitter(id, v) {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  const f = 0.75 + ((Math.abs(h) % 1000) / 1000) * 0.5;
+  return Math.round((v * f) / 10) * 10;
+}
+
+export const slug = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+  .replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+export function buildHoldings() {
+  const holdings = {};
+  for (const h of HOUSES) {
+    if (h.landless || !h.seat) continue;
+    holdings[h.id] = {
+      id: h.id, name: h.seat.replace(/,.*$/, '').replace(/^The Red Keep$/, 'King\'s Landing'), fullName: h.seat,
+      pos: [...h.pos], owner: h.id, seatOf: h.id, region: h.region,
+      type: h.holdingType || (h.rank === 'paramount' || h.rank === 'crown' ? 'great_castle' : 'castle'),
+      prosperity: 60, unrest: 10, garrison: null, status: 'normal', notes: [],
+    };
+  }
+  holdings.baratheon.name = 'King\'s Landing';
+  for (const [id, name, x, y, owner, type] of EXTRA_HOLDINGS) {
+    const region = HOUSES.find((h) => h.id === owner)?.region || 'unknown';
+    holdings[id] = { id, name, fullName: name, pos: [x, y], owner, seatOf: null, region, type, prosperity: 50, unrest: 10, garrison: null, status: 'normal', notes: [] };
+  }
+  return holdings;
+}
+
+export function createInitialState(scenarioId, playerHouse) {
+  const sc = SCENARIOS[scenarioId];
+  if (!sc) throw new Error('Unknown scenario ' + scenarioId);
+  const houses = {};
+  for (const h of HOUSES) {
+    const base = RANK_DEFAULTS[h.rank] || RANK_DEFAULTS.minor;
+    const ov = sc.figures[h.id] || {};
+    const figures = {};
+    for (const f of FIGURE_FIELDS) {
+      const v = ov[f] !== undefined ? ov[f] : (f === 'food' || f === 'ships' || f === 'debt' ? base[f] : jitter(h.id + f, base[f]));
+      figures[f] = { v, asOf: dateStr(sc.date), src: 'Maester\'s estimate', confidence: 'rough' };
+    }
+    houses[h.id] = {
+      id: h.id, name: h.name, liege: h.liege, region: h.region, rank: h.rank, color: h.color, sigil: h.sigil,
+      words: h.words, seat: h.landless ? null : h.id, title: h.title || '', realmName: h.realmName || null,
+      landless: !!h.landless, figures, status: 'active', notes: [],
+    };
+  }
+  const characters = {};
+  for (const c of CHARACTERS) {
+    characters[c.id] = { ...c, loc: resolvePlaceId(c.loc) || c.loc, status: 'free', opinion: 0, memories: [] };
+  }
+  // Lords: first character with role lord/lady/ruler of a house
+  for (const h of Object.values(houses)) {
+    const lord = CHARACTERS.find((c) => c.house === h.id && (c.roles.includes('lord') || c.roles.includes('ruler') || c.roles.includes('lady')) && !(c.id === 'catelyn_stark' || c.id === 'cersei_lannister'));
+    h.lord = lord ? lord.id : null;
+  }
+  houses.baratheon_se.lord = 'renly_baratheon';
+  houses.arryn.lord = 'robert_arryn';
+  houses.arryn.regent = 'lysa_arryn';
+
+  const holdings = buildHoldings();
+  const armies = {};
+  for (const a of sc.armies) {
+    const at = resolvePlaceId(a.at);
+    armies[a.id] = { ...a, at, pos: placePos(at, holdings) || [0, 0], dest: null, morale: 70, supply: 80, asOf: dateStr(sc.date) };
+  }
+  const relations = {};
+  for (const [a, b, v] of sc.relations) relations[relKey(a, b)] = { v, note: '' };
+
+  return {
+    version: 1,
+    meta: {
+      scenario: sc.id, scenarioName: sc.name, player: playerHouse, date: { ...sc.date }, turn: 0,
+      created: new Date().toISOString(),
+    },
+    houses, characters, holdings, armies, relations,
+    wars: structuredClone(sc.wars), pacts: structuredClone(sc.pacts),
+    ravens: [],       // incoming letters for the player
+    orders: [],       // pending player orders (free-text)
+    history: [],      // per-turn records {turn, date, span, orders, summary, events}
+    chats: {},        // characterId -> [{role, text, date}]
+    chronicle: [],    // consolidated long-term memory entries {date, text}
+    consolidatedThrough: 0,
+  };
+}
+
+export const relKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+export function getRelation(state, a, b) { return state.relations[relKey(a, b)]?.v ?? 0; }
+
+export function resolvePlaceId(id) {
+  if (!id) return null;
+  if (Array.isArray(id)) return null;
+  const s = slug(id);
+  if (HOUSE_IDS.has(s) && !LANDLESS.has(s)) return s;
+  if (EXTRA_IDS.has(s)) return s;
+  if (PLACE_ALIASES[s]) return PLACE_ALIASES[s];
+  if (JUNCTIONS[s]) return s;
+  const s2 = s.replace(/^the_/, '');
+  if (PLACE_ALIASES[s2]) return PLACE_ALIASES[s2];
+  if (HOUSE_IDS.has(s2) && !LANDLESS.has(s2)) return s2;
+  // Match by holding name
+  const byName = NAME_INDEX.get(s) || NAME_INDEX.get(s2);
+  if (byName) return byName;
+  return null;
+}
+
+export function placePos(placeId, holdings) {
+  if (!placeId) return null;
+  if (holdings[placeId]) return [...holdings[placeId].pos];
+  if (JUNCTIONS[placeId]) return [...JUNCTIONS[placeId]];
+  return null;
+}
+
+const HOUSE_IDS = new Set(HOUSES.map((h) => h.id));
+const LANDLESS = new Set(HOUSES.filter((h) => h.landless).map((h) => h.id));
+const EXTRA_IDS = new Set(EXTRA_HOLDINGS.map((e) => e[0]));
+const NAME_INDEX = new Map();
+for (const h of HOUSES) if (h.seat) {
+  NAME_INDEX.set(slug(h.seat), h.id);
+  NAME_INDEX.set(slug(h.seat.replace(/,.*$/, '')), h.id);
+}
+for (const e of EXTRA_HOLDINGS) NAME_INDEX.set(slug(e[1]), e[0]);
+
+// Realm: walk up the liege chain to the paramount (or top-level) house
+export function realmOf(state, houseId) {
+  let h = state.houses[houseId];
+  let guard = 0;
+  while (h && guard++ < 10) {
+    if (!h.liege) return h.id;
+    const lg = state.houses[h.liege];
+    if (!lg) return h.id;
+    if (h.rank === 'paramount' || h.rank === 'crown' || h.independent) return h.id;
+    h = lg;
+  }
+  return houseId;
+}
+
+export function topLiege(state, houseId) {
+  let h = state.houses[houseId];
+  let guard = 0;
+  while (h && h.liege && state.houses[h.liege] && guard++ < 10) h = state.houses[h.liege];
+  return h ? h.id : houseId;
+}
+
+export function vassalsOf(state, houseId, deep = false) {
+  const out = [];
+  for (const h of Object.values(state.houses)) {
+    if (h.liege === houseId) {
+      out.push(h.id);
+      if (deep) out.push(...vassalsOf(state, h.id, true));
+    }
+  }
+  return out;
+}
+
+export function realmTotals(state, houseId) {
+  const ids = [houseId, ...vassalsOf(state, houseId, true)];
+  const tot = {};
+  for (const f of FIGURE_FIELDS) tot[f] = ids.reduce((s, id) => s + (Number(state.houses[id]?.figures[f]?.v) || 0), 0);
+  return tot;
+}
+
+// ---------- Calendar ----------
+export const MONTHS = ['1st moon', '2nd moon', '3rd moon', '4th moon', '5th moon', '6th moon', '7th moon', '8th moon', '9th moon', '10th moon', '11th moon', '12th moon'];
+export function dateStr(d) { return `${d.day} ${MONTHS[d.month - 1]}, ${d.year} AC`; }
+export function addDays(d, days) {
+  let total = (d.year * 12 + (d.month - 1)) * 30 + (d.day - 1) + days;
+  const year = Math.floor(total / 360); total -= year * 360;
+  const month = Math.floor(total / 30) + 1; const day = (total % 30) + 1;
+  return { year, month, day };
+}
+export const SPANS = {
+  '1w': { days: 7, label: 'one week' }, '2w': { days: 14, label: 'two weeks' }, '1m': { days: 30, label: 'one moon' },
+  '3m': { days: 90, label: 'three moons' }, '6m': { days: 180, label: 'half a year' }, '1y': { days: 360, label: 'one year' },
+};
+
+// ---------- Applying simulation changes ----------
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const num = (v) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v.replace(/[,_]/g, ''))) ? Number(v.replace(/[,_]/g, '')) : null);
+
+function findHouse(state, id) {
+  if (!id) return null;
+  const s = slug(id).replace(/^house_/, '');
+  if (state.houses[s]) return s;
+  for (const h of Object.values(state.houses)) if (slug(h.name) === s) return h.id;
+  return null;
+}
+function findChar(state, id) {
+  if (!id) return null;
+  const s = slug(id);
+  if (state.characters[s]) return s;
+  for (const c of Object.values(state.characters)) if (slug(c.name) === s || slug(c.name.replace(/^ser_/i, '')) === s.replace(/^ser_/, '')) return c.id;
+  return null;
+}
+function findArmy(state, id) {
+  if (!id) return null;
+  if (state.armies[id]) return id;
+  const s = slug(id);
+  if (state.armies[s]) return s;
+  for (const a of Object.values(state.armies)) if (slug(a.name) === s) return a.id;
+  return null;
+}
+function posOf(state, place) {
+  if (Array.isArray(place) && place.length === 2) return [num(place[0]) ?? 0, num(place[1]) ?? 0];
+  const pid = resolvePlaceId(place);
+  if (pid) return placePos(pid, state.holdings);
+  const c = findChar(state, place);
+  if (c) return posOf(state, state.characters[c].loc);
+  const a = findArmy(state, place);
+  if (a) return [...state.armies[a].pos];
+  return null;
+}
+
+/**
+ * Apply a list of structured changes proposed by the simulation.
+ * Unknown references are rejected (reported back) instead of crashing the game.
+ */
+export function applyChanges(state, changes, ctx = {}) {
+  const applied = []; const rejected = [];
+  const date = dateStr(state.meta.date);
+  const src = ctx.source || 'The simulation';
+  for (const ch of Array.isArray(changes) ? changes : []) {
+    try {
+      const r = applyOne(state, ch, { date, src, ...ctx });
+      if (r) applied.push(r); else rejected.push({ change: ch, reason: 'no effect' });
+    } catch (e) {
+      rejected.push({ change: ch, reason: e.message });
+    }
+  }
+  return { applied, rejected };
+}
+
+function applyOne(state, ch, { date, src }) {
+  if (!ch || typeof ch !== 'object') throw new Error('not an object');
+  const op = String(ch.op || ch.type || '').toLowerCase();
+  switch (op) {
+    case 'figure': case 'figures': case 'house_figure': {
+      const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house ' + ch.house);
+      const fields = ch.field ? { [ch.field]: ch } : ch.values || {};
+      const out = [];
+      for (const [field, spec] of Object.entries(fields)) {
+        const f = FIGURE_FIELDS.find((x) => x.toLowerCase() === String(field).toLowerCase().replace(/[^a-z]/gi, '')) || FIGURE_FIELDS.find((x) => x.toLowerCase() === String(field).toLowerCase());
+        if (!f) continue;
+        const cur = state.houses[hid].figures[f];
+        const s = typeof spec === 'object' ? spec : { value: spec };
+        let v = num(s.value);
+        const d = num(s.delta);
+        if (v === null && d !== null) v = (Number(cur.v) || 0) + d;
+        if (v === null) continue;
+        v = Math.max(0, Math.round(v));
+        const old = cur.v;
+        state.houses[hid].figures[f] = { v, asOf: date, src: ch.source || src, confidence: ch.confidence || 'reported' };
+        out.push(`${state.houses[hid].name} ${FIGURE_LABELS[f]}: ${fmt(old)} → ${fmt(v)}`);
+      }
+      return out.length ? { op, text: out.join('; ') } : null;
+    }
+    case 'relation': {
+      const a = findHouse(state, ch.a), b = findHouse(state, ch.b);
+      if (!a || !b || a === b) throw new Error('bad houses');
+      const k = relKey(a, b); const cur = state.relations[k]?.v ?? 0;
+      let v = num(ch.value); const d = num(ch.delta);
+      if (v === null) v = cur + (d ?? 0);
+      v = clamp(Math.round(v), -100, 100);
+      state.relations[k] = { v, note: ch.reason || ch.note || state.relations[k]?.note || '' };
+      return { op, text: `Relations ${state.houses[a].name}–${state.houses[b].name}: ${cur} → ${v}` };
+    }
+    case 'army_create': case 'fleet_create': case 'raise_army': {
+      const owner = findHouse(state, ch.owner); if (!owner) throw new Error('unknown owner ' + ch.owner);
+      const pos = posOf(state, ch.at || ch.location) || placePos(owner, state.holdings) || placePos(state.houses[owner].seat, state.holdings);
+      if (!pos) throw new Error('no position');
+      let id = slug(ch.id || ch.name || `${owner}_host`);
+      while (state.armies[id]) id += '_2';
+      const men = Math.max(0, Math.round(num(ch.men) ?? 0));
+      state.armies[id] = {
+        id, owner, name: ch.name || `Host of ${state.houses[owner].name}`, commander: findChar(state, ch.commander) || ch.commander || null,
+        at: resolvePlaceId(ch.at || ch.location), pos, dest: null, men, ships: num(ch.ships) ?? undefined,
+        type: op === 'fleet_create' || ch.type === 'fleet' ? 'fleet' : 'army', composition: ch.composition || '',
+        status: ch.status || 'mustering', morale: num(ch.morale) ?? 70, supply: num(ch.supply) ?? 80, asOf: date,
+      };
+      return { op, text: `${state.armies[id].name} (${state.houses[owner].name}) ${men ? fmt(men) + ' men' : ''} appears at ${placeName(state, ch.at || ch.location) || 'the field'}` };
+    }
+    case 'army_move': case 'fleet_move': case 'move_army': {
+      const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
+      const a = state.armies[id];
+      const dest = posOf(state, ch.to);
+      if (!dest) throw new Error('unknown destination ' + ch.to);
+      const p = clamp(num(ch.progress) ?? 1, 0, 1);
+      const from = a.pos;
+      a.pos = [from[0] + (dest[0] - from[0]) * p, from[1] + (dest[1] - from[1]) * p];
+      if (p >= 1) { a.at = resolvePlaceId(ch.to); a.dest = null; a.destName = null; } else { a.at = null; a.dest = dest; a.destName = placeName(state, ch.to); }
+      if (ch.status) a.status = ch.status;
+      a.asOf = date;
+      return { op, text: `${a.name} ${p >= 1 ? 'arrives at' : 'marches toward'} ${placeName(state, ch.to)}` };
+    }
+    case 'army_update': case 'fleet_update': {
+      const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
+      const a = state.armies[id]; const out = [];
+      const men = num(ch.men), d = num(ch.delta);
+      if (men !== null || d !== null) { const old = a.men; a.men = Math.max(0, Math.round(men ?? a.men + d)); out.push(`men ${fmt(old)} → ${fmt(a.men)}`); }
+      if (num(ch.ships) !== null) { a.ships = num(ch.ships); out.push(`ships ${a.ships}`); }
+      for (const k of ['morale', 'supply']) if (num(ch[k]) !== null) { a[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${a[k]}`); }
+      if (ch.status) { a.status = ch.status; out.push(ch.status); }
+      if (ch.commander) { a.commander = findChar(state, ch.commander) || ch.commander; out.push('new commander'); }
+      if (ch.owner) { const o = findHouse(state, ch.owner); if (o) { a.owner = o; out.push('changes allegiance to ' + state.houses[o].name); } }
+      if (ch.name) a.name = ch.name;
+      if (ch.composition) a.composition = ch.composition;
+      a.asOf = date;
+      if (a.men <= 0 && a.type !== 'fleet') { delete state.armies[id]; return { op, text: `${a.name} has ceased to exist` }; }
+      return { op, text: `${a.name}: ${out.join(', ')}` };
+    }
+    case 'army_destroy': case 'army_disband': case 'fleet_destroy': {
+      const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army');
+      const n = state.armies[id].name; delete state.armies[id];
+      return { op, text: `${n} ${op === 'army_disband' ? 'disbands' : 'is destroyed'}${ch.reason ? ' — ' + ch.reason : ''}` };
+    }
+    case 'holding': case 'holding_update': case 'province': {
+      const hid = resolvePlaceId(ch.id || ch.holding || ch.place); if (!hid || !state.holdings[hid]) throw new Error('unknown holding ' + (ch.id || ch.holding));
+      const h = state.holdings[hid]; const out = [];
+      if (ch.owner) { const o = findHouse(state, ch.owner); if (!o) throw new Error('unknown owner'); if (o !== h.owner) { out.push(`passes from ${state.houses[h.owner]?.name} to ${state.houses[o].name}`); h.owner = o; } }
+      for (const k of ['unrest', 'prosperity']) if (num(ch[k]) !== null) { h[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${h[k]}`); }
+      if (num(ch.garrison) !== null) { h.garrison = Math.max(0, Math.round(num(ch.garrison))); out.push(`garrison ~${fmt(h.garrison)}`); }
+      if (ch.status) { h.status = ch.status; out.push(ch.status); }
+      if (ch.note) { h.notes.push(`${date}: ${ch.note}`); h.notes = h.notes.slice(-8); }
+      return { op, text: `${h.name}: ${out.join(', ') || 'updated'}` };
+    }
+    case 'character': case 'character_update': {
+      const cid = findChar(state, ch.id || ch.character); if (!cid) throw new Error('unknown character ' + (ch.id || ch.character));
+      const c = state.characters[cid]; const out = [];
+      if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
+      if (ch.loc || ch.location) { const l = resolvePlaceId(ch.loc || ch.location) || String(ch.loc || ch.location); c.loc = l; out.push('now at ' + placeName(state, l)); }
+      if (ch.title) { c.title = ch.title; out.push('now ' + ch.title); }
+      if (ch.status && ch.alive !== false) { c.status = ch.status; out.push(ch.status); }
+      if (ch.house) { const hh = findHouse(state, ch.house); if (hh) { c.house = hh; out.push('joins ' + state.houses[hh].name); } }
+      for (const k of ['opinion', 'loyalty']) {
+        if (num(ch[k]) !== null) { c[k] = clamp(num(ch[k]), -100, 100); out.push(`${k} ${c[k]}`); }
+        else if (num(ch[k + 'Delta']) !== null) { c[k] = clamp((c[k] || 0) + num(ch[k + 'Delta']), -100, 100); out.push(`${k} ${c[k]}`); }
+      }
+      if (ch.note || ch.memory) { c.memories = [...(c.memories || []), `${date}: ${ch.note || ch.memory}`].slice(-12); }
+      if (ch.traits) c.traits = ch.traits;
+      return { op, text: `${c.name} ${out.join(', ') || 'updated'}` };
+    }
+    case 'character_new': case 'new_character': {
+      const house = findHouse(state, ch.house) || 'baratheon';
+      let id = slug(ch.id || ch.name); if (!id) throw new Error('no name');
+      if (state.characters[id]) return applyOne(state, { ...ch, op: 'character', id }, { date, src });
+      state.characters[id] = {
+        id, name: ch.name || id, house, title: ch.title || '', age: num(ch.age) ?? 30, loc: resolvePlaceId(ch.loc || ch.location) || ch.loc || state.houses[house].seat,
+        roles: Array.isArray(ch.roles) ? ch.roles : [ch.role || 'family'].filter(Boolean), traits: ch.traits || '', bio: ch.bio || '', alive: true, status: 'free', opinion: num(ch.opinion) ?? 0, memories: [], generated: true,
+      };
+      return { op, text: `${state.characters[id].name} (${state.houses[house].name}) enters the story` };
+    }
+    case 'liege': case 'set_liege': case 'fealty': {
+      const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house');
+      const lg = ch.liege ? findHouse(state, ch.liege) : null;
+      if (ch.liege && !lg) throw new Error('unknown liege');
+      if (lg === hid) throw new Error('self liege');
+      const old = state.houses[hid].liege; state.houses[hid].liege = lg;
+      if (ch.independent !== undefined) state.houses[hid].independent = !!ch.independent;
+      if (!lg) state.houses[hid].independent = true;
+      return { op, text: `${state.houses[hid].name} ${lg ? 'swears fealty to ' + state.houses[lg].name : 'declares independence'}${old && old !== lg ? ` (was sworn to ${state.houses[old]?.name})` : ''}` };
+    }
+    case 'house_update': case 'house': {
+      const hid = findHouse(state, ch.house || ch.id); if (!hid) throw new Error('unknown house');
+      const h = state.houses[hid]; const out = [];
+      if (ch.lord) { const c = findChar(state, ch.lord); if (c) { h.lord = c; out.push('new lord ' + state.characters[c].name); } }
+      if (ch.title) { h.title = ch.title; out.push('title ' + ch.title); }
+      if (ch.realmName) { h.realmName = ch.realmName; out.push('realm ' + ch.realmName); }
+      if (ch.status) { h.status = ch.status; out.push(ch.status); }
+      if (ch.independent !== undefined) h.independent = !!ch.independent;
+      if (ch.note) h.notes = [...h.notes, `${date}: ${ch.note}`].slice(-10);
+      return { op, text: `${h.name}: ${out.join(', ') || 'updated'}` };
+    }
+    case 'war': {
+      const status = String(ch.status || 'start').toLowerCase();
+      if (status === 'start' || status === 'declare' || status === 'ongoing') {
+        const att = (Array.isArray(ch.attackers) ? ch.attackers : [ch.attacker]).map((x) => findHouse(state, x)).filter(Boolean);
+        const def = (Array.isArray(ch.defenders) ? ch.defenders : [ch.defender]).map((x) => findHouse(state, x)).filter(Boolean);
+        if (!att.length || !def.length) throw new Error('war needs sides');
+        const id = slug(ch.id || ch.name || `${att[0]}_vs_${def[0]}`);
+        const existing = state.wars.find((w) => w.id === id);
+        if (existing) { existing.attackers = [...new Set([...existing.attackers, ...att])]; existing.defenders = [...new Set([...existing.defenders, ...def])]; return { op, text: `${existing.name} widens` }; }
+        state.wars.push({ id, name: ch.name || `War of ${state.houses[att[0]].name} against ${state.houses[def[0]].name}`, attackers: att, defenders: def, started: date, status: 'ongoing', note: ch.reason || ch.note || '' });
+        return { op, text: `WAR: ${state.wars.at(-1).name}` };
+      }
+      const w = state.wars.find((x) => x.id === slug(ch.id || ch.name) || slug(x.name) === slug(ch.name || ''));
+      if (!w) throw new Error('unknown war');
+      w.status = 'ended'; w.ended = date; w.outcome = ch.outcome || '';
+      return { op, text: `PEACE: ${w.name} ends${ch.outcome ? ' — ' + ch.outcome : ''}` };
+    }
+    case 'war_join': {
+      const w = state.wars.find((x) => x.id === slug(ch.war || ch.id) || slug(x.name) === slug(ch.war || ''));
+      const hid = findHouse(state, ch.house); if (!w || !hid) throw new Error('bad war_join');
+      (ch.side === 'defender' ? w.defenders : w.attackers).push(hid);
+      return { op, text: `${state.houses[hid].name} joins ${w.name}` };
+    }
+    case 'pact': case 'treaty': case 'embargo': case 'trade': case 'alliance': case 'marriage': {
+      const type = op === 'pact' || op === 'treaty' ? String(ch.type || 'agreement') : op;
+      const a = findHouse(state, ch.a || ch.from), b = findHouse(state, ch.b || ch.to);
+      if (!a || !b) throw new Error('pact needs houses');
+      const status = String(ch.status || 'active').toLowerCase();
+      const id = slug(ch.id || `${type}_${a}_${b}`);
+      const ex = state.pacts.find((p) => p.id === id || (p.type === type && ((p.a === a && p.b === b) || (p.a === b && p.b === a)) && p.status !== 'ended'));
+      if (status === 'end' || status === 'ended' || status === 'broken') {
+        if (!ex) throw new Error('no such pact');
+        ex.status = status === 'broken' ? 'broken' : 'ended'; ex.ended = date;
+        return { op, text: `${type} between ${state.houses[a].name} and ${state.houses[b].name} ${ex.status}` };
+      }
+      if (ex) { Object.assign(ex, { terms: ch.terms || ex.terms, status }); return { op, text: `${type} between ${state.houses[a].name} and ${state.houses[b].name}: ${status}` }; }
+      state.pacts.push({ id, type, a, b, terms: ch.terms || '', status, since: date });
+      return { op, text: `${type.toUpperCase()}: ${state.houses[a].name} & ${state.houses[b].name}${ch.terms ? ' — ' + ch.terms : ''}` };
+    }
+    case 'battle': {
+      const pos = posOf(state, ch.at || ch.location);
+      state.battles = state.battles || [];
+      state.battles.push({ name: ch.name || `Battle at ${placeName(state, ch.at)}`, pos, date, turn: state.meta.turn, attacker: findHouse(state, ch.attacker), defender: findHouse(state, ch.defender), victor: findHouse(state, ch.victor), losses: ch.losses || {}, summary: ch.summary || '' });
+      state.battles = state.battles.slice(-40);
+      return { op, text: `BATTLE: ${state.battles.at(-1).name}${ch.victor ? ' — victory for ' + (state.houses[findHouse(state, ch.victor)]?.name || ch.victor) : ''}` };
+    }
+    case 'raven': case 'letter': case 'message': {
+      const from = findChar(state, ch.from);
+      state.ravens.unshift({ id: Date.now() + Math.random(), from: from || null, fromName: from ? state.characters[from].name : (ch.fromName || ch.from || 'Unknown'), text: String(ch.text || ''), date, read: false });
+      state.ravens = state.ravens.slice(0, 60);
+      return { op, text: `A raven arrives from ${state.ravens[0].fromName}` };
+    }
+    case 'chronicle': case 'memory': {
+      state.chronicle.push({ date, text: String(ch.text || '') });
+      return { op, text: 'Recorded in the chronicle' };
+    }
+    default:
+      throw new Error('unknown op ' + op);
+  }
+}
+
+export function placeName(state, place) {
+  if (Array.isArray(place)) return 'the field';
+  const pid = resolvePlaceId(place);
+  if (pid && state.holdings[pid]) return state.holdings[pid].name;
+  if (pid && JUNCTIONS[pid]) return pid.replace(/_jct$/, '').replace(/_/g, ' ');
+  if (state.characters?.[place]) return state.characters[place].name;
+  return place ? String(place).replace(/_/g, ' ') : 'unknown';
+}
+
+export function fmt(n) {
+  if (n === null || n === undefined || n === '') return '?';
+  if (typeof n !== 'number') return String(n);
+  return n.toLocaleString('en-US');
+}

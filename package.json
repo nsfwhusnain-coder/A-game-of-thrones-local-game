@@ -1,0 +1,12 @@
+{
+  "name": "westeros-chronicles",
+  "version": "0.1.0",
+  "description": "A locally hosted, AI-simulated A Song of Ice and Fire grand strategy game powered by a local LLM.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "check": "node scripts/check-data.js"
+  },
+  "engines": { "node": ">=18" }
+}

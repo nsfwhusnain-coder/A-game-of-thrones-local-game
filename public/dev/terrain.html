@@ -1,0 +1,14 @@
+<!doctype html><html><body style="margin:0;background:#111">
+<canvas id="c"></canvas>
+<script type="module">
+const w = new Worker('../js/map/terrain.worker.js', { type: 'module' });
+const scale = Number(new URLSearchParams(location.search).get('s') || 0.5);
+w.onmessage = (e) => {
+  if (e.data.type !== 'done') return;
+  const { W, H, rgba, ms } = e.data;
+  const c = document.getElementById('c'); c.width = W; c.height = H;
+  c.getContext('2d').putImageData(new ImageData(rgba, W, H), 0, 0);
+  document.title = 'done ' + ms;
+};
+w.postMessage({ scale, seeds: [] });
+</script></body></html>

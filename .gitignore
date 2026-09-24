@@ -1,0 +1,6 @@
+node_modules/
+saves/*
+!saves/.gitkeep
+config.json
+.DS_Store
+*.log
