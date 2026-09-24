@@ -7,6 +7,7 @@ import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidateP
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
 import { settle, initEconomy, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
+import { realmPetition } from '../public/js/shared/petitions.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 export const SAVES = path.join(ROOT, 'saves');
@@ -147,6 +148,13 @@ export async function advance(id, { span = '1m', orders } = {}) {
   const record = { turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw.ms, usage: raw.usage, ledger: state.houses[p].ledger.at(-1) };
   state.history.push(record);
   state.orders = [];
+  // If the simulator raised no matter for the player over a moon or more, the realm brings one itself
+  const newDecision = applied.some((a) => a.op === 'decision');
+  const pendingCount = (state.decisions || []).filter((d) => d.status === 'pending').length;
+  if (!newDecision && pendingCount === 0 && spanInfo.days >= 28 && Math.random() < 0.75) {
+    const pet = realmPetition(state);
+    if (pet) { const r = applyChanges(state, [{ op: 'decision', ...pet }]); record.applied.push(...r.applied); }
+  }
   // Unanswered decisions lapse after a couple of turns — the world moved on without you
   for (const d of state.decisions || []) if (d.status === 'pending' && state.meta.turn - d.turn >= 3) { d.status = 'lapsed'; }
 
