@@ -60,14 +60,34 @@ function seasonFood(state, region) {
 }
 
 /** Gross monthly yield of one holding (before the lord's share, taxes, luck). */
+/** Trade multiplier for a house from its pacts: trade agreements help, embargoes hurt (both ways). */
+export function tradeModifier(state, houseId) {
+  let m = 1;
+  const top = (id) => { let h = state.houses[id], g = 0; while (h?.liege && state.houses[h.liege] && g++ < 8 && h.rank !== 'paramount') h = state.houses[h.liege]; return h?.id; };
+  const mine = new Set([houseId, top(houseId)]);
+  for (const p of state.pacts || []) {
+    if (p.status !== 'active') continue;
+    const involved = mine.has(p.a) || mine.has(p.b);
+    if (!involved) continue;
+    if (p.type === 'trade') m += 0.1;
+    if (p.type === 'embargo') m -= 0.18;
+  }
+  // war with a neighbour chokes the roads and ports
+  const wars = (state.wars || []).filter((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].some((x) => mine.has(x))).length;
+  m -= Math.min(0.3, wars * 0.1);
+  return Math.max(0.3, Math.min(1.5, m));
+}
+
 export function holdingYield(state, h) {
   const pop10k = h.population / 10000;
+  const tmod = state.__tradeMods?.[h.owner] ?? tradeModifier(state, h.owner);
   const lines = {};
   let total = pop10k * 45; // rents, fees, customary dues
   lines.rents = total;
   for (const [r, v] of Object.entries(h.resources || {})) {
     if (!v || !RESOURCE_VALUE[r]) continue;
-    const y = MINES.has(r) ? v * RESOURCE_VALUE[r] * 8 : v * pop10k * RESOURCE_VALUE[r];
+    let y = MINES.has(r) ? v * RESOURCE_VALUE[r] * 8 : v * pop10k * RESOURCE_VALUE[r];
+    if (r === 'trade' || r === 'wine' || r === 'spice' || r === 'furs') y *= tmod;
     lines[r] = y; total += y;
   }
   return { total: total * holdingFactor(state, h), lines };
@@ -117,6 +137,7 @@ export function settle(state, days) {
   const ord = (n) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
   const date = state.meta?.date ? `${state.meta.date.day} ${ord(state.meta.date.month)} moon, ${state.meta.date.year} AC` : '';
   // 1. Gross incomes with luck per holding
+  state.__tradeMods = Object.fromEntries(Object.keys(state.houses).map((id) => [id, tradeModifier(state, id)]));
   const gross = {}; const detail = {};
   for (const house of Object.values(state.houses)) { gross[house.id] = 0; detail[house.id] = []; }
   for (const h of Object.values(state.holdings)) {
@@ -230,6 +251,7 @@ export function settle(state, days) {
     const entry = { turn: (state.meta?.turn || 0), date, days, lines: L.lines, income, expense, net: income - expense, treasury: f.treasury.v, prevTreasury: prev, food: f.food.v, reporter: steward?.name || null };
     house.ledger = [...(house.ledger || []), entry].slice(house.id === state.meta?.player ? -24 : -2);
   }
+  delete state.__tradeMods;
   return notes;
 }
 

@@ -1,5 +1,6 @@
 import { HOUSES } from '../data/houses.js';
 import { CHARACTERS } from '../data/characters.js';
+import { briefFor } from '../data/briefs.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL } from './ui/portrait.js';
 import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, REGION_NAMES, RANK_NAMES } from './ui/common.js';
@@ -43,7 +44,7 @@ function renderHouseDetail() {
   const blurb = { crown: 'You sit the Iron Throne. Command the paramounts, tax the realm — and pay its crushing debts.', paramount: 'Rule a kingdom of the Seven. Your bannermen are many, and each has his own mind.', major: 'A great bannerman. Your liege needs you — perhaps more than you need him.', minor: 'A small house with big ambitions. Every alliance matters.', city_state: 'A Free City of merchants and intrigue.', order: 'Hold the Wall with too few men and too little bread.', tribe: 'Lead a host beyond the reach of kings.', exile: 'A crown without a kingdom. You have a name — and little else.', company: 'Sellswords for hire. Gold buys loyalty — until it doesn\'t.' }[h.rank] || '';
   $('#house-detail').innerHTML = `
     <div class="detail-hero"><img class="banner" src="${bannerURL(h.sigil, 80, 120)}" alt=""><div><h2>House ${esc(h.name)}</h2><div class="words">${esc(h.words ? '“' + h.words + '”' : '')}</div><div class="muted">${RANK_NAMES[h.rank] || ''} · ${REGION_NAMES[h.region] || h.region}</div></div></div>
-    <p style="line-height:1.45">${esc(blurb)}</p>
+    ${(() => { const b = briefFor(h, { houses: Object.fromEntries(HOUSES.map((x) => [x.id, x])) }); return `<p style="line-height:1.45">${esc(b.situation)}</p><div class="grid2"><div><h4>Strengths</h4>${b.strengths.map((x) => `<div style="font-size:0.88rem">✦ ${esc(x)}</div>`).join('')}</div><div><h4>Weaknesses</h4>${b.weaknesses.map((x) => `<div style="font-size:0.88rem">✧ ${esc(x)}</div>`).join('')}</div></div>`; })()}
     <div class="kv"><span class="k">Seat</span><span>${esc(h.seat || '— (landless)')}</span><span class="k">Liege</span><span>${liege ? esc(liege.name) : 'None'}</span><span class="k">Vassals</span><span>${vassals.length ? vassals.length + ' houses' : '—'}</span></div>
     ${people.length ? `<h4>Your people</h4><div class="portrait-row">${people.map((c) => `<div class="p" title="${esc(c.title)}"><img src="${portraitURL({ ...c, alive: true }, h, 96)}"><div>${esc(c.name.replace(/^(Ser|Maester|Lord|Lady|Grand Maester) /, '').split(' ')[0])}</div></div>`).join('')}</div>` : ''}
     ${lord ? `<p class="muted" style="font-size:0.9rem;margin-top:0.8rem">You will play as <b>${esc(lord.name)}</b>${lord.title ? ', ' + esc(lord.title) : ''}.</p>` : ''}
@@ -161,9 +162,9 @@ function finishPick(hid) {
   if (!hid) return;
   const a = app.state.armies[pk.id]; const hd = app.state.holdings[hid];
   const hostile = hd.owner !== app.state.meta.player && app.map.atWarWith(hd.owner);
-  addOrder(`${a.name} marches on ${hd.name}${hostile ? ' — lay siege and take it' : ''}.`);
-  toast(`Order added: ${a.name} → ${hd.name}`);
-  app.map.flash(hd.pos);
+  api(`/games/${app.saveId}/act`, { body: { kind: 'march', army: a.id, to: hid, intent: hostile ? 'lay siege and take it' : '' } })
+    .then((r) => { app.setState(r.state); toast(`${a.name} marches on ${hd.name}. The route is on the map.`); app.map.flash(hd.pos); })
+    .catch((e) => toast(e.message, true));
 }
 
 // ───── tooltip ─────

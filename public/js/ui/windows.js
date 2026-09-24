@@ -104,9 +104,9 @@ function military() {
       <div class="s"><div class="k">Awaiting</div><div class="v" style="color:#ffe0a0">${called}</div></div>
       <div class="s"><div class="k">Refused</div><div class="v" style="color:#ec9a8a">${refused}</div></div>
     </div>
-    <div class="row-actions"><button class="btn primary" id="call-banners">📯 Call the banners…</button><button class="btn" data-order-tpl="Raise my own levies: ">Raise own levies</button><button class="btn" data-order-tpl="Hire sellswords: ">Hire sellswords</button></div>
+    <div class="row-actions"><button class="btn primary" id="call-banners">📯 Call the banners…</button><button class="btn" id="raise-levies">Raise own levies…</button><button class="btn" data-order-tpl="Hire sellswords: ">Hire sellswords</button></div>
     <div id="banners-form" class="hidden"></div>
-    <div class="section" style="margin-top:0.8rem"><h4>Your hosts & fleets</h4>${mine.map((a) => armyRow(a) + (a.owner === p ? `<div class="row-actions" style="margin:0.1rem 0 0.5rem 2.3rem"><button class="btn small" data-march="${a.id}">⤳ March…</button>${a.commander && s.characters[a.commander]?.alive ? `<button class="btn small" data-talk="${a.commander}">Commander</button>` : ''}<button class="btn small" data-order-tpl="${esc(a.name)} is to ">Orders…</button></div>` : '')).join('') || '<div class="muted">No hosts in the field. Call your banners to raise one.</div>'}</div>
+    <div class="section" style="margin-top:0.8rem"><h4>Your hosts & fleets</h4>${mine.map((a) => armyRow(a) + (a.owner === p ? `<div class="row-actions" style="margin:0.1rem 0 0.5rem 2.3rem"><button class="btn small" data-march="${a.id}">⤳ March…</button>${a.commander && s.characters[a.commander]?.alive ? `<button class="btn small" data-talk="${a.commander}">Commander</button>` : ''}<button class="btn small" data-order-tpl="${esc(a.name)} is to ">Orders…</button><button class="btn small danger" data-disband="${a.id}">Disband</button></div>` : '')).join('') || '<div class="muted">No hosts in the field. Call your banners to raise one.</div>'}</div>
     <div class="section"><h4>Vassal levies</h4>${vas.map((v) => `<div class="row clickable" data-house="${v.id}">${sig(v)}<div class="grow"><div class="title">${esc(v.name)}</div><div class="sub">~${fmt(v.figures.levies.v)} levies · ${fmt(v.figures.menAtArms.v)} men-at-arms</div></div>${obligationPills(v)}</div>`).join('') || '<div class="muted">You have no vassals.</div>'}</div>
     <div class="section"><h4>Known forces</h4>${others.map(armyRow).join('')}</div>`;
 }
@@ -212,6 +212,26 @@ const wire = {
       };
     };
     $$('[data-march]', body).forEach((b) => b.onclick = () => app.startPick('march', b.dataset.march));
+    $$('[data-disband]', body).forEach((b) => b.onclick = async () => {
+      if (!confirm('Disband this host? Most of the men will go home to their fields.')) return;
+      try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'disband', army: b.dataset.disband } }); app.setState(r.state); toast('The host disbands.'); } catch (e) { toast(e.message, true); }
+    });
+    $('#raise-levies', body).onclick = () => {
+      const s = app.state, p = s.meta.player, h = player();
+      const holds = Object.values(s.holdings).filter((x) => x.owner === p);
+      const cmds = Object.values(s.characters).filter((c) => c.alive && c.house === p && c.age >= 15 && c.status === 'free' && !String(c.loc).startsWith('army:'));
+      const max = Number(h.figures.levies.v) || 0;
+      modal(`<h2>Raise your levies</h2><p class="muted">Your own smallfolk answer you directly — your vassals must be called separately. Men in the field cost coin every moon and leave the fields untended.</p>
+        <label>Men: <b id="rl-n">${Math.round(max / 2)}</b> of ~${fmt(max)}</label><input type="range" id="rl-men" min="50" max="${max}" step="50" value="${Math.round(max / 2)}" style="width:100%">
+        <label>Muster at</label><select id="rl-at">${holds.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>
+        <label>Commander</label><select id="rl-cmd"><option value="">— none —</option>${cmds.map((c) => `<option value="${c.id}">${esc(c.name)} (⚔ ${c.skills?.[1] ?? '?'})</option>`).join('')}</select>
+        <label>Name</label><input class="input" id="rl-name" placeholder="e.g. The Wolfswood Levies">
+        <div class="row-actions"><button class="btn primary" id="rl-go">Raise them</button></div>`);
+      $('#rl-men').oninput = (e) => { $('#rl-n').textContent = e.target.value; };
+      $('#rl-go').onclick = async () => {
+        try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'raise', men: Number($('#rl-men').value), at: $('#rl-at').value, commander: $('#rl-cmd').value, name: $('#rl-name').value || undefined } }); app.setState(r.state); $('#modal').classList.add('hidden'); toast('The levies are called. They muster now.'); } catch (e) { toast(e.message, true); }
+      };
+    };
   },
   economy(body) {
     $$('[data-tax]', body).forEach((el) => el.onclick = async () => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'tax', level: el.dataset.tax } }); app.setState(r.state); toast(`Taxes set to ${TAX_LEVELS[el.dataset.tax].label.toLowerCase()}. Your lords will notice.`); } catch (e) { toast(e.message, true); } });
@@ -307,7 +327,7 @@ function characterSheet(id) {
     <div class="skills">${SKILL_NAMES.map((n, i) => `<div class="sk" title="${n}"><div class="i">${SKILL_ICONS[i]}</div><div class="n">${sk[i]}</div><div class="l">${n.slice(0, 4).toUpperCase()}</div></div>`).join('')}</div>
     <div>${traits.map((t) => `<span class="pill trait">${esc(t)}</span>`).join('')}</div>
     ${c.bio ? `<p style="font-size:0.92rem;line-height:1.45">${esc(c.bio)}</p>` : ''}
-    ${mine && c.secret ? `<p style="font-size:0.85rem" class="muted">🔒 <i>${esc(c.secret)}</i></p>` : ''}
+    ${c.secret && (mine || c.secretKnown) ? `<p style="font-size:0.88rem;border-left:3px solid var(--red);padding-left:0.5rem">🗝 <b>Secret:</b> <i>${esc(c.secret)}</i></p>` : c.secret && !mine ? '<p class="muted" style="font-size:0.8rem">🔒 There is more to this one than meets the eye.</p>' : ''}
     <h4>Family <button class="btn small" data-tree="${c.id}" style="float:right">Family tree</button></h4>
     <div class="family">${famMember(father, 'Father')}${famMember(mother, 'Mother')}${famMember(spouse, 'Spouse')}${famMember(betrothed, 'Betrothed')}${kids.map((k) => famMember(k, 'Child')).join('')}${sibs.slice(0, 8).map((k) => famMember(k, 'Sibling')).join('')}</div>
     ${c.memories?.length ? `<h4>Remembers</h4>${c.memories.slice(-5).map((m) => `<div class="muted" style="font-size:0.82rem">• ${esc(m)}</div>`).join('')}` : ''}

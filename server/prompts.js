@@ -7,6 +7,7 @@ import {
 import { estimateTokens } from './llm.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom } from '../public/js/shared/warfare.js';
+import { briefFor } from '../public/data/briefs.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
@@ -17,7 +18,7 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
 - {"op":"army_update","army":ARMY_ID,"men":N or "delta":±N,"morale":0-100,"supply":0-100,"status":"...","owner":HOUSE}
 - {"op":"army_destroy","army":ARMY_ID,"reason":"..."}  /  {"op":"army_disband","army":ARMY_ID}
 - {"op":"holding","id":PLACE,"owner":HOUSE,"unrest":0-100,"prosperity":0-100,"garrison":N,"status":"normal|besieged|sacked|burning|occupied","note":"..."}
-- {"op":"character","id":CHAR_ID,"alive":false,"cause":"...","loc":PLACE (or "with":ARMY_ID to travel with a host),"title":"...","status":"free|imprisoned|hostage|missing|exiled|wounded","opinion":-100..100 (of the player),"loyalty":-100..100 (to their liege),"note":"what they now remember"}
+- {"op":"character","id":CHAR_ID,"alive":false,"cause":"...","loc":PLACE (or "with":ARMY_ID to travel with a host),"title":"...","status":"free|imprisoned|hostage|missing|exiled|wounded","opinion":-100..100 (of the player),"loyalty":-100..100 (to their liege),"note":"what they now remember","revealSecret":true (the PLAYER learns this character's secret),"secret":"a new secret they now hide"}
 - {"op":"character_new","id":NEW_ID,"name":"...","house":HOUSE,"title":"...","age":N,"loc":PLACE,"roles":["captain"],"traits":"...","bio":"..."}
 - {"op":"relation","a":HOUSE,"b":HOUSE,"delta":±N,"reason":"..."}
 - {"op":"liege","house":HOUSE,"liege":HOUSE or null}   (vassal changes allegiance / declares independence)
@@ -74,6 +75,7 @@ function charLine(state, c) {
   const bits = [c.id, c.name, c.house, c.title || c.roles?.join('/'), `age ${c.age}`, `at ${loc}`];
   if (c.spouse) bits.push('spouse:' + c.spouse);
   if (!c.alive) bits.push('DEAD');
+  if (c.secret) bits.push(`SECRET${c.secretKnown ? ' (known to player)' : ''}: ${c.secret}`);
   else if (c.status && c.status !== 'free') bits.push(c.status.toUpperCase());
   return bits.join(' | ');
 }
@@ -81,7 +83,7 @@ function charLine(state, c) {
 function armyLine(state, a) {
   const cmd = a.commander ? (state.characters[a.commander]?.name || a.commander) : '—';
   const where = a.at ? `at ${placeName(state, a.at)}` : `en route to ${a.destName || '?'} (now near ${Math.round(a.pos[0])},${Math.round(a.pos[1])})`;
-  return `${a.id} | ${a.name} | ${a.owner} | ${a.type}${a.ships ? ` ${a.ships} ships` : ''} | ${fmt(a.men)} men | cmd:${cmd} | ${where} | ${a.status || ''} | morale ${a.morale} supply ${a.supply}`;
+  return `${a.id} | ${a.name} | ${a.owner} | ${a.type}${a.ships ? ` ${a.ships} ships` : ''} | ${fmt(a.men)} men | cmd:${cmd} | ${where} | ${a.status || ''} | morale ${a.morale} supply ${a.supply}${a.march ? ` | ORDERED to march on ${placeName(state, a.march.to)} (the engine moves it at marching pace unless you army_move it yourself, e.g. if intercepted)` : ''}`;
 }
 
 export function playerSheet(state) {
@@ -90,6 +92,7 @@ export function playerSheet(state) {
   lines.push(`PLAYER HOUSE: ${p} — House ${h.name}${h.title ? ', ' + h.title : ''}. Words: "${h.words}". Seat: ${h.seat ? state.holdings[h.seat].name : 'none'}. Liege: ${h.liege || 'none'}.`);
   const lord = h.lord ? state.characters[h.lord] : null;
   lines.push(`Head of house (the player acts as them): ${lord ? `${lord.name} (${lord.id})` : 'unknown'}.`);
+  if (state.meta.turn < 3) { const b = briefFor(h, state); lines.push(`House situation: ${b.situation} Strengths: ${b.strengths.join('; ')}. Weaknesses: ${b.weaknesses.join('; ')}.`); }
   lines.push(`Known figures (as last reported): ${figuresLine(h)}`);
   const pr = project(state, p);
   if (pr) lines.push(`Steward's projection per moon: income ~${fmt(pr.income)} (own lands ${fmt(pr.own)}, tribute ${fmt(pr.tribute)}), expenses ~${fmt(pr.expenses)} (hosts ${fmt(pr.upkeep)}, household ${fmt(pr.household)}, court ${fmt(pr.court)}, interest ${fmt(pr.interest)}, projects ${fmt(pr.projects)}, owed to liege ${fmt(pr.owed)}) → net ${fmt(pr.low)} to ${fmt(pr.high)}. Tax policy: ${h.policy?.tax || 'normal'}.`);

@@ -4,8 +4,9 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { chat, extractJson, extractField, loadConfig, estimateTokens } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt } from './prompts.js';
-import { createInitialState, migrateState, applyChanges, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
+import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
 import { settle, initEconomy, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
+import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 export const SAVES = path.join(ROOT, 'saves');
@@ -104,6 +105,15 @@ export async function advance(id, { span = '1m', orders } = {}) {
   state.meta.date = addDays(state.meta.date, spanInfo.days);
   state.meta.turn += 1;
   const { applied, rejected } = applyChanges(state, obj.changes || [], { source: 'Reports & rumours' });
+  // Marching orders the story didn't resolve: the engine walks the host along at marching pace
+  for (const a of Object.values(state.armies)) {
+    if (!a.march || a.movedTurn === state.meta.turn) continue;
+    const dest = placePos(a.march.to, state.holdings); if (!dest) { delete a.march; continue; }
+    const m = marchDays(a, a.pos, dest);
+    const f = Math.min(1, spanInfo.days / Math.max(1, m.days));
+    applyChanges(state, [{ op: 'army_move', army: a.id, to: f >= 1 ? a.march.to : a.march.to, progress: f, status: f >= 1 ? 'arrived' : 'marching' }]);
+    if (f >= 1) delete a.march;
+  }
   // Settle the books for the period (after the story has changed the causes)
   const econNotes = settle(state, spanInfo.days);
   const events = (Array.isArray(obj.events) ? obj.events : []).map((e) => ({
@@ -287,6 +297,36 @@ export function act(id, body) {
       applyChanges(state, [{ op: 'holding', id: h.id, owner: to.id, note: `Granted by House ${me.name} to House ${to.name}` }, { op: 'relation', a: p, b: to.id, delta: 20, reason: `Granted ${h.name}` }]);
       const lord = to.lord && state.characters[to.lord]; if (lord) { lord.opinion = Math.min(100, (lord.opinion || 0) + 20); lord.loyalty = Math.min(100, (lord.loyalty || 60) + 15); }
       addOrder(`Grant ${h.name} and its lands to House ${to.name} for their loyal service.`);
+      break;
+    }
+    case 'raise': {
+      const men = Math.round(Number(body.men) || 0);
+      const avail = Number(me.figures.levies.v) || 0;
+      if (men < 50) throw httpError(400, 'raise at least 50 men');
+      if (men > avail) throw httpError(400, `Only ~${avail} levies remain to be called.`);
+      const at = state.holdings[body.at] && (state.holdings[body.at].owner === p || state.houses[state.holdings[body.at].owner]?.liege === p) ? body.at : me.seat;
+      const cmd = body.commander && state.characters[body.commander]?.alive ? body.commander : null;
+      const name = String(body.name || `Levies of ${state.holdings[at].name}`).slice(0, 80);
+      applyChanges(state, [{ op: 'army_create', owner: p, name, at, men, commander: cmd, composition: `Levies of House ${me.name}${men >= 3000 ? ', with household knights' : ''}`, status: 'mustering' }, { op: 'figure', house: p, field: 'levies', delta: -men, source: 'Muster rolls' }]);
+      if (cmd) applyChanges(state, [{ op: 'character', id: cmd, with: Object.values(state.armies).find((a) => a.name === name && a.owner === p)?.id }]);
+      addOrder(`(Done) Raised ${men} of my own levies at ${state.holdings[at].name} as "${name}"${cmd ? ' under ' + state.characters[cmd].name : ''}. They are mustering.`);
+      break;
+    }
+    case 'disband': {
+      const a = state.armies[body.army]; if (!a || a.owner !== p) throw httpError(400, 'not your host');
+      const home = Math.round(a.type === 'fleet' ? 0 : a.men * 0.9);
+      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id) c.loc = a.at || me.seat;
+      delete state.armies[a.id];
+      if (home) applyChanges(state, [{ op: 'figure', house: p, field: 'levies', delta: home, source: 'Men sent home' }]);
+      addOrder(`(Done) Disbanded ${a.name}; the men go home to their fields.`);
+      break;
+    }
+    case 'march': {
+      const a = state.armies[body.army]; if (!a || a.owner !== p) throw httpError(400, 'not your host');
+      const dest = placePos(body.to, state.holdings); if (!dest) throw httpError(400, 'unknown destination');
+      const m = marchDays(a, a.pos, dest);
+      a.march = { to: body.to, since: state.meta.turn }; a.dest = dest; a.destName = placeName(state, body.to); a.at = null; a.status = 'marching';
+      addOrder(`${a.name} marches on ${placeName(state, body.to)} (~${m.miles} miles, ~${m.days} days)${body.intent ? ' — ' + body.intent : ''}.`);
       break;
     }
     case 'order': {

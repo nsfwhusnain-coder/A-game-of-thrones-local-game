@@ -442,7 +442,8 @@ function applyOne(state, ch, { date, src }) {
       a.pos = [from[0] + (dest[0] - from[0]) * p, from[1] + (dest[1] - from[1]) * p];
       if (p >= 1) { a.at = resolvePlaceId(ch.to); a.dest = null; a.destName = null; } else { a.at = null; a.dest = dest; a.destName = placeName(state, ch.to); }
       if (ch.status) a.status = ch.status;
-      a.asOf = date;
+      a.asOf = date; a.movedTurn = state.meta.turn;
+      if (a.march && p >= 1 && resolvePlaceId(ch.to) === resolvePlaceId(a.march.to)) delete a.march;
       return { op, text: `${a.name} ${p >= 1 ? 'arrives at' : 'marches toward'} ${placeName(state, ch.to)}` };
     }
     case 'army_update': case 'fleet_update': {
@@ -502,6 +503,8 @@ function applyOne(state, ch, { date, src }) {
       }
       if (ch.note || ch.memory) { c.memories = [...(c.memories || []), `${date}: ${ch.note || ch.memory}`].slice(-12); }
       if (ch.traits) c.traits = ch.traits;
+      if (ch.revealSecret || ch.secretRevealed) { c.secretKnown = true; out.push('their secret is uncovered'); }
+      if (ch.secret && typeof ch.secret === 'string') { c.secret = ch.secret; out.push('now hides a secret'); }
       if (ch.spouse) { const sp = findChar(state, ch.spouse); if (sp) { c.spouse = sp; state.characters[sp].spouse = c.id; out.push('wed to ' + state.characters[sp].name); } }
       return { op, text: `${c.name} ${out.join(', ') || 'updated'}` };
     }
