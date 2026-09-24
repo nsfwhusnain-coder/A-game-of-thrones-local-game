@@ -63,6 +63,30 @@ const RULES = `SIMULATION RULES
 7. Write events in a grounded, literary chronicle voice. Be specific: names, places, numbers, weather, rumours.
 8. The player RULES. Unless the period is shorter than two weeks, bring at least one matter of their OWN realm before them as a "decision": a petition from smallfolk, a border dispute between two of their vassals, a plea for grain, a request for justice against a knight, a marriage offer for one of their children, a vassal asking for a favour, a crime to judge. Use real vassal houses and characters. These small choices should have consequences for loyalty, unrest and prosperity.`;
 
+// What every call needs to know about the world, stated once (and kept identical between calls so the server can cache it)
+export const WORLD_PRIMER = `THE WORLD
+- The Known World of A Song of Ice and Fire (George R. R. Martin's books; the HBO show where the books are silent). Westeros is a continent some 3,000 miles long: the Seven Kingdoms under the Iron Throne in King's Landing — the North (Starks of Winterfell, a third of the land, cold, thinly peopled), the Iron Islands (Greyjoys, reavers), the Riverlands (Tullys of Riverrun), the Vale (Arryns of the Eyrie, mountain-walled), the Westerlands (Lannisters of Casterly Rock, gold mines), the Reach (Tyrells of Highgarden, the richest farmland and largest host), the Stormlands (Baratheons of Storm's End), Dorne (Martells of Sunspear, desert and mountains, unbowed), and the Crownlands around King's Landing. North of the Wall (700 feet of ice, held by the Night's Watch) live the free folk, and things older. Across the Narrow Sea lie the Free Cities of Essos (Braavos, Pentos, Myr, Lys, Tyrosh, Volantis, Norvos, Qohor, Lorath) and the Dothraki sea.
+- Time: years are counted AC (After Aegon's Conquest). A year has twelve moons (months); dates are written like "1 9th moon, 298 AC". Seasons last years and are declared by the Citadel's white ravens.
+- Feudal order: the King → the great lords (Lords Paramount/Wardens) → their bannermen → knights and smallfolk. Lords owe their liege tribute (dues) and levies when the banners are called; loyalty is personal and can break. Gold dragons are the currency.
+- Travel: hosts march 15-25 miles a day, horse faster, ships 50-100 miles a day; ravens carry letters in days. Nothing moves instantly.
+- Tone: grounded, political, violent and human. Honour is costly, betrayal is common, winter is coming.`;
+
+export const JSON_RULES = `JSON RULES (your reply is read by a program — one broken character loses the whole turn):
+- Reply with exactly ONE JSON object. No text before or after it, no code fences, no comments.
+- Every key in double quotes. Strings in double quotes. NEVER put a raw double quote inside a string: for speech inside text use single quotes ('Winter is coming,' he said) or escape it as \\".
+- No trailing commas. No line breaks inside strings (write it as one line). Numbers are plain digits: 8000, not "8,000" and not "8k".
+- Use only the ids given in the tables (snake_case). If unsure of an id, leave that change out rather than invent one.
+- Keep it compact: finish the whole object. A shorter complete reply is always better than a long one cut off.`;
+
+// How characters answer in audiences: a small scene, so the player sees them act and hears them speak
+export const SCENE_STYLE = `HOW TO WRITE YOUR REPLY — a short scene of 2 to 5 beats:
+- ACTIONS are written between asterisks, in the third person present, as the player sees them: *Lord Tywin sets down his quill and regards you without warmth.* Show gesture, expression, the room, a pause — what a watchful visitor would notice.
+- SPEECH is your own words, in the first person, spoken straight to the player ("you"), with no quotation marks and no name labels.
+- Alternate them naturally, e.g.: *He leans back.* You ask a great deal, my lord. *A thin smile.* But I am listening.
+- Stay in your own voice: your vocabulary, your temper, your secrets. Never narrate the player's feelings or actions, and never speak for them.
+- By raven: write the letter itself in the first person (it may begin with a greeting and end with your name), with at most one *note about the letter* (the seal, the hand, a stain).
+- Inside the JSON string, never use double quotes; use single quotes if you must quote something.`;
+
 // ---------------- World digest ----------------
 
 function houseLine(state, h, player) {
@@ -124,7 +148,7 @@ export function playerSheet(state) {
   return lines.join('\n');
 }
 
-export function worldDigest(state, budgetTokens, lean = false) {
+export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   const p = state.meta.player;
   const parts = [];
   const season = SEASONS[state.world?.season || 'summer'];
@@ -169,9 +193,11 @@ export function worldDigest(state, budgetTokens, lean = false) {
     houseLines = allHouses.filter((h) => relevant.has(h.id) || getRelation(state, p, h.id) !== 0).map((h) => houseLine(state, h, p));
     charLines = allChars.filter((c) => relevant.has(c.house) && (c.house === p || c.roles?.some((r) => ['lord', 'lady', 'ruler', 'heir', 'council', 'commander'].includes(r)))).map((c) => charLine(state, c));
   }
-  parts.push('HOUSES (id | name | seat | liege | lord | relation to player)\n' + houseLines.join('\n'));
-  parts.push('CHARACTERS (id | name | house | title | age | location | status)\n' + charLines.join('\n'));
-  return parts.join('\n\n');
+  const people = ['HOUSES (id | name | seat | liege | lord | relation to player)\n' + houseLines.join('\n'), 'CHARACTERS (id | name | house | title | age | location | status)\n' + charLines.join('\n')];
+  // houses & characters change little from turn to turn: callers put them first so the model server can reuse its cache
+  if (part === 'static') return people.join('\n\n');
+  if (part === 'dynamic') return parts.join('\n\n');
+  return [...parts, ...people].join('\n\n');
 }
 
 export function memoryBlock(state, chronicleMd, budgetTokens, keepRecent) {
@@ -211,33 +237,36 @@ export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
   const budget = Math.max(4000, cfg.contextTokens - cfg.maxTokens - 1500);
   const system = [
     `You are the MAESTER-SIMULATOR: the game engine of a grand strategy role-playing game set in the world of A Song of Ice and Fire. You simulate the whole Known World turn by turn.`,
+    WORLD_PRIMER,
+    'SCENARIO BACKGROUND\n' + sc.lore.map((l) => '- ' + l).join('\n'),
     RULES,
     CHANGE_SCHEMA,
+    JSON_RULES,
     `OUTPUT FORMAT — reply with ONE JSON object and nothing else:
 {
   "summary": "2-4 paragraph narrative of this period focused on what the player would know or notice",
   "events": [ {"title":"short headline","text":"2-5 sentences","where":PLACE_ID,"importance":1-5,"type":"war|diplomacy|economy|intrigue|court|disaster|rumor|religion|magic","houses":[HOUSE_IDS]} ],
   "changes": [ ...change operations... ]
 }
-Produce 4-10 events (more for longer periods). Include changes for every consequence that should appear on the map or in the numbers. Rumours may be inaccurate; changes must reflect the TRUE state.
+LENGTH: the summary is at most 3 short paragraphs. Each event text is 1-3 sentences. For a week or two: 2-5 events and up to 15 changes; for a moon: 4-8 events and up to 25 changes; for three moons or more (up to a year): 6-12 events and up to 40 changes — summarise, do not narrate every day. Include changes for every consequence that should appear on the map or in the numbers. Rumours may be inaccurate; changes must reflect the TRUE state.
 
 A SHORT EXAMPLE of the shape (different world, do not copy its content):
 {"summary":"Rain on the Mander. Lord Tarly's outriders caught raiders at the ford...","events":[{"title":"Raiders at the ford","text":"Three hundred Dornish raiders were caught crossing the Mander at dawn; Lord Tarly hanged their captain.","where":"tarly","importance":3,"type":"war","houses":["tarly","martell"]},{"title":"A petition from Honeyholt","text":"Lord Beesbury begs his liege to forgive his late tribute after the blight.","where":"beesbury","importance":2,"type":"court","houses":["beesbury"]}],"changes":[{"op":"army_update","army":"some_army_id","delta":-40,"morale":80},{"op":"relation","a":"tarly","b":"martell","delta":-10,"reason":"hanged raiders"},{"op":"obligation","house":"beesbury","tribute":"late","reason":"blight"},{"op":"decision","title":"Beesbury's plea","from":"some_char_id","text":"...","options":[{"label":"Forgive the debt","hint":"loyalty up, coin down"},{"label":"Demand payment","hint":"coin now, resentment later"}]}]}
 Only use ids that exist in the tables below. Change only what the story justifies. Never change the player's own allegiance or taxes — those are the player's choices.`,
   ].join('\n\n');
 
-  const lore = 'SCENARIO BACKGROUND\n' + sc.lore.map((l) => '- ' + l).join('\n');
   const digestBudget = Math.floor(budget * 0.55);
   const memBudget = Math.floor(budget * 0.3);
+  const lean = cfg.promptDetail === 'lean';
   const user = [
-    lore,
-    playerSheet(state),
-    worldDigest(state, digestBudget, cfg.promptDetail === 'lean'),
+    worldDigest(state, digestBudget, lean, 'static'),
     memoryBlock(state, chronicleMd, memBudget, cfg.keepRecentTurns),
+    'THE STATE OF THE REALM NOW\n' + worldDigest(state, digestBudget, lean, 'dynamic'),
+    playerSheet(state),
     diplomacySinceLastTurn(state),
     `CURRENT DATE: ${dateStr(state.meta.date)}. Simulate the next ${span.label} (${span.days} days).`,
-    `PLAYER'S ORDERS FOR THIS PERIOD:\n${orders.length ? orders.map((o, i) => `${i + 1}. ${o.text}`).join('\n') : '(The player issues no orders and waits.)'}`,
-    'Now simulate. Reply with the JSON object only.',
+    `PLAYER'S ORDERS FOR THIS PERIOD:\n${orders.length ? orders.map((o, i) => `${i + 1}. ${o.text}${o.note ? ' ' + o.note : ''}`).join('\n') : '(The player issues no orders and waits.)'}`,
+    `Now simulate the ${span.label}. Reply with the JSON object only: {"summary":"...","events":[...],"changes":[...]} — complete and valid.`,
   ].filter(Boolean).join('\n\n');
   return [{ role: 'system', content: system }, { role: 'user', content: user }];
 }
@@ -276,7 +305,8 @@ export function buildChatPrompt(state, charId, message, chronicleMd, cfg) {
     sameHouse ? '' : dispositionText(state, charId),
     sameHouse ? 'If asked for numbers (men, gold, grain, ships), answer with concrete figures appropriate to your role — you may adjust the ledger figures if you have reason to (a fresh count, desertions, a bad harvest). Report them via a "figure" change with source set to your name.' : 'You do not know the player\'s exact strength; do not reveal your own house\'s exact numbers unless it serves you.',
     'Distance matters: if you are not in the same place as the player, this exchange is by raven or envoy — write accordingly.',
-    `Reply ONLY with a JSON object: {"reply":"your in-character words (may include brief *actions*)","changes":[optional change operations caused by this conversation, e.g. figure reports, opinion shifts ("character" op on yourself), pacts you firmly agree to]}.
+    SCENE_STYLE,
+    `Reply ONLY with a JSON object: {"reply":"the scene: *what the player sees you do* and what you say, in first person","changes":[optional change operations caused by this conversation, e.g. figure reports, opinion shifts ("character" op on yourself), pacts you firmly agree to]}.
 Allowed ops: figure, character, relation, pact, raven, army_update, army_move, army_create, liege, obligation, decision, chronicle. Only commit to what your character would genuinely do.`,
     TALK_SCHEMA,
   ].filter(Boolean).join('\n\n');
@@ -290,7 +320,7 @@ Allowed ops: figure, character, relation, pact, raven, army_update, army_move, a
   ].filter(Boolean).join('\n\n');
   const messages = [{ role: 'system', content: system + '\n\n' + context }];
   for (const m of log) messages.push({ role: m.role === 'player' ? 'user' : 'assistant', content: m.role === 'player' ? m.text : JSON.stringify({ reply: m.text, changes: [] }) });
-  messages.push({ role: 'user', content: `${message}\n\n[Answer in character as ${c.name}, in your own voice. Reply with JSON only: {"reply":"your spoken or written words","changes":[]}]` });
+  messages.push({ role: 'user', content: `${message}\n\n[Answer in character as ${c.name}: a short scene, *actions* between asterisks, your words in the first person to me. Reply with JSON only: {"reply":"...","changes":[]}]` });
   return messages;
 }
 
@@ -319,7 +349,8 @@ export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {
   const system = [
     `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
     'Each counsellor speaks in their own voice, from their own expertise and interests; they may disagree with one another and with the lord. Officers give concrete numbers from the ledger. 1-4 of them speak per round, whoever is most relevant. Never break character.',
-    `Reply ONLY with JSON: {"replies":[{"speaker":CHAR_ID,"text":"..."}],"changes":[optional change operations the council's reports imply — e.g. a steward's corrected figures]}`,
+    SCENE_STYLE.replace('HOW TO WRITE YOUR REPLY — a short scene of 2 to 5 beats', 'HOW EACH COUNSELLOR SPEAKS — each reply is a short scene of 1 to 3 beats'),
+    `Reply ONLY with JSON: {"replies":[{"speaker":CHAR_ID,"text":"*what the player sees them do* and what they say, in first person"}],"changes":[optional change operations the council's reports imply — e.g. a steward's corrected figures]}`,
     TALK_SCHEMA,
   ].join('\n\n');
   const context = [`DATE: ${dateStr(state.meta.date)}`, playerSheet(state), ...people.map((c) => characterKnowledge(state, c)).filter(Boolean).slice(0, 1), memoryBlock(state, chronicleMd, Math.floor(budget * 0.3), 2), worldDigest(state, Math.floor(budget * 0.35), cfg.promptDetail !== 'full')].join('\n\n');

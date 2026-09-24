@@ -12,7 +12,7 @@ function httpJson(method, url, body, headers, timeoutMs) {
     const u = new URL(url);
     const lib = u.protocol === 'https:' ? https : http;
     const data = body ? Buffer.from(JSON.stringify(body)) : null;
-    const req = lib.request(u, { method, headers: { ...(data ? { 'Content-Type': 'application/json', 'Content-Length': data.length } : {}), ...headers } }, (res) => {
+    const req = lib.request(u, { method, agent: false, headers: { ...(data ? { 'Content-Type': 'application/json', 'Content-Length': data.length } : {}), ...headers } }, (res) => {
       const chunks = []; res.on('data', (c) => chunks.push(c));
       res.on('end', () => resolve({ status: res.statusCode, ok: res.statusCode >= 200 && res.statusCode < 300, text: Buffer.concat(chunks).toString('utf8') }));
       res.on('error', reject);
@@ -21,6 +21,35 @@ function httpJson(method, url, body, headers, timeoutMs) {
     req.on('error', (e) => reject(e.code === 'ECONNREFUSED' ? Object.assign(new Error('connection refused'), { cause: e }) : e));
     if (data) req.write(data);
     req.end();
+  });
+}
+
+// Streaming variant (Server-Sent Events): calls onEvent(json) for every data line, resolves when the stream ends.
+function httpStream(url, body, headers, timeoutMs, onEvent) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const lib = u.protocol === 'https:' ? https : http;
+    const data = Buffer.from(JSON.stringify(body));
+    const req = lib.request(u, { method: 'POST', agent: false, headers: { 'Content-Type': 'application/json', 'Content-Length': data.length, Accept: 'text/event-stream', Connection: 'close', ...headers } }, (res) => {
+      if (res.statusCode < 200 || res.statusCode >= 300) { const chunks = []; res.on('data', (c) => chunks.push(c)); res.on('end', () => resolve({ status: res.statusCode, ok: false, text: Buffer.concat(chunks).toString('utf8') })); return; }
+      let buf = ''; let raw = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => {
+        buf += chunk; raw += chunk.length < 4000 ? '' : '';
+        let nl;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+          if (!line.startsWith('data:')) continue;
+          const payload = line.slice(5).trim(); if (!payload || payload === '[DONE]') continue;
+          try { onEvent(JSON.parse(payload)); } catch { /* keep-alive or partial */ }
+        }
+      });
+      res.on('end', () => resolve({ status: res.statusCode, ok: true }));
+      res.on('error', reject);
+    });
+    req.setTimeout(timeoutMs, () => req.destroy(Object.assign(new Error(`The model took longer than ${Math.round(timeoutMs / 1000)}s (raise the timeout in Settings)`), { name: 'AbortError' })));
+    req.on('error', (e) => reject(e.code === 'ECONNREFUSED' ? Object.assign(new Error('connection refused'), { cause: e }) : e));
+    req.write(data); req.end();
   });
 }
 
@@ -41,6 +70,12 @@ export const DEFAULT_CONFIG = {
   keepRecentTurns: 4,                 // how many recent turns stay verbatim in the prompt
   promptDetail: 'full',               // 'full' = every house & character each turn; 'lean' = only what's relevant (much faster on laptops)
   extraBody: {},                      // merged into the request body (e.g. {"top_p":0.9,"min_p":0.05})
+  stream: true,                       // stream tokens so the game can show progress (thinking / writing)
+  thinking: 'auto',                   // 'auto' = the server's default; 'on' / 'off' toggle reasoning (Qwen3-style chat_template_kwargs)
+  thinkingBudget: 6000,               // extra tokens allowed for reasoning on top of maxTokens
+  ttsUrl: '',                         // optional local text-to-speech server (OpenAI-compatible /v1/audio/speech), e.g. Kokoro-FastAPI http://localhost:8880/v1
+  ttsModel: 'kokoro',
+  ttsKey: '',
 };
 
 export function loadConfig() {
@@ -64,30 +99,106 @@ export function saveConfig(cfg) {
 
 export const estimateTokens = (s) => Math.ceil(String(s || '').length / 3.6);
 
+/**
+ * One chat completion. opts: { kind, json, temperature, maxTokens, spanDays, onProgress(p), thinking }
+ * - streams when possible and reports progress: { phase: 'thinking'|'writing', thinkTokens, tokens, ms }
+ * - if the reply is cut off mid-JSON, asks the model to continue and stitches the pieces
+ * - if the model spends its whole budget thinking, retries once with thinking off
+ */
 export async function chat(messages, opts = {}) {
-  const cfg = { ...loadConfig(), ...opts };
+  const cfg = { ...loadConfig(), ...opts.cfgOverride };
   if (cfg.provider === 'mock') return mockResponse(messages, opts);
   if (cfg.provider === 'relay') return relayResponse(messages, opts, cfg);
+  const thinking = opts.thinking || cfg.thinking || 'auto';
+  // long periods produce long chronicles: give them room (plus room to think)
+  const spanK = opts.spanDays ? Math.min(2, 1 + Math.max(0, opts.spanDays - 30) / 330) : 1;
+  const answerTokens = Math.round((opts.maxTokens ?? cfg.maxTokens) * spanK);
+  const maxTokens = answerTokens + (thinking === 'off' ? 0 : Number(cfg.thinkingBudget) || 0);
+  const t0 = Date.now();
+  let r = await rawChat(messages, cfg, { ...opts, thinking, maxTokens }, t0);
+  // Out of room while still thinking: nothing usable came out. Try again without the thinking.
+  if (r.finish === 'length' && !/[{"]/.test(r.content) && thinking !== 'off') {
+    opts.onProgress?.({ phase: 'retrying', note: 'the model ran out of room while thinking; asking again without deliberation', ms: Date.now() - t0 });
+    r = await rawChat(messages, cfg, { ...opts, thinking: 'off', maxTokens: answerTokens }, t0);
+  }
+  // Cut off mid-answer: ask it to continue where it stopped (up to twice) and stitch the pieces
+  let text = r.content;
+  for (let k = 0; k < 2 && r.finish === 'length' && opts.json && text.includes('{'); k++) {
+    opts.onProgress?.({ phase: 'continuing', note: 'the reply was long; asking the model to finish it', ms: Date.now() - t0 });
+    const cont = [...messages, { role: 'assistant', content: text }, { role: 'user', content: 'Your reply was cut off. Continue EXACTLY where it stopped: output only the remaining characters of the same JSON object (no repetition, no preamble, no code fences).' }];
+    r = await rawChat(cont, cfg, { ...opts, thinking: 'off', maxTokens: answerTokens }, t0);
+    text = joinContinuation(text, r.content);
+  }
+  return { text: stripThinking(text), reasoning: r.reasoning, usage: r.usage, ms: Date.now() - t0, model: r.model, finish: r.finish };
+}
+
+function joinContinuation(a, b) {
+  b = stripThinking(b).replace(/^```(?:json)?\s*/i, '');
+  // drop any overlap the model repeated
+  for (let n = Math.min(200, a.length, b.length); n > 8; n--) if (a.endsWith(b.slice(0, n))) return a + b.slice(n);
+  return a + b;
+}
+
+async function rawChat(messages, cfg, opts, t0) {
+  try { return await rawChatOnce(messages, cfg, opts, t0); } catch (e) {
+    // a dropped connection (server restarted, socket reset) is worth one more try
+    if (e.code === 'ECONNRESET' || /socket hang up/i.test(e.message)) { await new Promise((r) => setTimeout(r, 800)); return rawChatOnce(messages, cfg, opts, t0); }
+    throw e;
+  }
+}
+async function rawChatOnce(messages, cfg, opts, t0) {
   const url = cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
   const body = {
     messages,
     temperature: opts.temperature ?? cfg.temperature,
-    max_tokens: opts.maxTokens ?? cfg.maxTokens,
-    stream: false,
+    max_tokens: opts.maxTokens,
+    stream: cfg.stream !== false,
     ...(cfg.model ? { model: cfg.model } : { model: 'local-model' }),
     ...(cfg.jsonMode && opts.json ? { response_format: { type: 'json_object' } } : {}),
+    ...(opts.thinking === 'on' || opts.thinking === 'off' ? { chat_template_kwargs: { enable_thinking: opts.thinking === 'on' } } : {}),
+    ...(cfg.stream !== false ? { stream_options: { include_usage: true }, return_progress: true } : {}),
     ...(cfg.extraBody || {}),
   };
-  const t0 = Date.now();
-  const res = await httpJson('POST', url, body, cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}, cfg.timeoutSec * 1000);
+  const headers = cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {};
+  if (body.stream) {
+    let content = '', reasoning = '', finish = null, usage = null, model = null, n = 0, lastReport = 0;
+    const res = await httpStream(url, body, headers, cfg.timeoutSec * 1000, (ev) => {
+      model = ev.model || model; if (ev.usage) usage = ev.usage;
+      // llama.cpp reports how far it has read the prompt (return_progress)
+      if (ev.prompt_progress && opts.onProgress) { const pp = ev.prompt_progress; opts.onProgress({ phase: 'reading', promptTotal: pp.total, promptDone: pp.processed, promptCached: pp.cache, ms: Date.now() - t0 }); }
+      const ch = ev.choices?.[0]; if (!ch) return;
+      const d = ch.delta || ch.message || {};
+      if (d.reasoning_content) reasoning += d.reasoning_content;
+      if (d.content) content += d.content;
+      if (ch.text) content += ch.text;
+      if (ch.finish_reason) finish = ch.finish_reason;
+      n++;
+      const now = Date.now();
+      if (n === 1) opts.onProgress?.({ firstTokenMs: now - t0 });
+      if (opts.onProgress && now - lastReport > 400) {
+        lastReport = now;
+        const inThink = (reasoning && !content) || (/<think>/i.test(content) && !/<\/think>/i.test(content));
+        opts.onProgress({ phase: inThink ? 'thinking' : 'writing', thinkTokens: Math.round((reasoning.length + (content.match(/<think>[\s\S]*?(<\/think>|$)/i)?.[0].length || 0)) / 3.6), tokens: Math.round(content.replace(/<think>[\s\S]*?(<\/think>|$)/i, '').length / 3.6), ms: now - t0 });
+      }
+    });
+    if (!res.ok) {
+      // some servers reject streaming or the extra fields: fall back to a plain request once
+      if (/stream|chat_template_kwargs|stream_options/i.test(res.text || '') || res.status === 400) return rawChatOnce(messages, { ...cfg, stream: false, extraBody: cfg.extraBody }, { ...opts, thinking: opts.thinking === 'auto' ? 'auto' : opts.thinking, noKwargs: true }, t0);
+      throw new Error(`LLM server returned ${res.status}: ${String(res.text).slice(0, 500)}`);
+    }
+    if (!content.trim() && reasoning && finish !== 'length') content = reasoning; // some servers put the answer in reasoning
+    return { content, reasoning, finish, usage, model };
+  }
+  if (opts.noKwargs) delete body.chat_template_kwargs;
+  delete body.stream_options; delete body.return_progress;
+  const res = await httpJson('POST', url, body, headers, cfg.timeoutSec * 1000);
   if (!res.ok) throw new Error(`LLM server returned ${res.status}: ${res.text.slice(0, 500)}`);
   const data = JSON.parse(res.text);
   const msg = data.choices?.[0]?.message || {};
   let content = msg.content ?? data.choices?.[0]?.text ?? '';
   if (Array.isArray(content)) content = content.map((c) => c.text || '').join('');
-  // some reasoning servers put everything in reasoning_content and leave content empty
-  if (!String(content).trim() && msg.reasoning_content) content = msg.reasoning_content;
-  return { text: stripThinking(content), usage: data.usage || null, ms: Date.now() - t0, model: data.model };
+  if (!String(content).trim() && msg.reasoning_content && data.choices?.[0]?.finish_reason !== 'length') content = msg.reasoning_content;
+  return { content: String(content), reasoning: msg.reasoning_content || '', finish: data.choices?.[0]?.finish_reason || null, usage: data.usage || null, model: data.model };
 }
 
 export async function listModels() {
@@ -114,7 +225,7 @@ export function extractField(text, field) {
 }
 
 export function extractJson(text) {
-  let s = String(text || '').trim();
+  let s = stripThinking(String(text || '')).trim();
   const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) s = fence[1].trim();
   const start = s.indexOf('{');
@@ -128,8 +239,11 @@ export function extractJson(text) {
     else if (c === '{') depth++;
     else if (c === '}') { depth--; if (depth === 0) { end = i; break; } }
   }
-  let body = end > 0 ? s.slice(start, end + 1) : s.slice(start) + '}'.repeat(Math.max(1, depth));
+  let body = end > 0 ? s.slice(start, end + 1) : s.slice(start);
+  if (end < 0) { try { return JSON.parse(closeTruncated(escapeInnerQuotes(body))); } catch { /* fall through to the other repairs */ } }
   try { return JSON.parse(body); } catch { /* try repairs */ }
+  body = escapeInnerQuotes(body.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ' '));
+  try { return JSON.parse(body); } catch { /* more repairs */ }
   body = body
     .replace(/,\s*([}\]])/g, '$1')                 // trailing commas
     .replace(/[“”]/g, '"')                // smart quotes
@@ -142,6 +256,30 @@ export function extractJson(text) {
     const fixed = closeTruncated(body);
     return JSON.parse(fixed);
   }
+}
+
+// Models often write dialogue with raw double quotes inside a JSON string ("text":"He said "no" to the king").
+// A quote inside a string that is not followed by , } ] or : is taken to be part of the text and escaped.
+// Raw newlines inside strings are escaped too.
+function escapeInnerQuotes(s) {
+  let out = '', inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (!inStr) { if (c === '"') inStr = true; out += c; continue; }
+    if (esc) { esc = false; out += c; continue; }
+    if (c === '\\') { esc = true; out += c; continue; }
+    if (c === '\n') { out += '\\n'; continue; }
+    if (c === '\r') continue;
+    if (c === '\t') { out += ' '; continue; }
+    if (c === '"') {
+      let j = i + 1; while (j < s.length && /\s/.test(s[j])) j++;
+      const nx = s[j];
+      if (nx === undefined || nx === ',' || nx === '}' || nx === ']' || nx === ':') { inStr = false; out += c; } else out += '\\"';
+      continue;
+    }
+    out += c;
+  }
+  return out;
 }
 
 function closeTruncated(s) {

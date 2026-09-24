@@ -1,0 +1,10 @@
+<!doctype html><html><body style="margin:0;background:#222;font:12px sans-serif;color:#ddd">
+<div id="g" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px"></div>
+<script type="module">
+import { bannerURL, sigilURL } from '../js/sigils.js';
+import { HOUSES } from '../data/houses.js';
+const ids = new URLSearchParams(location.search).get('ids')?.split(',');
+const list = ids ? HOUSES.filter((h) => ids.includes(h.id)) : HOUSES;
+document.getElementById('g').innerHTML = list.map((h) => `<div style="text-align:center;width:130px"><img src="${bannerURL(h.sigil, 120, 180)}" width="120"><br>${h.name}</div>`).join('');
+document.title = 'done';
+</script></body></html>

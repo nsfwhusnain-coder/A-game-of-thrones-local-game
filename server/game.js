@@ -68,17 +68,29 @@ export function deleteSave(id) { fs.rmSync(dir(id), { recursive: true, force: tr
 
 export function setOrders(id, orders) {
   const state = loadState(id);
-  state.orders = (orders || []).map((o) => ({ id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text || '').slice(0, 2000) })).filter((o) => o.text.trim());
+  const prev = new Map(state.orders.map((o) => [o.id, o])); // keep the simulator-only notes and flags of existing orders
+  state.orders = (orders || []).map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text || '').slice(0, 2000) })).filter((o) => o.text.trim());
   saveState(id, state);
   return state.orders;
 }
 
-async function askJson(id, kind, messages, cfg) {
-  const r1 = await chat(messages, { json: true, kind });
+// What the model is doing right now, per save (polled by the browser while it waits)
+const progress = new Map();
+export function getProgress(id) { const p = progress.get(id); return p ? { ...p, ms: Date.now() - p.t0 } : null; }
+const tracker = (id, kind) => { const t0 = Date.now(); progress.set(id, { kind, phase: 'waiting', ms: 0, t0 }); return (p) => progress.set(id, { kind, t0, ...progress.get(id), ...p, ms: Date.now() - t0 }); };
+const done = (id) => progress.delete(id);
+
+async function askJson(id, kind, messages, cfg, extra = {}) {
+  const onProgress = tracker(id, kind);
+  try { return await askJsonInner(id, kind, messages, { ...extra, onProgress }); } finally { done(id); }
+}
+async function askJsonInner(id, kind, messages, extra) {
+  const r1 = await chat(messages, { json: true, kind, ...extra });
   logLLM(id, kind, messages, r1.text);
   try { return { obj: extractJson(r1.text), raw: r1 }; } catch (e1) {
     const retry = [...messages, { role: 'assistant', content: r1.text.slice(0, 8000) }, { role: 'user', content: 'That reply was not valid JSON. Reply again with ONLY the complete JSON object, no commentary, no code fences.' }];
-    const r2 = await chat(retry, { json: true, kind, temperature: 0.4 });
+    extra.onProgress?.({ phase: 'retrying', note: 'the reply was not valid JSON; asking again' });
+    const r2 = await chat(retry, { json: true, kind, temperature: 0.4, ...extra, thinking: 'off' });
     logLLM(id, kind + '-retry', retry, r2.text);
     try { return { obj: extractJson(r2.text), raw: r2 }; } catch (e2) {
       return { obj: null, raw: r2, error: e2.message, text: r2.text || r1.text };
@@ -92,10 +104,10 @@ export async function advance(id, { span = '1m', orders } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
-  if (orders) state.orders = orders.map((o) => ({ id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim());
+  if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim()); }
   const chronicle = readChronicle(id);
   const messages = buildJumpPrompt(state, state.orders, span, chronicle, cfg);
-  const { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg);
+  const { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: (SPANS[span] || SPANS['1m']).days });
   if (!obj) throw httpError(502, `The simulator's reply could not be parsed (${error}). Raw start: ${String(text).slice(0, 300)}`);
 
   // Keep an undo point
@@ -228,7 +240,8 @@ export async function talk(id, charId, message) {
   if (!c) throw httpError(404, 'unknown character');
   if (!c.alive) throw httpError(400, `${c.name} is dead.`);
   const messages = buildChatPrompt(state, charId, message, readChronicle(id), cfg);
-  const r = await chat(messages, { json: true, kind: 'chat' });
+  const onProgress = tracker(id, 'chat');
+  let r; try { r = await chat(messages, { json: true, kind: 'chat', onProgress }); } finally { done(id); }
   logLLM(id, 'chat', messages, r.text);
   let reply = r.text, changes = [];
   try {
@@ -286,7 +299,8 @@ export function editState(id, patch) {
 export function act(id, body) {
   const state = loadState(id);
   const p = state.meta.player; const me = state.houses[p];
-  const addOrder = (text) => state.orders.push({ id: crypto.randomBytes(4).toString('hex'), text, auto: true });
+  // an order may carry a note for the simulator only (what the ledger already settled), never shown to the player
+  const addOrder = (text, note = '') => state.orders.push({ id: crypto.randomBytes(4).toString('hex'), text, auto: true, ...(note ? { note } : {}) });
   let result = {};
   switch (body.kind) {
     case 'tax': {
@@ -332,7 +346,7 @@ export function act(id, body) {
       d.status = 'decided'; d.choice = opt ? opt.label : String(body.custom).slice(0, 500); d.note = body.note ? String(body.note).slice(0, 500) : ''; d.decidedTurn = state.meta.turn;
       let settled = [];
       if (opt?.fx) { settled = applyPetitionFx(state, opt.fx, dateStr(state.meta.date)); d.effects = settled; }
-      addOrder(`DECISION — ${d.title}: I choose "${d.choice}".${d.note ? ' ' + d.note : ''}${settled.length ? ` [Already settled by the ledger, do not apply again: ${settled.join('; ')}. Narrate how people react.]` : ''}`);
+      addOrder(`DECISION — ${d.title}: I choose "${d.choice}".${d.note ? ' ' + d.note : ''}`, settled.length ? `[Already settled by the ledger, do not apply again: ${settled.join('; ')}. Narrate how people react.]` : '');
       if (settled.length) result.effects = settled;
       break;
     }
@@ -416,7 +430,8 @@ export async function council(id, members, message) {
   const ids = (members || []).filter((m) => state.characters[m]?.alive);
   if (!ids.length) throw httpError(400, 'no one to hold council with');
   const messages = buildCouncilPrompt(state, ids, message, readChronicle(id), cfg);
-  const r = await chat(messages, { json: true, kind: 'council' });
+  const onProgress = tracker(id, 'council');
+  let r; try { r = await chat(messages, { json: true, kind: 'council', onProgress }); } finally { done(id); }
   logLLM(id, 'council', messages, r.text);
   let replies = [], changes = [];
   try { const o = extractJson(r.text); replies = Array.isArray(o.replies) ? o.replies : []; changes = Array.isArray(o.changes) ? o.changes : []; } catch { replies = [{ speaker: ids[0], text: r.text }]; }

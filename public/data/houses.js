@@ -12,11 +12,11 @@ const S = (f, c, cc, d = 'plain', t = null) => ({ f, c, cc, d, t });
 export const HOUSES = [
   // ───────────── The Crown ─────────────
   H('baratheon', 'Baratheon of King\'s Landing', 'The Red Keep, King\'s Landing', 725, 1735, null, 'crownlands', 'crown', '#6a4c93',
-    S('#e2b33c', 'stag', '#111'), 'Ours is the Fury', { holdingType: 'city', title: 'The Iron Throne', realmName: 'The Crownlands' }),
+    S('#e8b923', 'stag', '#141414'), 'Ours is the Fury', { holdingType: 'city', title: 'The Iron Throne', realmName: 'The Crownlands' }),
   H('baratheon_ds', 'Baratheon of Dragonstone', 'Dragonstone', 925, 1617, 'baratheon', 'crownlands', 'major', '#8c6d3a',
-    S('#e2b33c', 'stag', '#111'), 'Ours is the Fury'),
+    S('#f0c238', 'heartstag', '#141414'), 'Ours is the Fury'),
   H('velaryon', 'Velaryon', 'High Tide, Driftmark', 897, 1633, 'baratheon_ds', 'crownlands', 'major', '#5f8fa6',
-    S('#5f8fa6', 'merman', '#e8e8e8'), 'The Old, the True, the Brave'),
+    S('#28797a', 'seahorse', '#dfe6e6'), 'The Old, the True, the Brave'),
   H('celtigar', 'Celtigar', 'Claw Isle', 956, 1549, 'baratheon_ds', 'crownlands', 'minor', '#a33',
     S('#a33', 'star', '#eee'), ''),
   H('bar_emmon', 'Bar Emmon', 'Sharp Point', 905, 1667, 'baratheon_ds', 'crownlands', 'minor', '#666',
@@ -33,17 +33,17 @@ export const HOUSES = [
 
   // ───────────── The North ─────────────
   H('stark', 'Stark', 'Winterfell', 553, 874, 'baratheon', 'north', 'paramount', '#8d9ba6',
-    S('#e8e8e8', 'wolf', '#6c757d'), 'Winter Is Coming', { realmName: 'The North', title: 'Warden of the North' }),
-  H('bolton', 'Bolton', 'The Dreadfort', 757, 845, 'stark', 'north', 'major', '#8c4a55', S('#2a2a2a', 'flayed', '#e8a0a8'), 'Our Blades Are Sharp'),
-  H('karstark', 'Karstark', 'Karhold', 898, 764, 'stark', 'north', 'major', '#4a4a4a', S('#222', 'sun', '#eee'), 'The Sun of Winter'),
-  H('umber', 'Umber', 'Last Hearth', 736, 694, 'stark', 'north', 'major', '#7a5230', S('#7a5230', 'giant', '#eee'), ''),
-  H('mormont', 'Mormont', 'Bear Island', 396, 669, 'stark', 'north', 'minor', '#3c5a3c', S('#3c6a3c', 'bear', '#111'), 'Here We Stand'),
-  H('glover', 'Glover', 'Deepwood Motte', 405, 769, 'stark', 'north', 'minor', '#b87333', S('#bbb', 'hand', '#aa3333'), ''),
-  H('manderly', 'Manderly', 'White Harbor', 644, 1073, 'stark', 'north', 'major', '#3d8f8a', S('#3d8f8a', 'merman', '#e8e8e8'), '', { holdingType: 'city' }),
-  H('reed', 'Reed', 'Greywater Watch', 541, 1238, 'stark', 'north', 'minor', '#5a6b3a', S('#5a6b3a', 'lizard', '#222'), ''),
-  H('tallhart', 'Tallhart', 'Torrhen\'s Square', 451, 950, 'stark', 'north', 'minor', '#3a6b4a', S('#e8e8e8', 'tree', '#2f5f2f'), 'Proud and Free'),
-  H('hornwood', 'Hornwood', 'Hornwood', 721, 938, 'stark', 'north', 'minor', '#c8a86b', S('#c8a86b', 'stag', '#6a4a2a'), ''),
-  H('cerwyn', 'Cerwyn', 'Castle Cerwyn', 555, 895, 'stark', 'north', 'minor', '#555', S('#aaa', 'bird', '#222'), ''),
+    S('#e9eef2', 'direwolf', '#6c737b'), 'Winter Is Coming', { realmName: 'The North', title: 'Warden of the North' }),
+  H('bolton', 'Bolton', 'The Dreadfort', 757, 845, 'stark', 'north', 'major', '#8c4a55', S('#ecb6be', 'flayed', '#a4161c'), 'Our Blades Are Sharp'),
+  H('karstark', 'Karstark', 'Karhold', 898, 764, 'stark', 'north', 'major', '#4a4a4a', S('#141414', 'sun', '#f2f2f2'), 'The Sun of Winter'),
+  H('umber', 'Umber', 'Last Hearth', 736, 694, 'stark', 'north', 'major', '#7a5230', S('#8a3a1a', 'giant', '#e8dcc8'), ''),
+  H('mormont', 'Mormont', 'Bear Island', 396, 669, 'stark', 'north', 'minor', '#3c5a3c', S('#2d5a2a', 'bear', '#141414'), 'Here We Stand'),
+  H('glover', 'Glover', 'Deepwood Motte', 405, 769, 'stark', 'north', 'minor', '#b87333', S('#a41c1c', 'hand', '#c8ccd2'), ''),
+  H('manderly', 'Manderly', 'White Harbor', 644, 1073, 'stark', 'north', 'major', '#3d8f8a', S('#27756c', 'merman', '#eef2ee'), '', { holdingType: 'city' }),
+  H('reed', 'Reed', 'Greywater Watch', 541, 1238, 'stark', 'north', 'minor', '#5a6b3a', S('#6e7e5c', 'lizard', '#141414'), ''),
+  H('tallhart', 'Tallhart', 'Torrhen\'s Square', 451, 950, 'stark', 'north', 'minor', '#3a6b4a', S('#6a4a2a', 'sentinels', '#2e5a2a'), 'Proud and Free'),
+  H('hornwood', 'Hornwood', 'Hornwood', 721, 938, 'stark', 'north', 'minor', '#c8a86b', S('#e07a24', 'moose', '#5a3a1e'), ''),
+  H('cerwyn', 'Cerwyn', 'Castle Cerwyn', 555, 895, 'stark', 'north', 'minor', '#555', S('#c8ccd2', 'axe', '#141414'), ''),
   H('dustin', 'Dustin', 'Barrowton', 426, 1054, 'stark', 'north', 'minor', '#6b6b4a', S('#222', 'tower', '#c9a44a', 'chief', '#c9a44a'), '', { holdingType: 'town' }),
   H('ryswell', 'Ryswell', 'The Rills', 356, 1087, 'stark', 'north', 'minor', '#8a6b4a', S('#8a6b4a', 'horse', '#c9a44a'), ''),
   H('flint', 'Flint', 'Widow\'s Watch', 921, 1053, 'stark', 'north', 'minor', '#7a7a7a', S('#7a7a7a', 'tower', '#222'), ''),
@@ -62,7 +62,7 @@ export const HOUSES = [
 
   // ───────────── The Iron Islands ─────────────
   H('greyjoy', 'Greyjoy', 'Pyke', 287, 1465, 'baratheon', 'iron_islands', 'paramount', '#3e4f4f',
-    S('#111', 'kraken', '#d4af37'), 'We Do Not Sow', { realmName: 'The Iron Islands', title: 'Lord Reaper of Pyke' }),
+    S('#141414', 'kraken', '#d6ae2e'), 'We Do Not Sow', { realmName: 'The Iron Islands', title: 'Lord Reaper of Pyke' }),
   H('harlaw', 'Harlaw', 'Ten Towers, Harlaw', 347, 1424, 'greyjoy', 'iron_islands', 'major', '#5a6a6a', S('#aaa', 'fish', '#111'), ''),
   H('goodbrother', 'Goodbrother', 'Hammerhorn, Great Wyk', 232, 1434, 'greyjoy', 'iron_islands', 'minor', '#4a4a3a', S('#111', 'horse', '#c9a44a'), ''),
   H('drumm', 'Drumm', 'Old Wyk', 258, 1416, 'greyjoy', 'iron_islands', 'minor', '#6a4a4a', S('#aa3333', 'hand', '#ddd'), ''),
@@ -72,12 +72,12 @@ export const HOUSES = [
 
   // ───────────── The Riverlands ─────────────
   H('tully', 'Tully', 'Riverrun', 506, 1524, 'baratheon', 'riverlands', 'paramount', '#3d62a8',
-    S('#3d62a8', 'trout', '#c0c0c0', 'fess', '#aa2d2d'), 'Family, Duty, Honor', { realmName: 'The Riverlands', title: 'Lord Paramount of the Trident' }),
-  H('frey', 'Frey', 'The Twins', 505, 1335, 'tully', 'riverlands', 'major', '#6f7a8a', S('#8a96a6', 'tower', '#2a3a5a'), ''),
+    S('#2f5da8', 'trout', '#e2e6ea', 'barrywavy', '#a42a2a'), 'Family, Duty, Honor', { realmName: 'The Riverlands', title: 'Lord Paramount of the Trident' }),
+  H('frey', 'Frey', 'The Twins', 505, 1335, 'tully', 'riverlands', 'major', '#6f7a8a', S('#1c2c58', 'twintowers', '#9aa0a8'), ''),
   H('blackwood', 'Blackwood', 'Raventree Hall', 600, 1549, 'tully', 'riverlands', 'major', '#3a2a2a', S('#3a2a2a', 'tree', '#aa2222'), ''),
-  H('bracken', 'Bracken', 'Stone Hedge', 578, 1526, 'tully', 'riverlands', 'major', '#8a3a2a', S('#8a3a2a', 'horse', '#c9a44a'), ''),
-  H('mallister', 'Mallister', 'Seagard', 497, 1380, 'tully', 'riverlands', 'major', '#6a3a6a', S('#6a3a6a', 'bird', '#ddd'), 'Above the Rest'),
-  H('whent', 'Whent', 'Harrenhal', 642, 1566, 'tully', 'riverlands', 'minor', '#3a3a5a', S('#3a3a5a', 'bird', '#c9a44a', 'bordure', '#c9a44a'), ''),
+  H('bracken', 'Bracken', 'Stone Hedge', 578, 1526, 'tully', 'riverlands', 'major', '#8a3a2a', S('#d8ae2e', 'horse', '#a41c1c'), ''),
+  H('mallister', 'Mallister', 'Seagard', 497, 1380, 'tully', 'riverlands', 'major', '#6a3a6a', S('#3a2a6c', 'eagle', '#d8dce2'), 'Above the Rest'),
+  H('whent', 'Whent', 'Harrenhal', 642, 1566, 'tully', 'riverlands', 'minor', '#3a3a5a', S('#e0a030', 'bats', '#141414'), ''),
   H('darry', 'Darry', 'Darry', 660, 1529, 'tully', 'riverlands', 'minor', '#7a5a3a', S('#7a5a3a', 'horse', '#ddd'), ''),
   H('mooton', 'Mooton', 'Maidenpool', 767, 1572, 'tully', 'riverlands', 'minor', '#aa3333', S('#ddd', 'fish', '#aa3333'), '', { holdingType: 'town' }),
   H('piper', 'Piper', 'Pinkmaiden', 494, 1596, 'tully', 'riverlands', 'minor', '#c98a9a', S('#c98a9a', 'hand', '#ddd'), ''),
@@ -88,7 +88,7 @@ export const HOUSES = [
 
   // ───────────── The Vale ─────────────
   H('arryn', 'Arryn', 'The Eyrie', 758, 1421, 'baratheon', 'vale', 'paramount', '#5b8fc7',
-    S('#5b8fc7', 'falcon', '#e8e8e8'), 'As High as Honor', { realmName: 'The Vale of Arryn', title: 'Defender of the Vale' }),
+    S('#7fb2e0', 'moonfalcon', '#ffffff'), 'As High as Honor', { realmName: 'The Vale of Arryn', title: 'Defender of the Vale' }),
   H('royce', 'Royce', 'Runestone', 949, 1413, 'arryn', 'vale', 'major', '#8a6a3a', S('#8a6a3a', 'star', '#222'), 'We Remember'),
   H('royce_gates', 'Royce of the Gates of the Moon', 'Gates of the Moon', 772, 1442, 'arryn', 'vale', 'minor', '#9a7a4a', S('#9a7a4a', 'moon', '#222'), ''),
   H('waxley', 'Waxley', 'Wickenden', 822, 1539, 'arryn', 'vale', 'minor', '#d8c890', S('#d8c890', 'flame', '#8a2a1a'), ''),
@@ -106,7 +106,7 @@ export const HOUSES = [
 
   // ───────────── The Westerlands ─────────────
   H('lannister', 'Lannister', 'Casterly Rock', 263, 1677, 'baratheon', 'westerlands', 'paramount', '#a31c1c',
-    S('#a31c1c', 'lion', '#d4af37'), 'Hear Me Roar!', { realmName: 'The Westerlands', title: 'Warden of the West' }),
+    S('#9c1616', 'lion', '#e6b634'), 'Hear Me Roar!', { realmName: 'The Westerlands', title: 'Warden of the West' }),
   H('lannisport', 'Lannister of Lannisport', 'Lannisport', 280, 1686, 'lannister', 'westerlands', 'minor', '#b53a2a', S('#d4af37', 'lion', '#a31c1c'), '', { holdingType: 'city' }),
   H('marbrand', 'Marbrand', 'Ashemark', 347, 1580, 'lannister', 'westerlands', 'major', '#b85a2a', S('#b85a2a', 'flame', '#ddd'), 'Burning Bright'),
   H('lefford', 'Lefford', 'The Golden Tooth', 405, 1608, 'lannister', 'westerlands', 'major', '#c9a44a', S('#c9a44a', 'tower', '#333'), ''),
@@ -119,16 +119,16 @@ export const HOUSES = [
   H('prester', 'Prester', 'Feastfires', 217, 1695, 'lannister', 'westerlands', 'minor', '#8a8a3a', S('#8a8a3a', 'fish', '#ddd'), ''),
   H('lydden', 'Lydden', 'Deep Den', 428, 1693, 'lannister', 'westerlands', 'minor', '#6a5a3a', S('#6a5a3a', 'bear', '#ddd'), ''),
   H('swyft', 'Swyft', 'Cornfield', 325, 1775, 'lannister', 'westerlands', 'minor', '#c9a44a', S('#2a4a8a', 'bird', '#c9a44a'), ''),
-  H('clegane', 'Clegane', 'Clegane\'s Keep', 348, 1731, 'lannister', 'westerlands', 'minor', '#c9a44a', S('#c9a44a', 'skull', '#111'), ''),
+  H('clegane', 'Clegane', 'Clegane\'s Keep', 348, 1731, 'lannister', 'westerlands', 'minor', '#c9a44a', S('#e8c030', 'dogs', '#141414'), ''),
   H('sarsfield', 'Sarsfield', 'Sarsfield', 341, 1640, 'lannister', 'westerlands', 'minor', '#6a8a6a', S('#6a8a6a', 'star', '#ddd'), ''),
   H('kenning', 'Kenning', 'Kayce', 227, 1674, 'lannister', 'westerlands', 'minor', '#5a5a8a', S('#5a5a8a', 'hand', '#c9a44a'), '', { holdingType: 'town' }),
 
   // ───────────── The Reach ─────────────
   H('tyrell', 'Tyrell', 'Highgarden', 407, 1990, 'baratheon', 'reach', 'paramount', '#4a8a3a',
-    S('#4a8a3a', 'rose', '#d4af37'), 'Growing Strong', { realmName: 'The Reach', title: 'Warden of the South' }),
-  H('hightower', 'Hightower', 'The Hightower, Oldtown', 295, 2135, 'tyrell', 'reach', 'major', '#b0b0b0', S('#ccc', 'tower', '#222', 'plain'), 'We Light the Way', { holdingType: 'city' }),
-  H('redwyne', 'Redwyne', 'The Arbor', 229, 2282, 'tyrell', 'reach', 'major', '#7a1f3a', S('#5a1f3a', 'fish', '#c9a44a'), ''),
-  H('tarly', 'Tarly', 'Horn Hill', 410, 2054, 'tyrell', 'reach', 'major', '#556b2f', S('#556b2f', 'spear', '#ddd'), 'First in Battle'),
+    S('#3d7a2b', 'rose', '#e8c23a'), 'Growing Strong', { realmName: 'The Reach', title: 'Warden of the South' }),
+  H('hightower', 'Hightower', 'The Hightower, Oldtown', 295, 2135, 'tyrell', 'reach', 'major', '#b0b0b0', S('#8a8a88', 'firetower', '#f4f0e6'), 'We Light the Way', { holdingType: 'city' }),
+  H('redwyne', 'Redwyne', 'The Arbor', 229, 2282, 'tyrell', 'reach', 'major', '#7a1f3a', S('#2a4a8a', 'grapes', '#6e1a3c'), ''),
+  H('tarly', 'Tarly', 'Horn Hill', 410, 2054, 'tyrell', 'reach', 'major', '#556b2f', S('#2d6a2a', 'huntsman', '#a41c1c'), 'First in Battle'),
   H('florent', 'Florent', 'Brightwater Keep', 301, 2057, 'tyrell', 'reach', 'major', '#c96a2a', S('#c96a2a', 'flame', '#7a2a6a'), ''),
   H('rowan', 'Rowan', 'Goldengrove', 410, 1857, 'tyrell', 'reach', 'major', '#c9a44a', S('#c9a44a', 'tree', '#333'), ''),
   H('fossoway', 'Fossoway', 'Cider Hall', 492, 1934, 'tyrell', 'reach', 'minor', '#aa3a2a', S('#c9a44a', 'rose', '#aa3a2a'), ''),
@@ -151,7 +151,7 @@ export const HOUSES = [
 
   // ───────────── The Stormlands ─────────────
   H('baratheon_se', 'Baratheon of Storm\'s End', 'Storm\'s End', 863, 1910, 'baratheon', 'stormlands', 'paramount', '#d9a72c',
-    S('#e2b33c', 'stag', '#111'), 'Ours is the Fury', { realmName: 'The Stormlands', title: 'Lord Paramount of the Stormlands' }),
+    S('#e8b923', 'stag', '#141414'), 'Ours is the Fury', { realmName: 'The Stormlands', title: 'Lord Paramount of the Stormlands' }),
   H('tarth', 'Tarth', 'Evenfall Hall, Tarth', 942, 1875, 'baratheon_se', 'stormlands', 'minor', '#d97aa0', S('#d97aa0', 'sun', '#ddd', 'quarterly', '#3a5aaa'), ''),
   H('estermont', 'Estermont', 'Greenstone, Estermont', 942, 2040, 'baratheon_se', 'stormlands', 'minor', '#3a6a3a', S('#3a6a3a', 'bird', '#ddd'), ''),
   H('connington', 'Connington', 'Griffin\'s Roost', 829, 1933, 'baratheon_se', 'stormlands', 'minor', '#aa3a2a', S('#ddd', 'bird', '#aa3a2a', 'pale', '#aa3a2a'), ''),
@@ -171,9 +171,9 @@ export const HOUSES = [
 
   // ───────────── Dorne ─────────────
   H('martell', 'Nymeros Martell', 'Sunspear', 935, 2224, 'baratheon', 'dorne', 'paramount', '#d9822b',
-    S('#d9822b', 'sun', '#aa2222'), 'Unbowed, Unbent, Unbroken', { realmName: 'Dorne', title: 'Prince of Dorne' }),
+    S('#e27622', 'sunspear', '#c8261a'), 'Unbowed, Unbent, Unbroken', { realmName: 'Dorne', title: 'Prince of Dorne' }),
   H('dayne_hh', 'Dayne of High Hermitage', 'High Hermitage', 464, 2164, 'martell', 'dorne', 'minor', '#5a4a8a', S('#5a4a8a', 'star', '#ddd', 'bordure', '#ddd'), ''),
-  H('dayne', 'Dayne', 'Starfall', 435, 2195, 'martell', 'dorne', 'major', '#6a5a9a', S('#6a5a9a', 'star', '#ddd'), ''),
+  H('dayne', 'Dayne', 'Starfall', 435, 2195, 'martell', 'dorne', 'major', '#6a5a9a', S('#8a78b8', 'fallingstar', '#f4f4f4'), ''),
   H('yronwood', 'Yronwood', 'Yronwood', 641, 2148, 'martell', 'dorne', 'major', '#3a3a2a', S('#c9a44a', 'tree', '#222'), ''),
   H('fowler', 'Fowler', 'Skyreach', 538, 2162, 'martell', 'dorne', 'minor', '#3a6aaa', S('#3a6aaa', 'falcon', '#ddd'), 'Let Me Soar'),
   H('manwoody', 'Manwoody', 'Kingsgrave', 545, 2114, 'martell', 'dorne', 'minor', '#222', S('#222', 'skull', '#ddd'), ''),
@@ -202,7 +202,7 @@ export const HOUSES = [
   H('volantis', 'Volantis', 'Volantis', 1658, 2235, null, 'essos', 'city_state', '#3a3a6a', S('#3a3a6a', 'dragon', '#c9a44a'), '', { holdingType: 'city', realmName: 'Volantis', title: 'Triarchs' }),
   H('dothraki', 'Khalasar of Drogo', 'Khal Drogo\'s camp', 1234, 1755, null, 'essos', 'tribe', '#8a6a4a', S('#8a6a4a', 'horse', '#ddd'), '', { holdingType: 'camp', realmName: 'Khalasar of Drogo', title: 'Khal' }),
   H('targaryen', 'Targaryen', null, 1191, 1697, null, 'essos', 'exile', '#8a1a1a',
-    S('#111', 'dragon', '#aa1a1a'), 'Fire and Blood', { landless: true, realmName: 'House Targaryen in exile' }),
+    S('#121212', 'dragon', '#c41e16'), 'Fire and Blood', { landless: true, realmName: 'House Targaryen in exile' }),
   H('golden_company', 'The Golden Company', null, 1362, 2056, null, 'essos', 'company', '#c9a44a',
     S('#c9a44a', 'skull', '#111'), 'Beneath the gold, the bitter steel', { landless: true, realmName: 'The Golden Company' }),
 ];

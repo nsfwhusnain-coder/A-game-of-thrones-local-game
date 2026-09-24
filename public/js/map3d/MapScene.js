@@ -8,6 +8,9 @@ import { PathGrid, pathLength, pointAlong } from './pathfind.js';
 import { makeNoise } from '../map/noise.js';
 
 const GEN_VERSION = 'atlas-v3';
+// Graphics quality (Settings): terrain mesh density, pixel ratio and shadows
+const QUALITY = { high: { seg: 960, dpr: 2, shadows: true }, balanced: { seg: 720, dpr: 1.5, shadows: true }, fast: { seg: 480, dpr: 1, shadows: false } };
+export const gfx = () => { try { return QUALITY[localStorage.getItem('gfx-quality')] || QUALITY.balanced; } catch { return QUALITY.balanced; } };
 const LAND_Y = 55, SEA_Y = 7, WATER_LEVEL = 0.35;
 
 function idb() { return new Promise((res, rej) => { const r = indexedDB.open('westeros-cache', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
@@ -22,10 +25,10 @@ export class MapScene {
     this.mode = 'political'; this.selected = null; this.selectedArmy = null; this.state = null;
     this.target = new THREE.Vector3(520, 0, 1000); this.dist = 900; this.goal = null;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    this.renderer.setPixelRatio(Math.min(gfx().dpr, window.devicePixelRatio || 1));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.05;
-    this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.renderer.shadowMap.enabled = gfx().shadows; this.renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(this.renderer.domElement);
     this.renderer.domElement.className = 'map-canvas';
     this.labelLayer = document.createElement('div'); this.labelLayer.className = 'map-labels'; container.appendChild(this.labelLayer);
@@ -95,7 +98,7 @@ export class MapScene {
   groundAt(x, z) { return Math.max(WATER_LEVEL, this.heightAt(x, z)); }
 
   buildTerrain(data) {
-    const segX = 960, segY = Math.round(segX * WORLD.h / WORLD.w);
+    const segX = gfx().seg, segY = Math.round(segX * WORLD.h / WORLD.w);
     const geo = new THREE.PlaneGeometry(WORLD.w, WORLD.h, segX, segY);
     geo.rotateX(-Math.PI / 2); geo.translate(WORLD.w / 2, 0, WORLD.h / 2);
     const pos = geo.attributes.position;

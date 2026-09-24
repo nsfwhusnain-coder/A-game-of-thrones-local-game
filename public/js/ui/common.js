@@ -102,11 +102,55 @@ function hexToHsl(hex) {
 }
 const THEME_VARS = ['--bg', '--panel', '--panel-solid', '--panel2', '--line', '--line2', '--gold', '--gold2', '--muted', '--red', '--accent'];
 /** Tint the whole interface in a house's colours (Stark steel-blue, Lannister crimson…). Pass null for the default gold. */
+// The colours each great house wears (from the books' heraldry): panels take the house hue,
+// buttons its main colour, highlights its metal.
+const THEMES = {
+  stark: { hue: 212, sat: 30, primary: '#2f5f95', metal: '#c9d6e4' },        // grey direwolf on ice-white: Stark blues and silver
+  baratheon: { hue: 42, sat: 30, primary: '#b8861a', metal: '#f2cc55', onPrimary: '#1a1206' }, // black stag on gold
+  baratheon_se: { hue: 42, sat: 30, primary: '#b8861a', metal: '#f2cc55', onPrimary: '#1a1206' },
+  baratheon_ds: { hue: 20, sat: 34, primary: '#b8861a', metal: '#f2a040', onPrimary: '#1a1206' }, // Stannis: the stag in the fiery heart
+  lannister: { hue: 0, sat: 45, primary: '#a01c1c', metal: '#e8c050' },      // golden lion on crimson
+  tully: { hue: 215, sat: 38, primary: '#2b5aa0', metal: '#e0a0a0', accent: '#a02828' }, // silver trout on blue and red
+  arryn: { hue: 208, sat: 42, primary: '#3f78b8', metal: '#eef4fb' },        // moon-and-falcon, white on sky blue
+  tyrell: { hue: 110, sat: 34, primary: '#3a7a2c', metal: '#e8c848' },       // golden rose on green
+  martell: { hue: 22, sat: 50, primary: '#c24e18', metal: '#f2b040' },       // red sun pierced by a golden spear
+  greyjoy: { hue: 150, sat: 12, primary: '#7a5f1a', metal: '#e6c24a' },      // golden kraken on black
+  targaryen: { hue: 0, sat: 30, primary: '#9a1616', metal: '#e0463a' },      // red three-headed dragon on black
+  nights_watch: { hue: 220, sat: 6, primary: '#3a3d44', metal: '#d0d4dc' },  // black
+  free_folk: { hue: 30, sat: 12, primary: '#5a4a3a', metal: '#d8c8b0' },
+  bolton: { hue: 350, sat: 36, primary: '#8e2436', metal: '#f0a8b4' },       // flayed man, red on pink
+  frey: { hue: 215, sat: 16, primary: '#4c5c74', metal: '#c8d0dc' },        // two grey towers on blue
+  hightower: { hue: 30, sat: 10, primary: '#6a6a6a', metal: '#f4ecd8' },
+  redwyne: { hue: 330, sat: 34, primary: '#7a1e44', metal: '#e8c050' },
+  velaryon: { hue: 190, sat: 36, primary: '#2a6a7a', metal: '#dde8ea' },
+  tarth: { hue: 330, sat: 30, primary: '#b0406a', metal: '#b8d0f0' },
+  mormont: { hue: 110, sat: 22, primary: '#3a5a34', metal: '#d8d8c8' },
+  umber: { hue: 25, sat: 30, primary: '#6a3e22', metal: '#e8d8c0' },
+  manderly: { hue: 175, sat: 34, primary: '#2a7a72', metal: '#e8f0ec' },
+};
 export function applyHouseTheme(house) {
   const root = document.documentElement.style;
   const color = house?.color;
+  const T = house && houseTheming() ? THEMES[house.id] : null;
+  if (T) {
+    const set = (k, v) => root.setProperty(k, v); const { hue: h, sat: s } = T;
+    set('--bg', `hsl(${h} ${Math.round(s * 0.7)}% 5%)`);
+    set('--panel', `hsla(${h} ${Math.round(s * 0.7)}% 8% / 0.95)`);
+    set('--panel-solid', `hsl(${h} ${Math.round(s * 0.7)}% 8%)`);
+    set('--panel2', `hsl(${h} ${Math.round(s * 0.8)}% 13%)`);
+    set('--line', `color-mix(in srgb, ${T.primary} 45%, #1a1a1a)`);
+    set('--line2', `color-mix(in srgb, ${T.primary} 70%, #2a2a2a)`);
+    set('--gold', `color-mix(in srgb, ${T.metal} 85%, ${T.primary})`);
+    set('--gold2', T.metal);
+    set('--muted', `hsl(${h} 12% 68%)`);
+    set('--red', T.primary);
+    set('--on-primary', T.onPrimary || '#fff8ea');
+    set('--accent', T.accent || T.primary);
+    return;
+  }
   const hsl = color && houseTheming() ? hexToHsl(color) : null;
-  if (!hsl) { for (const v of THEME_VARS) root.removeProperty(v); return; }
+  if (!hsl) { for (const v of [...THEME_VARS, '--on-primary']) root.removeProperty(v); return; }
+  root.removeProperty('--on-primary');
   const [h, s0] = hsl; const s = Math.max(28, Math.min(70, s0 < 20 ? s0 + 22 : s0)); // grey houses still get a hue
   const set = (k, v) => root.setProperty(k, v);
   set('--bg', `hsl(${h} ${Math.round(s * 0.35)}% 5%)`);

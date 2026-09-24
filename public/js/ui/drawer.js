@@ -2,6 +2,7 @@
 import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow } from './common.js';
 import { dateStr } from '../shared/world.js';
 import { briefFor } from '../../data/briefs.js';
+import { beats, speak, stopSpeaking, voiceSettings } from './voice.js';
 
 export function setDrawer(tab) { app.drawerTab = tab; renderDrawer(); }
 export function renderDrawer() {
@@ -29,10 +30,27 @@ export function decisionsHtml() {
       <input class="input dec-note" placeholder="Add your own words or conditions (optional)…"></div>`;
   }).join('');
 }
-export function wireDecisions(root) {
+export function wireDecisions(root, { onAllDone } = {}) {
   $$('.dec-opt', root).forEach((b) => b.onclick = async () => {
-    const card = b.closest('.decision'); const note = card.querySelector('.dec-note')?.value || '';
-    try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'decide', decision: b.dataset.decId, option: Number(b.dataset.opt), note } }); app.setState(r.state); toast(r.effects?.length ? `Done. ${r.effects.join(' · ')}` : 'Your answer is given. It will shape what comes next.'); } catch (e) { toast(e.message, true); }
+    const card = b.closest('.decision'); if (card.classList.contains('busy')) return;
+    const note = card.querySelector('.dec-note')?.value || '';
+    card.classList.add('busy'); $$('.dec-opt', card).forEach((x) => { x.disabled = true; x.classList.toggle('chosen', x === b); });
+    try {
+      const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'decide', decision: b.dataset.decId, option: Number(b.dataset.opt), note } });
+      // acknowledge the choice where it was made, then fold the card away
+      const label = b.childNodes[0]?.textContent || b.textContent;
+      const title = card.querySelector('.dec-title')?.textContent || '';
+      card.classList.remove('busy'); card.classList.add('decided');
+      card.innerHTML = `<div class="dec-done"><span class="tick">✓</span><div><div class="dec-title">${esc(title)}</div><div>You chose <b>${esc(label)}</b>.${r.effects?.length ? ` <span class="muted">${esc(r.effects.join(' · '))}</span>` : ' <span class="muted">Your word goes out; the realm will answer.</span>'}</div></div></div>`;
+      toast(`Decided: ${label}`);
+      setTimeout(() => {
+        card.classList.add('folding');
+        setTimeout(() => {
+          app.setState(r.state);
+          if (!$$('.decision:not(.decided)', root).length) onAllDone?.();
+        }, 450);
+      }, 1100);
+    } catch (e) { card.classList.remove('busy'); $$('.dec-opt', card).forEach((x) => { x.disabled = false; x.classList.remove('chosen'); }); toast(e.message, true); }
   });
 }
 function renderFeed(body) {
@@ -99,7 +117,7 @@ function renderAudience(body) {
       app.busy = true;
       const r = await api(`/games/${app.saveId}/talk`, { body: { character: c.id, message: text } });
       app.setState(r.state, { keepDrawer: true });
-      if (app.drawerTab === 'audience') renderAudience(body);
+      if (app.drawerTab === 'audience') { renderAudience(body); const last = [...body.querySelectorAll('.msg.npc')].at(-1); if (last) playScene([last]); }
       if (r.applied?.length) toast(r.applied.map((a) => a.text).join(' · '));
     } catch (e) { toast(e.message, true); $('#typing')?.remove(); }
     finally { app.busy = false; }
@@ -111,8 +129,38 @@ function renderAudience(body) {
 }
 function msgHtml(m, c) {
   const s = app.state; const sp = m.speaker ? s.characters[m.speaker] : c;
-  return `<div class="msg ${m.role}"><div class="who">${m.role === 'player' ? 'You' : `<img src="${por(sp, 40)}">${esc(sp?.name || '')}`} · ${esc(m.date || '')}</div>${esc(m.text)}${m.applied?.length ? `<div class="applied">${m.applied.map(esc).join('<br>')}</div>` : ''}</div>`;
+  if (m.role === 'player') return `<div class="msg player"><div class="who">You · ${esc(m.date || '')}</div>${esc(m.text)}</div>`;
+  // a reply is a small scene: what you see them do, and what they say
+  const bs = beats(m.text);
+  const body = bs.map((b) => (b.kind === 'act' ? `<p class="beat act">${esc(b.text)}</p>` : `<p class="beat say" title="Click to hear it">${esc(b.text)}</p>`)).join('') || esc(m.text);
+  return `<div class="msg npc" data-speaker="${sp?.id || ''}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}<button class="speak-all" title="Hear it">🔊</button></div><div class="beats">${body}</div>${m.applied?.length ? `<div class="applied">${m.applied.map(esc).join('<br>')}</div>` : ''}</div>`;
 }
+// Voices: click a line to hear it, or the speaker icon to hear the whole reply
+export function wireVoices(root) {
+  root.addEventListener('click', async (e) => {
+    const msg = e.target.closest('.msg.npc'); if (!msg) return;
+    const who = app.state.characters[msg.dataset.speaker];
+    if (e.target.closest('.speak-all')) { stopSpeaking(); for (const p of msg.querySelectorAll('.beat.say')) { p.classList.add('speaking'); await speak(p.textContent, who); p.classList.remove('speaking'); } return; }
+    const line = e.target.closest('.beat.say'); if (!line) return;
+    msg.querySelectorAll('.speaking').forEach((x) => x.classList.remove('speaking'));
+    line.classList.add('speaking'); await speak(line.textContent, who); line.classList.remove('speaking');
+  });
+}
+/** Play the newest replies as a scene: each beat appears in turn, and the spoken lines are voiced. */
+export async function playScene(msgs) {
+  const token = (playScene.token = (playScene.token || 0) + 1);
+  const all = msgs.flatMap((m) => [...m.querySelectorAll('.beat')].map((b) => ({ b, m })));
+  all.forEach(({ b }) => b.classList.add('hidden-beat'));
+  const auto = voiceSettings().auto && voiceSettings().engine !== 'off';
+  for (const { b, m } of all) {
+    if (playScene.token !== token) { all.forEach(({ b: x }) => x.classList.remove('hidden-beat')); return; }
+    b.classList.remove('hidden-beat'); b.classList.add('reveal');
+    b.closest('.chat-log')?.scrollTo({ top: 1e9, behavior: 'smooth' });
+    if (b.classList.contains('say') && auto) { b.classList.add('speaking'); await speak(b.textContent, app.state.characters[m.dataset.speaker]); b.classList.remove('speaking'); await wait(250); }
+    else await wait(b.classList.contains('act') ? 700 + Math.min(1600, b.textContent.length * 18) : 400 + Math.min(2500, b.textContent.length * 22));
+  }
+}
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function renderCouncil(body) {
   const s = app.state; const ids = app.council.filter((i) => s.characters[i]);
@@ -131,7 +179,9 @@ function renderCouncil(body) {
     try {
       app.busy = true;
       const r = await api(`/games/${app.saveId}/council`, { body: { members: ids, message: text } });
-      app.setState(r.state, { keepDrawer: true }); if (app.drawerTab === 'audience') renderCouncil(body);
+      const before = (app.state.chats['council:' + [...ids].sort().join(',')] || []).length;
+      app.setState(r.state, { keepDrawer: true });
+      if (app.drawerTab === 'audience') { renderCouncil(body); const fresh = [...body.querySelectorAll('.msg.npc')].slice(-Math.max(1, (r.replies || []).length)); playScene(fresh); }
       if (r.applied?.length) toast(r.applied.map((a) => a.text).join(' · '));
     } catch (e) { toast(e.message, true); $('#typing')?.remove(); } finally { app.busy = false; }
   };

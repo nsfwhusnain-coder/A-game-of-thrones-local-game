@@ -1,4 +1,22 @@
-// Procedural heraldry: draws a house sigil (shield + division + charge) on a canvas.
+// Heraldry: draws a house sigil (shield or banner + division + charge) on a canvas.
+// Charges come from sigil-art.js (book blazons as SVG paths); older procedural charges remain as a fallback.
+import { CHARGE_ART, CHARGE_SCALE } from './sigil-art.js';
+
+const P2D = new Map();
+const path2d = (d) => { let p = P2D.get(d); if (!p) { p = new Path2D(d); P2D.set(d, p); } return p; };
+/** Draw a charge centred at the current origin in a box of half-size 1 (like the old CHARGES). */
+function drawCharge(ctx, name, field, tinct) {
+  const art = CHARGE_ART[name];
+  if (!art || !art.length) { if (CHARGES[name]) { ctx.fillStyle = tinct; ctx.strokeStyle = tinct; CHARGES[name](ctx); } return; }
+  ctx.save(); const k = (CHARGE_SCALE[name] || 1.25) / 50; ctx.scale(k, k); ctx.translate(-50, -50);
+  for (const L of art) {
+    const col = L.t === 'c' ? tinct : L.t === 'f' ? field : L.t === 'k' ? 'rgba(0,0,0,0.55)' : L.t;
+    ctx.globalAlpha = L.o ?? 1;
+    if (L.s) { ctx.strokeStyle = col; ctx.lineWidth = L.s; ctx.lineCap = 'round'; ctx.stroke(path2d(L.d)); }
+    else { ctx.fillStyle = col; ctx.fill(path2d(L.d), 'nonzero'); }
+  }
+  ctx.restore();
+}
 
 function shieldPath(ctx, x, y, s) {
   const w = s * 0.86, h = s;
@@ -161,6 +179,17 @@ const CHARGES = {
   },
 };
 
+// Tully: barry wavy (bands of the second tincture across the field)
+function wavyBars(ctx, L, T, w, h) {
+  const n = 6, bh = h / n;
+  for (let i = 1; i < n; i += 2) {
+    const y0 = T + i * bh; ctx.beginPath(); ctx.moveTo(L, y0);
+    for (let x = 0; x <= w; x += w / 24) ctx.lineTo(L + x, y0 + Math.sin((x / w) * Math.PI * 4) * bh * 0.18);
+    for (let x = w; x >= 0; x -= w / 24) ctx.lineTo(L + x, y0 + bh + Math.sin((x / w) * Math.PI * 4) * bh * 0.18);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
 export function drawSigil(ctx, sigil, x, y, size, opts = {}) {
   if (!sigil) return;
   ctx.save();
@@ -179,16 +208,16 @@ export function drawSigil(ctx, sigil, x, y, size, opts = {}) {
       case 'bend': ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L + w * 0.3, T); ctx.lineTo(L + w, T + h * 0.7); ctx.lineTo(L + w, T + h); ctx.closePath(); ctx.fill(); break;
       case 'chevron': ctx.beginPath(); ctx.moveTo(L, y + h * 0.3); ctx.lineTo(x, y - h * 0.15); ctx.lineTo(L + w, y + h * 0.3); ctx.lineTo(L + w, y + h * 0.5); ctx.lineTo(x, y + h * 0.05); ctx.lineTo(L, y + h * 0.5); ctx.fill(); break;
       case 'bordure': ctx.lineWidth = size * 0.16; shieldPath(ctx, x, y, size); ctx.strokeStyle = sigil.t; ctx.stroke(); break;
+      case 'barrywavy': wavyBars(ctx, L, T, w, h); break;
       default: break;
     }
   }
-  if (sigil.c && CHARGES[sigil.c]) {
+  if (sigil.c && (CHARGES[sigil.c] || CHARGE_ART[sigil.c])) {
     ctx.save();
     ctx.translate(x, y - size * 0.02);
     const k = size * 0.3;
     ctx.scale(k, k);
-    ctx.fillStyle = sigil.cc || '#fff'; ctx.strokeStyle = sigil.cc || '#fff';
-    CHARGES[sigil.c](ctx);
+    drawCharge(ctx, sigil.c, sigil.f || '#777', sigil.cc || '#fff');
     ctx.restore();
   }
   ctx.restore();
@@ -231,6 +260,7 @@ export function drawBanner(ctx, sigil, w, h, opts = {}) {
       case 'bend': ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(w * 0.35, 0); ctx.lineTo(w, h * 0.75); ctx.lineTo(w, h); ctx.closePath(); ctx.fill(); break;
       case 'chevron': ctx.beginPath(); ctx.moveTo(0, h * 0.75); ctx.lineTo(w / 2, h * 0.4); ctx.lineTo(w, h * 0.75); ctx.lineTo(w, h * 0.92); ctx.lineTo(w / 2, h * 0.57); ctx.lineTo(0, h * 0.92); ctx.fill(); break;
       case 'bordure': ctx.lineWidth = w * 0.14; path(); ctx.strokeStyle = sigil.t; ctx.stroke(); break;
+      case 'barrywavy': wavyBars(ctx, 0, 0, w, h); break;
       default: break;
     }
   }
@@ -238,9 +268,9 @@ export function drawBanner(ctx, sigil, w, h, opts = {}) {
   const g = ctx.createLinearGradient(0, 0, w, 0);
   g.addColorStop(0, 'rgba(0,0,0,0.18)'); g.addColorStop(0.35, 'rgba(255,255,255,0.06)'); g.addColorStop(0.7, 'rgba(0,0,0,0.05)'); g.addColorStop(1, 'rgba(0,0,0,0.22)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-  if (sigil.c && CHARGES[sigil.c]) {
+  if (sigil.c && (CHARGES[sigil.c] || CHARGE_ART[sigil.c])) {
     ctx.save(); ctx.translate(w / 2, h * 0.42); const k = Math.min(w, h) * 0.36; ctx.scale(k, k);
-    ctx.fillStyle = sigil.cc || '#fff'; ctx.strokeStyle = sigil.cc || '#fff'; CHARGES[sigil.c](ctx); ctx.restore();
+    drawCharge(ctx, sigil.c, sigil.f || '#777', sigil.cc || '#fff'); ctx.restore();
   }
   ctx.restore();
   path(); ctx.lineWidth = Math.max(1, w * 0.04); ctx.strokeStyle = opts.border || 'rgba(30,20,10,0.9)'; ctx.stroke();

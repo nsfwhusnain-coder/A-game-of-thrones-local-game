@@ -1,7 +1,7 @@
 // A small heraldic icon set (24×24, stroked in the current colour) that replaces emoji everywhere in the UI.
 // Emoji render differently on every system; these are drawn once, in the game's own hand.
 const P = {
-  coin: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><path d="M12 9.5v5M10.5 12h3"/>',
+  coin: '<ellipse cx="12" cy="6.5" rx="7.5" ry="2.8"/><path d="M4.5 6.5v4c0 1.6 3.4 2.9 7.5 2.9s7.5-1.3 7.5-2.9v-4M4.5 10.5v4c0 1.6 3.4 2.9 7.5 2.9s7.5-1.3 7.5-2.9v-4M4.5 14.5v3.2c0 1.6 3.4 2.9 7.5 2.9s7.5-1.3 7.5-2.9v-3.2"/>',
   scales: '<path d="M12 4v15M8 20h8M5 7h14M12 4l-1.2 1.6h2.4z"/><path d="M5 7l-2.6 6.2h5.2zM19 7l-2.6 6.2h5.2z"/><path d="M2.4 13.2a2.6 1.6 0 0 0 5.2 0M16.4 13.2a2.6 1.6 0 0 0 5.2 0"/>',
   swords: '<path d="M4 4l10.5 10.5M20 4L9.5 14.5"/><path d="M12.5 16.5l4-4M7.5 12.5l4 4"/><path d="M15.2 15.2l3.8 3.8M8.8 15.2L5 19"/><circle cx="19.6" cy="19.6" r="0.9"/><circle cx="4.4" cy="19.6" r="0.9"/>',
   shield: '<path d="M12 3l7.5 2.8v5.4c0 5-3.4 8.4-7.5 9.8-4.1-1.4-7.5-4.8-7.5-9.8V5.8z"/><path d="M12 3v18M4.5 10.5h15"/>',
@@ -67,6 +67,9 @@ const P = {
   skull: '<path d="M12 3a7.5 7.5 0 0 0-7.5 7.5c0 2.6 1.3 4.3 3 5.3V19h9v-3.2c1.7-1 3-2.7 3-5.3A7.5 7.5 0 0 0 12 3z"/><circle cx="9" cy="11" r="1.6"/><circle cx="15" cy="11" r="1.6"/><path d="M10 19v2M14 19v2"/>',
   heart: '<path d="M12 20s-8-4.8-8-10.2A4.3 4.3 0 0 1 12 7.5a4.3 4.3 0 0 1 8 2.3C20 15.2 12 20 12 20z"/>',
   diamond: '<path d="M12 3l8 9-8 9-8-9z"/>',
+  speaker: '<path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
+  mute: '<path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/>',
+  music: '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
 };
 
 // Emoji the game has used, and what to draw instead
@@ -76,7 +79,7 @@ export const EMOJI = {
   '✕': 'close', '✖': 'close', '✨': 'sparkle', '＋': 'plus', '📯': 'horn', '🗝': 'key', '🔒': 'lock', '🗣': 'speak', '✉': 'letter', '🔥': 'fire', '⛺': 'tent', '✝': 'cross',
   '⚠': 'warn', '👑': 'crown', '⛏': 'pick', '🐎': 'horse', '🍷': 'wine', '🐟': 'fish', '🐑': 'sheep', '🪵': 'timber', '🦫': 'fur', '🧂': 'salt', '🧵': 'cloth', '🥈': 'silver',
   '🛤': 'road', '⚓': 'anchor', '🗼': 'tower', '🏪': 'market', '🏚': 'granary', '🔨': 'hammer', '🗺': 'map', '📍': 'pin', '💀': 'skull', '❖': 'diamond', '◆': 'diamond', '✔': 'check', '✓': 'check',
-  '▶': 'play', '⟩': 'chevronR', '⟨': 'chevronL', '▲': 'up', '▼': 'down',
+  '🔊': 'speaker', '🔇': 'mute', '🎵': 'music', '▶': 'play', '⟩': 'chevronR', '⟨': 'chevronL', '▲': 'up', '▼': 'down',
 };
 
 export function icon(name, cls = '') {
