@@ -44,7 +44,7 @@ function renderFeed(body) {
       ${t.applied?.length ? `<details class="changes"><summary>${t.applied.length} changes to the world</summary><ul>${t.applied.map((a) => `<li>${esc(a.text)}</li>`).join('')}</ul></details>` : ''}</div>`).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>
       ${(() => { const b = briefFor(s.houses[s.meta.player], s); return `<div class="event imp-4"><div class="et">Your situation</div><div class="eb">${esc(b.situation)}</div><div class="eb" style="margin-top:0.4rem"><b>Aims:</b> ${b.goals.map(esc).join(' · ')}</div></div>`; })()}
-      <div class="event"><div class="et">How to play</div><div class="eb">
+      <details class="event howto"${s.meta.turn === 0 ? ' open' : ''}><summary class="et">How to play</summary><div class="eb">
       • <b>Command</b> your house in plain words in the bar at the bottom — anything a lord could do.<br>
       • <b>Council</b> (🕯) — ask your steward, maester and master-at-arms for counsel and <i>numbers</i>. Their reports update your ledger.<br>
       • <b>Military</b> (⚔) — call the banners; each lord answers (or doesn't) in his own time. March hosts by clicking the map.<br>
@@ -52,7 +52,7 @@ function renderFeed(body) {
       • <b>Diplomacy</b> (🕊) — treat with any house; proposals open an audience.<br>
       • Click any castle, army or person. Speak to anyone — distant lords get a raven.<br>
       • <b>Advance ▶</b> — time passes; the world acts, the map changes.<br>
-      • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></div>`);
+      • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></details>`);
   wireDecisions(body);
   $$('.event[data-where]', body).forEach((el) => el.onclick = () => { const w = el.dataset.where; if (s.holdings[w]) { app.map.flyTo(s.holdings[w].pos); app.map.flash(s.holdings[w].pos); } });
 }

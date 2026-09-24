@@ -1,4 +1,6 @@
 import { HOUSES } from '../data/houses.js';
+import { startIconizer, icon } from './ui/icons.js';
+import { drawTitleMap } from './ui/titlemap.js';
 import { CHARACTERS } from '../data/characters.js';
 import { briefFor } from '../data/briefs.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
@@ -22,6 +24,9 @@ async function initTitle() {
   $('#house-filters').onclick = (e) => { const f = e.target.dataset.f; if (!f) return; app.houseFilter = f; $$('#house-filters button').forEach((b) => b.classList.toggle('active', b.dataset.f === f)); renderHouseGrid(); };
   $('#house-search').oninput = renderHouseGrid;
   renderHouseGrid(); renderSaves(); refreshLLMStatus();
+  $('#house-search').placeholder = `Search ${HOUSES.filter((h) => !h.landless || h.rank === 'exile').length} houses…`;
+  try { drawTitleMap($('#title-map')); } catch (e) { console.warn('title map', e); }
+  if (!app.titleResize) { app.titleResize = true; let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { if (!$('#title-screen').classList.contains('hidden')) drawTitleMap($('#title-map')); }, 250); }); }
 }
 function renderHouseGrid() {
   const q = $('#house-search').value.trim().toLowerCase(); const f = app.houseFilter;
@@ -58,7 +63,7 @@ async function renderSaves() {
     return `<div class="save" data-id="${s.id}">${h ? `<img src="${bannerURL(h.sigil, 40, 60)}">` : ''}<div><div>${esc(s.playerName)}</div><div class="muted" style="font-size:0.8rem">${esc(s.date)} · turn ${s.turn}</div></div><button class="btn small del" data-del="${s.id}">✕</button></div>`;
   }).join('') : '<div class="muted">No saved games yet.</div>';
   $('#save-list').onclick = async (e) => {
-    const del = e.target.dataset.del;
+    const del = e.target.closest('[data-del]')?.dataset.del;
     if (del) { e.stopPropagation(); if (confirm('Delete this save permanently?')) { await api('/games/' + del, { method: 'DELETE' }); renderSaves(); } return; }
     const s = e.target.closest('.save'); if (s) startGame(s.dataset.id);
   };
@@ -122,7 +127,7 @@ function renderTop() {
     ['🛡', 'Men-at-arms', fmt(h.figures.menAtArms.v), 'military', `Standing soldiers in your pay. Household guard: ${fmt(h.figures.guard.v)}`],
     ['⛵', 'Ships', fmt(h.figures.ships.v), 'military', `Your warships. Realm total: ~${fmt(tot.ships)}`],
     ['🌾', 'Food', `${h.figures.food.v} <small>moons</small>`, 'economy', `Months of stores. ${h.figures.food.src} · ${h.figures.food.asOf}`],
-    ['❄', 'Season', season.label, 'economy', s.world?.seasonNote || season.note],
+    [{ summer: '☀', autumn: '🍂', winter: '❄', spring: '🌱' }[s.world?.season || 'summer'] || '❄', 'Season', season.label, 'economy', s.world?.seasonNote || season.note],
   ];
   $('#res-row').innerHTML = items.map(([ic, k, v, win, tip], i) => `<div class="res ${i === 6 ? 'season' : ''}" data-win-open="${win}" title="${esc(tip)}"><span class="ic">${ic}</span><div><div class="k">${k}</div><div class="v">${v}</div></div></div>`).join('');
   $('#date-box').innerHTML = `${esc(dateStr(s.meta.date))}<div class="turn">Turn ${s.meta.turn}</div>`;
@@ -207,7 +212,7 @@ document.addEventListener('click', (e) => {
   const act = t.closest('[data-action]'); if (act) handleAction(act.dataset.action, act);
 });
 $('#drawer-tabs').addEventListener('click', (e) => { const tab = e.target.closest('[data-tab]')?.dataset.tab; if (tab) setDrawer(tab); });
-$('#mapmodes').onclick = (e) => { const m = e.target.dataset.mode; if (!m) return; $$('#mapmodes button').forEach((b) => b.classList.toggle('active', b.dataset.mode === m)); app.map.setMode(m); };
+$('#mapmodes').onclick = (e) => { const b0 = e.target.closest('[data-mode]'); const m = b0?.dataset.mode; if (!m) return; $$('#mapmodes button').forEach((b) => b.classList.toggle('active', b.dataset.mode === m)); app.map.setMode(m); };
 $('#modal').onclick = (e) => { if (e.target.id === 'modal') closeModal(); };
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (!$('#modal').classList.contains('hidden')) return closeModal(); if (app.picking) { app.picking = null; $('#pick-hint').classList.add('hidden'); return; } if (app.sheet) return closeSheet(); if (app.win) return closeWindow(); }
@@ -334,5 +339,7 @@ async function showSettings() {
   $('#cfg-models').onclick = async () => { await api('/config', { body: collect() }); try { const r = await api('/models'); $('#model-list').innerHTML = r.models.map((m) => `<option value="${esc(m)}">`).join(''); $('#cfg-result').textContent = 'Models: ' + r.models.join(', '); } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } };
 }
 
+startIconizer();
+$$('[data-mi]').forEach((b) => b.insertAdjacentHTML('afterbegin', icon(b.dataset.mi)));
 initTitle().catch((e) => toast(e.message, true));
 window.__app = app;

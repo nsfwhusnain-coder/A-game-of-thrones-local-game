@@ -14,7 +14,7 @@
 <body>
   <!-- ═════════ Title screen ═════════ -->
   <section id="title-screen" class="screen">
-    <div class="title-bg"></div>
+    <div class="title-bg"><canvas id="title-map"></canvas></div>
     <div class="title-inner">
       <header class="title-head">
         <h1 class="game-title">Westeros Chronicles</h1>
@@ -25,7 +25,7 @@
           <div id="scenario-list"></div>
           <div class="house-picker-head">
             <h2>Choose your house</h2>
-            <input id="house-search" class="input" placeholder="Search 147 houses…">
+            <input id="house-search" class="input" placeholder="Search houses…">
           </div>
           <div class="house-filters" id="house-filters"></div>
           <div id="house-grid" class="house-grid"></div>
@@ -118,13 +118,13 @@
     </footer>
 
     <div id="mapmodes" class="mapmodes">
-      <button data-mode="political" class="active">Realms</button>
-      <button data-mode="houses">Holders</button>
-      <button data-mode="diplomacy">Diplomacy</button>
-      <button data-mode="economy">Wealth</button>
-      <button data-mode="prosperity">Prosperity</button>
-      <button data-mode="unrest">Unrest</button>
-      <button data-mode="terrain">Terrain</button>
+      <button data-mode="political" class="active" data-mi="crown" title="Realms map">Realms</button>
+      <button data-mode="houses" data-mi="castle" title="Holders map">Holders</button>
+      <button data-mode="diplomacy" data-mi="dove" title="Diplomacy map">Diplomacy</button>
+      <button data-mode="economy" data-mi="coin" title="Wealth map">Wealth</button>
+      <button data-mode="prosperity" data-mi="wheat" title="Prosperity map">Prosperity</button>
+      <button data-mode="unrest" data-mi="fire" title="Unrest map">Unrest</button>
+      <button data-mode="terrain" data-mi="map" title="Terrain map">Terrain</button>
     </div>
     <div id="pick-hint" class="pick-hint hidden"></div>
     <div id="tooltip" class="tooltip hidden"></div>
