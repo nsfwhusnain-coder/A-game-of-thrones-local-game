@@ -471,7 +471,7 @@ export class MapScene {
 
   updateLabels() {
     const w = this.cssW, h = this.cssH; const v = new THREE.Vector3(); const d = this.dist;
-    const placed = [];
+    const placed = []; const armyBoxes = [];
     // realm labels: size scales with realm and zoom, largest first to avoid collisions
     for (const l of this.labels) {
       v.copy(l.pos).project(this.camera);
@@ -491,7 +491,14 @@ export class MapScene {
       else if (c.startsWith('event')) { show = vis && d < 2200; }
       if (!show) { if (l.shown !== false) { l.el.style.display = 'none'; l.shown = false; } continue; }
       if (l.shown !== true) { l.el.style.display = ''; l.shown = true; }
-      const x = (v.x * 0.5 + 0.5) * w, y = (-v.y * 0.5 + 0.5) * h;
+      const x = (v.x * 0.5 + 0.5) * w; let y = (-v.y * 0.5 + 0.5) * h;
+      if (c.startsWith('army')) {
+        // stack army plates that would overlap on screen
+        const bw = (l.el.offsetWidth || 90), bh = (l.el.offsetHeight || 20) + 3;
+        let guard = 0;
+        while (guard++ < 8 && armyBoxes.some((b) => Math.abs(b.x - x) < (b.w + bw) / 2 && Math.abs(b.y - y) < bh)) y -= bh;
+        armyBoxes.push({ x, y, w: bw });
+      }
       l.sx = x; l.sy = y;
       l.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)${scale !== 1 ? ` scale(${scale.toFixed(3)})` : ''}${l.rot ? ` rotate(${l.rot}rad)` : ''}`;
       if (c.startsWith('realm')) {
@@ -653,7 +660,7 @@ export class MapScene {
       const key = Math.round(p[0] / 8) + ',' + Math.round(p[1] / 8);
       const idx = stacks.get(key) || 0; stacks.set(key, idx + 1);
       if (idx) { const ang = idx * 2.1; const r = 5 * rec.group.scale.x; p = [p[0] + Math.cos(ang) * r, p[1] + Math.sin(ang) * r]; }
-      if (rec.stackIdx !== idx) { rec.stackIdx = idx; rec.label.el.style.marginTop = `${-1.4 - idx * 1.6}rem`; }
+
       const y = a.type === 'fleet' ? WATER_LEVEL + Math.sin(time * 1.3 + id.length) * 0.15 : this.groundAt(p[0], p[1]);
       rec.group.position.set(p[0], y, p[1]);
       if (heading !== null) rec.group.rotation.y = -heading + Math.PI / 2;

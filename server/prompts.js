@@ -210,7 +210,11 @@ export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
   "events": [ {"title":"short headline","text":"2-5 sentences","where":PLACE_ID,"importance":1-5,"type":"war|diplomacy|economy|intrigue|court|disaster|rumor|religion|magic","houses":[HOUSE_IDS]} ],
   "changes": [ ...change operations... ]
 }
-Produce 4-10 events (more for longer periods). Include changes for every consequence that should appear on the map or in the numbers. Rumours may be inaccurate; changes must reflect the TRUE state.`,
+Produce 4-10 events (more for longer periods). Include changes for every consequence that should appear on the map or in the numbers. Rumours may be inaccurate; changes must reflect the TRUE state.
+
+A SHORT EXAMPLE of the shape (different world, do not copy its content):
+{"summary":"Rain on the Mander. Lord Tarly's outriders caught raiders at the ford...","events":[{"title":"Raiders at the ford","text":"Three hundred Dornish raiders were caught crossing the Mander at dawn; Lord Tarly hanged their captain.","where":"tarly","importance":3,"type":"war","houses":["tarly","martell"]},{"title":"A petition from Honeyholt","text":"Lord Beesbury begs his liege to forgive his late tribute after the blight.","where":"beesbury","importance":2,"type":"court","houses":["beesbury"]}],"changes":[{"op":"army_update","army":"some_army_id","delta":-40,"morale":80},{"op":"relation","a":"tarly","b":"martell","delta":-10,"reason":"hanged raiders"},{"op":"obligation","house":"beesbury","tribute":"late","reason":"blight"},{"op":"decision","title":"Beesbury's plea","from":"some_char_id","text":"...","options":[{"label":"Forgive the debt","hint":"loyalty up, coin down"},{"label":"Demand payment","hint":"coin now, resentment later"}]}]}
+Only use ids that exist in the tables below. Change only what the story justifies. Never change the player's own allegiance or taxes — those are the player's choices.`,
   ].join('\n\n');
 
   const lore = 'SCENARIO BACKGROUND\n' + sc.lore.map((l) => '- ' + l).join('\n');
