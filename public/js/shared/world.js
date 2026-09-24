@@ -383,7 +383,8 @@ export function resolveSuccessions(state) {
   return out;
 }
 
-function applyOne(state, ch, { date, src }) {
+function applyOne(state, ch, ctx) {
+  const { date, src } = ctx;
   if (!ch || typeof ch !== 'object') throw new Error('not an object');
   const op = String(ch.op || ch.type || '').toLowerCase();
   switch (op) {
@@ -401,9 +402,13 @@ function applyOne(state, ch, { date, src }) {
         if (v === null && d !== null) v = (Number(cur.v) || 0) + d;
         if (v === null) continue;
         v = Math.max(0, Math.round(v));
+        // Physics of the realm: some numbers cannot jump
+        const hh = state.houses[hid]; let capped = '';
+        if (f === 'levies' && hh.levyCap) { const cap = Math.round(hh.levyCap * 1.3); if (v > cap) { v = cap; capped = ' (capped at what the land can bear)'; } }
+        if ((f === 'menAtArms' || f === 'ships' || f === 'guard') && src !== 'Muster rolls') { const cap = Math.round((Number(cur.v) || 0) * 1.5 + ({ ships: 12, menAtArms: 400, guard: 60 }[f])); if (v > cap) { v = cap; capped = ' (capped: such growth takes time)'; } }
         const old = cur.v;
         state.houses[hid].figures[f] = { v, asOf: date, src: ch.source || src, confidence: ch.confidence || 'reported' };
-        out.push(`${state.houses[hid].name} ${FIGURE_LABELS[f]}: ${fmt(old)} → ${fmt(v)}`);
+        out.push(`${state.houses[hid].name} ${FIGURE_LABELS[f]}: ${fmt(old)} → ${fmt(v)}${capped}`);
       }
       return out.length ? { op, text: out.join('; ') } : null;
     }
@@ -522,6 +527,7 @@ function applyOne(state, ch, { date, src }) {
     }
     case 'liege': case 'set_liege': case 'fealty': {
       const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house');
+      if (hid === state.meta.player && ctx.protectPlayer && !ctx.playerChoseAllegiance) throw new Error('only the player decides their own allegiance');
       const lg = ch.liege ? findHouse(state, ch.liege) : null;
       if (ch.liege && !lg) throw new Error('unknown liege');
       if (lg === hid) throw new Error('self liege');
@@ -616,6 +622,7 @@ function applyOne(state, ch, { date, src }) {
     }
     case 'tax': case 'policy': {
       const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house');
+      if (hid === state.meta.player && ctx.protectPlayer) throw new Error('only the player sets their own taxes');
       const lvl = String(ch.level || ch.tax || '').toLowerCase(); if (!TAX_LEVELS[lvl]) throw new Error('bad tax level');
       state.houses[hid].policy = { ...(state.houses[hid].policy || {}), tax: lvl };
       return { op, text: `House ${state.houses[hid].name} sets ${TAX_LEVELS[lvl].label.toLowerCase()} taxes` };

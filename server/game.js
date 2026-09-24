@@ -116,7 +116,9 @@ export async function advance(id, { span = '1m', orders } = {}) {
     }
   }
   state.meta.turn += 1;
-  const { applied, rejected } = applyChanges(state, [...(obj.changes || []), ...naturalDeaths], { source: 'Reports & rumours' });
+  const orderText = state.orders.map((o) => o.text).join(' ');
+  const playerChoseAllegiance = /fealty|swear|kneel|bend the knee|independen|king in the north|secede|declare (my|our)|crown (me|myself)|renounce/i.test(orderText);
+  const { applied, rejected } = applyChanges(state, [...(obj.changes || []), ...naturalDeaths], { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance });
   const deathEvents = naturalDeaths.map((d) => state.characters[d.id]).filter((c) => c && !c.alive).map((c) => ({ title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, type: 'court', houses: [c.house] }));
   // Marching orders the story didn't resolve: the engine walks the host along at marching pace
   for (const a of Object.values(state.armies)) {
@@ -223,7 +225,7 @@ export async function talk(id, charId, message) {
     const cur = Number(f.v) || 0;
     return cur === 0 ? v < 5000 : v / cur < 2.5 && v / cur > 0.4;
   });
-  const { applied, rejected } = applyChanges(state, changes, { source: c.name });
+  const { applied, rejected } = applyChanges(state, changes, { source: c.name, protectPlayer: true });
   const turn = state.meta.turn;
   state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn }, { role: 'npc', text: reply, date: dateStr(state.meta.date), turn, applied: applied.map((a) => a.text) }];
   if (state.chronicle.length) { appendChronicle(id, state.chronicle.map((x) => `- ${x.date}: ${x.text}`).join('\n') + '\n'); state.chronicle = []; }
@@ -369,7 +371,7 @@ export async function council(id, members, message) {
   let replies = [], changes = [];
   try { const o = extractJson(r.text); replies = Array.isArray(o.replies) ? o.replies : []; changes = Array.isArray(o.changes) ? o.changes : []; } catch { replies = [{ speaker: ids[0], text: r.text }]; }
   replies = replies.map((x) => ({ speaker: state.characters[x.speaker] ? x.speaker : ids.find((i) => state.characters[i].name === x.speaker) || ids[0], text: String(x.text || '') })).filter((x) => x.text);
-  const { applied, rejected } = applyChanges(state, changes, { source: 'Council' });
+  const { applied, rejected } = applyChanges(state, changes, { source: 'Council', protectPlayer: true });
   const key = 'council:' + ids.sort().join(',');
   const date = dateStr(state.meta.date), turn = state.meta.turn;
   state.chats[key] = [...(state.chats[key] || []), { role: 'player', text: message, date, turn }, ...replies.map((x) => ({ role: 'npc', speaker: x.speaker, text: x.text, date, turn }))];
