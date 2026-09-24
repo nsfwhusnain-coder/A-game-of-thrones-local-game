@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { chat, extractJson, loadConfig, estimateTokens } from './llm.js';
-import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt } from './prompts.js';
+import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt } from './prompts.js';
 import { createInitialState, applyChanges, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
+import { settle, initEconomy, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 export const SAVES = path.join(ROOT, 'saves');
@@ -28,7 +29,9 @@ export function listSaves() {
 export function loadState(id) {
   const f = path.join(dir(id), 'state.json');
   if (!fs.existsSync(f)) throw httpError(404, 'no such save');
-  return JSON.parse(fs.readFileSync(f, 'utf8'));
+  const st = JSON.parse(fs.readFileSync(f, 'utf8'));
+  if (!st.world) initEconomy(st); // migrate v1 saves
+  return st;
 }
 function saveState(id, state) {
   fs.mkdirSync(dir(id), { recursive: true });
@@ -97,11 +100,16 @@ export async function advance(id, { span = '1m', orders } = {}) {
   state.meta.date = addDays(state.meta.date, spanInfo.days);
   state.meta.turn += 1;
   const { applied, rejected } = applyChanges(state, obj.changes || [], { source: 'Reports & rumours' });
+  // Settle the books for the period (after the story has changed the causes)
+  const econNotes = settle(state, spanInfo.days);
   const events = (Array.isArray(obj.events) ? obj.events : []).map((e) => ({
     title: String(e.title || 'Untitled'), text: String(e.text || e.description || ''), where: resolvePlaceId(e.where || e.location) || null,
     importance: Math.max(1, Math.min(5, Number(e.importance) || 2)), type: String(e.type || 'court'), houses: Array.isArray(e.houses) ? e.houses : [],
   }));
-  const record = { turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw.ms, usage: raw.usage };
+  const p = state.meta.player;
+  const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
+  for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house] });
+  const record = { turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw.ms, usage: raw.usage, ledger: state.houses[p].ledger.at(-1) };
   state.history.push(record);
   state.orders = [];
 
@@ -187,4 +195,67 @@ export function editState(id, patch) {
   const res = applyChanges(state, patch.changes || [], { source: 'Game master' });
   saveState(id, state);
   return { ...res, state };
+}
+
+// Direct actions that take effect immediately in the ledger (and are told to the simulator as orders).
+export function act(id, body) {
+  const state = loadState(id);
+  const p = state.meta.player; const me = state.houses[p];
+  const addOrder = (text) => state.orders.push({ id: crypto.randomBytes(4).toString('hex'), text, auto: true });
+  let result = {};
+  switch (body.kind) {
+    case 'tax': {
+      if (!TAX_LEVELS[body.level]) throw httpError(400, 'bad tax level');
+      applyChanges(state, [{ op: 'tax', house: p, level: body.level }]);
+      addOrder(`Proclaim ${TAX_LEVELS[body.level].label.toLowerCase()} taxes across my lands and on my vassals' dues.`);
+      break;
+    }
+    case 'project': {
+      const t = PROJECT_TEMPLATES.find((x) => x.key === body.template); if (!t) throw httpError(400, 'unknown project');
+      const hold = state.holdings[body.holding] && state.holdings[body.holding].owner === p ? body.holding : me.seat;
+      if ((me.figures.treasury.v || 0) < t.cost * 0.25) throw httpError(400, `The treasury cannot even fund the first stage of ${t.name} (needs ~${Math.round(t.cost * 0.25)} gd up front).`);
+      applyChanges(state, [{ op: 'project', house: p, name: `${t.name} at ${state.holdings[hold].name}`, cost: t.cost, months: t.months, holding: hold, effect: t.effect }]);
+      addOrder(`Fund works: ${t.name} at ${state.holdings[hold].name} (${t.cost} gold dragons over ${t.months} moons).`);
+      break;
+    }
+    case 'cancel_project': {
+      const pr = state.projects.find((x) => x.id === body.project && x.house === p); if (!pr) throw httpError(404, 'no project');
+      pr.status = 'cancelled';
+      break;
+    }
+    case 'call_banners': {
+      const vassals = (body.vassals || []).filter((v) => state.houses[v]?.liege === p);
+      if (!vassals.length) throw httpError(400, 'choose at least one vassal');
+      for (const v of vassals) state.houses[v].obligations = { ...(state.houses[v].obligations || {}), levies: 'called' };
+      const at = state.holdings[body.at] ? state.holdings[body.at].name : state.holdings[me.seat]?.name;
+      addOrder(`CALL THE BANNERS: I summon ${vassals.map((v) => 'House ' + state.houses[v].name).join(', ')} to muster their levies at ${at}${body.deadline ? ' within ' + body.deadline : ''}.${body.note ? ' ' + body.note : ''} Raise my own levies as well${body.ownLevies ? ` (${body.ownLevies} men)` : ''}.`);
+      break;
+    }
+    case 'order': {
+      addOrder(String(body.text || '').slice(0, 2000));
+      break;
+    }
+    default: throw httpError(400, 'unknown action');
+  }
+  saveState(id, state);
+  return { state, ...result };
+}
+
+export async function council(id, members, message) {
+  const cfg = loadConfig();
+  const state = loadState(id);
+  const ids = (members || []).filter((m) => state.characters[m]?.alive);
+  if (!ids.length) throw httpError(400, 'no one to hold council with');
+  const messages = buildCouncilPrompt(state, ids, message, readChronicle(id), cfg);
+  const r = await chat(messages, { json: true, kind: 'council' });
+  logLLM(id, 'council', messages, r.text);
+  let replies = [], changes = [];
+  try { const o = extractJson(r.text); replies = Array.isArray(o.replies) ? o.replies : []; changes = Array.isArray(o.changes) ? o.changes : []; } catch { replies = [{ speaker: ids[0], text: r.text }]; }
+  replies = replies.map((x) => ({ speaker: state.characters[x.speaker] ? x.speaker : ids.find((i) => state.characters[i].name === x.speaker) || ids[0], text: String(x.text || '') })).filter((x) => x.text);
+  const { applied, rejected } = applyChanges(state, changes, { source: 'Council' });
+  const key = 'council:' + ids.sort().join(',');
+  const date = dateStr(state.meta.date), turn = state.meta.turn;
+  state.chats[key] = [...(state.chats[key] || []), { role: 'player', text: message, date, turn }, ...replies.map((x) => ({ role: 'npc', speaker: x.speaker, text: x.text, date, turn }))];
+  saveState(id, state);
+  return { replies, applied, rejected, state, key };
 }

@@ -44,6 +44,8 @@ route('POST', '/api/games/:id/advance', async (req, p) => game.advance(p.id, awa
 route('POST', '/api/games/:id/undo', (req, p) => game.undo(p.id));
 route('POST', '/api/games/:id/talk', async (req, p) => { const b = await readBody(req); return game.talk(p.id, b.character, String(b.message || '').slice(0, 4000)); });
 route('POST', '/api/games/:id/suggest', (req, p) => game.suggest(p.id));
+route('POST', '/api/games/:id/act', async (req, p) => game.act(p.id, await readBody(req)));
+route('POST', '/api/games/:id/council', async (req, p) => { const b = await readBody(req); return game.council(p.id, b.members, String(b.message || '').slice(0, 4000)); });
 route('POST', '/api/games/:id/consolidate', (req, p) => game.consolidateNow(p.id));
 route('POST', '/api/games/:id/ravens/read', (req, p) => ({ ravens: game.markRavensRead(p.id) }));
 route('POST', '/api/games/:id/edit', async (req, p) => game.editState(p.id, await readBody(req)));
@@ -61,9 +63,12 @@ const server = http.createServer(async (req, res) => {
       }
       return send(res, 404, { error: 'not found' });
     }
-    // Static files
-    let file = path.normalize(path.join(PUBLIC, decodeURIComponent(url.pathname)));
-    if (!file.startsWith(PUBLIC)) return send(res, 403, 'forbidden', 'text/plain');
+    // Static files (three.js is served straight from node_modules)
+    let base = PUBLIC, rel = decodeURIComponent(url.pathname);
+    if (rel.startsWith('/vendor/three/')) { base = path.join(ROOT, 'node_modules', 'three'); rel = rel.slice('/vendor/three'.length); }
+    let file = path.normalize(path.join(base, rel));
+    if (!file.startsWith(base)) return send(res, 403, 'forbidden', 'text/plain');
+    if (base !== PUBLIC && !fs.existsSync(file)) return send(res, 500, 'three.js not found — run "npm install" first.', 'text/plain');
     if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
     if (!fs.existsSync(file)) return send(res, 404, 'not found', 'text/plain');
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });

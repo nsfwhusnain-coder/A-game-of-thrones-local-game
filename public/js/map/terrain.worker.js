@@ -4,11 +4,11 @@ import { WORLD, LANDMASSES, ISLANDS, LAKES, LAKE_ISLANDS, MOUNTAINS, BIOMES } fr
 import { makeNoise } from './noise.js';
 
 self.onmessage = (e) => {
-  const { scale = 1, seeds = [], seed = 298 } = e.data;
+  const { scale = 1, seeds = [], seed = 298, shade = 14 } = e.data;
   const t0 = performance.now();
-  const out = generate(scale, seeds, seed, (p, msg) => self.postMessage({ type: 'progress', p, msg }));
+  const out = generate(scale, seeds, seed, (p, msg) => self.postMessage({ type: 'progress', p, msg }), shade);
   out.ms = Math.round(performance.now() - t0);
-  self.postMessage({ type: 'done', ...out }, [out.rgba.buffer, out.province.buffer, out.land.buffer, out.height.buffer]);
+  self.postMessage({ type: 'done', ...out }, [out.rgba.buffer, out.province.buffer, out.land.buffer, out.height.buffer, out.forest.buffer, out.depth.buffer]);
 };
 
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -96,7 +96,7 @@ function segDist(px, py, ax, ay, bx, by) {
   return Math.sqrt(qx * qx + qy * qy);
 }
 
-export function generate(scale, seeds, seed, progress = () => {}) {
+export function generate(scale, seeds, seed, progress = () => {}, shadeK = 14) {
   const W = Math.round(WORLD.w * scale), H = Math.round(WORLD.h * scale), N = W * H;
   const { fbm, ridged, noise } = makeNoise(seed);
   const inv = 1 / scale; // pixel -> world units
@@ -213,6 +213,8 @@ export function generate(scale, seeds, seed, progress = () => {}) {
     high: [168, 160, 150], beach: [200, 186, 146], steppe: [160, 152, 96],
   };
   const rgba = new Uint8ClampedArray(N * 4);
+  const forest = new Uint8Array(N);
+  const depth = new Uint8Array(N);
   const lx = -0.6, ly = -0.8;
   for (let y = 0; y < H; y++) {
     const wy = y * inv;
@@ -224,6 +226,7 @@ export function generate(scale, seeds, seed, progress = () => {}) {
       let col;
       const grain = noise(wx * 0.9, wy * 0.9) * 0.035 + noise(wx * 0.25, wy * 0.25) * 0.03;
       if (!land[i]) {
+        depth[i] = Math.min(255, Math.round(distWater[i] * inv * 4));
         const isLake = limg[i * 4] > 128;
         const d = Math.min(distWater[i] * inv, 60) / 60;
         if (isLake) col = mix3(C.shallow, C.lake, Math.min(1, d * 4));
@@ -272,6 +275,7 @@ export function generate(scale, seeds, seed, progress = () => {}) {
           const tn = noise(wx * 0.8, wy * 0.8), tn2 = noise(wx * 1.9 + 3, wy * 1.9);
           const canopy = 0.78 + 0.28 * tn + 0.14 * tn2;
           col = mix3(col, [fc[0] * canopy, fc[1] * canopy, fc[2] * canopy], t * 0.95);
+          forest[i] = Math.round(t * 255);
         }
         // mountains
         const rockT = smooth(0.2, 0.5, h);
@@ -285,12 +289,12 @@ export function generate(scale, seeds, seed, progress = () => {}) {
         // hillshade
         const hl = height[i - 1] ?? h, hr = height[i + 1] ?? h, hu = height[i - W] ?? h, hd = height[i + W] ?? h;
         const sx = (hl - hr) * scale, sy = (hu - hd) * scale;
-        let shade = 1 + (sx * -lx + sy * -ly) * 14;
+        let shade = 1 + (sx * -lx + sy * -ly) * shadeK;
         shade = Math.max(0.55, Math.min(1.45, shade));
         const g = 1 + grain;
         col = [col[0] * shade * g, col[1] * shade * g, col[2] * shade * g];
         // dark coastline edge
-        if (dl < 1.3) col = [col[0] * 0.62, col[1] * 0.62, col[2] * 0.66];
+        if (dl < 1.3 && shadeK > 8) col = [col[0] * 0.62, col[1] * 0.62, col[2] * 0.66];
       }
       const o = i * 4;
       rgba[o] = col[0]; rgba[o + 1] = col[1]; rgba[o + 2] = col[2]; rgba[o + 3] = 255;
@@ -349,5 +353,5 @@ export function generate(scale, seeds, seed, progress = () => {}) {
   }
 
   progress(1, 'Done');
-  return { W, H, scale, rgba, province, land, height: new Float32Array(height) };
+  return { W, H, scale, rgba, province, land, height: new Float32Array(height), forest, depth };
 }

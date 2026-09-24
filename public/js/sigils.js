@@ -211,3 +211,61 @@ export function sigilURL(sigil, size = 48) {
   cache.set(key, url);
   return url;
 }
+
+/** Draw a hanging swallow-tailed banner filling (w × h) with the house arms. */
+export function drawBanner(ctx, sigil, w, h, opts = {}) {
+  if (!sigil) return;
+  ctx.save();
+  const path = () => {
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(w, 0); ctx.lineTo(w, h); ctx.lineTo(w / 2, h * 0.84); ctx.lineTo(0, h); ctx.closePath();
+  };
+  path(); ctx.fillStyle = sigil.f || '#777'; ctx.fill();
+  ctx.save(); path(); ctx.clip();
+  if (sigil.t && sigil.d && sigil.d !== 'plain') {
+    ctx.fillStyle = sigil.t;
+    switch (sigil.d) {
+      case 'pale': ctx.fillRect(w / 2, 0, w / 2, h); break;
+      case 'fess': ctx.fillRect(0, h / 2, w, h / 2); break;
+      case 'chief': ctx.fillRect(0, 0, w, h * 0.22); break;
+      case 'quarterly': ctx.fillRect(w / 2, 0, w / 2, h / 2); ctx.fillRect(0, h / 2, w / 2, h / 2); break;
+      case 'bend': ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(w * 0.35, 0); ctx.lineTo(w, h * 0.75); ctx.lineTo(w, h); ctx.closePath(); ctx.fill(); break;
+      case 'chevron': ctx.beginPath(); ctx.moveTo(0, h * 0.75); ctx.lineTo(w / 2, h * 0.4); ctx.lineTo(w, h * 0.75); ctx.lineTo(w, h * 0.92); ctx.lineTo(w / 2, h * 0.57); ctx.lineTo(0, h * 0.92); ctx.fill(); break;
+      case 'bordure': ctx.lineWidth = w * 0.14; path(); ctx.strokeStyle = sigil.t; ctx.stroke(); break;
+      default: break;
+    }
+  }
+  // subtle cloth shading
+  const g = ctx.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0, 'rgba(0,0,0,0.18)'); g.addColorStop(0.35, 'rgba(255,255,255,0.06)'); g.addColorStop(0.7, 'rgba(0,0,0,0.05)'); g.addColorStop(1, 'rgba(0,0,0,0.22)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  if (sigil.c && CHARGES[sigil.c]) {
+    ctx.save(); ctx.translate(w / 2, h * 0.42); const k = Math.min(w, h) * 0.36; ctx.scale(k, k);
+    ctx.fillStyle = sigil.cc || '#fff'; ctx.strokeStyle = sigil.cc || '#fff'; CHARGES[sigil.c](ctx); ctx.restore();
+  }
+  ctx.restore();
+  path(); ctx.lineWidth = Math.max(1, w * 0.04); ctx.strokeStyle = opts.border || 'rgba(30,20,10,0.9)'; ctx.stroke();
+  ctx.restore();
+}
+
+const bannerCache = new Map();
+export function bannerURL(sigil, w = 60, h = 90) {
+  const key = JSON.stringify(sigil) + w + 'x' + h;
+  if (bannerCache.has(key)) return bannerCache.get(key);
+  const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2;
+  const ctx = c.getContext('2d'); ctx.scale(2, 2); drawBanner(ctx, sigil, w, h);
+  const url = c.toDataURL(); bannerCache.set(key, url); return url;
+}
+
+// Real sigil artwork (downloaded locally by `npm run fetch-sigils`) takes precedence when present.
+export const SIGIL_ART = new Map();
+export async function loadSigilArt() {
+  try {
+    const res = await fetch('/assets/sigils/index.json', { cache: 'no-cache' });
+    if (!res.ok) return;
+    const idx = await res.json();
+    for (const [id, file] of Object.entries(idx)) SIGIL_ART.set(id, '/assets/sigils/' + file);
+  } catch { /* no art installed */ }
+}
+export function sigilSrc(house, size = 48) {
+  return (house && SIGIL_ART.get(house.id)) || sigilURL(house?.sigil, size);
+}

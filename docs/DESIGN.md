@@ -32,8 +32,11 @@ The model returns `{summary, events[], changes[]}`. `applyChanges()` in `public/
 
 ## Roadmap
 
-- [ ] Land-and-sea pathfinding for army movement (roads, rivers, mountain passes); fleets that follow sea lanes.
-- [ ] Group audiences / small council meetings (multiple speakers, "next speaker" selection like Pax).
+- [x] Land-and-sea pathfinding for army movement; fleets follow sea lanes.
+- [x] Council meetings with multiple speakers.
+- [x] 3D map with procedural settlements, landmarks, forests, relief and water.
+- [x] Ledger engine (vassal tribute, taxes, upkeep, food, projects, seasons).
+- [x] Characters: skills, portraits, family trees.
 - [ ] Streaming responses so the turn narrative appears as it is written.
 - [ ] More scenarios: Robert's Rebellion (282 AC), Dance of the Dragons (129 AC), Aegon's Conquest, and a "Sandbox" start.
 - [ ] More houses and characters (every sworn house in the Wiki of Ice and Fire), minor towns and ports.

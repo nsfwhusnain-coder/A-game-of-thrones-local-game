@@ -2,7 +2,9 @@
 import { HOUSES, EXTRA_HOLDINGS, PLACE_ALIASES } from '../../data/houses.js';
 import { CHARACTERS } from '../../data/characters.js';
 import { SCENARIOS } from '../../data/scenarios.js';
-import { JUNCTIONS } from '../../data/geography.js';
+import { JUNCTIONS, LANDMASSES, ISLANDS } from '../../data/geography.js';
+import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.js';
+import { initEconomy, TAX_LEVELS } from './economy.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -45,11 +47,26 @@ export function buildHoldings() {
     };
   }
   holdings.baratheon.name = 'King\'s Landing';
+  for (const h of Object.values(holdings)) h.coastal = isCoastal(h.pos);
   for (const [id, name, x, y, owner, type] of EXTRA_HOLDINGS) {
     const region = HOUSES.find((h) => h.id === owner)?.region || 'unknown';
     holdings[id] = { id, name, fullName: name, pos: [x, y], owner, seatOf: null, region, type, prosperity: 50, unrest: 10, garrison: null, status: 'normal', notes: [] };
   }
   return holdings;
+}
+
+function segD(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2));
+  return Math.hypot(ax + t * dx - px, ay + t * dy - py);
+}
+export function isCoastal([x, y]) {
+  for (const lm of LANDMASSES) for (let i = 0; i < lm.points.length; i++) {
+    const a = lm.points[i], b = lm.points[(i + 1) % lm.points.length];
+    if (segD(x, y, a[0], a[1], b[0], b[1]) < 26) return true;
+  }
+  for (const [ix, iy, rx, ry] of ISLANDS) if (Math.hypot(x - ix, y - iy) < Math.max(rx, ry) + 22) return true;
+  return false;
 }
 
 export function createInitialState(scenarioId, playerHouse) {
@@ -71,9 +88,16 @@ export function createInitialState(scenarioId, playerHouse) {
     };
   }
   const characters = {};
-  for (const c of CHARACTERS) {
-    characters[c.id] = { ...c, loc: resolvePlaceId(c.loc) || c.loc, status: 'free', opinion: 0, memories: [] };
+  for (const c of [...CHARACTERS, ...ANCESTORS]) {
+    characters[c.id] = { ...c, loc: c.loc ? (resolvePlaceId(c.loc) || c.loc) : null, status: c.alive === false ? 'dead' : 'free', opinion: 0, loyalty: 60, memories: [] };
+    characters[c.id].skills = deriveSkills(c);
+    if (!characters[c.id].born && c.age != null) characters[c.id].born = sc.date.year - c.age;
   }
+  for (const [child, [f, m]] of Object.entries(PARENTS)) {
+    if (!characters[child]) continue;
+    characters[child].father = characters[f] ? f : null; characters[child].mother = characters[m] ? m : null;
+  }
+  for (const [a, b] of SPOUSES) if (characters[a] && characters[b]) { characters[a].spouse = b; characters[b].spouse = a; }
   // Lords: first character with role lord/lady/ruler of a house
   for (const h of Object.values(houses)) {
     const lord = CHARACTERS.find((c) => c.house === h.id && (c.roles.includes('lord') || c.roles.includes('ruler') || c.roles.includes('lady')) && !(c.id === 'catelyn_stark' || c.id === 'cersei_lannister'));
@@ -92,8 +116,8 @@ export function createInitialState(scenarioId, playerHouse) {
   const relations = {};
   for (const [a, b, v] of sc.relations) relations[relKey(a, b)] = { v, note: '' };
 
-  return {
-    version: 1,
+  const state = {
+    version: 2,
     meta: {
       scenario: sc.id, scenarioName: sc.name, player: playerHouse, date: { ...sc.date }, turn: 0,
       created: new Date().toISOString(),
@@ -107,6 +131,16 @@ export function createInitialState(scenarioId, playerHouse) {
     chronicle: [],    // consolidated long-term memory entries {date, text}
     consolidatedThrough: 0,
   };
+  initEconomy(state);
+  return state;
+}
+
+export function childrenOf(state, id) {
+  return Object.values(state.characters).filter((c) => c.father === id || c.mother === id).sort((a, b) => (a.born || 0) - (b.born || 0));
+}
+export function siblingsOf(state, id) {
+  const c = state.characters[id]; if (!c) return [];
+  return Object.values(state.characters).filter((x) => x.id !== id && ((c.father && x.father === c.father) || (c.mother && x.mother === c.mother)));
 }
 
 export const relKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -344,6 +378,10 @@ function applyOne(state, ch, { date, src }) {
       if (ch.owner) { const o = findHouse(state, ch.owner); if (!o) throw new Error('unknown owner'); if (o !== h.owner) { out.push(`passes from ${state.houses[h.owner]?.name} to ${state.houses[o].name}`); h.owner = o; } }
       for (const k of ['unrest', 'prosperity']) if (num(ch[k]) !== null) { h[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${h[k]}`); }
       if (num(ch.garrison) !== null) { h.garrison = Math.max(0, Math.round(num(ch.garrison))); out.push(`garrison ~${fmt(h.garrison)}`); }
+      if (num(ch.population) !== null) { h.population = Math.max(0, Math.round(num(ch.population))); out.push(`population ~${fmt(h.population)}`); }
+      if (num(ch.fort) !== null) { h.fort = Math.max(0, Math.min(6, num(ch.fort))); out.push(`fortifications ${h.fort}`); }
+      if (ch.building) { h.buildings = [...new Set([...(h.buildings || []), String(ch.building)])]; out.push('builds ' + ch.building); }
+      if (ch.resource && typeof ch.resource === 'object') { const t = String(ch.resource.type); h.resources[t] = Math.max(0, (h.resources[t] || 0) + (num(ch.resource.delta) ?? 0)); out.push(`${t} ${num(ch.resource.delta) > 0 ? 'up' : 'down'}`); }
       if (ch.status) { h.status = ch.status; out.push(ch.status); }
       if (ch.note) { h.notes.push(`${date}: ${ch.note}`); h.notes = h.notes.slice(-8); }
       return { op, text: `${h.name}: ${out.join(', ') || 'updated'}` };
@@ -362,6 +400,7 @@ function applyOne(state, ch, { date, src }) {
       }
       if (ch.note || ch.memory) { c.memories = [...(c.memories || []), `${date}: ${ch.note || ch.memory}`].slice(-12); }
       if (ch.traits) c.traits = ch.traits;
+      if (ch.spouse) { const sp = findChar(state, ch.spouse); if (sp) { c.spouse = sp; state.characters[sp].spouse = c.id; out.push('wed to ' + state.characters[sp].name); } }
       return { op, text: `${c.name} ${out.join(', ') || 'updated'}` };
     }
     case 'character_new': case 'new_character': {
@@ -370,8 +409,10 @@ function applyOne(state, ch, { date, src }) {
       if (state.characters[id]) return applyOne(state, { ...ch, op: 'character', id }, { date, src });
       state.characters[id] = {
         id, name: ch.name || id, house, title: ch.title || '', age: num(ch.age) ?? 30, loc: resolvePlaceId(ch.loc || ch.location) || ch.loc || state.houses[house].seat,
-        roles: Array.isArray(ch.roles) ? ch.roles : [ch.role || 'family'].filter(Boolean), traits: ch.traits || '', bio: ch.bio || '', alive: true, status: 'free', opinion: num(ch.opinion) ?? 0, memories: [], generated: true,
+        roles: Array.isArray(ch.roles) ? ch.roles : [ch.role || 'family'].filter(Boolean), traits: ch.traits || '', bio: ch.bio || '', alive: true, status: 'free', opinion: num(ch.opinion) ?? 0, loyalty: 60, memories: [], generated: true,
+        father: findChar(state, ch.father), mother: findChar(state, ch.mother), born: state.meta.date.year - (num(ch.age) ?? 30),
       };
+      state.characters[id].skills = deriveSkills(state.characters[id]);
       return { op, text: `${state.characters[id].name} (${state.houses[house].name}) enters the story` };
     }
     case 'liege': case 'set_liege': case 'fealty': {
@@ -392,6 +433,7 @@ function applyOne(state, ch, { date, src }) {
       if (ch.realmName) { h.realmName = ch.realmName; out.push('realm ' + ch.realmName); }
       if (ch.status) { h.status = ch.status; out.push(ch.status); }
       if (ch.independent !== undefined) h.independent = !!ch.independent;
+      if (ch.tribute || ch.levies) { h.obligations = { ...(h.obligations || {}), ...(ch.tribute ? { tribute: ch.tribute } : {}), ...(ch.levies ? { levies: ch.levies } : {}) }; out.push(`obligations ${ch.tribute || ''} ${ch.levies || ''}`); }
       if (ch.note) h.notes = [...h.notes, `${date}: ${ch.note}`].slice(-10);
       return { op, text: `${h.name}: ${out.join(', ') || 'updated'}` };
     }
@@ -450,6 +492,52 @@ function applyOne(state, ch, { date, src }) {
     case 'chronicle': case 'memory': {
       state.chronicle.push({ date, text: String(ch.text || '') });
       return { op, text: 'Recorded in the chronicle' };
+    }
+    case 'obligation': case 'vassal': {
+      const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house');
+      const h = state.houses[hid]; h.obligations = h.obligations || {}; const out = [];
+      if (ch.tribute) { h.obligations.tribute = String(ch.tribute); out.push('tribute: ' + ch.tribute); }
+      if (ch.levies) { h.obligations.levies = String(ch.levies); out.push('levies: ' + ch.levies); }
+      if (!out.length) throw new Error('nothing to change');
+      return { op, text: `House ${h.name} — ${out.join(', ')}${ch.reason ? ' (' + ch.reason + ')' : ''}` };
+    }
+    case 'tax': case 'policy': {
+      const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house');
+      const lvl = String(ch.level || ch.tax || '').toLowerCase(); if (!TAX_LEVELS[lvl]) throw new Error('bad tax level');
+      state.houses[hid].policy = { ...(state.houses[hid].policy || {}), tax: lvl };
+      return { op, text: `House ${state.houses[hid].name} sets ${TAX_LEVELS[lvl].label.toLowerCase()} taxes` };
+    }
+    case 'project': {
+      const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house');
+      state.projects = state.projects || [];
+      const status = String(ch.status || 'start').toLowerCase();
+      if (status === 'cancel' || status === 'cancelled' || status === 'complete') {
+        const p = state.projects.find((x) => x.house === hid && (x.id === ch.id || slug(x.name) === slug(ch.name || '')) && x.status === 'active');
+        if (!p) throw new Error('no such project');
+        p.status = status === 'complete' ? 'active' : 'cancelled'; if (status === 'complete') p.monthsLeft = 0;
+        return { op, text: `${p.name}: ${status}` };
+      }
+      const cost = Math.max(0, num(ch.cost) ?? 1000), months = Math.max(0.25, num(ch.months) ?? 3);
+      const hold = resolvePlaceId(ch.holding || ch.at) || state.houses[hid].seat;
+      const p = { id: slug(ch.id || ch.name || 'project') + '_' + Math.random().toString(36).slice(2, 6), house: hid, name: ch.name || 'Works', holding: hold, cost, remaining: cost, perMonth: cost / months, months, monthsLeft: months, effect: ch.effect || {}, status: 'active', started: date };
+      state.projects.push(p);
+      return { op, text: `House ${state.houses[hid].name} begins: ${p.name} (${fmt(cost)} gd over ${months} moons)` };
+    }
+    case 'season': {
+      const sname = String(ch.season || '').toLowerCase();
+      if (!['summer', 'autumn', 'winter', 'spring'].includes(sname)) throw new Error('bad season');
+      state.world = { ...(state.world || {}), season: sname, seasonNote: ch.note || '' };
+      return { op, text: `The season turns: ${sname.toUpperCase()}${ch.note ? ' — ' + ch.note : ''}` };
+    }
+    case 'marriage_characters': case 'wed': {
+      const a = findChar(state, ch.a), b = findChar(state, ch.b); if (!a || !b) throw new Error('unknown characters');
+      state.characters[a].spouse = b; state.characters[b].spouse = a;
+      return { op, text: `${state.characters[a].name} weds ${state.characters[b].name}` };
+    }
+    case 'betroth': {
+      const a = findChar(state, ch.a), b = findChar(state, ch.b); if (!a || !b) throw new Error('unknown characters');
+      state.characters[a].betrothed = b; state.characters[b].betrothed = a;
+      return { op, text: `${state.characters[a].name} is betrothed to ${state.characters[b].name}` };
     }
     default:
       throw new Error('unknown op ' + op);

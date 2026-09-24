@@ -4,3 +4,4 @@ saves/*
 config.json
 .DS_Store
 *.log
+public/assets/sigils/

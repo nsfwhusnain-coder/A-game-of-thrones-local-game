@@ -5,6 +5,7 @@ import {
   dateStr, getRelation, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS,
 } from '../public/js/shared/world.js';
 import { estimateTokens } from './llm.js';
+import { project, SEASONS } from '../public/js/shared/economy.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
@@ -25,12 +26,19 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
 - {"op":"pact","type":"alliance|trade|embargo|marriage|truce|non_aggression|loan|vassalage","a":HOUSE,"b":HOUSE,"terms":"...","status":"active|pending|ended|broken"}
 - {"op":"battle","name":"...","at":PLACE,"attacker":HOUSE,"defender":HOUSE,"victor":HOUSE,"losses":{"HOUSE":N},"summary":"..."}
 - {"op":"raven","from":CHAR_ID,"text":"a letter written in-character to the player"}
+- {"op":"obligation","house":VASSAL_HOUSE,"tribute":"paying|late|withholding","levies":"not_called|called|answered|delayed|refused","reason":"..."}
+    (how a vassal answers its liege: THIS is how a lord refuses the banners or stops paying — the ledger engine then excludes their gold/men)
+- {"op":"tax","house":HOUSE,"level":"low|normal|high|crushing"}
+- {"op":"project","house":HOUSE,"name":"...","cost":N,"months":N,"holding":PLACE,"effect":{"figures":{"ships":20},"prosperity":5,"fort":1,"building":"...","unrest":-10}}  / {"op":"project","house":HOUSE,"name":"...","status":"cancel"}
+- {"op":"season","season":"summer|autumn|winter|spring","note":"white ravens from the Citadel..."}
+- {"op":"wed","a":CHAR_ID,"b":CHAR_ID}  /  {"op":"betroth","a":CHAR_ID,"b":CHAR_ID}
+- {"op":"holding",...also "population":N,"fort":0-6,"building":"...","resource":{"type":"grain|gold|trade|...","delta":±0.5}}
 - {"op":"chronicle","text":"one line recording a truly significant, lasting fact (deaths of great lords, wars, crowns, betrayals)"}`;
 
 const RULES = `SIMULATION RULES
 1. You are the living world of A Song of Ice and Fire (books + show lore). Stay true to characters' personalities, motives, secrets and the political realities of Westeros and Essos. Other houses act on THEIR OWN interests, not the player's.
 2. The player controls only their own house. Their orders are INTENTIONS, not guaranteed outcomes. Resolve them plausibly: travel takes time (a host marches ~15-25 miles/day; the realm is ~3,000 miles long; a raven flies Winterfell→King's Landing in days), gold must exist to be spent, lords may refuse, delay, bargain or betray. Failure and partial success are common. Consequences ripple.
-3. Numbers are NOT fixed rules. Every figure (treasury, levies, men-at-arms, food, army sizes) is an estimate owned by you. Change them when the story demands: harvests, taxes, tolls, trade, bribes, desertion, disease, casualties, sellswords joining, lords sending or withholding men. Keep them internally consistent (raising 8,000 men lowers levies by ~8,000; feeding a host drains food and gold; a battle kills men on both sides).
+3. THE LEDGER ENGINE settles routine money and food AFTER your turn: rents and yields of each holding (driven by population, prosperity, unrest, season, sieges), vassal tribute (per each vassal's obligation status), tax policy, upkeep of armies/fleets/men-at-arms, court costs, interest and projects, with luck. So DO NOT add routine income or upkeep yourself. Instead change the CAUSES: set obligation statuses when lords refuse banners or dues, change holding prosperity/unrest/status for raids, sieges, good harvests, trade booms; start projects; change the season when the Citadel declares it. Use "figure" deltas only for extraordinary one-off sums (ransoms, plunder, bribes, loans, gifts, sellsword contracts) and for men (levies raised, men-at-arms lost). Keep numbers consistent: raising 8,000 men lowers levies ~8,000; a battle kills men on both sides.
 4. The world moves even if the player does nothing: canon events may unfold (with variation as the story diverges), NPC houses scheme, marry, feud, trade and go to war. Show at least one development that does not involve the player.
 5. Use exact ids from the tables for houses, characters, armies and places. You may create new characters (captains, envoys, bastards, maesters) and new armies.
 6. Respect what the player learned through diplomacy chats: agreements made there should be honored or broken in character.
@@ -52,6 +60,7 @@ function figuresLine(h) {
 function charLine(state, c) {
   const loc = placeName(state, c.loc);
   const bits = [c.id, c.name, c.house, c.title || c.roles?.join('/'), `age ${c.age}`, `at ${loc}`];
+  if (c.spouse) bits.push('spouse:' + c.spouse);
   if (!c.alive) bits.push('DEAD');
   else if (c.status && c.status !== 'free') bits.push(c.status.toUpperCase());
   return bits.join(' | ');
@@ -70,10 +79,14 @@ export function playerSheet(state) {
   const lord = h.lord ? state.characters[h.lord] : null;
   lines.push(`Head of house (the player acts as them): ${lord ? `${lord.name} (${lord.id})` : 'unknown'}.`);
   lines.push(`Known figures (as last reported): ${figuresLine(h)}`);
+  const pr = project(state, p);
+  if (pr) lines.push(`Steward's projection per moon: income ~${fmt(pr.income)} (own lands ${fmt(pr.own)}, tribute ${fmt(pr.tribute)}), expenses ~${fmt(pr.expenses)} (hosts ${fmt(pr.upkeep)}, household ${fmt(pr.household)}, court ${fmt(pr.court)}, interest ${fmt(pr.interest)}, projects ${fmt(pr.projects)}, owed to liege ${fmt(pr.owed)}) → net ${fmt(pr.low)} to ${fmt(pr.high)}. Tax policy: ${h.policy?.tax || 'normal'}.`);
+  const projs = (state.projects || []).filter((x) => x.house === p && x.status === 'active');
+  if (projs.length) lines.push('Works under way: ' + projs.map((x) => `${x.name} (${Math.round(x.monthsLeft * 10) / 10} moons left)`).join('; '));
   const vas = vassalsOf(state, p);
   if (vas.length) {
     lines.push('Sworn vassals:');
-    for (const v of vas) lines.push(`  ${houseLine(state, state.houses[v], p)} | ${figuresLine(state.houses[v])}`);
+    for (const v of vas) { const vh = state.houses[v]; const lordC = vh.lord ? state.characters[vh.lord] : null; lines.push(`  ${houseLine(state, vh, p)} | tribute:${vh.obligations?.tribute} levies:${vh.obligations?.levies} | lord loyalty ${lordC?.loyalty ?? '?'} | ${figuresLine(vh)}`); }
     const t = realmTotals(state, p);
     lines.push(`Realm totals (house + vassals): levies ${fmt(t.levies)}, men-at-arms ${fmt(t.menAtArms)}, ships ${fmt(t.ships)}, treasury ${fmt(t.treasury)}`);
   }
@@ -87,6 +100,8 @@ export function playerSheet(state) {
 export function worldDigest(state, budgetTokens) {
   const p = state.meta.player;
   const parts = [];
+  const season = SEASONS[state.world?.season || 'summer'];
+  parts.push(`SEASON: ${season.label}. ${state.world?.seasonNote || season.note}`);
   // Realms
   const tops = Object.values(state.houses).filter((h) => !h.liege || h.rank === 'paramount' || h.rank === 'crown' || h.independent);
   const realmLines = tops.map((h) => {
@@ -108,7 +123,7 @@ export function worldDigest(state, budgetTokens) {
 
   // Houses & characters: include everything if budget allows, else the most relevant
   const allHouses = Object.values(state.houses);
-  const allChars = Object.values(state.characters);
+  const allChars = Object.values(state.characters).filter((c) => c.alive || (c.died && c.died >= state.meta.date.year - 1) || !c.died);
   let houseLines = allHouses.map((h) => houseLine(state, h, p));
   let charLines = allChars.map((c) => charLine(state, c));
   const sizeNow = estimateTokens(parts.join('\n') + houseLines.join('\n') + charLines.join('\n'));
@@ -146,7 +161,8 @@ function diplomacySinceLastTurn(state) {
     const recent = log.filter((m) => m.turn === state.meta.turn).slice(-12);
     if (!recent.length) continue;
     const c = state.characters[cid];
-    blocks.push(`Conversation with ${c?.name || cid} (${c?.house}):\n` + recent.map((m) => `${m.role === 'player' ? 'PLAYER' : c?.name}: ${m.text}`).join('\n'));
+    const title = cid.startsWith('council:') ? 'Council meeting' : `Conversation with ${c?.name || cid} (${c?.house})`;
+    blocks.push(`${title}:\n` + recent.map((m) => `${m.role === 'player' ? 'PLAYER' : (state.characters[m.speaker]?.name || c?.name || 'NPC')}: ${m.text}`).join('\n'));
   }
   return blocks.length ? 'DIPLOMACY & CONVERSATIONS SINCE THE LAST TURN (these happened; honour their consequences)\n' + blocks.join('\n\n') : '';
 }
@@ -248,4 +264,24 @@ export function buildConsolidatePrompt(state, turns, chronicleMd) {
     'TURNS TO CONSOLIDATE:\n' + turns.map((t) => `== Turn ${t.turn} (${t.dateFrom} → ${t.date}) ==\nOrders: ${t.orders.map((o) => o.text).join(' | ') || '(none)'}\n${t.summary}\n${t.events.map((e) => `- [${e.importance}] ${e.title}: ${e.text}`).join('\n')}\nChanges: ${(t.applied || []).map((a) => a.text).join('; ')}`).join('\n\n'),
   ].filter(Boolean).join('\n\n');
   return [{ role: 'system', content: system }, { role: 'user', content: user }];
+}
+
+export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {
+  const p = state.meta.player; const ph = state.houses[p];
+  const lord = ph.lord ? state.characters[ph.lord] : null;
+  const people = ids.map((i) => state.characters[i]);
+  const budget = Math.max(3000, cfg.contextTokens - cfg.maxTokens - 1500);
+  const key = 'council:' + [...ids].sort().join(',');
+  const log = (state.chats[key] || []).slice(-30);
+  const system = [
+    `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
+    'Each counsellor speaks in their own voice, from their own expertise and interests; they may disagree with one another and with the lord. Officers give concrete numbers from the ledger. 1-4 of them speak per round, whoever is most relevant. Never break character.',
+    `Reply ONLY with JSON: {"replies":[{"speaker":CHAR_ID,"text":"..."}],"changes":[optional change operations the council's reports imply — e.g. a steward's corrected figures]}`,
+    CHANGE_SCHEMA,
+  ].join('\n\n');
+  const context = [`DATE: ${dateStr(state.meta.date)}`, playerSheet(state), ...people.map((c) => characterKnowledge(state, c)).filter(Boolean).slice(0, 1), memoryBlock(state, chronicleMd, Math.floor(budget * 0.3), 2), worldDigest(state, Math.floor(budget * 0.35))].join('\n\n');
+  const messages = [{ role: 'system', content: system + '\n\n' + context }];
+  for (const m of log) messages.push(m.role === 'player' ? { role: 'user', content: m.text } : { role: 'assistant', content: JSON.stringify({ replies: [{ speaker: m.speaker, text: m.text }] }) });
+  messages.push({ role: 'user', content: message });
+  return messages;
 }

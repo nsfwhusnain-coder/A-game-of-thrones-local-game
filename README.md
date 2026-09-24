@@ -11,9 +11,14 @@ The game is inspired by [Pax Historia](https://www.paxhistoria.co/): time pauses
 ## Quick start
 
 ```bash
-# Node 18+ required, no npm install needed (zero dependencies)
+git clone -b claude/brave-ramanujan-i8dt0q https://github.com/nsfwhusnain-coder/A-game-of-thrones-local-game.git
+cd A-game-of-thrones-local-game
+npm install          # Node 18+ · installs three.js (the 3D map engine)
+npm run fetch-sigils # optional: downloads the real house sigil art from A Wiki of Ice and Fire (local only)
 npm start            # → http://127.0.0.1:3298
 ```
+
+The first launch builds the map, which takes a few seconds. It is cached in your browser after that. You need a browser with WebGL2 (any recent Chrome, Edge, Opera, Firefox or Safari).
 
 1. Start a local model server with an OpenAI-compatible API:
    - **LM Studio**: load a model and start the server (default `http://localhost:1234/v1`)
@@ -24,6 +29,26 @@ npm start            # → http://127.0.0.1:3298
 3. Pick a house and play. Without a model you can use **Mock** mode to explore the UI.
 
 **Model advice:** the simulator juggles hundreds of ids and must return valid JSON, so bigger instruct models do much better. Roughly 24B–70B, or a strong MoE. Larger context lets it see the whole world at once. Keep the temperature around 0.7–0.9.
+
+## What's in the game
+
+- **A 3D tabletop map** (three.js).
+  - Terrain: hillshaded relief with snow-capped mountains, animated water with foam and sun glints, about 100k instanced trees, and rivers and roads.
+  - Structures: the 700-foot Wall, and procedurally built castles, towns, cities and camps whose size reflects their importance.
+  - Landmarks: King's Landing (Red Keep, Great Sept, Dragonpit), Casterly Rock on its crag, the Hightower, Storm's End, Harrenhal's five towers, the Eyrie on its spire, Pyke's sea stacks, Winterfell, the Twins, Riverrun, Sunspear, White Harbor, and the Titan of Braavos.
+  - Every seat flies its house banner.
+  - Your realm's border glows, and enemies at war are outlined in red.
+  - Armies and fleets are models with men and ships, and march along A* paths over land or sea.
+  - Map modes: realms, holders, diplomacy, wealth, prosperity, unrest, terrain.
+- **A CK3-style HUD** that scales to any screen.
+  - Top bar: resources and time controls.
+  - Bottom-left: your house banner and your ruler's portrait, with the action ring (Realm · Council · Military · Economy · Diplomacy · Intrigue · People · Chronicle).
+  - Bottom: a command bar for free-text orders.
+  - Right: a drawer with events, letters and audiences.
+- **Characters with depth:** procedural portraits, six skills (Diplomacy, Martial, Stewardship, Intrigue, Learning, Prowess), traits, loyalty, opinion of you, memories, and family trees (parents, spouses, children, siblings, including the dead ancestors).
+- **A real economy** (see below): the ledger, taxation, vassal tribute, upkeep, food stores, seasons, and works to fund (warships, granaries, walls, roads, markets, men-at-arms, mines).
+- **Feudal levies:** *Call the banners* sends ravens to the vassals you choose. Each lord answers, delays or refuses based on loyalty and the story, and only the lords who answer add men.
+- **Councils and audiences:** talk to anyone one-on-one (by raven if they are far away), or convene several advisors who each speak in their own voice.
 
 ## How to play
 
@@ -37,7 +62,18 @@ npm start            # → http://127.0.0.1:3298
 | **📜 Chronicle** | Long-term memory of your story (`saves/<game>/chronicle.md`). You can edit it to correct or steer the story. |
 | **↶ Undo** | Roll back the last turn. |
 
-### Numbers are reports, not rules
+### The economy: numbers are reports, not rules
+
+Each turn a **ledger engine** settles the books from causes, not constants:
+
+- Each holding yields rents and resources (Westerlands gold, Reach grain, Arbor wine, northern timber and furs, Braavosi trade…). The yield scales with **population, prosperity, unrest, season, sieges and raids**, plus **luck** (blight, bumper harvests, storms, new veins of ore).
+- Each vassal pays a share **only if their obligation is `paying`**. Lords can pay late, pay short, or withhold, depending on the story and their opinion of you. The ledger lists every vassal line, so *"House Bolton withheld its dues"* shows up as a real hole in your income.
+- Expenses: hosts and fleets in the field, men-at-arms, court, interest on debts, tribute to your liege, and works in progress. If gold runs out, you borrow.
+- Levies regrow toward what your land can bear. Men in the field don't till the fields, so long wars hurt prosperity and food.
+- Taxes (low → crushing) change income, unrest and your vassals' opinion.
+
+The AI simulator doesn't write routine income. It changes the **causes**: a lord refuses the banners, a harvest fails, raiders burn a village, the Citadel declares winter. The ledger then does the arithmetic.
+
 
 Nothing ticks automatically. There's no "+5 men every 10 seconds". Treasury, levies, men-at-arms, household guard, ships, food stores and every army's size are estimates owned by the simulation. Each figure shows who reported it and when.
 
@@ -69,8 +105,14 @@ server/llm.js          OpenAI-compatible client, JSON extraction/repair, mock mo
 server/prompts.js      Simulation rules, change-op schema, world digest, chat/advisor/consolidation prompts
 server/game.js         Saves, time jumps, audiences, undo, memory consolidation
 public/js/shared/world.js  World model shared by server & browser: initial state, place resolution, applyChanges
-public/js/map/terrain.worker.js  Procedural terrain: fractal coasts, mountains, biomes, hillshading, provinces
-public/js/map/renderer.js        Map: pan/zoom, political overlay & borders, rivers, roads, the Wall, castles, armies, labels
+public/js/map/terrain.worker.js  Procedural terrain: fractal coasts, heightmap, biomes, forest mask, provinces
+public/js/map3d/MapScene.js      3D map: relief mesh, water shader, political overlay & glowing borders, camera, labels, picking
+public/js/map3d/models.js        Procedural castles, cities, landmarks, the Wall, banners, armies, fleets, instanced forests
+public/js/map3d/pathfind.js      A* over land/sea with road bonuses (march routes & animation)
+public/js/shared/economy.js      The ledger engine: yields, tribute, taxes, upkeep, food, levies, projects, seasons
+public/js/ui/                    HUD windows, sheets, drawer, portraits
+public/data/economy.js           Resources, regional profiles, populations, tax levels
+public/data/families.js          Lineages, marriages, dead ancestors, looks, CK3-style skills
 public/js/sigils.js    Procedural heraldry
 public/js/app.js       UI
 public/data/geography.js   Coastlines, islands, lakes, mountains, forests, deserts, rivers, roads, labels

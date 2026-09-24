@@ -133,6 +133,9 @@ function mockResponse(messages, opts) {
       reply: '*(Mock mode — connect a local model in Settings for real replies.)* "My lord, I hear you. It shall be as you say, though the realm will not sit idle while we act."',
       changes: [],
     };
+  } else if (kind === 'council') {
+    const ids = [...String(messages[0]?.content || '').matchAll(/\[([a-z_]+)\]/g)].map((m) => m[1]);
+    obj = { replies: ids.slice(0, 2).map((id, i) => ({ speaker: id, text: i ? '*(Mock)* I would counsel caution, my lord.' : '*(Mock)* The ledgers are in order, my lord, though the harvest could be better.' })), changes: [] };
   } else if (kind === 'suggest') {
     obj = { suggestions: ['Call the banners and muster at the seat.', 'Send a raven to King\'s Landing professing loyalty.', 'Ask the steward for a full accounting of the granaries.', 'Double the watch on the coast.'] };
   } else if (kind === 'consolidate') {
@@ -140,6 +143,7 @@ function mockResponse(messages, opts) {
   } else {
     const m = last.match(/PLAYER HOUSE: ([a-z_]+)/);
     const house = m ? m[1] : 'stark';
+    const bannerCall = /CALL THE BANNERS|banner/i.test(last.split("PLAYER'S ORDERS")[1] || '');
     obj = {
       summary: 'Mock simulation: the realm turns slowly. Ravens fly, lords feast, and rumours spread along the Kingsroad.',
       events: [
@@ -149,6 +153,12 @@ function mockResponse(messages, opts) {
       changes: [
         { op: 'figure', house, field: 'treasury', delta: 1200, source: 'Steward\'s ledger' },
         { op: 'figure', house, field: 'food', delta: -1, source: 'Steward\'s ledger' },
+        ...(bannerCall ? [
+          { op: 'army_create', id: `${house}_host_${Date.now() % 1000}`, owner: house, name: 'The Muster', at: house, men: 6500, type: 'army', composition: 'Levies, knights and men-at-arms (mock)', status: 'mustering' },
+          { op: 'figure', house, field: 'levies', delta: -6500 },
+        ] : []),
+        { op: 'army_move', army: 'iron_fleet', to: 'seagard', progress: 0.5, status: 'sailing' },
+        { op: 'army_move', army: 'drogo_khalasar', to: 'norvos', progress: 0.3, status: 'riding east' },
       ],
     };
   }
