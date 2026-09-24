@@ -170,6 +170,10 @@ export async function advance(id, { span = '1m', orders } = {}) {
   for (const d of state.decisions || []) if (d.status === 'pending' && state.meta.turn - d.turn >= 3) {
     d.status = 'lapsed';
     if (d.kind === 'liege_call') applyPetitionFx(state, [{ call: 'refuse' }]); // silence is refusal
+    const fx = (d.options || []).flatMap((o) => o.fx || []);
+    const rising = fx.find((e) => e.rising), rebel = fx.find((e) => e.rebel);
+    if (rising) applyPetitionFx(state, [{ rising: [rising.rising[0], 'ignore'] }]);
+    if (rebel) applyPetitionFx(state, [{ rebel: [rebel.rebel[0], 'release'] }]); // silence: they take themselves out of your realm
   }
 
   // Flush chronicle ops + major events into the markdown chronicle

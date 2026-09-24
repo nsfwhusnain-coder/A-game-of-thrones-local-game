@@ -352,7 +352,7 @@ export class MapScene {
           rec.group.add(rec.banner);
         }
       }
-      const sieged = ['besieged', 'burning', 'sacked'].includes(hd.status);
+      const sieged = ['besieged', 'burning', 'sacked', 'rising'].includes(hd.status);
       if (sieged && !rec.siege) {
         const col = hd.status === 'besieged' ? '#ff4a2a' : '#ff9a2a';
         const ring = new THREE.Mesh(new THREE.TorusGeometry(rec.radius * 0.75, 0.35, 6, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85 }));

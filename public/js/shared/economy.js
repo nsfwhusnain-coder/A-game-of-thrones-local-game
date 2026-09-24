@@ -50,7 +50,7 @@ export function initEconomy(state) {
 
 function holdingFactor(state, h) {
   let f = (h.prosperity / 60) * (1 - h.unrest / 160);
-  if (h.status === 'besieged') f *= 0.3; else if (h.status === 'sacked') f *= 0.1; else if (h.status === 'burning') f *= 0.2; else if (h.status === 'occupied') f *= 0.55;
+  if (h.status === 'besieged') f *= 0.3; else if (h.status === 'sacked') f *= 0.1; else if (h.status === 'burning') f *= 0.2; else if (h.status === 'occupied') f *= 0.55; else if (h.status === 'rising') f *= 0.35;
   return Math.max(0, f);
 }
 
