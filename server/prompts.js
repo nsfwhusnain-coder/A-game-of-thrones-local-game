@@ -2,13 +2,14 @@
 // decides what every other house does, and emits structured changes that the engine applies.
 import { SCENARIOS } from '../public/data/scenarios.js';
 import {
-  dateStr, getRelation, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS,
+  dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS,
 } from '../public/js/shared/world.js';
 import { estimateTokens } from './llm.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom } from '../public/js/shared/warfare.js';
 import { briefFor } from '../public/data/briefs.js';
 import { vassalTemper } from '../public/js/shared/vassals.js';
+import { PLACE_NAMES } from '../public/data/geography.js';
 import { dispositionText } from '../public/js/shared/diplomacy.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
@@ -36,7 +37,9 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
 - {"op":"project","house":HOUSE,"name":"...","cost":N,"months":N,"holding":PLACE,"effect":{"figures":{"ships":20},"prosperity":5,"fort":1,"building":"...","unrest":-10}}  / {"op":"project","house":HOUSE,"name":"...","status":"cancel"}
 - {"op":"season","season":"summer|autumn|winter|spring","note":"white ravens from the Citadel..."}
 - {"op":"wed","a":CHAR_ID,"b":CHAR_ID}  /  {"op":"betroth","a":CHAR_ID,"b":CHAR_ID}
-- {"op":"holding",...also "population":N,"fort":0-6,"building":"...","resource":{"type":"grain|gold|trade|...","delta":±0.5}}
+- {"op":"holding",...also "population":N,"fort":0-6,"building":"...","resource":{"type":"grain|gold|trade|...","delta":±0.5},"name":"a new name (a place renamed by its new lord)","status":"ruined" (burned to the ground; the map shows a ruin)}
+- {"op":"holding_new","name":"...","owner":HOUSE,"near":PLACE (or "at":PLACE),"type":"castle|town|camp|fortress","note":"why it was raised"}   (a new castle, town or war camp appears on the map)
+- {"op":"landmark","name":"The Battle of the Whispering Wood","at":PLACE,"kind":"battle|camp|grave|site","note":"..."}   (marks a place on the map where something memorable happened; "remove":true clears it)
 - {"op":"decision","title":"...","text":"the situation, 1-3 sentences","from":CHAR_ID,"options":[{"label":"Accept the King's offer","hint":"likely consequences"},{"label":"...","hint":"..."}]}
     (put a real choice before the PLAYER when a character or event demands their answer: an offer, a demand, a crisis, a judgement. 2-4 options, each plausible. The player's choice arrives as an order next turn.)
 - {"op":"chronicle","text":"one line recording a truly significant, lasting fact (deaths of great lords, wars, crowns, betrayals)"}`;
@@ -145,6 +148,10 @@ export function worldDigest(state, budgetTokens, lean = false) {
 
   const changedHoldings = Object.values(state.holdings).filter((x) => x.owner !== (x.seatOf || x.owner) || x.status !== 'normal' || x.unrest >= 40 || x.notes.length);
   if (changedHoldings.length) parts.push('NOTABLE HOLDINGS\n' + changedHoldings.map((x) => `${x.id} | ${x.name} | owner:${x.owner} | ${x.status} | unrest ${x.unrest} | ${x.notes.slice(-2).join(' / ')}`).join('\n'));
+  const founded = Object.values(state.holdings).filter((x) => x.founded || x.formerNames?.length);
+  if (founded.length) parts.push('PLACES CHANGED DURING PLAY\n' + founded.map((x) => `${x.id} | ${x.name}${x.formerNames?.length ? ' (formerly ' + x.formerNames.join(', ') + ')' : ''} | ${x.type} | owner:${x.owner}${x.founded ? ' | founded ' + x.founded : ''}`).join('\n'));
+  if (state.landmarks?.length) parts.push('LANDMARKS ON THE MAP\n' + state.landmarks.map((l) => `${l.name} (${l.kind}, ${l.date})`).join('\n'));
+  if (!lean) parts.push('OTHER PLACES armies and people can go (not holdings): ' + Object.keys(PLACE_NAMES).filter((k) => !/_\d/.test(k) && resolvePlaceId(k) === k && !state.holdings[k]).slice(0, 120).join(', '));
   if (state.battles?.length) parts.push('RECENT BATTLES\n' + state.battles.slice(-8).map((b) => `${b.date} | ${b.name} | victor:${b.victor || '?'} | ${b.summary || ''}`).join('\n'));
 
   // Houses & characters: include everything if budget allows, else the most relevant

@@ -2,7 +2,8 @@
 // The simulator still decides what happens — this tells it (and the player) what is *likely*.
 import { realmOf, placeName } from './world.js';
 
-export const MILES_PER_UNIT = 1.5;           // Westeros is ~3,000 miles tall; the map ~2,000 units
+import { MILES_PER_UNIT } from "../../data/geography.js"; // ~1.85 miles per game unit on the atlas
+export { MILES_PER_UNIT };
 const SPEED = { foot: 18, horse: 32, fleet: 60 }; // miles per day
 
 export function atWar(state, a, b) {

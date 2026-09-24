@@ -1,9 +1,9 @@
 // A* pathfinding on a coarse grid derived from the terrain. Armies walk on land (mountains cost more,
 // roads cost less); fleets sail on water. Used to draw march routes and animate movement.
-import { ROADS, JUNCTIONS } from '../../data/geography.js';
+import { ROADS } from '../../data/geography.js';
 
 export class PathGrid {
-  constructor({ W, H, scale, land, height }, holdingsPos, cell = 5) {
+  constructor({ W, H, scale, land, height }, cell = 5) {
     this.cell = cell; this.scale = scale;
     this.gw = Math.ceil(W / scale / cell); this.gh = Math.ceil(H / scale / cell);
     const n = this.gw * this.gh;
@@ -29,7 +29,7 @@ export class PathGrid {
     }
     // roads are fast
     for (const road of ROADS) {
-      const pts = road.via.map((id) => holdingsPos(id) || JUNCTIONS[id]).filter(Boolean);
+      const pts = road.pts;
       for (let k = 0; k < pts.length - 1; k++) {
         const [ax, ay] = pts[k], [bx, by] = pts[k + 1];
         const steps = Math.ceil(Math.hypot(bx - ax, by - ay) / cell);

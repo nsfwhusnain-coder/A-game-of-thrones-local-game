@@ -1,14 +1,14 @@
 // The 3D tabletop map (three.js): relief terrain, animated water, political overlay with your realm
 // glowing, instanced forests, procedural castles & cities, the Wall, banners, armies with march routes.
 import * as THREE from 'three';
-import { WORLD, WALL, LABELS, RIVERS, ROADS, JUNCTIONS } from '../../data/geography.js';
+import { WORLD, WALL, LABELS, RIVERS, ROADS, JUNCTIONS, PLACE_NAMES, PLACE_KIND } from '../../data/geography.js';
 import { realmOf, getRelation, resolvePlaceId, fmt } from '../shared/world.js';
 import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, bannerTexture, tierOf, armyFigureCount } from './models.js';
 import { PathGrid, pathLength, pointAlong } from './pathfind.js';
 import { makeNoise } from '../map/noise.js';
 
-const GEN_VERSION = 'terrain3d-v3';
-const LAND_Y = 36, SEA_Y = 7, WATER_LEVEL = 0.35;
+const GEN_VERSION = 'atlas-v3';
+const LAND_Y = 55, SEA_Y = 7, WATER_LEVEL = 0.35;
 
 function idb() { return new Promise((res, rej) => { const r = indexedDB.open('westeros-cache', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 async function cacheGet(key) { try { const db = await idb(); return await new Promise((res) => { const q = db.transaction('kv').objectStore('kv').get(key); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch { return null; } }
@@ -48,15 +48,22 @@ export class MapScene {
 
   // ───────────── generation ─────────────
   async generate(holdings, onProgress) {
-    this.seeds = Object.values(holdings).map((h) => ({ id: h.id, x: h.pos[0], y: h.pos[1], w: h.type === 'great_castle' || h.type === 'city' ? 1.35 : h.type === 'camp' || h.type === 'ruin' ? 0.7 : 1 }));
-    const key = GEN_VERSION + ':' + this.seeds.map((s) => s.id + s.x + s.y).join('|');
+    this.seeds = Object.values(holdings).filter((h) => !h.founded).map((h) => ({ id: h.id, x: h.pos[0], y: h.pos[1], w: h.type === 'great_castle' || h.type === 'city' ? 1.35 : h.type === 'camp' || h.type === 'ruin' ? 0.7 : 1 }));
+    // Landmarks the atlas cannot draw: the Giant's Lance under the Eyrie, Dragonmont smoking over Dragonstone
+    const at = (id) => holdings[id]?.pos;
+    const features = [
+      at('arryn') && { type: 'peak', x: at('arryn')[0] + 4, y: at('arryn')[1] + 3, r: 24, h: 1.45 },
+      at('baratheon_ds') && { type: 'volcano', x: at('baratheon_ds')[0] + 3, y: at('baratheon_ds')[1] - 2, r: 9, h: 0.6 },
+      at('lannister') && { type: 'peak', x: at('lannister')[0] - 1, y: at('lannister')[1] - 1, r: 5, h: 0.22 },
+    ].filter(Boolean);
+    const key = GEN_VERSION + ':' + this.seeds.map((s) => s.id + s.x + s.y).join('|') + JSON.stringify(features);
     let data = await cacheGet(key);
     if (!data) {
       data = await new Promise((resolve, reject) => {
         const w = new Worker(new URL('../map/terrain.worker.js', import.meta.url), { type: 'module' });
         w.onmessage = (e) => { if (e.data.type === 'progress') onProgress?.(e.data.p * 0.8, e.data.msg); else if (e.data.type === 'done') { w.terminate(); resolve(e.data); } };
         w.onerror = (e) => reject(new Error('Terrain worker failed: ' + (e.message || 'unknown')));
-        w.postMessage({ scale: 1, seeds: this.seeds, shade: 4 });
+        w.postMessage({ scale: 1, seeds: this.seeds, heightScale: LAND_Y, features });
       });
       cacheSet(key, data);
     }
@@ -67,12 +74,12 @@ export class MapScene {
     this.buildWater(data);
     onProgress?.(0.88, 'Planting the forests');
     await tick();
-    this.forests = buildForests({ W: data.W, H: data.H, scale: data.scale, forest: data.forest, land: data.land }, (x, z) => this.heightAt(x, z));
+    this.forests = buildForests({ W: data.W, H: data.H, scale: data.scale, forest: data.forest, land: data.land, northY: 1180, snowY: 640 }, (x, z) => this.heightAt(x, z));
     this.scene.add(this.forests);
     this.wallMesh = buildWall(WALL, (x, z) => this.heightAt(x, z)); this.scene.add(this.wallMesh);
     this.buildRivers();
     onProgress?.(0.94, 'Charting roads');
-    this.grid = new PathGrid({ W: data.W, H: data.H, scale: data.scale, land: data.land, height: data.height }, (id) => { const p = resolvePlaceId(id); return p && holdings[p] ? holdings[p].pos : JUNCTIONS[id] || null; });
+    this.grid = new PathGrid({ W: data.W, H: data.H, scale: data.scale, land: data.land, height: data.height });
     this.provinceStats();
     this.buildSeaLabels();
     onProgress?.(1, 'Ready');
@@ -88,7 +95,7 @@ export class MapScene {
   groundAt(x, z) { return Math.max(WATER_LEVEL, this.heightAt(x, z)); }
 
   buildTerrain(data) {
-    const segX = 700, segY = Math.round(segX * WORLD.h / WORLD.w);
+    const segX = 960, segY = Math.round(segX * WORLD.h / WORLD.w);
     const geo = new THREE.PlaneGeometry(WORLD.w, WORLD.h, segX, segY);
     geo.rotateX(-Math.PI / 2); geo.translate(WORLD.w / 2, 0, WORLD.h / 2);
     const pos = geo.attributes.position;
@@ -97,18 +104,29 @@ export class MapScene {
     const cv = document.createElement('canvas'); cv.width = data.W; cv.height = data.H;
     cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(data.rgba), data.W, data.H), 0, 0);
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy(); tex.generateMipmaps = true;
+    // per-pixel relief: an object-space normal map from the full-resolution heights (crisp ridges on a lighter mesh)
+    const nmap = new THREE.DataTexture(new Uint8Array(data.normal.buffer || data.normal), data.W, data.H, THREE.RGBAFormat, THREE.UnsignedByteType);
+    nmap.flipY = true; nmap.magFilter = THREE.LinearFilter; nmap.minFilter = THREE.LinearMipmapLinearFilter; nmap.generateMipmaps = true; nmap.anisotropy = tex.anisotropy; nmap.needsUpdate = true;
     this.overlayCanvas = document.createElement('canvas'); this.overlayCanvas.width = data.W; this.overlayCanvas.height = data.H;
     this.hlCanvas = document.createElement('canvas'); this.hlCanvas.width = data.W; this.hlCanvas.height = data.H;
     this.overlayTex = new THREE.CanvasTexture(this.overlayCanvas); this.overlayTex.colorSpace = THREE.SRGBColorSpace;
     this.hlTex = new THREE.CanvasTexture(this.hlCanvas);
     const uniforms = this.terrainUniforms = { uOverlay: { value: this.overlayTex }, uHL: { value: this.hlTex }, uStrength: { value: 0.6 }, uTime: { value: 0 } };
-    const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.93, metalness: 0 });
+    const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.94, metalness: 0, normalMap: nmap, normalMapType: THREE.ObjectSpaceNormalMap });
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, uniforms);
-      sh.fragmentShader = 'uniform sampler2D uOverlay; uniform sampler2D uHL; uniform float uStrength; uniform float uTime;\n' + sh.fragmentShader
+      sh.vertexShader = 'varying vec3 vWPos;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = `uniform sampler2D uOverlay; uniform sampler2D uHL; uniform float uStrength; uniform float uTime; varying vec3 vWPos;
+        float dh(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+        float dn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(dh(i),dh(i+vec2(1,0)),f.x), mix(dh(i+vec2(0,1)),dh(i+vec2(1,1)),f.x), f.y); }
+` + sh.fragmentShader
         .replace('#include <map_fragment>', `#include <map_fragment>
+          // close-up detail so the land never looks like a stretched picture
+          float near = 1.0 - smoothstep(60.0, 420.0, length(cameraPosition - vWPos));
+          float det = dn(vWPos.xz * 1.7) * 0.55 + dn(vWPos.xz * 5.3) * 0.3 + dn(vWPos.xz * 13.0) * 0.15;
+          diffuseColor.rgb *= 1.0 + (det - 0.5) * 0.22 * near;
           float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-          diffuseColor.rgb = clamp(mix(vec3(lum), diffuseColor.rgb, 1.35) * vec3(1.04, 1.0, 0.94), 0.0, 1.0);
+          diffuseColor.rgb = clamp(mix(vec3(lum), diffuseColor.rgb, 1.2) * vec3(1.03, 1.0, 0.96), 0.0, 1.0);
           vec4 ov = texture2D(uOverlay, vMapUv);
           diffuseColor.rgb = mix(diffuseColor.rgb, ov.rgb, ov.a * uStrength);
           vec4 hl = texture2D(uHL, vMapUv);
@@ -140,7 +158,7 @@ export class MapScene {
           float d = mix(1.0, texture2D(uDepth, uv).r, inside);
           vec3 shallow = vec3(0.23, 0.46, 0.52), mid = vec3(0.1, 0.27, 0.38), deep = vec3(0.04, 0.12, 0.2);
           vec3 col = d < 0.12 ? mix(shallow, mid, d / 0.12) : mix(mid, deep, clamp((d - 0.12) / 0.5, 0.0, 1.0));
-          float north = smoothstep(420.0, 60.0, vW.z); col = mix(col, vec3(0.52, 0.62, 0.68), north * 0.55);
+          float north = smoothstep(760.0, 380.0, vW.z); col = mix(col, vec3(0.52, 0.62, 0.68), north * 0.55);
           vec2 p = vW.xz * 0.06;
           float t = uTime * 0.35;
           float nx = n(p + vec2(t, t*0.7)) - n(p * 1.7 - vec2(t*0.8, -t*0.4) + 10.0);
@@ -165,57 +183,25 @@ export class MapScene {
   }
 
   buildRivers() {
-    const { noise } = makeNoise(77);
-    const mat = new THREE.MeshStandardMaterial({ color: '#3f7894', roughness: 0.25, metalness: 0.1, emissive: '#10283a', emissiveIntensity: 0.3 });
-    const group = new THREE.Group();
-    RIVERS.forEach((r, ri) => {
-      const pts = [];
-      for (let i = 0; i < r.pts.length - 1; i++) {
-        const [ax, ay] = r.pts[i], [bx, by] = r.pts[i + 1]; const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 3);
-        for (let k = 0; k < n; k++) { const t = k / n; let x = ax + (bx - ax) * t, y = ay + (by - ay) * t; const nx = -(by - ay), ny = bx - ax, l = Math.hypot(nx, ny) || 1; const off = noise(pts.length * 0.15, ri * 3.1) * (3 + r.w); x += (nx / l) * off; y += (ny / l) * off; pts.push([x, y]); }
-      }
-      pts.push(r.pts.at(-1));
-      const verts = []; const idx = [];
-      for (let i = 0; i < pts.length; i++) {
-        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
-        let nx = -(b[1] - a[1]), ny = b[0] - a[0]; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-        const w = (0.4 + r.w * (0.3 + 0.7 * i / pts.length)) * 0.8;
-        const [x, z] = pts[i];
-        const y = Math.max(WATER_LEVEL + 0.05, this.heightAt(x, z)) + 0.18;
-        verts.push(x + nx * w, y, z + ny * w, x - nx * w, y, z - ny * w);
-        if (i) { const k = (i - 1) * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
-      }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)); g.setIndex(idx); g.computeVertexNormals();
-      const m = new THREE.Mesh(g, mat); m.receiveShadow = true; group.add(m);
-    });
-    this.scene.add(group);
-    // roads as thin dusty ribbons
-    const rmat = new THREE.MeshStandardMaterial({ color: '#8a6a44', roughness: 1, transparent: true, opacity: 0.8 });
+    // rivers are painted into the land itself (and carved into it); only the roads are ribbons
+    // roads: dusty tracks along the atlas roads (the Kingsroad, the Roseroad, the Goldroad…)
+    this.roadMat = new THREE.MeshStandardMaterial({ color: '#8a6a44', roughness: 1, transparent: true, opacity: 0.85 });
     this.roadGroup = new THREE.Group();
-    this.roadDefs = ROADS;
+    for (const road of ROADS) this.roadGroup.add(this.ribbon(catmull(road.pts, 3), road.name ? 0.7 : 0.5, this.roadMat, 0.15));
     this.scene.add(this.roadGroup);
-    this.roadMat = rmat;
   }
 
-  drawRoads() {
-    if (!this.state || this.roadGroup.children.length) return;
-    for (const road of ROADS) {
-      const pts = road.via.map((id) => this.placePos(id)).filter(Boolean);
-      for (let k = 0; k < pts.length - 1; k++) {
-        const seg = this.grid.find(pts[k], pts[k + 1], 'land');
-        this.roadGroup.add(this.ribbon(seg, 0.55, this.roadMat, 0.12));
-      }
-    }
-  }
+  drawRoads() {}
 
-  ribbon(pts, width, material, lift = 0.3) {
+  ribbon(pts, width, material, lift = 0.3, water = false) {
     const verts = [], idx = [], uvs = []; let acc = 0;
     for (let i = 0; i < pts.length; i++) {
       const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
       let nx = -(b[1] - a[1]), ny = b[0] - a[0]; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
       if (i) acc += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
-      const [x, z] = pts[i]; const y = this.groundAt(x, z) + lift;
-      verts.push(x + nx * width, y, z + ny * width, x - nx * width, y, z - ny * width); uvs.push(acc, 0, acc, 1);
+      const w = typeof width === 'function' ? width(i, pts.length) : width;
+      const [x, z] = pts[i]; const y = (water ? Math.max(WATER_LEVEL + 0.05, this.heightAt(x, z)) : this.groundAt(x, z)) + lift;
+      verts.push(x + nx * w, y, z + ny * w, x - nx * w, y, z - ny * w); uvs.push(acc, 0, acc, 1);
       if (i) { const k = (i - 1) * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); g.computeVertexNormals();
@@ -237,8 +223,11 @@ export class MapScene {
     this.state = state;
     this.recolor();
     this.syncSettlements();
+    if (this.provDirty) { this.provDirty = false; this.recolor(); }
     this.syncArmies(prev);
     this.syncEventPins();
+    this.syncLandmarks();
+    if (first) this.buildPlaces();
     if (first) {
       this.drawRoads();
       const seat = state.holdings[state.houses[state.meta.player]?.seat];
@@ -327,17 +316,23 @@ export class MapScene {
   // ───────────── settlements ─────────────
   syncSettlements() {
     const s = this.state;
+    for (const [id, rec] of this.settlements) if (!s.holdings[id]) { this.scene.remove(rec.group); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.settlements.delete(id); }
     for (const hd of Object.values(s.holdings)) {
       const owner = s.houses[hd.owner];
       let rec = this.settlements.get(hd.id);
+      // a holding founded during play claims its own lands on the map
+      if (this.seedIndex && !this.seedIndex.has(hd.id)) this.addSeed(hd);
+      // burned to the ground: the castle becomes a ruin (and is rebuilt if the story rebuilds it)
+      const shape = /ruin|destroyed|razed/.test(hd.status || '') ? 'ruin' : hd.type;
+      if (rec && rec.shape !== shape) { this.scene.remove(rec.group); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.settlements.delete(hd.id); rec = null; }
       if (!rec) {
-        const b = buildSettlement(hd, owner, owner?.color || '#777');
+        const b = buildSettlement({ ...hd, type: shape }, owner, owner?.color || '#777');
         const [x, z] = hd.pos;
         const y = this.groundAt(x, z);
         b.group.position.set(x, y - 0.1, z);
         b.group.rotation.y = (hd.id.length * 0.7) % (Math.PI * 2);
         this.scene.add(b.group);
-        rec = { ...b, holding: hd.id, owner: null, banner: null };
+        rec = { ...b, holding: hd.id, owner: null, banner: null, shape };
         this.settlements.set(hd.id, rec);
         const lbl = this.addLabel(hd.name, [x, y, z], `holding t${rec.tier}`, { holding: hd.id });
         rec.label = lbl;
@@ -361,10 +356,25 @@ export class MapScene {
         for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; const t = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.1, 5), new THREE.MeshStandardMaterial({ color: '#c8b48a', flatShading: true })); t.position.set(Math.cos(a) * rec.radius * 0.95, 0.55, Math.sin(a) * rec.radius * 0.95); tents.add(t); }
         rec.siege = new THREE.Group(); rec.siege.add(ring, tents); rec.group.add(rec.siege);
       } else if (!sieged && rec.siege) { rec.group.remove(rec.siege); rec.siege = null; }
+      if (rec.label.el.textContent !== hd.name) rec.label.el.textContent = hd.name;
       rec.label.el.classList.toggle('mine', this.isMine(hd.owner));
       rec.label.el.classList.toggle('enemy', this.atWarWith(hd.owner));
       rec.label.el.dataset.status = hd.status !== 'normal' ? hd.status : '';
     }
+  }
+  addSeed(hd) {
+    const k = this.seeds.length; if (k >= 32000) return;
+    const seed = { id: hd.id, x: hd.pos[0], y: hd.pos[1], w: hd.type === 'camp' || hd.type === 'ruin' ? 0.7 : 1 };
+    this.seeds.push(seed); this.seedIndex.set(hd.id, k);
+    const { W, H, scale, province, land } = this; const R = 34;
+    const x0 = Math.max(0, Math.floor((seed.x - R) * scale)), x1 = Math.min(W - 1, Math.ceil((seed.x + R) * scale)), y0 = Math.max(0, Math.floor((seed.y - R) * scale)), y1 = Math.min(H - 1, Math.ceil((seed.y + R) * scale));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const i = y * W + x; const cur = province[i]; if (!land[i] || cur < 0) continue;
+      const wx = x / scale, wy = y / scale; const o = this.seeds[cur];
+      const dNew = ((wx - seed.x) ** 2 + (wy - seed.y) ** 2) / seed.w, dOld = ((wx - o.x) ** 2 + (wy - o.y) ** 2) / (o.w || 1);
+      if (dNew < dOld && dNew < R * R) province[i] = k;
+    }
+    this.provinceStats(); this.provDirty = true;
   }
   isMine(owner) { const s = this.state; let x = s.houses[owner], g = 0; if (owner === s.meta.player) return true; while (x?.liege && g++ < 8) { if (x.liege === s.meta.player) return true; x = s.houses[x.liege]; } return false; }
 
@@ -433,6 +443,36 @@ export class MapScene {
       const lbl = this.addLabel('⚔', [b.pos[0], this.groundAt(b.pos[0], b.pos[1]) + 10, b.pos[1]], 'event battle', { battle: b }); lbl.el.title = b.name; this.eventPins.push(lbl);
     }
   }
+  // Canonical places that are not holdings: ruins (the Nightfort, Oldstones, Castamere), abandoned Wall castles,
+  // inns and villages — small models with labels when you look closely
+  buildPlaces() {
+    const neutral = { id: 'none', color: '#8a847a', rank: 'minor' };
+    this.places = [];
+    for (const [id, pos] of Object.entries(JUNCTIONS)) {
+      if (resolvePlaceId(id) !== id || this.state.holdings[id] || /_\d|^the_/.test(id) && !PLACE_KIND[id]) continue;
+      const kind = PLACE_KIND[id]; const name = PLACE_NAMES[id]; if (!kind || !name) continue;
+      if (this.places.some((p) => Math.hypot(p.pos[0] - pos[0], p.pos[1] - pos[1]) < 2)) continue;
+      const type = kind === 'ruin' || (kind === 'site' && /^(nightfort|deep_lake|queensgate|oakensheild|woodswatch|sable_hall|rimegate|long_barrow|torches|greenguard|greyguard|stonedoor|hoarfrost|icemark|sentinel_stand|westwatch)/.test(id)) ? 'ruin' : kind === 'castle' ? 'castle' : 'town';
+      const b = buildSettlement({ id, name, type, region: '' }, neutral, '#7a6a5a');
+      const y = this.groundAt(pos[0], pos[1]);
+      b.group.position.set(pos[0], y - 0.1, pos[1]); b.group.scale.setScalar(type === 'castle' ? 0.8 : 0.6); b.group.rotation.y = (id.length * 0.9) % 6.28;
+      this.scene.add(b.group);
+      const label = this.addLabel(name, [pos[0], y, pos[1]], 'place ' + type, { place: id });
+      this.places.push({ id, pos, group: b.group, label });
+    }
+  }
+  syncLandmarks() {
+    const s = this.state; const want = s.landmarks || [];
+    const key = JSON.stringify(want.map((l) => [l.name, l.pos]));
+    if (key === this.landmarkKey) return; this.landmarkKey = key;
+    for (const l of this.landmarkEls || []) l.el.remove();
+    this.labels = this.labels.filter((l) => !(this.landmarkEls || []).includes(l));
+    this.landmarkEls = want.map((lm) => {
+      const icon = lm.kind === 'battle' ? '⚔' : lm.kind === 'camp' ? '⛺' : lm.kind === 'grave' ? '✝' : '◆';
+      const l = this.addLabel(`${icon} ${lm.name}`, [lm.pos[0], this.groundAt(lm.pos[0], lm.pos[1]) + 3, lm.pos[1]], 'landmark', {});
+      l.el.title = lm.note || lm.name; return l;
+    });
+  }
   pulse(pos, cls) { const l = this.addLabel('', [pos[0], this.groundAt(pos[0], pos[1]) + 2, pos[1]], 'pulse ' + cls, {}); setTimeout(() => { l.el.remove(); this.labels = this.labels.filter((x) => x !== l); }, 4500); }
 
   // ───────────── labels (HTML overlay) ─────────────
@@ -489,6 +529,8 @@ export class MapScene {
       else if (c.startsWith('feature')) { show = vis && d < 1300 && d > 250; }
       else if (c.startsWith('army')) { show = vis; }
       else if (c.startsWith('event')) { show = vis && d < 2200; }
+      else if (c.startsWith('landmark')) { show = vis && d < 1100; }
+      else if (c.startsWith('place')) { show = vis && d < 330; }
       if (!show) { if (l.shown !== false) { l.el.style.display = 'none'; l.shown = false; } continue; }
       if (l.shown !== true) { l.el.style.display = ''; l.shown = true; }
       const x = (v.x * 0.5 + 0.5) * w; let y = (-v.y * 0.5 + 0.5) * h;
@@ -539,6 +581,7 @@ export class MapScene {
       const vis = rec.tier >= 6 ? true : rec.tier >= 5 ? this.dist < 1900 : rec.tier >= 4 ? this.dist < 1100 : this.dist < 700;
       rec.group.visible = vis; if (vis) rec.group.scale.setScalar(rec.tier >= 5 ? zf : Math.min(zf, 2.4));
     }
+    for (const pl of this.places || []) pl.group.visible = this.dist < 520;
     const af = clamp(this.dist / 160, 1, 9);
     for (const rec of this.armyObjs.values()) rec.group.scale.setScalar(af);
     if (this.forests) this.forests.visible = this.dist < 900;
@@ -678,3 +721,19 @@ export class MapScene {
 }
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
+// Catmull-Rom resampling of a polyline, one point every `step` units
+function catmull(pts, step = 2) {
+  if (pts.length < 3) return pts;
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const n = Math.max(1, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (let k = 0; k < n; k++) {
+      const t = k / n, t2 = t * t, t3 = t2 * t;
+      const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+      out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+    }
+  }
+  out.push(pts.at(-1));
+  return out;
+}

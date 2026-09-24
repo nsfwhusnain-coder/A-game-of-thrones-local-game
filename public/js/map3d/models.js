@@ -312,13 +312,13 @@ export function buildWall(points, heightAt) {
   for (let i = 0; i < points.length - 1; i++) {
     const [x1, z1] = points[i], [x2, z2] = points[i + 1];
     const len = Math.hypot(x2 - x1, z2 - z1), a = Math.atan2(z2 - z1, x2 - x1);
-    const steps = Math.ceil(len / 6);
+    const steps = Math.ceil(len / 3);
     for (let s = 0; s < steps; s++) {
       const k0 = s / steps, k1 = (s + 1) / steps;
       const ax = x1 + (x2 - x1) * k0, az = z1 + (z2 - z1) * k0, bx = x1 + (x2 - x1) * k1, bz = z1 + (z2 - z1) * k1;
       const cx = (ax + bx) / 2, cz = (az + bz) / 2; const base = heightAt(cx, cz);
-      const g = new THREE.BoxGeometry(Math.hypot(bx - ax, bz - az) + 0.6, 16, 3.2);
-      g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(cx, base + 7, cz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -a, 0)), new THREE.Vector3(1, 1, 1)));
+      const g = new THREE.BoxGeometry(Math.hypot(bx - ax, bz - az) + 0.6, 24, 3.6);
+      g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(cx, base + 10, cz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -a, 0)), new THREE.Vector3(1, 1, 1)));
       geoms.push(g.toNonIndexed());
     }
   }
@@ -417,7 +417,7 @@ export function buildArmy(army, house) {
 }
 
 // ---------- trees (chunked instancing for frustum culling) ----------
-export function buildForests({ W, H, scale, forest, land }, heightAt, tile = 200) {
+export function buildForests({ W, H, scale, forest, land, northY = 900, snowY = 380 }, heightAt, tile = 200) {
   const conifer = mergeGeometries([new THREE.ConeGeometry(0.9, 2.4, 6).translate(0, 1.8, 0).toNonIndexed(), new THREE.CylinderGeometry(0.12, 0.15, 0.7, 5).translate(0, 0.35, 0).toNonIndexed()]);
   const leafy = mergeGeometries([new THREE.IcosahedronGeometry(0.95, 0).translate(0, 1.7, 0).toNonIndexed(), new THREE.CylinderGeometry(0.12, 0.16, 1, 5).translate(0, 0.5, 0).toNonIndexed()]);
   const matC = new THREE.MeshLambertMaterial({ color: '#ffffff', flatShading: true });
@@ -432,10 +432,10 @@ export function buildForests({ W, H, scale, forest, land }, heightAt, tile = 200
     const px = Math.floor(jx * scale), py = Math.floor(jy * scale); if (px < 0 || py < 0 || px >= W || py >= H) continue;
     const i = py * W + px; if (!land[i]) continue;
     const f = forest[i] / 255; if (f < 0.25 || rng() > f * 0.85) continue;
-    const north = jy < 900; const type = north || rng() < 0.25 ? 0 : 1;
+    const north = jy < northY; const type = north || rng() < 0.25 ? 0 : 1;
     const key = `${Math.floor(jx / tile)},${Math.floor(jy / tile)},${type}`;
     if (!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key).push([jx, jy, 0.7 + rng() * 0.6, rng() * 6.28, north, jy < 380]);
+    buckets.get(key).push([jx, jy, 0.7 + rng() * 0.6, rng() * 6.28, north, jy < snowY - rng() * 80]);
   }
   for (const [key, list] of buckets) {
     const type = Number(key.split(',')[2]);

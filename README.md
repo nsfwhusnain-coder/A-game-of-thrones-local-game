@@ -43,8 +43,10 @@ The first launch builds the map, which takes a few seconds. It is cached in your
 
 ## What's in the game
 
-- **A 3D tabletop map** (three.js).
-  - Terrain: hillshaded relief with snow-capped mountains, animated water with foam and sun glints, about 100k instanced trees, and rivers and roads.
+- **A 3D map of the Known World, built from real atlas data** (three.js).
+  - Geography: the canonical coastlines, islands, lakes, rivers, roads, mountain ranges, forests, swamps and kingdom borders of the fan-made *Lands of Ice and Fire* GIS atlas, projected so that distances are true to the books: the North is a third of Westeros, and Winterfell is some 500 miles from Moat Cailin.
+  - Terrain, generated from that data: ridged mountain ranges that rise from foothills to snow-capped cores (the Frostfangs, the Mountains of the Moon with the Giant's Lance under the Eyrie, the Red Mountains of Dorne), the snows beyond the Wall, the heather and pine of the North, the farmland patchwork of the Riverlands and the Reach, the sands and red rock of Dorne, dunes, marshes and beaches. Per-pixel relief lighting, animated water with foam and sun glints, and instanced forests.
+  - Every seat sits where the books put it. The canonical places that are not seats are there too: the ruins of the Nightfort, Oldstones, High Heart and Castamere, the abandoned castles along the Wall, the Crossroads Inn, Mole's Town and Queenscrown. Armies can march to any of them.
   - Structures: the 700-foot Wall, and procedurally built castles, towns, cities and camps whose size reflects their importance.
   - Landmarks: King's Landing (Red Keep, Great Sept, Dragonpit), Casterly Rock on its crag, the Hightower, Storm's End, Harrenhal's five towers, the Eyrie on its spire, Pyke's sea stacks, Winterfell, the Twins, Riverrun, Sunspear, White Harbor, and the Titan of Braavos.
   - Every seat flies its house banner.
@@ -59,6 +61,7 @@ The first launch builds the map, which takes a few seconds. It is cached in your
 - **Characters with depth:** procedural portraits, six skills (Diplomacy, Martial, Stewardship, Intrigue, Learning, Prowess), traits, loyalty, opinion of you, memories, and family trees (parents, spouses, children, siblings, including the dead ancestors).
 - **A real economy** (see below): the ledger, taxation, vassal tribute, upkeep, food stores, seasons, and works to fund (warships, granaries, walls, roads, markets, men-at-arms, mines).
 - **Feudal levies:** *Call the banners* sends ravens to the vassals you choose. Each lord answers, delays or refuses based on loyalty and the story, and only the lords who answer add men.
+- **A map the story can change:** the simulator can raise new castles, towns and war camps (which claim their own lands on the map), rename places, burn castles to ruins, and mark battlefields and camps as landmarks.
 - **Councils and audiences:** talk to anyone one-on-one (by raven if they are far away), or convene several advisors who each speak in their own voice.
 
 ## Ruling your house
@@ -132,7 +135,7 @@ server/llm.js          OpenAI-compatible client, JSON extraction/repair, mock mo
 server/prompts.js      Simulation rules, change-op schema, world digest, chat/advisor/consolidation prompts
 server/game.js         Saves, time jumps, audiences, undo, memory consolidation
 public/js/shared/world.js  World model shared by server & browser: initial state, place resolution, applyChanges
-public/js/map/terrain.worker.js  Procedural terrain: fractal coasts, heightmap, biomes, forest mask, provinces
+public/js/map/terrain.worker.js  Terrain from the atlas: heights, ridged ranges, climate & biomes, normals, forests, provinces
 public/js/map3d/MapScene.js      3D map: relief mesh, water shader, political overlay & glowing borders, camera, labels, picking
 public/js/map3d/models.js        Procedural castles, cities, landmarks, the Wall, banners, armies, fleets, instanced forests
 public/js/map3d/pathfind.js      A* over land/sea with road bonuses (march routes & animation)
@@ -142,8 +145,9 @@ public/data/economy.js           Resources, regional profiles, populations, tax 
 public/data/families.js          Lineages, marriages, dead ancestors, looks, CK3-style skills
 public/js/sigils.js    Procedural heraldry
 public/js/app.js       UI
-public/data/geography.js   Coastlines, islands, lakes, mountains, forests, deserts, rivers, roads, labels
-public/data/houses.js      147 houses with seats, lieges, colours, sigils, words
+public/data/atlas.js       GENERATED geography (scripts/build-atlas.js from data-src/got-inspired-map)
+public/data/geography.js   The atlas for the game: named places (inns, ruins), labels, miles per unit
+public/data/houses.js      156 houses with seats, lieges, colours, sigils, words
 public/data/characters.js  157 named characters (roles, traits, secrets)
 public/data/scenarios.js   Scenario lore, starting estimates, armies, relations, wars, pacts
 saves/<id>/            state.json, chronicle.md, llm-log.jsonl (git-ignored)
@@ -156,7 +160,11 @@ config.json            your model settings (git-ignored)
 
 - **Houses:** add an `H(...)` line in `public/data/houses.js`. The seat position becomes a province automatically.
 - **Characters:** add a `C(...)` line in `public/data/characters.js`.
-- **Geography:** edit the control points in `public/data/geography.js`. Coastlines are coarse on purpose; fractal detail is added procedurally. Bump `GEN_VERSION` in `renderer.js` to regenerate the cached map.
+- **Geography:** the source GIS data lives in `data-src/got-inspired-map/`. Run `node scripts/build-atlas.js` to regenerate `public/data/atlas.js`, then bump `GEN_VERSION` in `public/js/map3d/MapScene.js` so browsers rebuild their cached terrain. `public/dev/atlas-preview.html` draws a quick 2D proof of the atlas with every holding on it.
+
+## Credits
+
+The map geography is derived from *A Song of Ice and Fire Speculative World Map*, GIS files by **cadaei**, based on the maps of **Tear** (Cartographers' Guild) and **theMountainGoat**, released under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) via [mapbox/GOT-Inspired-Map](https://github.com/mapbox/GOT-Inspired-Map). The data was projected, simplified and annotated for this game. The derived files (`data-src/got-inspired-map/`, `public/data/atlas.js`) are shared under the same licence and must not be used commercially. The world of A Song of Ice and Fire, its places and its characters are © George R. R. Martin. This is a non-commercial fan project.
 - **Scenarios:** add an entry to `public/data/scenarios.js`.
 
 See [docs/DESIGN.md](docs/DESIGN.md) for the design notes and roadmap.

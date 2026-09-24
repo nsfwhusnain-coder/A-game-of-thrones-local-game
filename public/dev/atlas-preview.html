@@ -1,0 +1,27 @@
+<!doctype html><html><body style="margin:0;background:#123">
+<canvas id="c"></canvas>
+<script type="module">
+import * as A from '../data/atlas.js';
+import { HOUSES, EXTRA_HOLDINGS } from '../data/houses.js';
+const q = new URLSearchParams(location.search); const s = Number(q.get('s') || 0.5); const ox = Number(q.get('x') || 0), oy = Number(q.get('y') || 0);
+const c = document.getElementById('c'); c.width = Number(q.get('w') || A.WORLD.w * s); c.height = Number(q.get('h') || A.WORLD.h * s);
+const g = c.getContext('2d'); g.setTransform(s, 0, 0, s, -ox * s, -oy * s);
+const poly = (p, fill, stroke) => { g.beginPath(); p.pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.stroke(); } };
+const line = (p, col, w) => { g.beginPath(); p.pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
+g.fillStyle = '#1d3b55'; g.fillRect(0, 0, A.WORLD.w, A.WORLD.h);
+A.LAND.forEach((p) => poly(p, '#9aa870'));
+const RC = { north: '#c8d0d8', wall: '#fff', beyond: '#eef', riverlands: '#6a9ad8', iron_islands: '#444', dorne: '#e8a050', stormlands: '#e0d050', vale: '#80b8e8', westerlands: '#d05050', crownlands: '#a070c0', reach: '#60b060' };
+g.globalAlpha = 0.35; A.REGIONS.forEach((r) => poly(r, RC[r.region])); g.globalAlpha = 1;
+A.FORESTS.forEach((p) => poly(p, '#2e5a2e'));
+A.SWAMPS.forEach((p) => poly(p, '#56684a'));
+A.MOUNTAIN_RANGES.forEach((p) => poly(p, `rgba(110,90,70,${0.4 + p.h * 0.6})`));
+A.LAKES.forEach((p) => poly(p, '#3a6a90'));
+A.RIVER_LINES.forEach((p) => line(p, '#3a7ab0', p.w * 0.6));
+A.ROAD_LINES.forEach((p) => line(p, '#7a4a20', 1.2));
+line({ pts: A.WALL_LINE }, '#fff', 3);
+g.font = '7px sans-serif'; g.fillStyle = '#000';
+for (const h of HOUSES) if (h.seat && !h.landless) { g.fillStyle = '#b00'; g.fillRect(h.pos[0] - 1.5, h.pos[1] - 1.5, 3, 3); g.fillStyle = '#000'; g.fillText(h.seat.replace(/,.*$/, ''), h.pos[0] + 3, h.pos[1] + 2); }
+for (const e of EXTRA_HOLDINGS) { g.fillStyle = '#00b'; g.fillRect(e[2] - 1.5, e[3] - 1.5, 3, 3); g.fillStyle = '#000'; g.fillText(e[1], e[2] + 3, e[3] + 2); }
+g.font = 'italic 9px serif'; g.fillStyle = '#fff'; A.ATLAS_LABELS.forEach((l) => g.fillText(l.t, l.x, l.y));
+document.title = 'done';
+</script></body></html>

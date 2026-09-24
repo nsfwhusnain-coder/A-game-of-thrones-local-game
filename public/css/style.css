@@ -110,6 +110,9 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .lbl.realm { font-weight: 700; letter-spacing: 0.35em; color: rgba(255,246,220,0.9); font-size: 1rem; text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 2px 2px #000; }
 .lbl.realm.own { color: #e8ffd0; }
 .lbl.sea { font-style: italic; letter-spacing: 0.4em; color: rgba(190,220,235,0.65); text-shadow: 0 0 4px rgba(0,20,40,0.8); font-size: 0.8rem; }
+.lbl.place { margin-top: 0.9rem; font-size: 0.64rem; font-style: italic; color: rgba(245,236,214,0.85); letter-spacing: 0.02em; }
+.lbl.place.ruin { color: rgba(214,206,190,0.75); }
+.lbl.landmark { font-size: 0.7rem; color: #fff3d0; background: rgba(20,14,9,0.72); border: 1px solid rgba(201,164,74,0.5); border-radius: 3px; padding: 0 0.3rem; pointer-events: auto; cursor: help; white-space: nowrap; }
 .lbl.feature { font-size: 0.72rem; letter-spacing: 0.15em; color: rgba(245,232,200,0.75); font-style: italic; }
 .lbl.army { margin-top: -1.4rem; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; background: rgba(18,13,9,0.88); border: 1px solid #5a4630; border-radius: 3px; padding: 0.08rem 0.4rem 0.08rem 0.1rem; font-size: 0.72rem; text-shadow: none; box-shadow: 0 2px 6px rgba(0,0,0,0.6); }
 .lbl.army .flag { width: 0.55rem; height: 1rem; border-radius: 1px; display: inline-block; border: 1px solid rgba(0,0,0,0.6); }

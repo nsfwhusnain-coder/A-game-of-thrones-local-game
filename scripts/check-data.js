@@ -1,7 +1,7 @@
 // Sanity-checks the world data: every reference resolves, ids are unique, positions are in bounds.
 import { HOUSES, EXTRA_HOLDINGS } from '../public/data/houses.js';
 import { CHARACTERS } from '../public/data/characters.js';
-import { ROADS, WORLD } from '../public/data/geography.js';
+import { WORLD } from '../public/data/geography.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
 import { createInitialState, resolvePlaceId } from '../public/js/shared/world.js';
 
@@ -22,7 +22,6 @@ for (const c of CHARACTERS) {
   if (!houseIds.has(c.house)) bad(`${c.id}: unknown house ${c.house}`);
   if (!resolvePlaceId(c.loc) && c.loc !== 'at_sea') bad(`${c.id}: unresolved location ${c.loc}`);
 }
-for (const r of ROADS) for (const v of r.via) if (!resolvePlaceId(v)) bad(`road ${r.name}: unknown stop ${v}`);
 for (const sc of Object.values(SCENARIOS)) {
   const st = createInitialState(sc.id, 'stark');
   for (const a of Object.values(st.armies)) {

@@ -2,7 +2,8 @@
 import { HOUSES, EXTRA_HOLDINGS, PLACE_ALIASES } from '../../data/houses.js';
 import { CHARACTERS } from '../../data/characters.js';
 import { SCENARIOS } from '../../data/scenarios.js';
-import { JUNCTIONS, LANDMASSES, ISLANDS } from '../../data/geography.js';
+import { JUNCTIONS, PLACE_NAMES, LAND, LAKES } from '../../data/geography.js';
+import { MAP_VERSION, warpOld } from '../../data/warp.js';
 import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.js';
 import { initEconomy, TAX_LEVELS, project } from './economy.js';
 import { heirOf } from './people.js';
@@ -61,12 +62,20 @@ function segD(px, py, ax, ay, bx, by) {
   const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2));
   return Math.hypot(ax + t * dx - px, ay + t * dy - py);
 }
+const HOLDING_TYPES = ['castle', 'great_castle', 'city', 'town', 'camp', 'fortress', 'ruin', 'palace'];
+const inPoly = ([x, y], pts) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+export function isLand(p) { return LAND.some((l) => inPoly(p, l.pts)) && !LAKES.some((l) => inPoly(p, l.pts)); }
+/** A dry spot at about `dist` units from `p` (or `p` itself), searching outward. */
+export function landNear(p, dist = 0) {
+  const a0 = Math.random() * Math.PI * 2;
+  for (let r = dist; r < dist + 40; r += 2) for (let k = 0; k < 12; k++) { const a = a0 + (k / 12) * Math.PI * 2; const q = r ? [Math.round(p[0] + Math.cos(a) * r), Math.round(p[1] + Math.sin(a) * r)] : [Math.round(p[0]), Math.round(p[1])]; if (isLand(q)) return q; if (!r) break; }
+  return null;
+}
 export function isCoastal([x, y]) {
-  for (const lm of LANDMASSES) for (let i = 0; i < lm.points.length; i++) {
-    const a = lm.points[i], b = lm.points[(i + 1) % lm.points.length];
-    if (segD(x, y, a[0], a[1], b[0], b[1]) < 26) return true;
+  for (const lm of LAND) {
+    const p = lm.pts;
+    for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; if (Math.abs(a[0] - x) > 40 && Math.abs(b[0] - x) > 40) continue; if (segD(x, y, a[0], a[1], b[0], b[1]) < 14) return true; }
   }
-  for (const [ix, iy, rx, ry] of ISLANDS) if (Math.hypot(x - ix, y - iy) < Math.max(rx, ry) + 22) return true;
   return false;
 }
 
@@ -127,7 +136,7 @@ export function createInitialState(scenarioId, playerHouse) {
   const state = {
     version: 2,
     meta: {
-      scenario: sc.id, scenarioName: sc.name, player: playerHouse, date: { ...sc.date }, turn: 0,
+      scenario: sc.id, scenarioName: sc.name, player: playerHouse, date: { ...sc.date }, turn: 0, mapVersion: MAP_VERSION,
       created: new Date().toISOString(),
     },
     houses, characters, holdings, armies, relations,
@@ -150,6 +159,20 @@ export function createInitialState(scenarioId, playerHouse) {
 
 /** Bring older saves up to date with new world features. */
 export function migrateState(state) {
+  // Saves from the first, hand-drawn map: carry every position onto the atlas
+  if ((state.meta.mapVersion || 1) < MAP_VERSION) {
+    const canon = new Map([...HOUSES.filter((h) => h.seat && !h.landless).map((h) => [h.id, h.pos]), ...EXTRA_HOLDINGS.map((e) => [e[0], [e[2], e[3]]])]);
+    for (const h of Object.values(state.holdings)) h.pos = canon.has(h.id) ? [...canon.get(h.id)] : warpOld(h.pos);
+    for (const h of Object.values(state.holdings)) h.coastal = isCoastal(h.pos);
+    for (const h of Object.values(state.houses)) if (canon.has(h.id)) h.pos = [...canon.get(h.id)]; else if (h.pos) h.pos = warpOld(h.pos);
+    for (const a of Object.values(state.armies)) {
+      a.pos = a.at && state.holdings[a.at] ? [...state.holdings[a.at].pos] : warpOld(a.pos);
+      if (a.dest) a.dest = a.march && state.holdings[a.march.to] ? [...state.holdings[a.march.to].pos] : warpOld(a.dest);
+    }
+    for (const b of state.battles || []) if (b.pos) b.pos = warpOld(b.pos);
+    state.meta.mapVersion = MAP_VERSION;
+  }
+  registerPlaces(state);
   for (const h of Object.values(state.houses)) {
     if (!h.lord && h.rank !== 'company') { const c = generateLord(h, state.meta.date.year); if (!state.characters[c.id]) state.characters[c.id] = c; h.lord = c.id; }
   }
@@ -224,21 +247,33 @@ export function siblingsOf(state, id) {
 export const relKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 export function getRelation(state, a, b) { return state.relations[relKey(a, b)]?.v ?? 0; }
 
+// Holdings founded or renamed during play (by the story or the player), so names resolve like the built-in ones
+const DYNAMIC = new Map();
+export function registerPlaces(state) {
+  DYNAMIC.clear();
+  for (const h of Object.values(state.holdings || {})) {
+    DYNAMIC.set(h.id, h.id); DYNAMIC.set(slug(h.name), h.id); DYNAMIC.set(slug(h.name).replace(/^the_/, ''), h.id);
+    for (const n of h.formerNames || []) if (!DYNAMIC.has(slug(n))) DYNAMIC.set(slug(n), h.id);
+  }
+}
 export function resolvePlaceId(id) {
   if (!id) return null;
   if (Array.isArray(id)) return null;
   const s = slug(id);
+  if (DYNAMIC.has(s) && !HOUSE_IDS.has(s) && !PLACE_ALIASES[s]) return DYNAMIC.get(s);
   if (HOUSE_IDS.has(s) && !LANDLESS.has(s)) return s;
   if (EXTRA_IDS.has(s)) return s;
   if (PLACE_ALIASES[s]) return PLACE_ALIASES[s];
-  if (JUNCTIONS[s]) return s;
   const s2 = s.replace(/^the_/, '');
   if (PLACE_ALIASES[s2]) return PLACE_ALIASES[s2];
   if (HOUSE_IDS.has(s2) && !LANDLESS.has(s2)) return s2;
   // Match by holding name
   const byName = NAME_INDEX.get(s) || NAME_INDEX.get(s2);
   if (byName) return byName;
-  return null;
+  // Named places that are not holdings (inns, ruins, villages); a place standing on a holding is that holding
+  const pl = JUNCTIONS[s] ? s : JUNCTIONS[s2] ? s2 : JUNCTIONS['the_' + s] ? 'the_' + s : null;
+  if (pl) return HOLDING_AT.get(pl) || pl;
+  return DYNAMIC.get(s) || DYNAMIC.get(s2) || null;
 }
 
 export function placePos(placeId, holdings) {
@@ -257,6 +292,11 @@ for (const h of HOUSES) if (h.seat) {
   NAME_INDEX.set(slug(h.seat.replace(/,.*$/, '')), h.id);
 }
 for (const e of EXTRA_HOLDINGS) NAME_INDEX.set(slug(e[1]), e[0]);
+const HOLDING_AT = new Map();
+{
+  const seats = [...HOUSES.filter((h) => h.seat && !h.landless).map((h) => [h.id, h.pos]), ...EXTRA_HOLDINGS.map((e) => [e[0], [e[2], e[3]]])];
+  for (const [pid, [x, y]] of Object.entries(JUNCTIONS)) { const hit = seats.find(([, p]) => Math.hypot(p[0] - x, p[1] - y) < 4); if (hit) HOLDING_AT.set(pid, hit[0]); }
+}
 
 // Realm: walk up the liege chain to the paramount (or top-level) house
 export function realmOf(state, houseId) {
@@ -355,6 +395,7 @@ function posOf(state, place) {
  * Unknown references are rejected (reported back) instead of crashing the game.
  */
 export function applyChanges(state, changes, ctx = {}) {
+  registerPlaces(state);
   const applied = []; const rejected = [];
   const date = dateStr(state.meta.date);
   const src = ctx.source || 'The simulation';
@@ -505,8 +546,35 @@ function applyOne(state, ch, ctx) {
       if (ch.building) { h.buildings = [...new Set([...(h.buildings || []), String(ch.building)])]; out.push('builds ' + ch.building); }
       if (ch.resource && typeof ch.resource === 'object') { const t = String(ch.resource.type); h.resources[t] = Math.max(0, (h.resources[t] || 0) + (num(ch.resource.delta) ?? 0)); out.push(`${t} ${num(ch.resource.delta) > 0 ? 'up' : 'down'}`); }
       if (ch.status) { h.status = ch.status; out.push(ch.status); }
+      if (ch.name && String(ch.name).trim() && ch.name !== h.name) { out.push(`renamed from ${h.name}`); h.formerNames = [...(h.formerNames || []), h.name]; h.name = String(ch.name).trim().slice(0, 60); registerPlaces(state); }
+      if (ch.type && HOLDING_TYPES.includes(ch.type)) { h.type = ch.type; out.push(ch.type); }
       if (ch.note) { h.notes.push(`${date}: ${ch.note}`); h.notes = h.notes.slice(-8); }
       return { op, text: `${h.name}: ${out.join(', ') || 'updated'}` };
+    }
+    case 'holding_new': case 'found': case 'settlement': {
+      // a new castle, town, camp or fortress raised on the map
+      const owner = findHouse(state, ch.owner); if (!owner) throw new Error('unknown owner ' + ch.owner);
+      const name = String(ch.name || '').trim(); if (!name) throw new Error('a new holding needs a name');
+      let id = slug(ch.id || name); if (state.holdings[id] || HOUSE_IDS.has(id)) id = slug(name + '_' + owner);
+      if (state.holdings[id]) throw new Error('holding exists: ' + id);
+      const near = Array.isArray(ch.at) ? ch.at : posOf(state, ch.at || ch.near);
+      if (!near) throw new Error('unknown place ' + (ch.at || ch.near));
+      const pos = landNear(near, ch.at && !ch.near ? 0 : 8 + Math.random() * 6);
+      if (!pos) throw new Error('no dry land there');
+      const type = HOLDING_TYPES.includes(ch.type) ? ch.type : 'castle';
+      const region = nearestHolding(state, pos) ? state.holdings[nearestHolding(state, pos)].region : state.houses[owner].region;
+      state.holdings[id] = { id, name, fullName: name, pos, owner, seatOf: null, region, type, prosperity: 40, unrest: 15, garrison: null, status: 'normal', notes: [ch.note ? `${date}: ${ch.note}` : `${date}: founded`], resources: {}, population: type === 'town' ? 4000 : type === 'camp' ? 800 : 1500, coastal: isCoastal(pos), founded: date };
+      registerPlaces(state);
+      return { op, text: `${name} is raised by House ${state.houses[owner].name} near ${placeName(state, ch.at || ch.near)}` };
+    }
+    case 'landmark': case 'map_label': {
+      // a named spot on the map: a battlefield, a camp, a ford where something happened
+      const text = String(ch.name || ch.text || '').trim(); if (!text) throw new Error('a landmark needs a name');
+      state.landmarks = state.landmarks || [];
+      if (ch.remove) { state.landmarks = state.landmarks.filter((l) => l.name !== text); return { op, text: `Landmark removed: ${text}` }; }
+      const pos = Array.isArray(ch.at) ? ch.at : posOf(state, ch.at); if (!pos) throw new Error('unknown place ' + ch.at);
+      state.landmarks = [...state.landmarks.filter((l) => l.name !== text), { name: text, pos: [pos[0] + (Math.random() - 0.5) * 6, pos[1] + (Math.random() - 0.5) * 6], kind: ch.kind || 'site', note: ch.note || '', date }].slice(-40);
+      return { op, text: `On the map: ${text}` };
     }
     case 'character': case 'character_update': {
       const cid = findChar(state, ch.id || ch.character); if (!cid) throw new Error('unknown character ' + (ch.id || ch.character));
@@ -695,7 +763,7 @@ export function placeName(state, place) {
   if (typeof place === 'string' && place.startsWith('army:')) { const a = state.armies?.[place.slice(5)]; return a ? `with ${a.name}` : 'in the field'; }
   const pid = resolvePlaceId(place);
   if (pid && state.holdings[pid]) return state.holdings[pid].name;
-  if (pid && JUNCTIONS[pid]) return pid.replace(/_jct$/, '').replace(/_/g, ' ');
+  if (pid && JUNCTIONS[pid]) return PLACE_NAMES[pid] || pid.replace(/_/g, ' ');
   if (state.characters?.[place]) return state.characters[place].name;
   return place ? String(place).replace(/_/g, ' ') : 'unknown';
 }
