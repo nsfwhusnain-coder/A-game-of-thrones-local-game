@@ -9,6 +9,7 @@ import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom } from '../public/js/shared/warfare.js';
 import { briefFor } from '../public/data/briefs.js';
 import { vassalTemper } from '../public/js/shared/vassals.js';
+import { dispositionText } from '../public/js/shared/diplomacy.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
@@ -265,6 +266,7 @@ export function buildChatPrompt(state, charId, message, chronicleMd, cfg) {
     c.secret ? `Your secret (protect it unless you have strong reason): ${c.secret}` : '',
     c.memories?.length ? `Things you remember:\n- ${c.memories.join('\n- ')}` : '',
     `You are speaking with ${playerLord ? playerLord.name : 'the head'} of House ${ph.name} (the player). ${rel}`,
+    sameHouse ? '' : dispositionText(state, charId),
     sameHouse ? 'If asked for numbers (men, gold, grain, ships), answer with concrete figures appropriate to your role — you may adjust the ledger figures if you have reason to (a fresh count, desertions, a bad harvest). Report them via a "figure" change with source set to your name.' : 'You do not know the player\'s exact strength; do not reveal your own house\'s exact numbers unless it serves you.',
     'Distance matters: if you are not in the same place as the player, this exchange is by raven or envoy — write accordingly.',
     `Reply ONLY with a JSON object: {"reply":"your in-character words (may include brief *actions*)","changes":[optional change operations caused by this conversation, e.g. figure reports, opinion shifts ("character" op on yourself), pacts you firmly agree to]}.

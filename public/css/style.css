@@ -336,3 +336,6 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .dec-opt { text-align: left; white-space: normal; font-family: var(--serif); font-size: 0.92rem; }
 .dec-opt small { display: block; color: var(--muted); font-size: 0.75rem; font-style: italic; }
 .dec-note { font-size: 0.85rem; }
+
+a { color: var(--gold2); text-decoration: none; }
+a:hover { text-decoration: underline; }

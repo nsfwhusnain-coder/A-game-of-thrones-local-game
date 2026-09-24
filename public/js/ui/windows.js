@@ -4,6 +4,7 @@ import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf 
 import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
 import { vassalTemper } from '../shared/vassals.js';
+import { disposition } from '../shared/diplomacy.js';
 import { atWar, battleOdds, marchDays, siegeEstimate } from '../shared/warfare.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
@@ -336,6 +337,7 @@ function characterSheet(id) {
     <div>${traits.map((t) => `<span class="pill trait">${esc(t)}</span>`).join('')}</div>
     ${c.bio ? `<p style="font-size:0.92rem;line-height:1.45">${esc(c.bio)}</p>` : ''}
     ${c.secret && (mine || c.secretKnown) ? `<p style="font-size:0.88rem;border-left:3px solid var(--red);padding-left:0.5rem">🗝 <b>Secret:</b> <i>${esc(c.secret)}</i></p>` : c.secret && !mine ? '<p class="muted" style="font-size:0.8rem">🔒 There is more to this one than meets the eye.</p>' : ''}
+    ${!mine && c.alive && c.house !== p ? dispositionHtml(id) : ''}
     <h4>Family <button class="btn small" data-tree="${c.id}" style="float:right">Family tree</button></h4>
     <div class="family">${famMember(father, 'Father')}${famMember(mother, 'Mother')}${famMember(spouse, 'Spouse')}${famMember(betrothed, 'Betrothed')}${kids.map((k) => famMember(k, 'Child')).join('')}${sibs.slice(0, 8).map((k) => famMember(k, 'Sibling')).join('')}</div>
     ${c.memories?.length ? `<h4>Remembers</h4>${c.memories.slice(-5).map((m) => `<div class="muted" style="font-size:0.82rem">• ${esc(m)}</div>`).join('')}` : ''}
@@ -347,6 +349,15 @@ function characterSheet(id) {
       ${mine ? `<button class="btn" data-order-tpl="Grant ${esc(c.name)} ">Grant…</button>` : ''}
       ${c.status === 'imprisoned' ? `<button class="btn danger" data-order-tpl="Pass judgement on ${esc(c.name)}: ">Judge</button>` : ''}
       ${s.holdings[c.loc] ? `<button class="btn ghost" data-hold="${c.loc}">Show on map</button>` : ''}</div>` : ''}`;
+}
+
+const DISP_COLOR = { eager: '#a8e08a', favourable: '#cfe0a0', open: '#e0d8b0', reluctant: '#e8c870', unwilling: '#ec9a8a', hostile: '#ff6a5a' };
+function dispositionHtml(id) {
+  const d = disposition(app.state, id); if (!d) return '';
+  const tip = (x) => esc(x.factors.map(([l, v]) => `${l}: ${v > 0 ? '+' : ''}${v}`).join('\n') || 'No strong feelings');
+  const pill = (label, x) => `<span class="pill" title="${tip(x)}" style="color:${DISP_COLOR[x.word]}">${label}: ${x.word}</span>`;
+  const N = { alliance: 'Alliance', marriage: 'Marriage', trade: 'Trade', fealty: 'Fealty' };
+  return `<h4>Disposition toward you</h4><div>${pill('Overall', d)}${Object.entries(d.proposals).filter(([k]) => !(k === 'fealty' && app.state.houses[app.state.characters[id].house]?.liege === app.state.meta.player)).map(([k, x]) => pill(N[k], x)).join('')}</div><div class="muted" style="font-size:0.75rem">Hover for the reasons. Gifts, favours, threats and good arguments can change minds.</div>`;
 }
 
 function familyTree(id) {
