@@ -30,6 +30,23 @@ Its internal prompts are grouped as: Chat with User, Chat with Advisor, Jump For
 
 The model returns `{summary, events[], changes[]}`. `applyChanges()` in `public/js/shared/world.js` is the only way the world changes. It is forgiving: it resolves ids by slug or name, accepts `delta` or `value`, and clamps ranges. Anything it can't resolve is **rejected and reported** rather than applied blindly. The same function handles audience outcomes and manual GM edits.
 
+## Engine and story: who decides what
+
+The model narrates and decides the *unusual*. The engine keeps the *routine* moving, so the realm stays alive even with a small or silent model. When the model sets something explicitly in a turn (an obligation, a season, an army move), the engine leaves it alone.
+
+| System | Module | What the engine does on its own |
+|---|---|---|
+| Ledger | `shared/economy.js` | Yields, tribute, upkeep, interest, projects, food stores, grain buying, famine, Night's Watch alms |
+| Seasons | `shared/economy.js` `seasonTick` | White ravens turn the seasons after randomised lengths |
+| Vassals | `shared/vassals.js` | Temper (loyalty, friendship, taxes, hardship) drives dues and answers to the banners. Answering hosts march to the muster and merge. Idle lords grow restless and desert. Risings. Defiant vassals |
+| Player as vassal | `shared/vassals.js` | A liege at war calls the player's banners as a decision. Dues can be paid, delayed or withheld |
+| Petitions | `shared/petitions.js` | Realm matters when the story raised none. Every option carries immediate effects (`fx`) |
+| Disposition | `shared/diplomacy.js` | How a character weighs alliance, marriage, trade and fealty. Given to the model in audiences |
+| Marches | `server/game.js` | Hosts with orders walk at marching pace |
+| Succession & ageing | `shared/world.js`, `server/game.js` | Heirs inherit; the old and ailing die |
+
+Decision options may carry `fx` (engine effects applied the moment the player answers). The order text sent to the model lists what was already settled, so the model narrates reactions instead of applying the effects twice.
+
 ## Roadmap
 
 - [x] Land-and-sea pathfinding for army movement; fleets follow sea lanes.
