@@ -665,6 +665,7 @@ function applyOne(state, ch, ctx) {
     case 'season': {
       const sname = String(ch.season || '').toLowerCase();
       if (!['summer', 'autumn', 'winter', 'spring'].includes(sname)) throw new Error('bad season');
+      if (state.world?.season !== sname) state.world = { ...(state.world || {}), seasonDays: 0 };
       state.world = { ...(state.world || {}), season: sname, seasonNote: ch.note || '' };
       return { op, text: `The season turns: ${sname.toUpperCase()}${ch.note ? ' — ' + ch.note : ''}` };
     }

@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import { chat, extractJson, extractField, loadConfig, estimateTokens } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt } from './prompts.js';
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
-import { settle, initEconomy, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
+import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
@@ -137,6 +137,11 @@ export async function advance(id, { span = '1m', orders } = {}) {
     if (f >= 1) delete a.march;
   }
   vt.events.push(...fieldService(state, spanInfo.days), ...gatherMusters(state));
+  // The seasons turn on their own if the story does not turn them
+  if (!applied.some((a) => a.op === 'season')) {
+    const turned = seasonTick(state, spanInfo.days);
+    if (turned) { vt.events.unshift({ title: `A white raven: ${turned.season} has come`, text: turned.text, where: resolvePlaceId('oldtown'), importance: 5, type: 'court', houses: [] }); applied.push({ op: 'season', text: `The season turns: ${turned.season.toUpperCase()}` }); }
+  } else { state.world.seasonDays = 0; }
   // Settle the books for the period (after the story has changed the causes)
   const econNotes = settle(state, spanInfo.days);
   const events = (Array.isArray(obj.events) ? obj.events : []).map((e) => ({

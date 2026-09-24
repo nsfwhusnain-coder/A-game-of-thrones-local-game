@@ -94,7 +94,10 @@ export function holdingYield(state, h) {
 }
 
 export function armyUpkeep(a) {
-  if (a.type === 'fleet') return (a.ships || 0) * 12 + a.men * 0.1; // crews fish, trade and raid between wars
+  if (a.type === 'fleet') {
+    const reavers = /ironborn|reaver|longship/i.test(a.composition || '') ? 0.45 : 1; // ironborn crews live off the sea and the iron price
+    return ((a.ships || 0) * 12 + a.men * 0.1) * reavers * (a.status === 'anchored' ? 0.8 : 1); // crews fish, trade and raid between wars
+  }
   const sell = /sellsword|company|mercenar/i.test(a.composition || '') || /company/i.test(a.name || '');
   return a.men * (sell ? 1.1 : 0.28) * (a.status === 'garrison' ? 0.5 : 1);
 }
@@ -332,4 +335,24 @@ export function almsFor(state) {
     out.push({ id: h.id, amount: Math.round((h.region === 'north' ? 120 : 50) * (rel / 50)) });
   }
   return out;
+}
+
+// The long seasons of Westeros. The Citadel's white ravens announce each turn; nobody knows how long they will last.
+// Minimum and typical lengths in days (the long summer of 298 has already lasted nine years).
+const SEASON_CLOCK = {
+  summer: { next: 'autumn', min: 60, mean: 300, note: 'The Citadel has sent forth the white ravens: summer is ended. The maesters counsel lords to fill their granaries.' },
+  autumn: { next: 'winter', min: 240, mean: 540, note: 'White ravens fly from Oldtown: winter has come. In the North the snows are already deep.' },
+  winter: { next: 'spring', min: 360, mean: 900, note: 'The white ravens fly again: spring has come at last. The thaw begins; planting can start.' },
+  spring: { next: 'summer', min: 240, mean: 540, note: 'The Conclave declares that summer has come. The fields are green.' },
+};
+/** Advance the season clock by `days`. Returns a note if the season turned. */
+export function seasonTick(state, days) {
+  const w = state.world = state.world || {};
+  const cur = w.season || 'summer'; const c = SEASON_CLOCK[cur]; if (!c) return null;
+  w.seasonDays = (w.seasonDays || 0) + days;
+  if (w.seasonDays < c.min) return null;
+  const pTurn = 1 - Math.exp(-days / Math.max(30, c.mean - c.min));
+  if (Math.random() >= pTurn) return null;
+  w.season = c.next; w.seasonDays = 0; w.seasonNote = c.note;
+  return { season: c.next, text: c.note };
 }
