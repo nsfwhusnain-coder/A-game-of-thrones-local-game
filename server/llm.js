@@ -2,6 +2,27 @@
 // (LM Studio, Ollama /v1, llama.cpp server, vLLM, KoboldCpp, text-generation-webui, OpenRouter...).
 import fs from 'node:fs';
 import path from 'node:path';
+import http from 'node:http';
+import https from 'node:https';
+
+// Plain http(s) request: Node's fetch() aborts responses whose headers take >5 minutes,
+// which kills long generations on slow local models. This honours our own timeout instead.
+function httpJson(method, url, body, headers, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const lib = u.protocol === 'https:' ? https : http;
+    const data = body ? Buffer.from(JSON.stringify(body)) : null;
+    const req = lib.request(u, { method, headers: { ...(data ? { 'Content-Type': 'application/json', 'Content-Length': data.length } : {}), ...headers } }, (res) => {
+      const chunks = []; res.on('data', (c) => chunks.push(c));
+      res.on('end', () => resolve({ status: res.statusCode, ok: res.statusCode >= 200 && res.statusCode < 300, text: Buffer.concat(chunks).toString('utf8') }));
+      res.on('error', reject);
+    });
+    req.setTimeout(timeoutMs, () => req.destroy(Object.assign(new Error(`The model took longer than ${Math.round(timeoutMs / 1000)}s (raise the timeout in Settings)`), { name: 'AbortError' })));
+    req.on('error', (e) => reject(e.code === 'ECONNREFUSED' ? Object.assign(new Error('connection refused'), { cause: e }) : e));
+    if (data) req.write(data);
+    req.end();
+  });
+}
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const CONFIG_PATH = path.join(ROOT, 'config.json');
@@ -46,35 +67,25 @@ export async function chat(messages, opts = {}) {
     ...(cfg.jsonMode && opts.json ? { response_format: { type: 'json_object' } } : {}),
     ...(cfg.extraBody || {}),
   };
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), cfg.timeoutSec * 1000);
   const t0 = Date.now();
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}) },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-    });
-    const text = await res.text();
-    if (!res.ok) throw new Error(`LLM server returned ${res.status}: ${text.slice(0, 500)}`);
-    const data = JSON.parse(text);
-    const msg = data.choices?.[0]?.message || {};
-    let content = msg.content ?? data.choices?.[0]?.text ?? '';
-    if (Array.isArray(content)) content = content.map((c) => c.text || '').join('');
-    return { text: stripThinking(content), usage: data.usage || null, ms: Date.now() - t0, model: data.model };
-  } finally {
-    clearTimeout(timer);
-  }
+  const res = await httpJson('POST', url, body, cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}, cfg.timeoutSec * 1000);
+  if (!res.ok) throw new Error(`LLM server returned ${res.status}: ${res.text.slice(0, 500)}`);
+  const data = JSON.parse(res.text);
+  const msg = data.choices?.[0]?.message || {};
+  let content = msg.content ?? data.choices?.[0]?.text ?? '';
+  if (Array.isArray(content)) content = content.map((c) => c.text || '').join('');
+  // some reasoning servers put everything in reasoning_content and leave content empty
+  if (!String(content).trim() && msg.reasoning_content) content = msg.reasoning_content;
+  return { text: stripThinking(content), usage: data.usage || null, ms: Date.now() - t0, model: data.model };
 }
 
 export async function listModels() {
   const cfg = loadConfig();
   if (cfg.provider === 'mock') return ['mock'];
   if (cfg.provider === 'relay') return ['relay (human / external game master)'];
-  const res = await fetch(cfg.baseUrl.replace(/\/+$/, '') + '/models', { headers: cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {} });
+  const res = await httpJson('GET', cfg.baseUrl.replace(/\/+$/, '') + '/models', null, cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}, 8000);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
+  const data = JSON.parse(res.text);
   return (data.data || data.models || []).map((m) => m.id || m.name);
 }
 
@@ -84,6 +95,13 @@ function stripThinking(s) {
 }
 
 /** Extract and parse the first JSON object from model output, repairing common mistakes. */
+/** Last resort: pull a quoted field out of broken JSON. */
+export function extractField(text, field) {
+  const m = String(text || '').match(new RegExp('"' + field + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"', 's'));
+  if (!m) return null;
+  try { return JSON.parse('"' + m[1] + '"'); } catch { return m[1]; }
+}
+
 export function extractJson(text) {
   let s = String(text || '').trim();
   const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -105,7 +123,9 @@ export function extractJson(text) {
     .replace(/,\s*([}\]])/g, '$1')                 // trailing commas
     .replace(/[“”]/g, '"')                // smart quotes
     .replace(/\/\/[^\n"]*$/gm, '')                  // line comments
-    .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":'); // unquoted keys
+    .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":') // unquoted keys
+    .replace(/:\s*([A-Za-z_][A-Za-z0-9_'-]*)\s*(?=[,}\]])/g, (m, w) => (/^(true|false|null)$/.test(w) ? m : `: "${w}"`)) // unquoted string values
+    .replace(/:\s*(-?\d{1,3}(?:,\d{3})+)(?=\s*[,}\]])/g, (m, n) => ': ' + n.replace(/,/g, '')); // 60,000 -> 60000
   try { return JSON.parse(body); } catch (e) {
     // Truncated output: close open arrays/objects
     const fixed = closeTruncated(body);

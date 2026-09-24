@@ -48,7 +48,7 @@ function realm() {
     </div>
     <div class="section"><h4>Your holdings</h4>${holdings.map((x) => `<div class="row clickable" data-hold="${x.id}"><div class="grow"><div class="title">${esc(x.name)} ${x.status !== 'normal' ? `<span class="pill bad">${esc(x.status)}</span>` : ''}</div>
       <div class="sub">~${fmt(x.population)} souls · walls ${'■'.repeat(x.fort || 0)}${'□'.repeat(Math.max(0, 5 - (x.fort || 0)))} · ${Object.entries(x.resources || {}).filter(([, v]) => v >= 0.5).map(([k]) => RESOURCES[k]?.icon || '').join(' ')}</div>
-      <div style="display:flex;gap:0.5rem"><div style="flex:1" title="Prosperity ${x.prosperity}">${meter(x.prosperity, '#7fb85a')}</div><div style="flex:1" title="Unrest ${x.unrest}">${meter(x.unrest, '#d0604a')}</div></div></div></div>`).join('')}</div>
+      <div style="display:flex;gap:0.5rem"><div style="flex:1" title="Prosperity ${x.prosperity}">${meter(x.prosperity, '#7fb85a')}</div><div style="flex:1" title="Unrest ${x.unrest}">${meter(x.unrest, '#d0604a')}</div></div></div>${x.id !== h.seat && vas.length ? `<button class="btn small" data-grant="${x.id}">Grant…</button>` : ''}</div>`).join('')}</div>
     <div class="section"><h4>Sworn vassals</h4>${vas.map((v) => vassalRow(s.houses[v])).join('') || '<div class="muted">None.</div>'}</div>`;
 }
 function obligationPills(v) {
@@ -67,6 +67,7 @@ const SEATS = [
   ['steward', 'Steward', 'Keeps the ledgers, granaries and stores'], ['maester', 'Maester', 'Ravens, healing, lore and counsel'],
   ['master_at_arms', 'Master-at-arms', 'Trains and counts your fighting men'], ['captain', 'Captain of the guard', 'Commands the household guard'],
   ['commander', 'Commander', 'Leads hosts in the field'], ['spymaster', 'Master of whisperers', 'Secrets, spies and plots'],
+  ['castellan', 'Castellan', 'Holds your seat when you are away'],
 ];
 function councilMembers() {
   const s = app.state, p = s.meta.player;
@@ -78,7 +79,7 @@ function councilMembers() {
 }
 function council() {
   const { seats, family, small } = councilMembers();
-  const seat = (x) => x.c ? `<div class="council-seat"><img src="${por(x.c, 64)}" alt=""><div class="grow"><div class="role">${x.label}</div><div class="title" data-char="${x.c.id}" style="cursor:pointer">${esc(x.c.name)}</div><div class="sub muted">${esc(x.desc)}</div></div><label style="margin:0"><input type="checkbox" class="cm" value="${x.c.id}" checked></label><button class="btn small" data-talk="${x.c.id}">Audience</button></div>`
+  const seat = (x) => x.c ? `<div class="council-seat"><img src="${por(x.c, 64)}" alt=""><div class="grow"><div class="role">${x.label}</div><div class="title" data-char="${x.c.id}" style="cursor:pointer">${esc(x.c.name)}</div><div class="sub muted">${esc(x.desc)}</div></div><label style="margin:0"><input type="checkbox" class="cm" value="${x.c.id}" checked></label><button class="btn small" data-talk="${x.c.id}">Audience</button><button class="btn small ghost" data-appoint="${x.role}" title="Replace">⇄</button></div>`
     : `<div class="council-seat empty"><div style="width:3rem;text-align:center;font-size:1.5rem">∅</div><div class="grow"><div class="role">${x.label}</div><div class="sub muted">Vacant — ${esc(x.desc)}</div></div><button class="btn small" data-appoint="${x.role}">Appoint…</button></div>`;
   return `<p class="muted">Summon your advisors together and put a question to them. Each speaks from their own office — and their own interests.</p>
     ${seats.map(seat).join('')}
@@ -240,7 +241,23 @@ const wire = {
 // appoint & order templates (delegated)
 document.addEventListener('click', (e) => {
   const ap = e.target.closest('[data-appoint]');
-  if (ap) { const label = SEATS.find((x) => x[0] === ap.dataset.appoint)?.[1] || ap.dataset.appoint; $('#order-input').value = `Appoint a new ${label} for my household: `; $('#order-input').focus(); }
+  if (ap) {
+    const role = ap.dataset.appoint; const label = SEATS.find((x) => x[0] === role)?.[1] || role;
+    const s = app.state, p = s.meta.player, seat = player().seat;
+    const cands = Object.values(s.characters).filter((c) => c.alive && c.id !== player().lord && (c.house === p || c.loc === seat) && c.age >= 14 && c.status === 'free');
+    modal(`<h2>Appoint a ${esc(label)}</h2><p class="muted">Choose from your household, wards and guests. Or describe whom you seek and the realm will find someone.</p>
+      ${cands.map((c) => `<div class="row clickable" data-appoint-pick="${c.id}"><img class="por" src="${por(c, 64)}"><div class="grow"><div class="title">${esc(c.name)}</div><div class="sub">${esc(c.title || c.roles.join(', '))} · ${SKILL_NAMES.map((n, i) => `${SKILL_ICONS[i]}${c.skills?.[i] ?? '?'}`).join(' ')}</div></div></div>`).join('') || '<p class="muted">No one suitable at your seat.</p>'}
+      <hr><label>Or seek someone new</label><input class="input" id="seek-text" placeholder="e.g. a hard old knight from the mountain clans who knows siegecraft"><div class="row-actions"><button class="btn" id="seek-go">Send word</button></div>`);
+    $$('[data-appoint-pick]').forEach((r) => r.onclick = async () => { try { const res = await api(`/games/${app.saveId}/act`, { body: { kind: 'appoint', character: r.dataset.appointPick, role } }); app.setState(res.state); $('#modal').classList.add('hidden'); toast(`${s.characters[r.dataset.appointPick].name} is now your ${label}.`); } catch (err) { toast(err.message, true); } });
+    $('#seek-go').onclick = () => { addOrder(`Find and appoint a new ${label} for my household: ${$('#seek-text').value}`); $('#modal').classList.add('hidden'); toast('The order is given.'); };
+  }
+  const gr = e.target.closest('[data-grant]');
+  if (gr) {
+    const s = app.state, p = s.meta.player; const hd = s.holdings[gr.dataset.grant];
+    const vas = vassalsOf(s, p).map((v) => s.houses[v]);
+    modal(`<h2>Grant ${esc(hd.name)}</h2><p class="muted">Lands are the surest way to bind a lord to you — and to make his neighbours jealous.</p>${vas.map((v) => `<div class="row clickable" data-grant-to="${v.id}">${sig(v)}<div class="grow"><div class="title">House ${esc(v.name)}</div><div class="sub">${esc(v.lord ? s.characters[v.lord]?.name : '')} · loyalty ${s.characters[v.lord]?.loyalty ?? '?'}</div></div>${relHtml(getRelation(s, p, v.id))}</div>`).join('') || '<p class="muted">You have no vassals.</p>'}`);
+    $$('[data-grant-to]').forEach((r) => r.onclick = async () => { try { const res = await api(`/games/${app.saveId}/act`, { body: { kind: 'grant', holding: hd.id, house: r.dataset.grantTo } }); app.setState(res.state); $('#modal').classList.add('hidden'); toast(`${hd.name} now belongs to House ${s.houses[r.dataset.grantTo].name}.`); } catch (err) { toast(err.message, true); } });
+  }
   const tpl = e.target.closest('[data-order-tpl]');
   if (tpl) { $('#order-input').value = tpl.dataset.orderTpl; $('#order-input').focus(); }
 });

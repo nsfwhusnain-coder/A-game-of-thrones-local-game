@@ -82,6 +82,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+server.requestTimeout = 0; server.timeout = 0; server.keepAliveTimeout = 65000; // long local generations
 server.listen(PORT, HOST, () => {
   const cfg = loadConfig();
   console.log(`\n  Westeros Chronicles is running → http://${HOST}:${PORT}\n  Model server: ${cfg.provider === 'mock' ? 'MOCK MODE (no model)' : cfg.baseUrl} ${cfg.model || ''}\n`);

@@ -161,7 +161,7 @@ export function worldDigest(state, budgetTokens) {
 export function memoryBlock(state, chronicleMd, budgetTokens, keepRecent) {
   const out = [];
   if (chronicleMd && chronicleMd.trim()) out.push('THE CHRONICLE (long-term memory of the story so far)\n' + trimToTokens(chronicleMd, Math.floor(budgetTokens * 0.5), true));
-  const recent = state.history.filter((t) => t.turn > state.consolidatedThrough).slice(-Math.max(keepRecent, 1) * 2);
+  const recent = state.history.filter((t) => t.turn > state.consolidatedThrough).slice(-Math.max(keepRecent, 1));
   if (recent.length) {
     const lines = recent.map((t) => `== Turn ${t.turn} (${t.dateFrom} → ${t.date}) ==\nPlayer orders: ${t.orders.map((o) => o.text).join(' | ') || '(none)'}\n${t.summary}\n${t.events.map((e) => `- ${e.title}: ${e.text}`).join('\n')}`);
     out.push('RECENT TURNS\n' + trimToTokens(lines.join('\n\n'), Math.floor(budgetTokens * 0.5), true));

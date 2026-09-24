@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { chat, extractJson, loadConfig, estimateTokens } from './llm.js';
+import { chat, extractJson, extractField, loadConfig, estimateTokens } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt } from './prompts.js';
 import { createInitialState, migrateState, applyChanges, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
 import { settle, initEconomy, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
@@ -83,7 +83,10 @@ async function askJson(id, kind, messages, cfg) {
   }
 }
 
+const consolidating = new Map(); // save id -> promise (memory is compressed in the background)
+
 export async function advance(id, { span = '1m', orders } = {}) {
+  if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
   if (orders) state.orders = orders.map((o) => ({ id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim());
@@ -124,8 +127,10 @@ export async function advance(id, { span = '1m', orders } = {}) {
   state.chronicle = [];
 
   saveState(id, state);
-  const consolidated = await maybeConsolidate(id, state, cfg).catch((e) => ({ error: e.message }));
-  return { state: loadState(id), turn: record, consolidated };
+  // Compress old turns into the chronicle without making the player wait
+  const job = maybeConsolidate(id, state, cfg).catch((e) => { console.error('consolidation failed:', e.message); return null; }).finally(() => consolidating.delete(id));
+  consolidating.set(id, job);
+  return { state: loadState(id), turn: record, consolidated: 'background' };
 }
 
 async function maybeConsolidate(id, state, cfg, force = false) {
@@ -161,6 +166,7 @@ export function undo(id) {
 }
 
 export async function talk(id, charId, message) {
+  if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
   const c = state.characters[charId];
@@ -176,10 +182,20 @@ export async function talk(id, charId, message) {
     changes = Array.isArray(o.changes) ? o.changes : [];
     if (!reply.trim()) throw new Error('empty');
   } catch {
-    // plain-text reply (or broken JSON): keep the prose, drop anything that looks like machinery
-    reply = String(r.text).replace(/```[\s\S]*?```/g, '').replace(/\{[\s\S]*\}/g, '').replace(/^\s*"?reply"?\s*:\s*/i, '').trim() || '*They say nothing you can make sense of.*';
+    // broken JSON: rescue the "reply" field if we can, else keep the prose and drop the machinery
+    const rescued = extractField(r.text, 'reply');
+    if (rescued) { reply = rescued; changes = []; } else reply = String(r.text).replace(/```[\s\S]*?```/g, '').replace(/\{[\s\S]*\}/g, '').replace(/^\s*"?reply"?\s*:\s*/i, '').trim() || '*They say nothing you can make sense of.*';
     changes = [];
   }
+  // Sanity guard: a conversation can refine the ledger, not rewrite it (protects against model hallucinations)
+  changes = changes.filter((ch) => {
+    if (!ch || String(ch.op) !== 'figure') return true;
+    if (!ch.source || /your name/i.test(ch.source)) ch.source = c.name;
+    const h = state.houses[ch.house]; const f = h?.figures?.[ch.field]; const v = Number(String(ch.value ?? '').replace(/,/g, ''));
+    if (!f || !isFinite(v) || ch.value === undefined) return true;
+    const cur = Number(f.v) || 0;
+    return cur === 0 ? v < 5000 : v / cur < 2.5 && v / cur > 0.4;
+  });
   const { applied, rejected } = applyChanges(state, changes, { source: c.name });
   const turn = state.meta.turn;
   state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn }, { role: 'npc', text: reply, date: dateStr(state.meta.date), turn, applied: applied.map((a) => a.text) }];
@@ -253,6 +269,26 @@ export function act(id, body) {
       addOrder(`DECISION — ${d.title}: I choose "${d.choice}".${d.note ? ' ' + d.note : ''}`);
       break;
     }
+    case 'appoint': {
+      const ROLES = { steward: 'Steward', maester: 'Maester', master_at_arms: 'Master-at-arms', captain: 'Captain of the guard', spymaster: 'Master of whisperers', commander: 'Commander', castellan: 'Castellan' };
+      const c = state.characters[body.character]; if (!c || !c.alive) throw httpError(404, 'no such person');
+      if (!ROLES[body.role]) throw httpError(400, 'bad office');
+      for (const o of Object.values(state.characters)) if (o.house === p && o.id !== c.id && o.roles?.includes(body.role) && body.role !== 'commander') o.roles = o.roles.filter((r) => r !== body.role);
+      c.roles = [...new Set([...(c.roles || []), body.role])];
+      if (c.house !== p) { c.memories = [...(c.memories || []), `Appointed ${ROLES[body.role]} of House ${me.name}.`]; }
+      c.opinion = Math.min(100, (c.opinion || 0) + 10);
+      addOrder(`Appoint ${c.name} as ${ROLES[body.role]} of House ${me.name}.`);
+      break;
+    }
+    case 'grant': {
+      const h = state.holdings[body.holding]; if (!h || h.owner !== p) throw httpError(400, 'you can only grant your own holdings');
+      if (h.id === me.seat) throw httpError(400, 'you cannot give away your own seat');
+      const to = state.houses[body.house]; if (!to || to.liege !== p) throw httpError(400, 'you can only grant lands to your sworn vassals');
+      applyChanges(state, [{ op: 'holding', id: h.id, owner: to.id, note: `Granted by House ${me.name} to House ${to.name}` }, { op: 'relation', a: p, b: to.id, delta: 20, reason: `Granted ${h.name}` }]);
+      const lord = to.lord && state.characters[to.lord]; if (lord) { lord.opinion = Math.min(100, (lord.opinion || 0) + 20); lord.loyalty = Math.min(100, (lord.loyalty || 60) + 15); }
+      addOrder(`Grant ${h.name} and its lands to House ${to.name} for their loyal service.`);
+      break;
+    }
     case 'order': {
       addOrder(String(body.text || '').slice(0, 2000));
       break;
@@ -264,6 +300,7 @@ export function act(id, body) {
 }
 
 export async function council(id, members, message) {
+  if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
   const ids = (members || []).filter((m) => state.characters[m]?.alive);
