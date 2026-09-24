@@ -352,6 +352,15 @@ export class MapScene {
           rec.group.add(rec.banner);
         }
       }
+      const sieged = ['besieged', 'burning', 'sacked'].includes(hd.status);
+      if (sieged && !rec.siege) {
+        const col = hd.status === 'besieged' ? '#ff4a2a' : '#ff9a2a';
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(rec.radius * 0.75, 0.35, 6, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85 }));
+        ring.rotation.x = -Math.PI / 2; ring.position.y = 0.6; ring.userData.siege = true;
+        const tents = new THREE.Group();
+        for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; const t = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.1, 5), new THREE.MeshStandardMaterial({ color: '#c8b48a', flatShading: true })); t.position.set(Math.cos(a) * rec.radius * 0.95, 0.55, Math.sin(a) * rec.radius * 0.95); tents.add(t); }
+        rec.siege = new THREE.Group(); rec.siege.add(ring, tents); rec.group.add(rec.siege);
+      } else if (!sieged && rec.siege) { rec.group.remove(rec.siege); rec.siege = null; }
       rec.label.el.classList.toggle('mine', this.isMine(hd.owner));
       rec.label.el.classList.toggle('enemy', this.atWarWith(hd.owner));
       rec.label.el.dataset.status = hd.status !== 'normal' ? hd.status : '';
@@ -631,6 +640,7 @@ export class MapScene {
     if (this.waterUniforms) this.waterUniforms.uTime.value = time;
     // armies: animate marches and place on terrain
     const now = performance.now();
+    const stacks = new Map();
     for (const [id, rec] of this.armyObjs) {
       const a = this.state?.armies[id]; if (!a) continue;
       let p = a.pos, heading = null;
@@ -639,6 +649,11 @@ export class MapScene {
         p = pointAlong(rec.anim.path, e); const p2 = pointAlong(rec.anim.path, Math.min(1, e + 0.02)); heading = Math.atan2(p2[1] - p[1], p2[0] - p[0]);
         if (t >= 1) rec.anim = null;
       }
+      // armies sharing a spot fan out so both models and labels stay readable
+      const key = Math.round(p[0] / 8) + ',' + Math.round(p[1] / 8);
+      const idx = stacks.get(key) || 0; stacks.set(key, idx + 1);
+      if (idx) { const ang = idx * 2.1; const r = 5 * rec.group.scale.x; p = [p[0] + Math.cos(ang) * r, p[1] + Math.sin(ang) * r]; }
+      if (rec.stackIdx !== idx) { rec.stackIdx = idx; rec.label.el.style.marginTop = `${-1.4 - idx * 1.6}rem`; }
       const y = a.type === 'fleet' ? WATER_LEVEL + Math.sin(time * 1.3 + id.length) * 0.15 : this.groundAt(p[0], p[1]);
       rec.group.position.set(p[0], y, p[1]);
       if (heading !== null) rec.group.rotation.y = -heading + Math.PI / 2;
@@ -646,7 +661,10 @@ export class MapScene {
     }
     // banners flutter
     const flutter = Math.sin(time * 2.2) * 0.12;
-    for (const rec of this.settlements.values()) if (rec.banner) rec.banner.children[1].rotation.y = flutter + Math.sin(time * 3.1 + rec.top) * 0.05;
+    for (const rec of this.settlements.values()) {
+      if (rec.banner) rec.banner.children[1].rotation.y = flutter + Math.sin(time * 3.1 + rec.top) * 0.05;
+      if (rec.siege) rec.siege.children[0].material.opacity = 0.55 + 0.35 * Math.sin(time * 3);
+    }
     this.renderer.render(this.scene, this.camera);
     this.updateLabels();
   }

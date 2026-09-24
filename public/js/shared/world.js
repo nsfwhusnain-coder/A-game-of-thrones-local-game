@@ -4,11 +4,12 @@ import { CHARACTERS } from '../../data/characters.js';
 import { SCENARIOS } from '../../data/scenarios.js';
 import { JUNCTIONS, LANDMASSES, ISLANDS } from '../../data/geography.js';
 import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.js';
-import { initEconomy, TAX_LEVELS } from './economy.js';
+import { initEconomy, TAX_LEVELS, project } from './economy.js';
+import { heirOf } from './people.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
-  treasury: 'Treasury', income: 'Income / month', debt: 'Debt', levies: 'Levies (unraised)',
+  treasury: 'Treasury', income: 'Net income / moon', debt: 'Debt', levies: 'Levies (unraised)',
   menAtArms: 'Men-at-arms', guard: 'Household guard', ships: 'Warships', food: 'Food stores (months)',
 };
 
@@ -103,7 +104,14 @@ export function createInitialState(scenarioId, playerHouse) {
     const lord = CHARACTERS.find((c) => c.house === h.id && (c.roles.includes('lord') || c.roles.includes('ruler') || c.roles.includes('lady')) && !(c.id === 'catelyn_stark' || c.id === 'cersei_lannister'));
     h.lord = lord ? lord.id : null;
   }
+  // Every house needs a head. Where the books name none, raise a plausible lord.
+  for (const h of Object.values(houses)) {
+    if (h.lord || h.rank === 'company') continue;
+    const c = generateLord(h, sc.date.year);
+    characters[c.id] = c; h.lord = c.id;
+  }
   houses.baratheon_se.lord = 'renly_baratheon';
+  houses.golden_company.lord = 'harry_strickland';
   houses.arryn.lord = 'robert_arryn';
   houses.arryn.regent = 'lysa_arryn';
 
@@ -132,7 +140,58 @@ export function createInitialState(scenarioId, playerHouse) {
     consolidatedThrough: 0,
   };
   initEconomy(state);
+  // Starting "income" is the steward's projection, not a guess
+  for (const h of Object.values(state.houses)) {
+    const pr = project(state, h.id);
+    if (pr) h.figures.income = { ...h.figures.income, v: Math.round((pr.low + pr.high) / 2) };
+  }
   return state;
+}
+
+/** Bring older saves up to date with new world features. */
+export function migrateState(state) {
+  for (const h of Object.values(state.houses)) {
+    if (!h.lord && h.rank !== 'company') { const c = generateLord(h, state.meta.date.year); if (!state.characters[c.id]) state.characters[c.id] = c; h.lord = c.id; }
+  }
+  if (state.houses.golden_company && !state.houses.golden_company.lord) state.houses.golden_company.lord = 'harry_strickland';
+  return state;
+}
+
+const NAME_POOLS = {
+  north: ['Brandon', 'Rickard', 'Torrhen', 'Cregan', 'Edwyle', 'Harrion', 'Artos', 'Donnor', 'Wyllis', 'Jonnel', 'Medger', 'Rodwell', 'Lyessa', 'Alys', 'Sarra', 'Wynafryd'],
+  wall: ['Othell', 'Donal', 'Bowen', 'Jarmen'], beyond: ['Harma', 'Varamyr', 'Rattleshirt', 'Soren', 'Morna'],
+  iron_islands: ['Dagon', 'Harren', 'Torwold', 'Gorold', 'Baelor', 'Sawane', 'Lucimore', 'Alyn', 'Gysella', 'Hotho', 'Rodrik', 'Tristifer'],
+  riverlands: ['Tristan', 'Lucas', 'Hoster', 'Elmo', 'Jonos', 'Theomar', 'Clement', 'Hugo', 'Lymond', 'Tytos', 'Bethany', 'Jeyne'],
+  vale: ['Eon', 'Andar', 'Jon', 'Symond', 'Gerold', 'Alester', 'Harlan', 'Robar', 'Morton', 'Belore', 'Ysilla', 'Mya'],
+  westerlands: ['Lyman', 'Tybolt', 'Damon', 'Quenten', 'Lewys', 'Humfrey', 'Regenard', 'Antario', 'Melwyn', 'Cerenna', 'Myranda', 'Lanna'],
+  crownlands: ['Gyles', 'Denys', 'Lucifer', 'Bartimos', 'Guncer', 'Tanda', 'Symon', 'Ardrian', 'Monford', 'Falyse', 'Renfred', 'Duram'],
+  reach: ['Leo', 'Tanton', 'Alekyne', 'Arthor', 'Humfrey', 'Titus', 'Orton', 'Lyonel', 'Ormund', 'Moryn', 'Leonette', 'Rhonda'],
+  stormlands: ['Ormund', 'Lester', 'Bryce', 'Arstan', 'Guyard', 'Harwood', 'Hubert', 'Dickon', 'Lomas', 'Ronnet', 'Sharna', 'Ellyn'],
+  dorne: ['Harmen', 'Deziel', 'Franklyn', 'Dagos', 'Myles', 'Edgar', 'Garibald', 'Andrey', 'Quentyn', 'Larra', 'Nymella', 'Arron'],
+  essos: ['Tycho', 'Malaquo', 'Doniphos', 'Nyessos', 'Samarro', 'Horonno', 'Ferrego', 'Illyrio', 'Belicho', 'Doran', 'Tregar', 'Alequo'],
+};
+const TRAIT_POOL = ['ambitious', 'cautious', 'proud', 'honorable', 'greedy', 'pious', 'jovial', 'cruel', 'shrewd', 'loyal', 'craven', 'brave', 'stubborn', 'generous', 'wrathful', 'patient', 'scheming', 'just', 'lazy', 'diligent'];
+function generateLord(h, year) {
+  let seed = 0; for (const ch of h.id) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+  const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const pool = NAME_POOLS[h.region] || NAME_POOLS.reach;
+  const first = pool[Math.floor(rnd() * pool.length)];
+  const female = /^(Lyessa|Alys|Sarra|Wynafryd|Harma|Morna|Gysella|Bethany|Jeyne|Ysilla|Mya|Cerenna|Myranda|Lanna|Tanda|Falyse|Leonette|Rhonda|Sharna|Ellyn|Larra|Nymella|Belore)$/.test(first);
+  const essos = h.region === 'essos';
+  const surname = h.name.replace(/ of .*$/, '').replace(/^Nymeros /, '');
+  const age = 22 + Math.floor(rnd() * 44);
+  const OPP = { lazy: 'diligent', diligent: 'lazy', craven: 'brave', brave: 'craven', cruel: 'just', just: 'cruel', greedy: 'generous', generous: 'greedy', patient: 'wrathful', wrathful: 'patient', honorable: 'scheming', scheming: 'honorable' };
+  const picked = [];
+  for (let k = 0; k < 6 && picked.length < 3; k++) { const t = TRAIT_POOL[Math.floor(rnd() * TRAIT_POOL.length)]; if (!picked.includes(t) && !picked.includes(OPP[t])) picked.push(t); }
+  const traits = picked.join(', ');
+  const seatName = (HOUSES.find((x) => x.id === h.id)?.seat || h.name).replace(/,.*$/, '');
+  const title = essos ? (h.title || `First Magister of ${h.name}`) : `${female ? 'Lady' : 'Lord'} of ${seatName}`;
+  const id = slug(`${first}_${essos ? h.id : surname}`);
+  return {
+    id, name: essos ? `${first} of ${h.name}` : `${first} ${surname}`, house: h.id, title, age, born: year - age, loc: h.id,
+    roles: essos ? ['ruler'] : [female ? 'lady' : 'lord'], traits, bio: `Head of House ${h.name}.`, alive: true, status: 'free', opinion: 0, loyalty: 50 + Math.floor(rnd() * 40), memories: [], generated: true, gender: female ? 'f' : 'm',
+    skills: deriveSkills({ roles: ['lord'], traits, age }),
+  };
 }
 
 export function childrenOf(state, id) {
@@ -201,19 +260,21 @@ export function topLiege(state, houseId) {
   return h ? h.id : houseId;
 }
 
-export function vassalsOf(state, houseId, deep = false) {
+export function vassalsOf(state, houseId, deep = false, stopAtParamount = false) {
   const out = [];
   for (const h of Object.values(state.houses)) {
     if (h.liege === houseId) {
+      if (stopAtParamount && (h.rank === 'paramount' || h.independent)) continue;
       out.push(h.id);
-      if (deep) out.push(...vassalsOf(state, h.id, true));
+      if (deep) out.push(...vassalsOf(state, h.id, true, stopAtParamount));
     }
   }
   return out;
 }
 
+// A realm's own strength (a crown's totals don't include its paramounts' kingdoms)
 export function realmTotals(state, houseId) {
-  const ids = [houseId, ...vassalsOf(state, houseId, true)];
+  const ids = [houseId, ...vassalsOf(state, houseId, true, state.houses[houseId]?.rank === 'crown')];
   const tot = {};
   for (const f of FIGURE_FIELDS) tot[f] = ids.reduce((s, id) => s + (Number(state.houses[id]?.figures[f]?.v) || 0), 0);
   return tot;
@@ -286,7 +347,40 @@ export function applyChanges(state, changes, ctx = {}) {
       rejected.push({ change: ch, reason: e.message });
     }
   }
+  for (const note of resolveSuccessions(state)) applied.push(note);
   return { applied, rejected };
+}
+
+/** When a house's head dies (or vanishes), the heir takes the seat. The player plays on as the heir. */
+export function resolveSuccessions(state) {
+  const out = [];
+  const date = dateStr(state.meta.date);
+  for (const h of Object.values(state.houses)) {
+    const lord = h.lord ? state.characters[h.lord] : null;
+    if (lord && lord.alive) continue;
+    if (!lord && h.rank === 'company') continue;
+    const heir = heirOf(state, h.id, h.lord);
+    let text;
+    if (heir) {
+      const prev = lord?.name || 'the late lord';
+      h.lord = heir.id;
+      if (heir.house !== h.id) heir.house = h.id;
+      const seat = h.seat && state.holdings[h.seat] ? state.holdings[h.seat].name : h.name;
+      const female = heir.gender === 'f' || /lady|princess|queen/i.test(heir.title || '');
+      if (h.rank === 'crown') heir.title = `${female ? 'Queen' : 'King'} of the Andals and the First Men, ${female ? 'Lady' : 'Lord'} of the Seven Kingdoms`;
+      else if (!/king|queen/i.test(heir.title || '')) heir.title = `${female ? 'Lady' : 'Lord'} of ${seat}`;
+      heir.roles = [...new Set([...(heir.roles || []).filter((r) => r !== 'heir'), female ? 'lady' : 'lord'])];
+      text = `SUCCESSION: ${heir.name} succeeds ${prev} as head of House ${h.name}${(heir.age ?? 20) < 16 ? ` — a child of ${heir.age}; a regent will rule in all but name` : ''}`;
+    } else {
+      const c = generateLord(h, state.meta.date.year);
+      c.id = c.id + '_' + state.meta.turn; c.bio = `A cousin who claimed the seat of House ${h.name} when the main line failed.`;
+      state.characters[c.id] = c; h.lord = c.id;
+      text = `SUCCESSION: the main line of House ${h.name} has failed; a cousin, ${c.name}, claims the seat`;
+    }
+    state.chronicle.push({ date, text });
+    out.push({ op: 'succession', text, house: h.id });
+  }
+  return out;
 }
 
 function applyOne(state, ch, { date, src }) {
@@ -369,7 +463,10 @@ function applyOne(state, ch, { date, src }) {
     }
     case 'army_destroy': case 'army_disband': case 'fleet_destroy': {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army');
-      const n = state.armies[id].name; delete state.armies[id];
+      const gone = state.armies[id]; const n = gone.name;
+      const home = gone.at || nearestHolding(state, gone.pos);
+      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + id) c.loc = home;
+      delete state.armies[id];
       return { op, text: `${n} ${op === 'army_disband' ? 'disbands' : 'is destroyed'}${ch.reason ? ' — ' + ch.reason : ''}` };
     }
     case 'holding': case 'holding_update': case 'province': {
@@ -390,7 +487,12 @@ function applyOne(state, ch, { date, src }) {
       const cid = findChar(state, ch.id || ch.character); if (!cid) throw new Error('unknown character ' + (ch.id || ch.character));
       const c = state.characters[cid]; const out = [];
       if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
-      if (ch.loc || ch.location) { const l = resolvePlaceId(ch.loc || ch.location) || String(ch.loc || ch.location); c.loc = l; out.push('now at ' + placeName(state, l)); }
+      if (ch.loc || ch.location || ch.with) {
+        const raw = ch.with || ch.loc || ch.location;
+        const army = findArmy(state, String(raw).replace(/^army:/, ''));
+        const l = army && !resolvePlaceId(raw) ? 'army:' + army : (resolvePlaceId(raw) || String(raw));
+        c.loc = l; out.push((army ? 'travels with ' : 'now at ') + placeName(state, l));
+      }
       if (ch.title) { c.title = ch.title; out.push('now ' + ch.title); }
       if (ch.status && ch.alive !== false) { c.status = ch.status; out.push(ch.status); }
       if (ch.house) { const hh = findHouse(state, ch.house); if (hh) { c.house = hh; out.push('joins ' + state.houses[hh].name); } }
@@ -489,6 +591,14 @@ function applyOne(state, ch, { date, src }) {
       state.ravens = state.ravens.slice(0, 60);
       return { op, text: `A raven arrives from ${state.ravens[0].fromName}` };
     }
+    case 'decision': case 'choice': {
+      const opts = (Array.isArray(ch.options) ? ch.options : []).map((o) => (typeof o === 'string' ? { label: o } : { label: String(o.label || o.text || ''), hint: String(o.hint || o.effect || '') })).filter((o) => o.label);
+      if (opts.length < 2) throw new Error('a decision needs at least two options');
+      state.decisions = state.decisions || [];
+      const d = { id: slug(ch.id || ch.title || 'decision') + '_' + Math.random().toString(36).slice(2, 6), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, status: 'pending' };
+      state.decisions.push(d);
+      return { op, text: `A decision awaits you: ${d.title}` };
+    }
     case 'chronicle': case 'memory': {
       state.chronicle.push({ date, text: String(ch.text || '') });
       return { op, text: 'Recorded in the chronicle' };
@@ -544,8 +654,15 @@ function applyOne(state, ch, { date, src }) {
   }
 }
 
+export function nearestHolding(state, pos) {
+  let best = null, bd = Infinity;
+  for (const h of Object.values(state.holdings)) { const d = (h.pos[0] - pos[0]) ** 2 + (h.pos[1] - pos[1]) ** 2; if (d < bd) { bd = d; best = h.id; } }
+  return best;
+}
+
 export function placeName(state, place) {
   if (Array.isArray(place)) return 'the field';
+  if (typeof place === 'string' && place.startsWith('army:')) { const a = state.armies?.[place.slice(5)]; return a ? `with ${a.name}` : 'in the field'; }
   const pid = resolvePlaceId(place);
   if (pid && state.holdings[pid]) return state.holdings[pid].name;
   if (pid && JUNCTIONS[pid]) return pid.replace(/_jct$/, '').replace(/_/g, ' ');

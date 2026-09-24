@@ -35,6 +35,7 @@ export const estimateTokens = (s) => Math.ceil(String(s || '').length / 3.6);
 export async function chat(messages, opts = {}) {
   const cfg = { ...loadConfig(), ...opts };
   if (cfg.provider === 'mock') return mockResponse(messages, opts);
+  if (cfg.provider === 'relay') return relayResponse(messages, opts, cfg);
   const url = cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
   const body = {
     messages,
@@ -70,6 +71,7 @@ export async function chat(messages, opts = {}) {
 export async function listModels() {
   const cfg = loadConfig();
   if (cfg.provider === 'mock') return ['mock'];
+  if (cfg.provider === 'relay') return ['relay (human / external game master)'];
   const res = await fetch(cfg.baseUrl.replace(/\/+$/, '') + '/models', { headers: cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {} });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -163,4 +165,27 @@ function mockResponse(messages, opts) {
     };
   }
   return Promise.resolve({ text: JSON.stringify(obj), usage: null, ms: 5, model: 'mock' });
+}
+
+// ---------------- Relay: a human (or external agent) plays the simulator ----------------
+// Each request is written to relay/<n>-<kind>.prompt.md; the reply is read from relay/<n>-<kind>.reply.txt.
+// Useful for testing prompts with any model (paste into a chat UI) or for running a live game master.
+const RELAY_DIR = path.join(ROOT, 'relay');
+let relaySeq = 0;
+async function relayResponse(messages, opts, cfg) {
+  fs.mkdirSync(RELAY_DIR, { recursive: true });
+  const n = String(Date.now()).slice(-7) + '-' + (++relaySeq);
+  const base = path.join(RELAY_DIR, `${n}-${opts.kind || 'chat'}`);
+  fs.writeFileSync(base + '.prompt.md', messages.map((m) => `### ${m.role.toUpperCase()}\n${m.content}`).join('\n\n'));
+  const t0 = Date.now();
+  const deadline = t0 + (cfg.timeoutSec || 900) * 1000;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(base + '.reply.txt')) {
+      await new Promise((r) => setTimeout(r, 150));
+      const text = fs.readFileSync(base + '.reply.txt', 'utf8');
+      return { text: stripThinking(text), usage: null, ms: Date.now() - t0, model: 'relay' };
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw Object.assign(new Error('Relay timed out waiting for ' + base + '.reply.txt'), { status: 504 });
 }

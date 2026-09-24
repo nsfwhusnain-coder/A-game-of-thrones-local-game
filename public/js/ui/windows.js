@@ -3,6 +3,7 @@ import { app, $, $$, esc, fmt, placeName, getRelation, api, toast, relHtml, sig,
 import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf } from '../shared/world.js';
 import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
+import { atWar, battleOdds, marchDays, siegeEstimate } from '../shared/warfare.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
 
@@ -364,6 +365,14 @@ function armySheet(id) {
     <div class="kv"><span class="k">Position</span><span>${a.at ? esc(placeName(s, a.at)) : 'marching to ' + esc(a.destName || '?')}</span>
     <span class="k">Composition</span><span>${esc(a.composition || '—')}</span><span class="k">Reported</span><span>${esc(a.asOf || '')}</span></div>
     ${cmd ? `<h4>Commander</h4>${charRow(cmd)}` : ''}
+    ${(() => {
+      const with_ = Object.values(s.characters).filter((c) => c.loc === 'army:' + a.id && c.alive && c.id !== a.commander);
+      const foes = Object.values(s.armies).filter((b) => atWar(s, a.owner, b.owner)).map((b) => ({ b, m: marchDays(a, a.pos, b.pos), o: battleOdds(s, a, b) })).sort((x, y) => x.m.days - y.m.days).slice(0, 4);
+      const targets = a.type === 'fleet' ? [] : Object.values(s.holdings).filter((h) => atWar(s, a.owner, h.owner)).map((h) => ({ h, m: marchDays(a, a.pos, h.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
+      return (with_.length ? `<h4>Riding with the host</h4>${with_.map((c) => charRow(c)).join('')}` : '')
+        + (foes.length ? `<h4>War room — enemy hosts</h4>${foes.map(({ b, m, o }) => `<div class="row clickable" data-army="${b.id}">${sig(s.houses[b.owner])}<div class="grow"><div class="title">${esc(b.name)} <span class="muted">~${fmt(b.men)}</span></div><div class="sub">${m.days} days' march (${m.miles} mi) · if you attack: <b style="color:${o.attacker >= 60 ? '#a8e08a' : o.attacker >= 40 ? '#ffe0a0' : '#ec9a8a'}">${o.attacker}%</b></div></div></div>`).join('')}` : '')
+        + (targets.length ? `<h4>Enemy holdings in reach</h4>${targets.map(({ h, m }) => { const e = siegeEstimate(s, h, [a]); return `<div class="row clickable" data-hold="${h.id}"><div class="grow"><div class="title">${esc(h.name)}</div><div class="sub">${m.days} days · walls ${h.fort}/6 · a siege would take ~${e.months} moons · ${esc(e.storm)}</div></div></div>`; }).join('')}` : '');
+    })()}
     ${mine ? `<hr><div class="row-actions"><button class="btn primary" data-march="${a.id}">⤳ March to…</button><button class="btn" data-order-tpl="${esc(a.name)} is to ">Give orders…</button><button class="btn danger" data-order-tpl="Disband ${esc(a.name)} and send the men home to their fields.">Disband</button></div>` : ''}`;
 }
 

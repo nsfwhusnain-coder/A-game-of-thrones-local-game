@@ -17,10 +17,27 @@ export function renderDrawer() {
 export function eventHtml(e) {
   return `<div class="event imp-${e.importance}" ${e.where ? `data-where="${e.where}"` : ''}><div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div><div class="meta">${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
 }
+export function decisionsHtml() {
+  const s = app.state;
+  const pend = (s.decisions || []).filter((d) => d.status === 'pending');
+  return pend.map((d) => {
+    const who = d.from ? s.characters[d.from] : null;
+    return `<div class="decision" data-dec="${d.id}"><div class="dec-head">${who ? `<img src="${por(who, 64)}" alt="">` : '<span class="dec-icon">⚖</span>'}<div><div class="dec-title">${esc(d.title)}</div><div class="muted" style="font-size:0.75rem">${who ? esc(who.name) + ' · ' : ''}${esc(d.date)}</div></div></div>
+      <div class="eb">${esc(d.text)}</div>
+      <div class="dec-opts">${d.options.map((o, i) => `<button class="btn dec-opt" data-dec-id="${d.id}" data-opt="${i}" title="${esc(o.hint || '')}">${esc(o.label)}${o.hint ? `<small>${esc(o.hint)}</small>` : ''}</button>`).join('')}</div>
+      <input class="input dec-note" placeholder="Add your own words or conditions (optional)…"></div>`;
+  }).join('');
+}
+export function wireDecisions(root) {
+  $$('.dec-opt', root).forEach((b) => b.onclick = async () => {
+    const card = b.closest('.decision'); const note = card.querySelector('.dec-note')?.value || '';
+    try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'decide', decision: b.dataset.decId, option: Number(b.dataset.opt), note } }); app.setState(r.state); toast('Your answer is given. It will shape what comes next.'); } catch (e) { toast(e.message, true); }
+  });
+}
 function renderFeed(body) {
   const s = app.state;
   const turns = [...s.history].reverse().slice(0, 15);
-  body.innerHTML = turns.length ? turns.map((t) => `<div class="turn-block"><div class="turn-head"><span>Turn ${t.turn}</span><span>${esc(t.date)}</span></div>
+  body.innerHTML = decisionsHtml() + (turns.length ? turns.map((t) => `<div class="turn-block"><div class="turn-head"><span>Turn ${t.turn}</span><span>${esc(t.date)}</span></div>
       <div class="summary">${esc(t.summary)}</div>${t.events.map(eventHtml).join('')}
       ${t.ledger ? `<div class="changes">🪙 Treasury ${t.ledger.net >= 0 ? '+' : ''}${fmt(t.ledger.net)} → ${fmt(t.ledger.treasury)} gd · food ${t.ledger.food} moons</div>` : ''}
       ${t.applied?.length ? `<details class="changes"><summary>${t.applied.length} changes to the world</summary><ul>${t.applied.map((a) => `<li>${esc(a.text)}</li>`).join('')}</ul></details>` : ''}</div>`).join('')
@@ -33,7 +50,8 @@ function renderFeed(body) {
       • <b>Diplomacy</b> (🕊) — treat with any house; proposals open an audience.<br>
       • Click any castle, army or person. Speak to anyone — distant lords get a raven.<br>
       • <b>Advance ▶</b> — time passes; the world acts, the map changes.<br>
-      • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></div>`;
+      • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></div>`);
+  wireDecisions(body);
   $$('.event[data-where]', body).forEach((el) => el.onclick = () => { const w = el.dataset.where; if (s.holdings[w]) { app.map.flyTo(s.holdings[w].pos); app.map.flash(s.holdings[w].pos); } });
 }
 export function ravenHtml(r) {

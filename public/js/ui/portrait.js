@@ -2,12 +2,8 @@
 // office regalia (crowns, maester chains, Kingsguard white, Night's Watch black).
 import { HOUSE_LOOKS, LOOK_OVERRIDES } from '../../data/families.js';
 
-const FEMALE = new Set(['catelyn_stark', 'sansa_stark', 'arya_stark', 'lyarra_stark', 'lyanna_stark', 'minisa_whent', 'maege_mormont', 'dacey_mormont', 'meera_reed', 'donella_hornwood', 'barbrey_dustin', 'ygritte', 'val', 'cersei_lannister', 'myrcella_baratheon', 'selyse_florent', 'shireen_baratheon', 'melisandre', 'brienne_tarth', 'jeyne_westerling', 'lysa_arryn', 'anya_waynwood', 'olenna_tyrell', 'margaery_tyrell', 'arianne_martell', 'ellaria_sand', 'obara_sand', 'asha_greyjoy', 'daenerys_targaryen', 'shella_whent', 'arwyn_oakheart', 'joanna_lannister', 'cassana_estermont', 'rhaella_targaryen', 'elia_martell', 'rhaenys_targaryen', 'alannys_harlaw', 'mellario']);
-export function isFemale(c) {
-  if (!c) return false;
-  if (c.gender) return c.gender === 'f';
-  return FEMALE.has(c.id) || /\b(lady|queen|princess|spearwife|septa|maid|daughter|wife|mother|widow)\b/i.test(c.title || '');
-}
+import { isFemale } from '../shared/people.js';
+export { isFemale };
 
 function hash(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 function rngFrom(seed) { let s = seed || 1; return () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296); }

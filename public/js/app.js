@@ -4,7 +4,7 @@ import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL } from './ui/portrait.js';
 import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, REGION_NAMES, RANK_NAMES } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
-import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml } from './ui/drawer.js';
+import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, wireDecisions } from './ui/drawer.js';
 import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName } from './shared/world.js';
 import { project, SEASONS } from './shared/economy.js';
 
@@ -124,6 +124,8 @@ function renderTop() {
   ];
   $('#res-row').innerHTML = items.map(([ic, k, v, win, tip], i) => `<div class="res ${i === 6 ? 'season' : ''}" data-win-open="${win}" title="${esc(tip)}"><span class="ic">${ic}</span><div><div class="k">${k}</div><div class="v">${v}</div></div></div>`).join('');
   $('#date-box').innerHTML = `${esc(dateStr(s.meta.date))}<div class="turn">Turn ${s.meta.turn}</div>`;
+  const pendingDec = (s.decisions || []).filter((d) => d.status === 'pending').length;
+  $('#date-box').insertAdjacentHTML('beforeend', pendingDec ? `<div class="turn" style="color:#ffb060">⚖ ${pendingDec} decision${pendingDec > 1 ? 's' : ''} awaiting you</div>` : '');
   const unread = s.ravens.filter((r) => !r.read).length;
   $('#raven-badge').textContent = unread; $('#raven-badge').classList.toggle('hidden', !unread);
 }
@@ -259,7 +261,9 @@ async function advance() {
 }
 function showTurnReport(t) {
   const L = t.ledger;
+  const decs = decisionsHtml();
   modal(`<h2>${esc(t.dateFrom)} → ${esc(t.date)}</h2>
+    ${decs ? `<h4>Decisions await you</h4>${decs}<hr>` : ''}
     <div class="summary">${esc(t.summary)}</div><hr>
     ${t.events.map(eventHtml).join('')}
     ${L ? `<hr><h4>Your accounts</h4><div class="kv"><span class="k">Income</span><span style="color:#a8e08a">+${fmt(L.income)}</span><span class="k">Expenses</span><span style="color:#ec9a8a">−${fmt(L.expense)}</span><span class="k">Treasury</span><span><b>${fmt(L.prevTreasury)} → ${fmt(L.treasury)}</b></span><span class="k">Food stores</span><span>${L.food} moons</span></div>
@@ -267,6 +271,7 @@ function showTurnReport(t) {
     ${t.applied?.length ? `<hr><details><summary><h4 style="display:inline">The world changes (${t.applied.length})</h4></summary><ul class="changes">${t.applied.map((a) => `<li>${esc(a.text)}</li>`).join('')}</ul></details>` : ''}
     ${t.rejected?.length ? `<p class="muted" style="font-size:0.8rem">${t.rejected.length} proposed change(s) referred to unknown people or places and were ignored.</p>` : ''}
     <div class="settings-actions"><button class="btn primary" data-action="close-modal">Continue</button></div>`);
+  wireDecisions($('#modal-box'));
   for (const e of t.events) if (e.where && app.state.holdings[e.where]) app.map.flash(app.state.holdings[e.where].pos);
 }
 

@@ -6,6 +6,7 @@ import {
 } from '../public/js/shared/world.js';
 import { estimateTokens } from './llm.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
+import { warRoom } from '../public/js/shared/warfare.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
@@ -16,7 +17,7 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
 - {"op":"army_update","army":ARMY_ID,"men":N or "delta":±N,"morale":0-100,"supply":0-100,"status":"...","owner":HOUSE}
 - {"op":"army_destroy","army":ARMY_ID,"reason":"..."}  /  {"op":"army_disband","army":ARMY_ID}
 - {"op":"holding","id":PLACE,"owner":HOUSE,"unrest":0-100,"prosperity":0-100,"garrison":N,"status":"normal|besieged|sacked|burning|occupied","note":"..."}
-- {"op":"character","id":CHAR_ID,"alive":false,"cause":"...","loc":PLACE,"title":"...","status":"free|imprisoned|hostage|missing|exiled|wounded","opinion":-100..100 (of the player),"loyalty":-100..100 (to their liege),"note":"what they now remember"}
+- {"op":"character","id":CHAR_ID,"alive":false,"cause":"...","loc":PLACE (or "with":ARMY_ID to travel with a host),"title":"...","status":"free|imprisoned|hostage|missing|exiled|wounded","opinion":-100..100 (of the player),"loyalty":-100..100 (to their liege),"note":"what they now remember"}
 - {"op":"character_new","id":NEW_ID,"name":"...","house":HOUSE,"title":"...","age":N,"loc":PLACE,"roles":["captain"],"traits":"...","bio":"..."}
 - {"op":"relation","a":HOUSE,"b":HOUSE,"delta":±N,"reason":"..."}
 - {"op":"liege","house":HOUSE,"liege":HOUSE or null}   (vassal changes allegiance / declares independence)
@@ -33,7 +34,18 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
 - {"op":"season","season":"summer|autumn|winter|spring","note":"white ravens from the Citadel..."}
 - {"op":"wed","a":CHAR_ID,"b":CHAR_ID}  /  {"op":"betroth","a":CHAR_ID,"b":CHAR_ID}
 - {"op":"holding",...also "population":N,"fort":0-6,"building":"...","resource":{"type":"grain|gold|trade|...","delta":±0.5}}
+- {"op":"decision","title":"...","text":"the situation, 1-3 sentences","from":CHAR_ID,"options":[{"label":"Accept the King's offer","hint":"likely consequences"},{"label":"...","hint":"..."}]}
+    (put a real choice before the PLAYER when a character or event demands their answer: an offer, a demand, a crisis, a judgement. 2-4 options, each plausible. The player's choice arrives as an order next turn.)
 - {"op":"chronicle","text":"one line recording a truly significant, lasting fact (deaths of great lords, wars, crowns, betrayals)"}`;
+
+// Compact schema for conversations (small models drown in the full list)
+const TALK_SCHEMA = `OPTIONAL CHANGES your words cause (only when something concrete happens):
+- {"op":"figure","house":ID,"field":"treasury|levies|menAtArms|ships|food","value":N,"source":"your name"}   (reporting a fresh count)
+- {"op":"character","id":YOUR_ID,"opinion":-100..100,"note":"what you will remember"}
+- {"op":"relation","a":HOUSE,"b":HOUSE,"delta":±N,"reason":"..."}
+- {"op":"pact","type":"alliance|trade|marriage|truce|loan","a":HOUSE,"b":HOUSE,"terms":"...","status":"active"}   (only if you firmly agree)
+- {"op":"obligation","house":YOUR_HOUSE,"tribute":"paying|late|withholding","levies":"answered|delayed|refused"}   (a vassal answering the call)
+- {"op":"decision","title":"...","text":"...","from":YOUR_ID,"options":[{"label":"..."},{"label":"..."}]}   (when you demand an answer)`;
 
 const RULES = `SIMULATION RULES
 1. You are the living world of A Song of Ice and Fire (books + show lore). Stay true to characters' personalities, motives, secrets and the political realities of Westeros and Essos. Other houses act on THEIR OWN interests, not the player's.
@@ -92,8 +104,14 @@ export function playerSheet(state) {
   }
   const holdings = Object.values(state.holdings).filter((x) => x.owner === p);
   lines.push('Holdings: ' + holdings.map((x) => `${x.id} (${x.status}, unrest ${x.unrest}, prosperity ${x.prosperity}${x.garrison != null ? ', garrison ' + x.garrison : ''})`).join('; '));
-  const chars = Object.values(state.characters).filter((c) => c.house === p);
-  lines.push('Members & retainers: ' + chars.map((c) => `${c.name} [${c.id}]${c.alive ? '' : ' (dead)'}${c.status !== 'free' && c.alive ? ' (' + c.status + ')' : ''} @${placeName(state, c.loc)}`).join('; '));
+  const chars = Object.values(state.characters).filter((c) => c.house === p && c.alive);
+  lines.push('Members & retainers: ' + chars.map((c) => `${c.name} [${c.id}]${c.status !== 'free' ? ' (' + c.status + ')' : ''} @${placeName(state, c.loc)}`).join('; '));
+  const letters = (state.ravens || []).slice(0, 5);
+  if (letters.length) lines.push('Letters the player has received recently:\n' + letters.map((r) => `  [${r.date}] from ${r.fromName}: ${r.text}`).join('\n'));
+  const pending = (state.decisions || []).filter((d) => d.status === 'pending');
+  if (pending.length) lines.push('Decisions awaiting the player: ' + pending.map((d) => d.title).join('; '));
+  const decided = (state.decisions || []).filter((d) => d.status === 'decided' && d.decidedTurn === state.meta.turn);
+  if (decided.length) lines.push('DECISIONS THE PLAYER MADE THIS TURN (binding — resolve their consequences):\n' + decided.map((d) => `  ${d.title}: chose "${d.choice}"${d.note ? ' — ' + d.note : ''}`).join('\n'));
   return lines.join('\n');
 }
 
@@ -116,6 +134,8 @@ export function worldDigest(state, budgetTokens) {
   const pacts = state.pacts.filter((x) => x.status !== 'ended');
   parts.push('PACTS & AGREEMENTS\n' + (pacts.length ? pacts.map((x) => `${x.type} | ${x.a} & ${x.b} | ${x.status} | ${x.terms}`).join('\n') : 'none'));
   parts.push('ARMIES & FLEETS IN THE FIELD\n' + Object.values(state.armies).map((a) => armyLine(state, a)).join('\n'));
+  const wr = warRoom(state);
+  if (wr.length) parts.push('WAR ROOM (engine estimates — let battles, sieges and marches follow these odds and timings unless the story gives a strong reason; upsets happen but are rare)\n' + wr.join('\n'));
 
   const changedHoldings = Object.values(state.holdings).filter((x) => x.owner !== (x.seatOf || x.owner) || x.status !== 'normal' || x.unrest >= 40 || x.notes.length);
   if (changedHoldings.length) parts.push('NOTABLE HOLDINGS\n' + changedHoldings.map((x) => `${x.id} | ${x.name} | owner:${x.owner} | ${x.status} | unrest ${x.unrest} | ${x.notes.slice(-2).join(' / ')}`).join('\n'));
@@ -236,18 +256,20 @@ export function buildChatPrompt(state, charId, message, chronicleMd, cfg) {
     sameHouse ? 'If asked for numbers (men, gold, grain, ships), answer with concrete figures appropriate to your role — you may adjust the ledger figures if you have reason to (a fresh count, desertions, a bad harvest). Report them via a "figure" change with source set to your name.' : 'You do not know the player\'s exact strength; do not reveal your own house\'s exact numbers unless it serves you.',
     'Distance matters: if you are not in the same place as the player, this exchange is by raven or envoy — write accordingly.',
     `Reply ONLY with a JSON object: {"reply":"your in-character words (may include brief *actions*)","changes":[optional change operations caused by this conversation, e.g. figure reports, opinion shifts ("character" op on yourself), pacts you firmly agree to]}.
-Allowed ops: figure, character, relation, pact, raven, army_update, army_move, army_create, liege, chronicle. Only commit to what your character would genuinely do.`,
-    CHANGE_SCHEMA,
+Allowed ops: figure, character, relation, pact, raven, army_update, army_move, army_create, liege, obligation, decision, chronicle. Only commit to what your character would genuinely do.`,
+    TALK_SCHEMA,
   ].filter(Boolean).join('\n\n');
+  const sc = SCENARIOS[state.meta.scenario];
   const context = [
     `CURRENT DATE: ${dateStr(state.meta.date)}`,
+    state.history.length < 3 ? 'BACKGROUND (what the realm knows or whispers; you know only what your character plausibly would):\n' + sc.lore.map((l) => '- ' + l).join('\n') : '',
     characterKnowledge(state, c),
     memoryBlock(state, chronicleMd, Math.floor(budget * 0.35), 2),
     'Known houses and people (ids):\n' + worldDigest(state, Math.floor(budget * 0.35)),
   ].filter(Boolean).join('\n\n');
   const messages = [{ role: 'system', content: system + '\n\n' + context }];
-  for (const m of log) messages.push({ role: m.role === 'player' ? 'user' : 'assistant', content: m.role === 'player' ? m.text : JSON.stringify({ reply: m.text }) });
-  messages.push({ role: 'user', content: message });
+  for (const m of log) messages.push({ role: m.role === 'player' ? 'user' : 'assistant', content: m.role === 'player' ? m.text : JSON.stringify({ reply: m.text, changes: [] }) });
+  messages.push({ role: 'user', content: `${message}\n\n[Answer in character as ${c.name}, in your own voice. Reply with JSON only: {"reply":"your spoken or written words","changes":[]}]` });
   return messages;
 }
 
@@ -277,11 +299,11 @@ export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {
     `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
     'Each counsellor speaks in their own voice, from their own expertise and interests; they may disagree with one another and with the lord. Officers give concrete numbers from the ledger. 1-4 of them speak per round, whoever is most relevant. Never break character.',
     `Reply ONLY with JSON: {"replies":[{"speaker":CHAR_ID,"text":"..."}],"changes":[optional change operations the council's reports imply — e.g. a steward's corrected figures]}`,
-    CHANGE_SCHEMA,
+    TALK_SCHEMA,
   ].join('\n\n');
   const context = [`DATE: ${dateStr(state.meta.date)}`, playerSheet(state), ...people.map((c) => characterKnowledge(state, c)).filter(Boolean).slice(0, 1), memoryBlock(state, chronicleMd, Math.floor(budget * 0.3), 2), worldDigest(state, Math.floor(budget * 0.35))].join('\n\n');
   const messages = [{ role: 'system', content: system + '\n\n' + context }];
   for (const m of log) messages.push(m.role === 'player' ? { role: 'user', content: m.text } : { role: 'assistant', content: JSON.stringify({ replies: [{ speaker: m.speaker, text: m.text }] }) });
-  messages.push({ role: 'user', content: message });
+  messages.push({ role: 'user', content: `${message}\n\n[The counsellors answer in their own voices. Reply with JSON only: {"replies":[{"speaker":CHAR_ID,"text":"..."}],"changes":[]}]` });
   return messages;
 }

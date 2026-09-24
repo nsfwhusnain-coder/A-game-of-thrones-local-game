@@ -46,7 +46,7 @@ export const HOLDING_RESOURCES = {
   greyjoy: { iron: 1.0 }, stark: { timber: 0.8, furs: 0.6 }, bolton: { furs: 0.6 }, karstark: { furs: 0.6 },
   braavos: { trade: 6.0 }, pentos: { trade: 3.5 }, myr: { trade: 3.0 }, lys: { trade: 3.5, spice: 1.0 }, tyrosh: { trade: 3.0 },
   volantis: { trade: 5.0 }, qohor: { trade: 2.0, iron: 1.5 }, norvos: { trade: 1.5 }, lorath: { fish: 1.5, trade: 1.0 },
-  mallister: { fish: 0.6 }, tully: { grain: 0.6, fish: 0.6 }, rowan: { grain: 1.0 }, oakheart: { timber: 0.8 },
+  mallister: { fish: 0.6 }, nights_watch: { grain: 0.9, trade: 0.4 }, shadow_tower: { grain: 0.3 }, eastwatch: { fish: 1.0, trade: 0.5 }, tully: { grain: 0.6, fish: 0.6 }, rowan: { grain: 1.0 }, oakheart: { timber: 0.8 },
   tarly: { horses: 0.6 }, florent: { grain: 0.6 }, crane: { fish: 0.6 }, caswell: { trade: 0.8 }, footly: { trade: 0.6 },
   baratheon_se: { timber: 0.6 }, tarth: { fish: 0.4 }, connington: { fish: 0.4 }, planky_town: { trade: 1.2 },
 };

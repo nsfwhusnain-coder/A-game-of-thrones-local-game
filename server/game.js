@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { chat, extractJson, loadConfig, estimateTokens } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt } from './prompts.js';
-import { createInitialState, applyChanges, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
+import { createInitialState, migrateState, applyChanges, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
 import { settle, initEconomy, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -31,6 +31,7 @@ export function loadState(id) {
   if (!fs.existsSync(f)) throw httpError(404, 'no such save');
   const st = JSON.parse(fs.readFileSync(f, 'utf8'));
   if (!st.world) initEconomy(st); // migrate v1 saves
+  migrateState(st);
   return st;
 }
 function saveState(id, state) {
@@ -106,6 +107,10 @@ export async function advance(id, { span = '1m', orders } = {}) {
     title: String(e.title || 'Untitled'), text: String(e.text || e.description || ''), where: resolvePlaceId(e.where || e.location) || null,
     importance: Math.max(1, Math.min(5, Number(e.importance) || 2)), type: String(e.type || 'court'), houses: Array.isArray(e.houses) ? e.houses : [],
   }));
+  for (const a of applied.filter((x) => x.op === 'succession')) {
+    const hh = state.houses[a.house];
+    events.unshift({ title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === state.meta.player ? 5 : 4, type: 'court', houses: [a.house] });
+  }
   const p = state.meta.player;
   const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
   for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house] });
@@ -165,7 +170,16 @@ export async function talk(id, charId, message) {
   const r = await chat(messages, { json: true, kind: 'chat' });
   logLLM(id, 'chat', messages, r.text);
   let reply = r.text, changes = [];
-  try { const o = extractJson(r.text); reply = String(o.reply ?? o.response ?? r.text); changes = Array.isArray(o.changes) ? o.changes : []; } catch { /* plain-text reply */ }
+  try {
+    const o = extractJson(r.text);
+    reply = String(o.reply ?? o.response ?? o.text ?? o.message ?? '');
+    changes = Array.isArray(o.changes) ? o.changes : [];
+    if (!reply.trim()) throw new Error('empty');
+  } catch {
+    // plain-text reply (or broken JSON): keep the prose, drop anything that looks like machinery
+    reply = String(r.text).replace(/```[\s\S]*?```/g, '').replace(/\{[\s\S]*\}/g, '').replace(/^\s*"?reply"?\s*:\s*/i, '').trim() || '*They say nothing you can make sense of.*';
+    changes = [];
+  }
   const { applied, rejected } = applyChanges(state, changes, { source: c.name });
   const turn = state.meta.turn;
   state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn }, { role: 'npc', text: reply, date: dateStr(state.meta.date), turn, applied: applied.map((a) => a.text) }];
@@ -229,6 +243,14 @@ export function act(id, body) {
       for (const v of vassals) state.houses[v].obligations = { ...(state.houses[v].obligations || {}), levies: 'called' };
       const at = state.holdings[body.at] ? state.holdings[body.at].name : state.holdings[me.seat]?.name;
       addOrder(`CALL THE BANNERS: I summon ${vassals.map((v) => 'House ' + state.houses[v].name).join(', ')} to muster their levies at ${at}${body.deadline ? ' within ' + body.deadline : ''}.${body.note ? ' ' + body.note : ''} Raise my own levies as well${body.ownLevies ? ` (${body.ownLevies} men)` : ''}.`);
+      break;
+    }
+    case 'decide': {
+      const d = (state.decisions || []).find((x) => x.id === body.decision && x.status === 'pending');
+      if (!d) throw httpError(404, 'no such decision');
+      const opt = d.options[Number(body.option)]; if (!opt && !body.custom) throw httpError(400, 'bad option');
+      d.status = 'decided'; d.choice = opt ? opt.label : String(body.custom).slice(0, 500); d.note = body.note ? String(body.note).slice(0, 500) : ''; d.decidedTurn = state.meta.turn;
+      addOrder(`DECISION — ${d.title}: I choose "${d.choice}".${d.note ? ' ' + d.note : ''}`);
       break;
     }
     case 'order': {
