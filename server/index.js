@@ -65,10 +65,11 @@ const server = http.createServer(async (req, res) => {
     }
     // Static files (three.js is served straight from node_modules)
     let base = PUBLIC, rel = decodeURIComponent(url.pathname);
-    if (rel.startsWith('/vendor/three/')) { base = path.join(ROOT, 'node_modules', 'three'); rel = rel.slice('/vendor/three'.length); }
+    // three.js ships bundled in public/vendor; fall back to node_modules if someone deletes it
+    if (rel.startsWith('/vendor/three/') && !fs.existsSync(path.join(PUBLIC, rel))) { base = path.join(ROOT, 'node_modules', 'three'); rel = rel.slice('/vendor/three'.length); }
     let file = path.normalize(path.join(base, rel));
     if (!file.startsWith(base)) return send(res, 403, 'forbidden', 'text/plain');
-    if (base !== PUBLIC && !fs.existsSync(file)) return send(res, 500, 'three.js not found — run "npm install" first.', 'text/plain');
+    
     if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
     if (!fs.existsSync(file)) return send(res, 404, 'not found', 'text/plain');
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
@@ -76,7 +77,7 @@ const server = http.createServer(async (req, res) => {
   } catch (e) {
     const status = e.status || (e.name === 'AbortError' ? 504 : e.cause?.code === 'ECONNREFUSED' ? 503 : 500);
     const msg = e.cause?.code === 'ECONNREFUSED' ? `Cannot reach the model server at ${loadConfig().baseUrl}. Is LM Studio / Ollama / llama.cpp running? (Or switch to mock mode in Settings.)` : e.message;
-    if (status >= 500) console.error(e);
+    if (status >= 500 && status !== 503) console.error(e);
     send(res, status, { error: msg });
   }
 });

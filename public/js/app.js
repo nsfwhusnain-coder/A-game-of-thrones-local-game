@@ -1,6 +1,5 @@
 import { HOUSES } from '../data/houses.js';
 import { CHARACTERS } from '../data/characters.js';
-import { MapScene } from './map3d/MapScene.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL } from './ui/portrait.js';
 import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, REGION_NAMES, RANK_NAMES } from './ui/common.js';
@@ -82,6 +81,7 @@ async function startGame(id, state) {
   if (!app.map) {
     $('#map-loading').classList.remove('hidden');
     try {
+      const { MapScene } = await import('./map3d/MapScene.js');
       app.map = new MapScene($('#map-wrap'), {
         onSelect: (hid) => { if (app.picking) return finishPick(hid); if (hid) openSheet('holding', hid); else closeSheet(); },
         onSelectArmy: (aid) => openSheet('army', aid),
@@ -89,7 +89,12 @@ async function startGame(id, state) {
         onEvent: (e) => { setDrawer('feed'); if (e.where && app.state.holdings[e.where]) app.map.flyTo(app.state.holdings[e.where].pos); toast(e.title + ' — ' + e.text); },
       });
       await app.map.generate(app.state.holdings, (p, msg) => { $('#map-loading-bar').style.width = Math.round(p * 100) + '%'; $('#map-loading-text').textContent = msg + '…'; });
-    } catch (e) { console.error(e); toast('The map failed to load: ' + e.message + ' (does your browser support WebGL2?)', true); }
+    } catch (e) {
+      console.error(e); app.map = null;
+      $('#map-loading-text').innerHTML = `The map failed to load: ${esc(e.message)}<br><small>Check that WebGL is enabled in your browser (opera://settings → System → hardware acceleration). Press F12 → Console for details.</small>`;
+      toast('The map failed to load: ' + e.message, true);
+      return;
+    }
     $('#map-loading').classList.add('hidden');
   }
   app.map.state = null;

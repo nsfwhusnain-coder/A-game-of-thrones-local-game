@@ -13,9 +13,16 @@ The game is inspired by [Pax Historia](https://www.paxhistoria.co/): time pauses
 ```bash
 git clone -b claude/brave-ramanujan-i8dt0q https://github.com/nsfwhusnain-coder/A-game-of-thrones-local-game.git
 cd A-game-of-thrones-local-game
-npm install          # Node 18+ · installs three.js (the 3D map engine)
-npm run fetch-sigils # optional: downloads the real house sigil art from A Wiki of Ice and Fire (local only)
-npm start            # → http://127.0.0.1:3298
+
+npm start
+```
+
+Then open http://127.0.0.1:3298. You only need Node 18+; the 3D engine (three.js) is bundled.
+
+Optional: download the real house sigil art from the wikis for your local copy (takes a few minutes):
+
+```bash
+npm run fetch-sigils
 ```
 
 The first launch builds the map, which takes a few seconds. It is cached in your browser after that. You need a browser with WebGL2 (any recent Chrome, Edge, Opera, Firefox or Safari).
