@@ -52,6 +52,8 @@ Decision options may carry `fx` (engine effects applied the moment the player an
 - [x] Land-and-sea pathfinding for army movement; fleets follow sea lanes.
 - [x] Council meetings with multiple speakers.
 - [x] 3D map with procedural settlements, landmarks, forests, relief and water.
+- [x] The map rebuilt from real atlas data (canonical coastlines, rivers, roads, ranges, forests, kingdoms and places), with terrain generated from it.
+- [x] The story can change the map: new holdings, renames, ruins, landmarks.
 - [x] Ledger engine (vassal tribute, taxes, upkeep, food, projects, seasons).
 - [x] Characters: skills, portraits, family trees.
 - [ ] Streaming responses so the turn narrative appears as it is written.
@@ -59,6 +61,6 @@ Decision options may carry `fx` (engine effects applied the moment the player an
 - [ ] More houses and characters (every sworn house in the Wiki of Ice and Fire), minor towns and ports.
 - [ ] Trade routes and goods (Arbor wine, Lannisport gold, northern timber, Braavosi credit) drawn on the map.
 - [ ] Holding buildings and upgrades; sieges with duration; castle garrisons as separate units.
-- [ ] Map editor for the geography and provinces.
+- [ ] Map editor for the geography and provinces (for now: edit `data-src/` and run `scripts/build-atlas.js`).
 - [ ] Portraits (procedural or local image model).
 - [ ] Optional two-pass turn (plan, then resolve) for smaller models.
