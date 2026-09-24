@@ -1,7 +1,7 @@
 // The temper of the vassals: loyalty and friendship decide whether dues arrive and banners answer.
 // The simulator can override any of this by changing obligations itself; the engine fills in when it doesn't.
 import { applyChanges, placePos, getRelation } from './world.js';
-import { marchDays } from './warfare.js';
+import { marchDays, atWar } from './warfare.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -39,6 +39,7 @@ export function vassalTick(state, days, touched = new Set()) {
     const t = vassalTemper(state, v.id);
     const liege = state.houses[v.liege];
     const mine = v.liege === p;
+    if (v.id === p) { events.push(...playerAsVassal(state, v, months)); continue; } // the player answers for themself
     // --- dues ---
     if (!touched.has(v.id) && ['paying', 'late', 'withholding'].includes(ob.tribute)) {
       const r = Math.random(); let next = ob.tribute;
@@ -164,4 +165,53 @@ export function fieldService(state, days) {
     if (host.men <= 0) delete state.armies[host.id];
   }
   return events;
+}
+
+// When the player is someone's vassal: the liege's summons arrive as a decision, and withheld dues are noticed.
+function playerAsVassal(state, me, months) {
+  const events = []; const ob = me.obligations = me.obligations || { tribute: 'paying', levies: 'not_called' };
+  const liege = state.houses[me.liege]; const lord = state.characters[liege.lord];
+  const k = [me.id, liege.id].sort().join('|');
+  if (ob.tribute === 'withholding' || ob.tribute === 'late') {
+    const d = (ob.tribute === 'withholding' ? 3 : 1) * months;
+    state.relations[k] = { ...(state.relations[k] || {}), v: clamp(Math.round((state.relations[k]?.v ?? 0) - d), -100, 100) };
+  }
+  // a liege at war calls on his sworn swords
+  const atWarNow = state.wars.some((w) => w.status !== 'ended' && (w.attackers.includes(liege.id) || w.defenders.includes(liege.id)));
+  if (atWarNow && (!ob.levies || ob.levies === 'not_called') && Math.random() < 0.45 * months) { ob.levies = 'called'; ob.muster = liege.seat; ob.calledDays = 0; }
+  if (ob.levies === 'delayed') { ob.calledDays = (ob.calledDays || 0) + months * 30; if (ob.calledDays > 40) { ob.levies = 'called'; ob.calledDays = 0; state.relations[k] = { ...(state.relations[k] || {}), v: clamp((state.relations[k]?.v ?? 0) - 5, -100, 100) }; } }
+  if (ob.levies === 'called' && !(state.decisions || []).some((d) => d.kind === 'liege_call' && d.status === 'pending')) {
+    const lev = Number(me.figures.levies?.v) || 0;
+    const muster = state.holdings[ob.muster || liege.seat]?.name || 'his seat';
+    const r = applyChanges(state, [{ op: 'decision', title: `House ${liege.name} calls your banners`, from: liege.lord, text: `A raven with ${lord ? lord.name + "'s" : 'your liege\'s'} seal: you are commanded to muster your levies and ride for ${muster} with all haste.`, options: [
+      { label: 'Answer the call', hint: `~${Math.round(lev * 0.75).toLocaleString()} men march for ${muster}; your liege is pleased`, fx: [{ call: 'answer' }] },
+      { label: 'Send a token force', hint: 'A few hundred men and many excuses', fx: [{ call: 'token' }] },
+      { label: 'Delay — the harvest must come in', hint: 'Your liege will not wait forever', fx: [{ call: 'delay' }] },
+      { label: 'Refuse the summons', hint: 'Keep your men. Your liege will remember.', fx: [{ call: 'refuse' }] }] }]);
+    const d = state.decisions.at(-1); if (d && r.applied.length) d.kind = 'liege_call';
+  }
+  return events;
+}
+
+/** The player's answer to a liege's summons. Returns lines describing what was done. */
+export function answerCall(state, how) {
+  const p = state.meta.player; const me = state.houses[p]; const liege = state.houses[me.liege]; if (!liege) return [];
+  const ob = me.obligations = me.obligations || {}; const out = [];
+  const k = [p, liege.id].sort().join('|');
+  const rel = (d) => { state.relations[k] = { ...(state.relations[k] || {}), v: clamp((state.relations[k]?.v ?? 0) + d, -100, 100) }; out.push(`${liege.name} ${d > 0 ? '+' : ''}${d}`); };
+  if (how === 'answer' || how === 'token') {
+    const lev = Number(me.figures.levies?.v) || 0; const maa = Number(me.figures.menAtArms?.v) || 0;
+    const men = how === 'answer' ? Math.round((lev * 0.75 + maa * 0.5) / 50) * 50 : Math.min(300, Math.round(lev * 0.15 / 50) * 50 || 50);
+    const name = `Host of House ${me.name}`;
+    const heir = Object.values(state.characters).find((c) => c.alive && c.house === p && c.status === 'free' && c.age >= 16 && /heir|knight/.test((c.roles || []).join(' ')));
+    applyChanges(state, [{ op: 'army_create', owner: p, name, at: me.seat, men, commander: heir?.id || me.lord, composition: `Levies of House ${me.name}${how === 'answer' && maa > 100 ? ', with knights and men-at-arms' : ''}`, status: 'marching to muster' },
+      { op: 'figure', house: p, field: 'levies', delta: -Math.round(men * 0.85), source: 'Muster rolls' }]);
+    const a = Object.values(state.armies).filter((x) => x.owner === p && x.name === name).at(-1);
+    if (a && ob.muster && ob.muster !== me.seat) { a.march = { to: ob.muster, since: state.meta.turn }; a.dest = placePos(ob.muster, state.holdings); a.status = 'marching'; }
+    ob.levies = 'answered';
+    out.push(`${men.toLocaleString()} men march for ${state.holdings[ob.muster]?.name || 'the muster'}`);
+    rel(how === 'answer' ? 10 : -3);
+  } else if (how === 'delay') { ob.levies = 'delayed'; rel(-5); }
+  else if (how === 'refuse') { ob.levies = 'refused'; rel(-20); const l = state.characters[liege.lord]; if (l) out.push(`${l.name} will not forget`); }
+  return out;
 }

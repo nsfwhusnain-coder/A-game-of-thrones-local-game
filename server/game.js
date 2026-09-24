@@ -162,7 +162,10 @@ export async function advance(id, { span = '1m', orders } = {}) {
     if (pet) { const r = applyChanges(state, [{ op: 'decision', ...pet }]); record.applied.push(...r.applied); }
   }
   // Unanswered decisions lapse after a couple of turns — the world moved on without you
-  for (const d of state.decisions || []) if (d.status === 'pending' && state.meta.turn - d.turn >= 3) { d.status = 'lapsed'; }
+  for (const d of state.decisions || []) if (d.status === 'pending' && state.meta.turn - d.turn >= 3) {
+    d.status = 'lapsed';
+    if (d.kind === 'liege_call') applyPetitionFx(state, [{ call: 'refuse' }]); // silence is refusal
+  }
 
   // Flush chronicle ops + major events into the markdown chronicle
   const notes = [...state.chronicle.map((c) => c.text), ...events.filter((e) => e.importance >= 5).map((e) => `${e.title} — ${e.text}`)];
@@ -289,6 +292,14 @@ export function act(id, body) {
       if ((me.figures.treasury.v || 0) < t.cost * 0.25) throw httpError(400, `The treasury cannot even fund the first stage of ${t.name} (needs ~${Math.round(t.cost * 0.25)} gd up front).`);
       applyChanges(state, [{ op: 'project', house: p, name: `${t.name} at ${state.holdings[hold].name}`, cost: t.cost, months: t.months, holding: hold, effect: t.effect }]);
       addOrder(`Fund works: ${t.name} at ${state.holdings[hold].name} (${t.cost} gold dragons over ${t.months} moons).`);
+      break;
+    }
+    case 'dues': {
+      if (!me.liege) throw httpError(400, 'you owe dues to no one');
+      if (!['paying', 'late', 'withholding'].includes(body.status)) throw httpError(400, 'bad status');
+      me.obligations = { ...(me.obligations || {}), tribute: body.status };
+      const lg = state.houses[me.liege];
+      addOrder(body.status === 'paying' ? `Pay my dues to House ${lg.name} in full.` : body.status === 'late' ? `Delay my dues to House ${lg.name}; send excuses and small sums.` : `Withhold all dues from House ${lg.name}.`);
       break;
     }
     case 'cancel_project': {

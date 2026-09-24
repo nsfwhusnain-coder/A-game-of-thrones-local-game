@@ -2,6 +2,7 @@
 // Used when the simulator itself raised nothing for the player this turn.
 import { vassalsOf, getRelation, generateKin } from './world.js';
 import { isFemale } from './people.js';
+import { answerCall } from './vassals.js';
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
@@ -130,6 +131,7 @@ export function applyPetitionFx(state, fx, date = '') {
     if (e.tribute) { const h = state.houses[e.tribute[0]]; if (h) { h.obligations = { ...(h.obligations || {}), tribute: e.tribute[1], tributeUntil: (state.meta.date.year * 12 + state.meta.date.month) + 12 }; out.push(`House ${h.name} tribute ${e.tribute[1]}`); } }
     if (e.betroth) { const [a, b] = e.betroth.map((x) => state.characters[x]); if (a && b && a.alive && b.alive && !a.betrothed && !b.betrothed) { a.betrothed = b.id; b.betrothed = a.id; out.push(`${a.name} betrothed to ${b.name}`); } }
     if (e.betrothNew) { const [kidId, hid, female, age] = e.betrothNew; const kid = state.characters[kidId]; if (kid?.alive && !kid.betrothed) { const c = generateKin(state, hid, { female, age }); if (c) { kid.betrothed = c.id; c.betrothed = kid.id; out.push(`${kid.name} betrothed to ${c.name}`); } } }
+    if (e.call) out.push(...answerCall(state, e.call));
     if (e.debt) { me.loans = [...(me.loans || []), { to: e.debt[0], amount: e.debt[1], turn: state.meta.turn }]; }
     if (e.chance) { const [pr, yes, no] = e.chance; out.push(...applyPetitionFx(state, Math.random() < pr ? yes : no, date)); }
   }
