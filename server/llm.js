@@ -39,6 +39,7 @@ export const DEFAULT_CONFIG = {
   timeoutSec: 900,
   consolidateEvery: 5,                // consolidate turn history into the chronicle every N turns (Pax Historia style)
   keepRecentTurns: 4,                 // how many recent turns stay verbatim in the prompt
+  promptDetail: 'full',               // 'full' = every house & character each turn; 'lean' = only what's relevant (much faster on laptops)
   extraBody: {},                      // merged into the request body (e.g. {"top_p":0.9,"min_p":0.05})
 };
 

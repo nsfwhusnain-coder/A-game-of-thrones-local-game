@@ -145,13 +145,13 @@ export class MapScene {
           float t = uTime * 0.35;
           float nx = n(p + vec2(t, t*0.7)) - n(p * 1.7 - vec2(t*0.8, -t*0.4) + 10.0);
           float nz = n(p * 1.3 + vec2(-t*0.6, t)) - n(p * 2.1 + vec2(t*0.5, t*0.3) + 33.0);
-          float farK = 1.0 - smoothstep(300.0, 1600.0, vFogDepth);
+          float farK = 1.0 - smoothstep(120.0, 900.0, vFogDepth);
           vec3 N = normalize(vec3(nx * 0.18 * farK, 1.0, nz * 0.18 * farK));
           vec3 V = normalize(uCam - vW);
           vec3 R = reflect(-uSun, N);
-          float spec = pow(max(dot(R, V), 0.0), 140.0) * 0.45;
+          float spec = pow(max(dot(R, V), 0.0), 180.0) * 0.35;
           float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
-          col += spec * farK * vec3(1.0, 0.92, 0.75) + fres * vec3(0.08, 0.12, 0.16);
+          col += spec * farK * vec3(1.0, 0.92, 0.75) + fres * farK * vec3(0.05, 0.08, 0.1);
           float foam = smoothstep(0.035, 0.0, d) * (0.55 + 0.45 * sin(uTime * 1.6 + vW.x * 0.3 + vW.z * 0.25));
           col = mix(col, vec3(0.86, 0.9, 0.88), foam * 0.6 * inside);
           float alpha = mix(0.55, 0.96, smoothstep(0.0, 0.2, d));

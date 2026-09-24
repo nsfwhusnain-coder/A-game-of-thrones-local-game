@@ -112,13 +112,13 @@ export function playerSheet(state) {
   const letters = (state.ravens || []).slice(0, 5);
   if (letters.length) lines.push('Letters the player has received recently:\n' + letters.map((r) => `  [${r.date}] from ${r.fromName}: ${r.text}`).join('\n'));
   const pending = (state.decisions || []).filter((d) => d.status === 'pending');
-  if (pending.length) lines.push('Decisions awaiting the player: ' + pending.map((d) => d.title).join('; '));
+  if (pending.length) lines.push('Decisions the player has NOT answered (treat silence as delay or refusal, and let those who asked react): ' + pending.map((d) => `${d.title} (asked ${d.date})`).join('; '));
   const decided = (state.decisions || []).filter((d) => d.status === 'decided' && d.decidedTurn === state.meta.turn);
   if (decided.length) lines.push('DECISIONS THE PLAYER MADE THIS TURN (binding — resolve their consequences):\n' + decided.map((d) => `  ${d.title}: chose "${d.choice}"${d.note ? ' — ' + d.note : ''}`).join('\n'));
   return lines.join('\n');
 }
 
-export function worldDigest(state, budgetTokens) {
+export function worldDigest(state, budgetTokens, lean = false) {
   const p = state.meta.player;
   const parts = [];
   const season = SEASONS[state.world?.season || 'summer'];
@@ -150,9 +150,12 @@ export function worldDigest(state, budgetTokens) {
   let houseLines = allHouses.map((h) => houseLine(state, h, p));
   let charLines = allChars.map((c) => charLine(state, c));
   const sizeNow = estimateTokens(parts.join('\n') + houseLines.join('\n') + charLines.join('\n'));
-  if (sizeNow > budgetTokens) {
+  if (lean || sizeNow > budgetTokens) {
     const relevant = new Set([p, ...vassalsOf(state, p, true), ...tops.map((h) => h.id)]);
     for (const w of wars) if (w.attackers.includes(p) || w.defenders.includes(p)) [...w.attackers, ...w.defenders].forEach((x) => relevant.add(x));
+    if (state.houses[p]?.liege) relevant.add(state.houses[p].liege);
+    // anyone the player has spoken with, and anyone at the player's side
+    for (const k of Object.keys(state.chats || {})) if (state.characters[k]) relevant.add(state.characters[k].house);
     houseLines = allHouses.filter((h) => relevant.has(h.id) || getRelation(state, p, h.id) !== 0).map((h) => houseLine(state, h, p));
     charLines = allChars.filter((c) => relevant.has(c.house) && (c.house === p || c.roles?.some((r) => ['lord', 'lady', 'ruler', 'heir', 'council', 'commander'].includes(r)))).map((c) => charLine(state, c));
   }
@@ -215,7 +218,7 @@ Produce 4-10 events (more for longer periods). Include changes for every consequ
   const user = [
     lore,
     playerSheet(state),
-    worldDigest(state, digestBudget),
+    worldDigest(state, digestBudget, cfg.promptDetail === 'lean'),
     memoryBlock(state, chronicleMd, memBudget, cfg.keepRecentTurns),
     diplomacySinceLastTurn(state),
     `CURRENT DATE: ${dateStr(state.meta.date)}. Simulate the next ${span.label} (${span.days} days).`,
@@ -268,7 +271,7 @@ Allowed ops: figure, character, relation, pact, raven, army_update, army_move, a
     state.history.length < 3 ? 'BACKGROUND (what the realm knows or whispers; you know only what your character plausibly would):\n' + sc.lore.map((l) => '- ' + l).join('\n') : '',
     characterKnowledge(state, c),
     memoryBlock(state, chronicleMd, Math.floor(budget * 0.35), 2),
-    'Known houses and people (ids):\n' + worldDigest(state, Math.floor(budget * 0.35)),
+    'Known houses and people (ids):\n' + worldDigest(state, Math.floor(budget * 0.35), cfg.promptDetail !== 'full'),
   ].filter(Boolean).join('\n\n');
   const messages = [{ role: 'system', content: system + '\n\n' + context }];
   for (const m of log) messages.push({ role: m.role === 'player' ? 'user' : 'assistant', content: m.role === 'player' ? m.text : JSON.stringify({ reply: m.text, changes: [] }) });
@@ -304,7 +307,7 @@ export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {
     `Reply ONLY with JSON: {"replies":[{"speaker":CHAR_ID,"text":"..."}],"changes":[optional change operations the council's reports imply — e.g. a steward's corrected figures]}`,
     TALK_SCHEMA,
   ].join('\n\n');
-  const context = [`DATE: ${dateStr(state.meta.date)}`, playerSheet(state), ...people.map((c) => characterKnowledge(state, c)).filter(Boolean).slice(0, 1), memoryBlock(state, chronicleMd, Math.floor(budget * 0.3), 2), worldDigest(state, Math.floor(budget * 0.35))].join('\n\n');
+  const context = [`DATE: ${dateStr(state.meta.date)}`, playerSheet(state), ...people.map((c) => characterKnowledge(state, c)).filter(Boolean).slice(0, 1), memoryBlock(state, chronicleMd, Math.floor(budget * 0.3), 2), worldDigest(state, Math.floor(budget * 0.35), cfg.promptDetail !== 'full')].join('\n\n');
   const messages = [{ role: 'system', content: system + '\n\n' + context }];
   for (const m of log) messages.push(m.role === 'player' ? { role: 'user', content: m.text } : { role: 'assistant', content: JSON.stringify({ replies: [{ speaker: m.speaker, text: m.text }] }) });
   messages.push({ role: 'user', content: `${message}\n\n[The counsellors answer in their own voices. Reply with JSON only: {"replies":[{"speaker":CHAR_ID,"text":"..."}],"changes":[]}]` });

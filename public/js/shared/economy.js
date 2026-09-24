@@ -94,7 +94,7 @@ export function holdingYield(state, h) {
 }
 
 export function armyUpkeep(a) {
-  if (a.type === 'fleet') return (a.ships || 0) * 25 + a.men * 0.15;
+  if (a.type === 'fleet') return (a.ships || 0) * 12 + a.men * 0.1; // crews fish, trade and raid between wars
   const sell = /sellsword|company|mercenar/i.test(a.composition || '') || /company/i.test(a.name || '');
   return a.men * (sell ? 1.1 : 0.28) * (a.status === 'garrison' ? 0.5 : 1);
 }

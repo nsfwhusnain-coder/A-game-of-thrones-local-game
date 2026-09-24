@@ -251,6 +251,8 @@ async function handleAction(action, el) {
 
 async function advance() {
   if (app.busy || !app.state) return;
+  const undecided = (app.state.decisions || []).filter((d) => d.status === 'pending');
+  if (undecided.length && !confirm(`${undecided.length} decision${undecided.length > 1 ? 's await' : ' awaits'} your answer (${undecided.map((d) => d.title).join(', ')}). Silence is also an answer — advance anyway?`)) { setDrawer('feed'); return; }
   const pending = orderInput.value.trim(); if (pending) { addOrder(pending); orderInput.value = ''; }
   const span = $('#span-select').value;
   busy(true, `The world moves forward ${$('#span-select').selectedOptions[0].text}…`);
@@ -294,7 +296,7 @@ async function showSettings() {
   modal(`<h2>Model settings</h2>
     <p class="muted" style="font-size:0.9rem">Any OpenAI-compatible server works (llama.cpp's <code>llama-server</code>, LM Studio, Ollama…). The simulator juggles hundreds of names and must answer in JSON, so larger instruct models do best. Set the context window to what your server was started with (e.g. <code>-c 262144</code> → 262144).</p>
     <div class="grid2">
-      <div><label>Provider</label><select id="cfg-provider"><option value="openai">OpenAI-compatible (local server)</option><option value="mock">Mock (no model, for testing)</option></select></div>
+      <div><label>Provider</label><select id="cfg-provider"><option value="openai">OpenAI-compatible (local server)</option><option value="mock">Mock (no model, for testing)</option><option value="relay">Relay (you or another app writes the replies — see README)</option></select></div>
       <div><label>Model name <span class="muted">(blank = server default)</span></label><input class="input" id="cfg-model" list="model-list" value="${esc(c.model)}"><datalist id="model-list"></datalist></div>
       <div style="grid-column:1/-1"><label>Server URL</label><input class="input" id="cfg-url" value="${esc(c.baseUrl)}"><div class="presets">${presets.map(([n, u]) => `<button class="btn small" data-url="${u}">${n}</button>`).join('')}</div></div>
       <div><label>API key <span class="muted">(usually blank)</span></label><input class="input" id="cfg-key" value="${esc(c.apiKey)}"></div>
@@ -304,16 +306,17 @@ async function showSettings() {
       <div><label>Consolidate memory every N turns</label><input class="input" id="cfg-cons" type="number" value="${c.consolidateEvery}"></div>
       <div><label>Recent turns kept verbatim</label><input class="input" id="cfg-keep" type="number" value="${c.keepRecentTurns}"></div>
       <div><label>Request timeout (seconds)</label><input class="input" id="cfg-timeout" type="number" value="${c.timeoutSec}"></div>
+      <div><label>World detail per turn</label><select id="cfg-detail"><option value="full">Full — every house & person (best with big context & fast GPU)</option><option value="lean">Lean — only what matters to you (much faster on laptops)</option></select></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-json" ${c.jsonMode ? 'checked' : ''}> Force JSON mode (response_format)</label></div>
       <div style="grid-column:1/-1"><label>Extra request parameters (JSON, e.g. {"top_p":0.9,"min_p":0.05})</label><input class="input" id="cfg-extra" value="${esc(JSON.stringify(c.extraBody || {}))}"></div>
     </div>
     <div class="settings-actions"><button class="btn primary" id="cfg-save">Save</button><button class="btn" id="cfg-test">Test connection</button><button class="btn ghost" id="cfg-models">Fetch models</button></div>
     <div id="cfg-result" class="muted" style="margin-top:0.6rem;white-space:pre-wrap;font-size:0.85rem"></div>`);
-  $('#cfg-provider').value = c.provider;
+  $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full';
   $$('[data-url]').forEach((b) => b.onclick = () => { $('#cfg-url').value = b.dataset.url; });
   const collect = () => {
     let extra = {}; try { extra = JSON.parse($('#cfg-extra').value || '{}'); } catch { toast('Extra parameters are not valid JSON', true); }
-    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, extraBody: extra };
+    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, extraBody: extra };
   };
   $('#cfg-save').onclick = async () => { await api('/config', { body: collect() }); toast('Settings saved.'); refreshLLMStatus(); };
   $('#cfg-test').onclick = async () => { await api('/config', { body: collect() }); $('#cfg-result').textContent = 'Testing…'; try { const r = await api('/llm/test', { body: {} }); $('#cfg-result').textContent = `✔ Connected (${r.ms} ms, ${r.model || 'model'})\n${r.text}`; } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } refreshLLMStatus(); };

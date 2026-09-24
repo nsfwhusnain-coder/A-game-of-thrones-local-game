@@ -130,6 +130,8 @@ export async function advance(id, { span = '1m', orders } = {}) {
   const record = { turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw.ms, usage: raw.usage, ledger: state.houses[p].ledger.at(-1) };
   state.history.push(record);
   state.orders = [];
+  // Unanswered decisions lapse after a couple of turns — the world moved on without you
+  for (const d of state.decisions || []) if (d.status === 'pending' && state.meta.turn - d.turn >= 3) { d.status = 'lapsed'; }
 
   // Flush chronicle ops + major events into the markdown chronicle
   const notes = [...state.chronicle.map((c) => c.text), ...events.filter((e) => e.importance >= 5).map((e) => `${e.title} — ${e.text}`)];
