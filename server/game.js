@@ -124,7 +124,8 @@ export async function advance(id, { span = '1m', orders } = {}) {
     const dest = placePos(a.march.to, state.holdings); if (!dest) { delete a.march; continue; }
     const m = marchDays(a, a.pos, dest);
     const f = Math.min(1, spanInfo.days / Math.max(1, m.days));
-    applyChanges(state, [{ op: 'army_move', army: a.id, to: f >= 1 ? a.march.to : a.march.to, progress: f, status: f >= 1 ? 'arrived' : 'marching' }]);
+    const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to: a.march.to, progress: f, status: f >= 1 ? 'arrived' : 'marching' }]);
+    applied.push(...mv.applied);
     if (f >= 1) delete a.march;
   }
   // Settle the books for the period (after the story has changed the causes)
@@ -339,7 +340,8 @@ export function act(id, body) {
     }
     case 'march': {
       const a = state.armies[body.army]; if (!a || a.owner !== p) throw httpError(400, 'not your host');
-      const dest = placePos(body.to, state.holdings); if (!dest) throw httpError(400, 'unknown destination');
+      const to = resolvePlaceId(body.to) || body.to; body.to = to;
+      const dest = placePos(to, state.holdings); if (!dest) throw httpError(400, 'unknown destination');
       const m = marchDays(a, a.pos, dest);
       a.march = { to: body.to, since: state.meta.turn }; a.dest = dest; a.destName = placeName(state, body.to); a.at = null; a.status = 'marching';
       addOrder(`${a.name} marches on ${placeName(state, body.to)} (~${m.miles} miles, ~${m.days} days)${body.intent ? ' — ' + body.intent : ''}.`);

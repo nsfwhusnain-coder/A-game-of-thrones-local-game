@@ -55,7 +55,8 @@ const RULES = `SIMULATION RULES
 4. The world moves even if the player does nothing: canon events may unfold (with variation as the story diverges), NPC houses scheme, marry, feud, trade and go to war. Show at least one development that does not involve the player.
 5. Use exact ids from the tables for houses, characters, armies and places. You may create new characters (captains, envoys, bastards, maesters) and new armies.
 6. Respect what the player learned through diplomacy chats: agreements made there should be honored or broken in character.
-7. Write events in a grounded, literary chronicle voice. Be specific: names, places, numbers, weather, rumours.`;
+7. Write events in a grounded, literary chronicle voice. Be specific: names, places, numbers, weather, rumours.
+8. The player RULES. Unless the period is shorter than two weeks, bring at least one matter of their OWN realm before them as a "decision": a petition from smallfolk, a border dispute between two of their vassals, a plea for grain, a request for justice against a knight, a marriage offer for one of their children, a vassal asking for a favour, a crime to judge. Use real vassal houses and characters. These small choices should have consequences for loyalty, unrest and prosperity.`;
 
 // ---------------- World digest ----------------
 
