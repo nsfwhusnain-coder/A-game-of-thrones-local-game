@@ -32,7 +32,7 @@ export function decisionsHtml() {
 export function wireDecisions(root) {
   $$('.dec-opt', root).forEach((b) => b.onclick = async () => {
     const card = b.closest('.decision'); const note = card.querySelector('.dec-note')?.value || '';
-    try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'decide', decision: b.dataset.decId, option: Number(b.dataset.opt), note } }); app.setState(r.state); toast('Your answer is given. It will shape what comes next.'); } catch (e) { toast(e.message, true); }
+    try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'decide', decision: b.dataset.decId, option: Number(b.dataset.opt), note } }); app.setState(r.state); toast(r.effects?.length ? `Done. ${r.effects.join(' · ')}` : 'Your answer is given. It will shape what comes next.'); } catch (e) { toast(e.message, true); }
   });
 }
 function renderFeed(body) {

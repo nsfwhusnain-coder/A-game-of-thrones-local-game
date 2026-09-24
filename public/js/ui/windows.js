@@ -3,6 +3,7 @@ import { app, $, $$, esc, fmt, placeName, getRelation, api, toast, relHtml, sig,
 import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf } from '../shared/world.js';
 import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
+import { vassalTemper } from '../shared/vassals.js';
 import { atWar, battleOdds, marchDays, siegeEstimate } from '../shared/warfare.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
@@ -53,13 +54,18 @@ function realm() {
 }
 function obligationPills(v) {
   const t = v.obligations?.tribute || 'paying', l = v.obligations?.levies || 'not_called';
-  const tc = t === 'paying' ? 'good' : t === 'late' ? 'warn' : 'bad';
+  const tc = t === 'paying' ? 'good' : ['late', 'reduced', 'forgiven'].includes(t) ? 'warn' : 'bad';
   const lc = l === 'answered' ? 'good' : l === 'called' || l === 'delayed' ? 'warn' : l === 'refused' ? 'bad' : '';
   return `<span class="pill ${tc}" title="Tribute">🪙 ${esc(t)}</span><span class="pill ${lc}" title="Levies">⚔ ${esc(l.replace('_', ' '))}</span>`;
 }
+function temperWord(t) {
+  if (t == null) return '';
+  const [w, c] = t >= 70 ? ['devoted', '#a8e08a'] : t >= 50 ? ['dutiful', '#cfe0a0'] : t >= 35 ? ['wavering', '#e8c870'] : t >= 20 ? ['resentful', '#ec9a8a'] : ['near rebellion', '#ff6a5a'];
+  return `<span style="color:${c}" title="Temper ${t}/100: how willingly this house serves. Loyalty of its lord, friendship with you, your taxes, and its own troubles.">${w}</span>`;
+}
 function vassalRow(v) {
   const s = app.state; const lord = v.lord ? s.characters[v.lord] : null;
-  return `<div class="row clickable" data-house="${v.id}">${sig(v)}<div class="grow"><div class="title">${esc(v.name)}</div><div class="sub">${lord ? esc(lord.name) : '—'} · levies ~${fmt(v.figures.levies.v)}</div><div>${obligationPills(v)}</div></div>${relHtml(getRelation(s, s.meta.player, v.id))}</div>`;
+  return `<div class="row clickable" data-house="${v.id}">${sig(v)}<div class="grow"><div class="title">${esc(v.name)}</div><div class="sub">${lord ? esc(lord.name) : '—'} · levies ~${fmt(v.figures.levies.v)} · ${temperWord(vassalTemper(s, v.id))}</div><div>${obligationPills(v)}</div></div>${relHtml(getRelation(s, s.meta.player, v.id))}</div>`;
 }
 
 // ───────────── Council ─────────────
@@ -106,8 +112,8 @@ function military() {
     </div>
     <div class="row-actions"><button class="btn primary" id="call-banners">📯 Call the banners…</button><button class="btn" id="raise-levies">Raise own levies…</button><button class="btn" data-order-tpl="Hire sellswords: ">Hire sellswords</button></div>
     <div id="banners-form" class="hidden"></div>
-    <div class="section" style="margin-top:0.8rem"><h4>Your hosts & fleets</h4>${mine.map((a) => armyRow(a) + (a.owner === p ? `<div class="row-actions" style="margin:0.1rem 0 0.5rem 2.3rem"><button class="btn small" data-march="${a.id}">⤳ March…</button>${a.commander && s.characters[a.commander]?.alive ? `<button class="btn small" data-talk="${a.commander}">Commander</button>` : ''}<button class="btn small" data-order-tpl="${esc(a.name)} is to ">Orders…</button><button class="btn small danger" data-disband="${a.id}">Disband</button></div>` : '')).join('') || '<div class="muted">No hosts in the field. Call your banners to raise one.</div>'}</div>
-    <div class="section"><h4>Vassal levies</h4>${vas.map((v) => `<div class="row clickable" data-house="${v.id}">${sig(v)}<div class="grow"><div class="title">${esc(v.name)}</div><div class="sub">~${fmt(v.figures.levies.v)} levies · ${fmt(v.figures.menAtArms.v)} men-at-arms</div></div>${obligationPills(v)}</div>`).join('') || '<div class="muted">You have no vassals.</div>'}</div>
+    <div class="section" style="margin-top:0.8rem"><h4>Your hosts & fleets</h4>${mine.map((a) => armyRow(a) + ((a.owner === p || a.serving === p) ? `<div class="row-actions" style="margin:0.1rem 0 0.5rem 2.3rem"><button class="btn small" data-march="${a.id}">⤳ March…</button>${a.commander && s.characters[a.commander]?.alive ? `<button class="btn small" data-talk="${a.commander}">Commander</button>` : ''}<button class="btn small" data-order-tpl="${esc(a.name)} is to ">Orders…</button><button class="btn small danger" data-disband="${a.id}">Disband</button></div>` : '')).join('') || '<div class="muted">No hosts in the field. Call your banners to raise one.</div>'}</div>
+    <div class="section"><h4>Vassal levies</h4>${vas.map((v) => `<div class="row clickable" data-house="${v.id}">${sig(v)}<div class="grow"><div class="title">${esc(v.name)}</div><div class="sub">~${fmt(v.figures.levies.v)} levies · ${fmt(v.figures.menAtArms.v)} men-at-arms · ${temperWord(vassalTemper(s, v.id))}</div></div>${obligationPills(v)}</div>`).join('') || '<div class="muted">You have no vassals.</div>'}</div>
     <div class="section"><h4>Known forces</h4>${others.map(armyRow).join('')}</div>`;
 }
 
@@ -219,7 +225,7 @@ const wire = {
     $('#raise-levies', body).onclick = () => {
       const s = app.state, p = s.meta.player, h = player();
       const holds = Object.values(s.holdings).filter((x) => x.owner === p);
-      const cmds = Object.values(s.characters).filter((c) => c.alive && c.house === p && c.age >= 15 && c.status === 'free' && !String(c.loc).startsWith('army:'));
+      const cmds = Object.values(s.characters).filter((c) => c.alive && c.house === p && c.age >= 14 && c.status === 'free' && !String(c.loc).startsWith('army:'));
       const max = Number(h.figures.levies.v) || 0;
       modal(`<h2>Raise your levies</h2><p class="muted">Your own smallfolk answer you directly — your vassals must be called separately. Men in the field cost coin every moon and leave the fields untended.</p>
         <label>Men: <b id="rl-n">${Math.round(max / 2)}</b> of ~${fmt(max)}</label><input type="range" id="rl-men" min="50" max="${max}" step="50" value="${Math.round(max / 2)}" style="width:100%">
@@ -390,7 +396,7 @@ function holdingSheet(id) {
 
 function armySheet(id) {
   const s = app.state; const a = s.armies[id]; if (!a) return '';
-  const h = s.houses[a.owner]; const cmd = a.commander ? s.characters[a.commander] : null; const mine = a.owner === s.meta.player;
+  const h = s.houses[a.owner]; const cmd = a.commander ? s.characters[a.commander] : null; const mine = a.owner === s.meta.player || a.serving === s.meta.player;
   return `
     <div class="detail-hero"><img class="banner" src="${banner(h, 60, 90)}" style="width:4rem" alt=""><div><h2>${a.type === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</h2><div class="muted"><a href="#" data-house="${h.id}">House ${esc(h.name)}</a> · ${esc(a.status || '')}</div></div></div>
     <div class="stat-grid">

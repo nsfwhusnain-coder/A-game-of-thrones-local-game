@@ -8,6 +8,7 @@ import { estimateTokens } from './llm.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom } from '../public/js/shared/warfare.js';
 import { briefFor } from '../public/data/briefs.js';
+import { vassalTemper } from '../public/js/shared/vassals.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
@@ -84,7 +85,7 @@ function charLine(state, c) {
 function armyLine(state, a) {
   const cmd = a.commander ? (state.characters[a.commander]?.name || a.commander) : '—';
   const where = a.at ? `at ${placeName(state, a.at)}` : `en route to ${a.destName || '?'} (now near ${Math.round(a.pos[0])},${Math.round(a.pos[1])})`;
-  return `${a.id} | ${a.name} | ${a.owner} | ${a.type}${a.ships ? ` ${a.ships} ships` : ''} | ${fmt(a.men)} men | cmd:${cmd} | ${where} | ${a.status || ''} | morale ${a.morale} supply ${a.supply}${a.march ? ` | ORDERED to march on ${placeName(state, a.march.to)} (the engine moves it at marching pace unless you army_move it yourself, e.g. if intercepted)` : ''}`;
+  return `${a.id} | ${a.name} | ${a.owner}${a.serving ? ` (serving ${a.serving})` : ''} | ${a.type}${a.ships ? ` ${a.ships} ships` : ''} | ${fmt(a.men)} men | cmd:${cmd} | ${where} | ${a.status || ''} | morale ${a.morale} supply ${a.supply}${a.march ? ` | ORDERED to march on ${placeName(state, a.march.to)} (the engine moves it at marching pace unless you army_move it yourself, e.g. if intercepted)` : ''}`;
 }
 
 export function playerSheet(state) {
@@ -102,7 +103,7 @@ export function playerSheet(state) {
   const vas = vassalsOf(state, p);
   if (vas.length) {
     lines.push('Sworn vassals:');
-    for (const v of vas) { const vh = state.houses[v]; const lordC = vh.lord ? state.characters[vh.lord] : null; lines.push(`  ${houseLine(state, vh, p)} | tribute:${vh.obligations?.tribute} levies:${vh.obligations?.levies} | lord loyalty ${lordC?.loyalty ?? '?'} | ${figuresLine(vh)}`); }
+    for (const v of vas) { const vh = state.houses[v]; const lordC = vh.lord ? state.characters[vh.lord] : null; lines.push(`  ${houseLine(state, vh, p)} | tribute:${vh.obligations?.tribute} levies:${vh.obligations?.levies} | lord loyalty ${lordC?.loyalty ?? '?'} temper ${vassalTemper(state, v)} | ${figuresLine(vh)}`); }
     const t = realmTotals(state, p);
     lines.push(`Realm totals (house + vassals): levies ${fmt(t.levies)}, men-at-arms ${fmt(t.menAtArms)}, ships ${fmt(t.ships)}, treasury ${fmt(t.treasury)}`);
   }

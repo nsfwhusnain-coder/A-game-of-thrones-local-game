@@ -7,7 +7,8 @@ import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidateP
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
 import { settle, initEconomy, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
-import { realmPetition } from '../public/js/shared/petitions.js';
+import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
+import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 export const SAVES = path.join(ROOT, 'saves');
@@ -121,6 +122,10 @@ export async function advance(id, { span = '1m', orders } = {}) {
   const playerChoseAllegiance = /fealty|swear|kneel|bend the knee|independen|king in the north|secede|declare (my|our)|crown (me|myself)|renounce/i.test(orderText);
   const { applied, rejected } = applyChanges(state, [...(obj.changes || []), ...naturalDeaths], { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance });
   const deathEvents = naturalDeaths.map((d) => state.characters[d.id]).filter((c) => c && !c.alive).map((c) => ({ title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, type: 'court', houses: [c.house] }));
+  // Vassals whose obligations the story did not settle act on their own temper: dues, and the banners
+  const touched = new Set((obj.changes || []).filter((c) => c && ['obligation', 'vassal'].includes(c.op)).map((c) => String(c.house || '').toLowerCase()));
+  const vt = vassalTick(state, spanInfo.days, touched);
+  applied.push(...vt.applied);
   // Marching orders the story didn't resolve: the engine walks the host along at marching pace
   for (const a of Object.values(state.armies)) {
     if (!a.march || a.movedTurn === state.meta.turn) continue;
@@ -131,13 +136,14 @@ export async function advance(id, { span = '1m', orders } = {}) {
     applied.push(...mv.applied);
     if (f >= 1) delete a.march;
   }
+  vt.events.push(...fieldService(state, spanInfo.days), ...gatherMusters(state));
   // Settle the books for the period (after the story has changed the causes)
   const econNotes = settle(state, spanInfo.days);
   const events = (Array.isArray(obj.events) ? obj.events : []).map((e) => ({
     title: String(e.title || 'Untitled'), text: String(e.text || e.description || ''), where: resolvePlaceId(e.where || e.location) || null,
     importance: Math.max(1, Math.min(5, Number(e.importance) || 2)), type: String(e.type || 'court'), houses: Array.isArray(e.houses) ? e.houses : [],
   }));
-  events.push(...deathEvents);
+  events.push(...deathEvents, ...vt.events);
   for (const a of applied.filter((x) => x.op === 'succession')) {
     const hh = state.houses[a.house];
     events.unshift({ title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === state.meta.player ? 5 : 4, type: 'court', houses: [a.house] });
@@ -293,8 +299,9 @@ export function act(id, body) {
     case 'call_banners': {
       const vassals = (body.vassals || []).filter((v) => state.houses[v]?.liege === p);
       if (!vassals.length) throw httpError(400, 'choose at least one vassal');
-      for (const v of vassals) state.houses[v].obligations = { ...(state.houses[v].obligations || {}), levies: 'called' };
-      const at = state.holdings[body.at] ? state.holdings[body.at].name : state.holdings[me.seat]?.name;
+      const muster = resolvePlaceId(body.at) || me.seat;
+      for (const v of vassals) state.houses[v].obligations = { ...(state.houses[v].obligations || {}), levies: 'called', muster, calledDays: 0 };
+      const at = state.holdings[muster] ? state.holdings[muster].name : state.holdings[me.seat]?.name;
       addOrder(`CALL THE BANNERS: I summon ${vassals.map((v) => 'House ' + state.houses[v].name).join(', ')} to muster their levies at ${at}${body.deadline ? ' within ' + body.deadline : ''}.${body.note ? ' ' + body.note : ''} Raise my own levies as well${body.ownLevies ? ` (${body.ownLevies} men)` : ''}.`);
       break;
     }
@@ -303,7 +310,10 @@ export function act(id, body) {
       if (!d) throw httpError(404, 'no such decision');
       const opt = d.options[Number(body.option)]; if (!opt && !body.custom) throw httpError(400, 'bad option');
       d.status = 'decided'; d.choice = opt ? opt.label : String(body.custom).slice(0, 500); d.note = body.note ? String(body.note).slice(0, 500) : ''; d.decidedTurn = state.meta.turn;
-      addOrder(`DECISION — ${d.title}: I choose "${d.choice}".${d.note ? ' ' + d.note : ''}`);
+      let settled = [];
+      if (opt?.fx) { settled = applyPetitionFx(state, opt.fx, dateStr(state.meta.date)); d.effects = settled; }
+      addOrder(`DECISION — ${d.title}: I choose "${d.choice}".${d.note ? ' ' + d.note : ''}${settled.length ? ` [Already settled by the ledger, do not apply again: ${settled.join('; ')}. Narrate how people react.]` : ''}`);
+      if (settled.length) result.effects = settled;
       break;
     }
     case 'appoint': {
@@ -340,16 +350,28 @@ export function act(id, body) {
       break;
     }
     case 'disband': {
-      const a = state.armies[body.army]; if (!a || a.owner !== p) throw httpError(400, 'not your host');
-      const home = Math.round(a.type === 'fleet' ? 0 : a.men * 0.9);
-      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id) c.loc = a.at || me.seat;
+      const a = state.armies[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
+      const owner = state.houses[a.owner];
+      // the sworn houses take their own men home
+      let others = 0;
+      const sworn = Object.values(a.contingents || {}).reduce((x, y) => x + y, 0);
+      const scale = sworn > a.men ? a.men / sworn : 1; // losses fall on every banner alike
+      for (const [vid, men] of Object.entries(a.contingents || {})) {
+        const v = state.houses[vid]; if (!v) continue; const back = Math.round(men * scale * 0.9); others += men * scale;
+        v.figures.levies = { ...(v.figures.levies || {}), v: (Number(v.figures.levies?.v) || 0) + back };
+        v.obligations = { ...(v.obligations || {}), levies: 'not_called' }; delete v.obligations.host;
+        for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id && c.house === vid) c.loc = v.seat;
+      }
+      const home = Math.round(a.type === 'fleet' ? 0 : Math.max(0, a.men - others) * 0.9);
+      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id) c.loc = a.owner === p ? (a.at || me.seat) : owner.seat;
       delete state.armies[a.id];
-      if (home) applyChanges(state, [{ op: 'figure', house: p, field: 'levies', delta: home, source: 'Men sent home' }]);
-      addOrder(`(Done) Disbanded ${a.name}; the men go home to their fields.`);
+      if (home) applyChanges(state, [{ op: 'figure', house: a.owner, field: 'levies', delta: home, source: 'Men sent home' }]);
+      if (a.owner !== p) { owner.obligations = { ...(owner.obligations || {}), levies: 'not_called' }; delete owner.obligations.host; }
+      addOrder(`(Done) ${a.owner === p ? 'Disbanded' : 'Released from service'} ${a.name}; the men go home to their fields.`);
       break;
     }
     case 'march': {
-      const a = state.armies[body.army]; if (!a || a.owner !== p) throw httpError(400, 'not your host');
+      const a = state.armies[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
       const to = resolvePlaceId(body.to) || body.to; body.to = to;
       const dest = placePos(to, state.holdings); if (!dest) throw httpError(400, 'unknown destination');
       const m = marchDays(a, a.pos, dest);

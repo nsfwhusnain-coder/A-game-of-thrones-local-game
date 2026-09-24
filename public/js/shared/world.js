@@ -194,6 +194,25 @@ function generateLord(h, year) {
   };
 }
 
+// A new member of a house (a younger child or grandchild of the lord) — for marriages and wards
+const FEMALE_NAMES = { north: ['Wylla', 'Lyessa', 'Alys', 'Sarra', 'Jonelle'], riverlands: ['Bethany', 'Jeyne', 'Roslin', 'Minisa'], vale: ['Ysilla', 'Mya', 'Myranda', 'Jeyne'], westerlands: ['Cerenna', 'Myranda', 'Lanna', 'Joanna'], reach: ['Leonette', 'Rhonda', 'Alerie', 'Merry'], stormlands: ['Sharna', 'Ellyn', 'Cassana', 'Argella'], dorne: ['Larra', 'Nymella', 'Ynys', 'Mellario'], crownlands: ['Falyse', 'Tanda', 'Lollys', 'Alys'], iron_islands: ['Gysella', 'Sawane', 'Esgred', 'Alannys'] };
+export function generateKin(state, houseId, { female = false, age = 14 } = {}) {
+  const h = state.houses[houseId]; if (!h) return null;
+  const region = state.holdings[h.seat]?.region || h.region || 'reach';
+  const pool = female ? (FEMALE_NAMES[region] || FEMALE_NAMES.reach) : (NAME_POOLS[region] || NAME_POOLS.reach).filter((n) => !/^(Lyessa|Alys|Sarra|Wynafryd|Harma|Morna|Gysella|Bethany|Jeyne|Ysilla|Mya|Cerenna|Myranda|Lanna|Tanda|Falyse|Leonette|Rhonda|Sharna|Ellyn|Larra|Nymella|Belore)$/.test(n));
+  const surname = h.name.replace(/ of .*$/, '').replace(/^Nymeros /, '');
+  let first = pool[Math.floor(Math.random() * pool.length)], id = slug(`${first}_${surname}`), n = 2;
+  while (state.characters[id]) id = slug(`${first}_${surname}_${n++}`);
+  const lord = state.characters[h.lord];
+  const traits = [TRAIT_POOL[Math.floor(Math.random() * TRAIT_POOL.length)]].join(', ');
+  const year = state.meta?.date?.year || 298;
+  const c = { id, name: `${first} ${surname}`, house: houseId, title: '', age, born: year - age, loc: h.seat || houseId, roles: ['family'], traits, bio: `${female ? 'Daughter' : 'Son'} of House ${h.name}${lord ? `, kin to ${lord.name}` : ''}.`, alive: true, status: 'free', opinion: 0, loyalty: 60, memories: [], generated: true, gender: female ? 'f' : 'm', skills: deriveSkills({ roles: ['family'], traits, age }) };
+  if (lord && lord.age - age >= 16) c[isFemaleLord(lord) ? 'mother' : 'father'] = lord.id;
+  state.characters[id] = c;
+  return c;
+}
+const isFemaleLord = (c) => c.gender === 'f' || /^(Lady|Queen|Princess)\b/.test(c.title || '');
+
 export function childrenOf(state, id) {
   return Object.values(state.characters).filter((c) => c.father === id || c.mother === id).sort((a, b) => (a.born || 0) - (b.born || 0));
 }
@@ -601,7 +620,7 @@ function applyOne(state, ch, ctx) {
       return { op, text: `A raven arrives from ${state.ravens[0].fromName}` };
     }
     case 'decision': case 'choice': {
-      const opts = (Array.isArray(ch.options) ? ch.options : []).map((o) => (typeof o === 'string' ? { label: o } : { label: String(o.label || o.text || ''), hint: String(o.hint || o.effect || '') })).filter((o) => o.label);
+      const opts = (Array.isArray(ch.options) ? ch.options : []).map((o) => (typeof o === 'string' ? { label: o } : { label: String(o.label || o.text || ''), hint: String(o.hint || o.effect || ''), ...(Array.isArray(o.fx) ? { fx: o.fx } : {}) })).filter((o) => o.label);
       if (opts.length < 2) throw new Error('a decision needs at least two options');
       state.decisions = state.decisions || [];
       const d = { id: slug(ch.id || ch.title || 'decision') + '_' + Math.random().toString(36).slice(2, 6), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, status: 'pending' };

@@ -112,18 +112,19 @@ export function project(state, houseId) {
     const vg = houseHoldings(state, v.id).reduce((s, h) => s + holdingYield(state, h).total, 0) * 0.25;
     const share = TRIBUTE_SHARE[house.rank] ?? 0.2;
     const st = v.obligations?.tribute || 'paying';
-    const exp = st === 'paying' ? vg * share * tax.income : st === 'late' ? vg * share * 0.4 : 0;
+    const exp = st === 'paying' ? vg * share * tax.income : st === 'reduced' ? vg * share * tax.income * 0.5 : st === 'late' ? vg * share * 0.4 : 0;
     tribute += exp; vassals.push({ id: v.id, expected: Math.round(exp), status: st });
   }
   const armies = Object.values(state.armies).filter((a) => a.owner === houseId);
   const upkeep = armies.reduce((s, a) => s + armyUpkeep(a), 0);
-  const household = (house.figures.menAtArms?.v || 0) * 0.38 + (house.figures.guard?.v || 0) * 0.6;
+  const alms = almsFor(state).find((x) => x.id === houseId)?.amount || 0;
+  const household = (house.figures.menAtArms?.v || 0) * (houseId === 'nights_watch' ? 0.12 : 0.38) + (house.figures.guard?.v || 0) * 0.6 + alms;
   const court = house.policy?.courtCost ?? ({ crown: 6000, paramount: 1500, major: 160, minor: 40, city_state: 5000 }[house.rank] || 30);
   const interest = (house.figures.debt?.v || 0) * 0.004;
   const projects = (state.projects || []).filter((p) => p.house === houseId && p.status === 'active').reduce((s, p) => s + p.perMonth, 0);
   const liege = house.liege ? state.houses[house.liege] : null;
   const owed = liege && (house.obligations?.tribute === 'paying') ? own / tax.income * (TRIBUTE_SHARE[liege.rank] ?? 0.2) : 0;
-  const income = own + tribute;
+  const income = own + tribute + (houseId === 'nights_watch' ? almsFor(state).reduce((a, x) => a + x.amount, 0) : 0);
   const expenses = upkeep + household + court + interest + projects + owed;
   return { own: Math.round(own), tribute: Math.round(tribute), vassals, upkeep: Math.round(upkeep), household: Math.round(household), court: Math.round(court), interest: Math.round(interest), projects: Math.round(projects), owed: Math.round(owed), income: Math.round(income), expenses: Math.round(expenses), net: Math.round(income - expenses), low: Math.round(income * 0.75 - expenses), high: Math.round(income * 1.15 - expenses) };
 }
@@ -165,16 +166,18 @@ export function settle(state, days) {
   }
   for (const v of Object.values(state.houses)) {
     const liege = v.liege ? state.houses[v.liege] : null; if (!liege || !ledgers[liege.id]) continue;
+    // Remitted dues (forgiven or halved by the liege) run for a year, then revert
+    if (v.obligations?.tributeUntil && state.meta?.date && state.meta.date.year * 12 + state.meta.date.month >= v.obligations.tributeUntil) { v.obligations.tribute = 'paying'; delete v.obligations.tributeUntil; notes.push({ house: liege.id, text: `House ${v.name}'s remitted dues have run their course; full tribute is owed again.` }); }
     const st = v.obligations?.tribute || 'paying';
     const share = TRIBUTE_SHARE[liege.rank] ?? 0.2;
     const ltax = TAX_LEVELS[liege.policy?.tax || 'normal'];
     let rel = 0; try { rel = state.relations[(v.id < liege.id ? `${v.id}|${liege.id}` : `${liege.id}|${v.id}`)]?.v ?? 0; } catch { /* */ }
-    let comply = st === 'paying' ? rnd(0.85, 1.05) : st === 'late' ? (Math.random() < 0.35 ? rnd(0.8, 1.6) : 0) : 0;
+    let comply = st === 'paying' ? rnd(0.85, 1.05) : st === 'reduced' ? rnd(0.45, 0.55) : st === 'late' ? (Math.random() < 0.35 ? rnd(0.8, 1.6) : 0) : 0;
     if (st === 'paying' && rel < -30) comply *= rnd(0.5, 0.9);
     const base = (ledgers[v.id]?.own || 0) / TAX_LEVELS[v.policy?.tax || 'normal'].income;
     const due = base * share * ltax.income;
     const paid = Math.max(0, due * comply);
-    const note = st === 'withholding' ? 'withheld' : st === 'late' ? (paid > 0 ? 'arrears paid' : 'late — nothing arrived') : paid < due * 0.8 ? 'paid short' : '';
+    const note = st === 'withholding' ? 'withheld' : st === 'forgiven' ? 'forgiven this year' : st === 'reduced' ? 'halved by your grace' : st === 'late' ? (paid > 0 ? 'arrears paid' : 'late — nothing arrived') : paid < due * 0.8 ? 'paid short' : '';
     if (due > 1 || st !== 'paying') {
       ledgers[liege.id].lines.push({ kind: 'income', label: `Tribute — House ${v.name}`, amount: Math.round(paid), expected: Math.round(due), note, vassal: v.id });
       ledgers[v.id].lines.push({ kind: 'expense', label: `Tribute to House ${liege.name}`, amount: Math.round(paid), note });
@@ -193,12 +196,22 @@ export function settle(state, days) {
     const armies = Object.values(state.armies).filter((a) => a.owner === house.id);
     const upkeep = armies.reduce((s, a) => s + armyUpkeep(a), 0) * months;
     if (upkeep) L.lines.push({ kind: 'expense', label: 'Hosts & fleets in the field', amount: Math.round(upkeep), detail: armies.map((a) => ({ label: a.name, amount: Math.round(armyUpkeep(a) * months) })) });
-    const household = ((f.menAtArms?.v || 0) * 0.38 + (f.guard?.v || 0) * 0.6) * months;
+    const household = ((f.menAtArms?.v || 0) * (house.id === 'nights_watch' ? 0.12 : 0.38) + (f.guard?.v || 0) * 0.6) * months; // sworn brothers take no wages
     if (household) L.lines.push({ kind: 'expense', label: 'Men-at-arms & household guard', amount: Math.round(household) });
     const court = (house.policy?.courtCost ?? ({ crown: 6000, paramount: 1500, major: 160, minor: 40, city_state: 5000 }[house.rank] || 30)) * months * rnd(0.85, 1.2);
     L.lines.push({ kind: 'expense', label: 'Court, feasts & household', amount: Math.round(court) });
     const interest = (f.debt?.v || 0) * 0.004 * months;
     if (interest) L.lines.push({ kind: 'expense', label: 'Interest on debts', amount: Math.round(interest) });
+    // The Night's Watch lives on the alms of the realm; friendly great houses send coin and grain north
+    if (house.id === 'nights_watch' || (state.houses.nights_watch && ['crown', 'paramount'].includes(house.rank))) {
+      if (house.id === 'nights_watch') {
+        const alms = almsFor(state).reduce((a, x) => a + x.amount, 0) * months;
+        if (alms) L.lines.push({ kind: 'income', label: 'Alms & grain from the realm', amount: Math.round(alms), detail: almsFor(state).map((x) => ({ label: `House ${state.houses[x.id].name}`, amount: Math.round(x.amount * months) })) });
+      } else {
+        const mine = almsFor(state).find((x) => x.id === house.id);
+        if (mine) L.lines.push({ kind: 'expense', label: 'Alms to the Night\'s Watch', amount: Math.round(mine.amount * months) });
+      }
+    }
     // projects
     for (const p of (state.projects || []).filter((x) => x.house === house.id && x.status === 'active')) {
       const spend = Math.min(p.remaining, p.perMonth * months);
@@ -225,8 +238,23 @@ export function settle(state, days) {
     const cons = Math.max(0.05, pop * 0.9 + soldiers * 1.3);
     const prod = hs.reduce((s, h) => { const r = h.resources || {}; return s + (h.population / 10000) * ((r.grain || 0) * 0.8 + (r.fish || 0) * 0.5 + (r.horses || 0) * 0.1 + 0.45) * holdingFactor(state, h) * seasonFood(state, h.region) * rnd(0.8, 1.15); }, 0);
     const levyDrain = Math.min(0.35, soldiers / Math.max(0.01, pop) * 3); // men in the field don't till fields
-    const stores = (Number(f.food?.v) || 0) * cons + (prod * (1 - levyDrain) - cons) * months;
+    const aid = house.id === 'nights_watch' ? (almsFor(state).length ? Math.min(1.05, 0.7 + 0.15 * almsFor(state).length) : 0) * cons : 0; // grain carts up the kingsroad
+    const stores = aid * months + (Number(f.food?.v) || 0) * cons + (prod * (1 - levyDrain) - cons) * months;
     if (!nomad) f.food = { v: Math.round(clamp(stores / cons, 0, 96) * 10) / 10, asOf: date, src, confidence: 'reported' };
+    // A prudent steward buys grain when the stores run low — dear in winter, impossible under embargo or siege
+    if (!nomad && f.food.v < 4 && cons > 0.05 && house.id !== 'nights_watch') {
+      const sieged = hs.some((h) => h.id === house.seat && /besieg/.test(h.status || ''));
+      const price = 320 * (state.world?.season === 'winter' ? 2.2 : state.world?.season === 'autumn' ? 1.4 : 1) / Math.max(0.3, tradeModifier(state, house.id));
+      const want = Math.min(4 - f.food.v, 2 * months);
+      const afford = Math.floor((f.treasury.v * 0.5) / (cons * price) * 10) / 10;
+      const buy = sieged ? 0 : Math.min(want, afford);
+      if (buy >= 0.3) {
+        const cost = Math.round(buy * cons * price);
+        f.treasury.v -= cost; f.food.v = Math.round((f.food.v + buy) * 10) / 10;
+        L.lines.push({ kind: 'expense', label: 'Grain bought from merchants', amount: cost, note: `${buy.toFixed(1)} moons of stores` });
+        notes.push({ house: house.id, text: `The steward of House ${house.name} bought ${buy.toFixed(1)} moons of grain for ${cost.toLocaleString()} dragons.` });
+      }
+    }
     if (!nomad && f.food.v < 2 && pop > 0.3) notes.push({ house: house.id, text: `Hunger stalks the lands of House ${house.name}. The granaries are nearly empty.`, important: true });
 
     // levies regenerate toward what the land can bear
@@ -291,3 +319,17 @@ export const PROJECT_TEMPLATES = [
   { key: 'mines', name: 'Open new mine shafts', icon: '⛏', cost: 15000, months: 8, effect: { resource: { type: 'iron', amount: 0.4 }, building: 'New mine shafts' }, desc: 'Iron from the hills (gold if the gods are kind).' },
 ];
 export { RESOURCES, TAX_LEVELS };
+
+// Which great houses send alms north, and how much (a moon's worth). Friendship with the Watch opens purses.
+export function almsFor(state) {
+  const nw = state.houses.nights_watch; if (!nw) return [];
+  const out = [];
+  for (const h of Object.values(state.houses)) {
+    if (!['crown', 'paramount'].includes(h.rank) || h.id === 'nights_watch') continue;
+    const k = h.id < 'nights_watch' ? `${h.id}|nights_watch` : `nights_watch|${h.id}`;
+    const rel = state.relations[k]?.v ?? 0;
+    if (rel < 25 || (Number(h.figures.treasury?.v) || 0) < 500) continue;
+    out.push({ id: h.id, amount: Math.round((h.region === 'north' ? 120 : 50) * (rel / 50)) });
+  }
+  return out;
+}
