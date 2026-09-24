@@ -35,6 +35,10 @@ The first launch builds the map, which takes a few seconds. It is cached in your
 2. Open the game and go to **⚙ Model Settings**. Pick your server and set **Context window** to match the context your server was started with (for example `262144` for 256k). Click **Test connection**.
 3. Pick a house and play. Without a model you can use **Mock** mode to explore the UI.
 
+**Laptops:** in Settings, set *World detail per turn* to **Lean**. Prompts get about 45% smaller (only the houses and people that matter to you), so turns are much faster on a MacBook. Use **Full** with a big context and a fast GPU.
+
+**Relay / game-master mode:** set Provider to *Relay*. Every prompt is written to `relay/<n>-<kind>.prompt.md`, and the game waits for you (or any other app or model) to write the answer to `relay/<n>-<kind>.reply.txt`. This is handy for testing prompts or running a human-GMed campaign.
+
 **Model advice:** the simulator juggles hundreds of ids and must return valid JSON, so bigger instruct models do much better. Roughly 24B–70B, or a strong MoE. Larger context lets it see the whole world at once. Keep the temperature around 0.7–0.9.
 
 ## What's in the game
@@ -56,6 +60,16 @@ The first launch builds the map, which takes a few seconds. It is cached in your
 - **A real economy** (see below): the ledger, taxation, vassal tribute, upkeep, food stores, seasons, and works to fund (warships, granaries, walls, roads, markets, men-at-arms, mines).
 - **Feudal levies:** *Call the banners* sends ravens to the vassals you choose. Each lord answers, delays or refuses based on loyalty and the story, and only the lords who answer add men.
 - **Councils and audiences:** talk to anyone one-on-one (by raven if they are far away), or convene several advisors who each speak in their own voice.
+
+## Ruling your house
+
+- **Decisions.** When the world demands an answer (the King offers you the Handship, Walder Frey names his price for the crossing, the King is dying and Renly offers you swords), a decision card appears with options and room for your own conditions. Your answer binds the next turn. Silence is also an answer, and unanswered decisions lapse.
+- **Succession.** When a lord dies, the heir takes the seat: male-preference primogeniture (absolute in Dorne), through children, grandchildren, siblings and kin. Sworn brothers, maesters and Kingsguard are skipped. If your ruler dies, you play on as the heir. Characters age every year, and the old and ailing may die.
+- **Your officers.** Appoint a steward, master-at-arms, captain, spymaster, commander or castellan from your household and guests. Grant holdings to loyal vassals to bind them to you.
+- **Your hosts.** Raise your own levies directly (the number of men, the muster point, the commander). Call your vassals' banners (each lord answers, delays or refuses in character). Click the map to march; the engine walks the host at marching pace unless the story intervenes. Disband hosts to send men home to the harvest.
+- **The war room.** Battles and sieges are grounded in numbers: men, morale, the commander's martial skill, supply, troop quality, walls and stores. Each army panel shows the enemy hosts in reach, march times and your odds. The simulator gets the same estimates.
+- **Intrigue.** Characters hide secrets (whose children are whose, who poisoned whom). Schemes and conversations can uncover them, and uncovered secrets appear on character sheets.
+- **Trade.** Trade pacts raise, and embargoes and wars cut, the trade-driven income (trade, wine, spice, furs) of everyone involved.
 
 ## How to play
 

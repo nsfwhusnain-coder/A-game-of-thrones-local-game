@@ -102,9 +102,22 @@ export async function advance(id, { span = '1m', orders } = {}) {
 
   const spanInfo = SPANS[span] || SPANS['1m'];
   const dateFrom = dateStr(state.meta.date);
+  const yearBefore = state.meta.date.year;
   state.meta.date = addDays(state.meta.date, spanInfo.days);
+  // The years turn: everyone ages, and the very old may not see the next one
+  const naturalDeaths = [];
+  for (let y = yearBefore; y < state.meta.date.year; y++) {
+    for (const c of Object.values(state.characters)) {
+      if (!c.alive || c.age == null) continue;
+      c.age += 1;
+      const ailing = c.status === 'wounded' || /ailing|dying|sick|abed/i.test(`${c.traits} ${c.bio}`);
+      const risk = c.age >= 60 ? ((c.age - 58) ** 2) / 2600 + (ailing ? 0.25 : 0) : ailing && c.age > 45 ? 0.08 : 0;
+      if (risk && Math.random() < Math.min(0.85, risk)) naturalDeaths.push({ op: 'character', id: c.id, alive: false, cause: ailing ? 'illness' : 'old age' });
+    }
+  }
   state.meta.turn += 1;
-  const { applied, rejected } = applyChanges(state, obj.changes || [], { source: 'Reports & rumours' });
+  const { applied, rejected } = applyChanges(state, [...(obj.changes || []), ...naturalDeaths], { source: 'Reports & rumours' });
+  const deathEvents = naturalDeaths.map((d) => state.characters[d.id]).filter((c) => c && !c.alive).map((c) => ({ title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, type: 'court', houses: [c.house] }));
   // Marching orders the story didn't resolve: the engine walks the host along at marching pace
   for (const a of Object.values(state.armies)) {
     if (!a.march || a.movedTurn === state.meta.turn) continue;
@@ -120,6 +133,7 @@ export async function advance(id, { span = '1m', orders } = {}) {
     title: String(e.title || 'Untitled'), text: String(e.text || e.description || ''), where: resolvePlaceId(e.where || e.location) || null,
     importance: Math.max(1, Math.min(5, Number(e.importance) || 2)), type: String(e.type || 'court'), houses: Array.isArray(e.houses) ? e.houses : [],
   }));
+  events.push(...deathEvents);
   for (const a of applied.filter((x) => x.op === 'succession')) {
     const hh = state.houses[a.house];
     events.unshift({ title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === state.meta.player ? 5 : 4, type: 'court', houses: [a.house] });
