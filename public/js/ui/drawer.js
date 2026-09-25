@@ -3,7 +3,7 @@ import { eventArt } from './event-art.js';
 import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow } from './common.js';
 import { dateStr } from '../shared/world.js';
 import { briefFor } from '../../data/briefs.js';
-import { beats, speak, stopSpeaking, voiceSettings } from './voice.js';
+import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices } from './voice.js';
 
 export function setDrawer(tab) { app.drawerTab = tab; renderDrawer(); }
 export function renderDrawer() {
@@ -90,6 +90,7 @@ export function openCouncil(ids) { app.chatWith = null; app.council = ids; showD
 function showDrawer() { $('#drawer').classList.remove('hidden'); $('#drawer-open').classList.add('hidden'); }
 
 function renderAudience(body) {
+  warmVoices(); // start the natural voices loading while you choose your words
   const s = app.state;
   if (app.council) return renderCouncil(body);
   const c = app.chatWith ? s.characters[app.chatWith] : null;
@@ -133,7 +134,8 @@ function msgHtml(m, c) {
   if (m.role === 'player') return `<div class="msg player"><div class="who">You · ${esc(m.date || '')}</div>${esc(m.text)}</div>`;
   // a reply is a small scene: what you see them do, and what they say
   const bs = beats(m.text);
-  const body = bs.map((b) => (b.kind === 'act' ? `<p class="beat act">${esc(b.text)}</p>` : `<p class="beat say" title="Click to hear it">${esc(b.text)}</p>`)).join('') || esc(m.text);
+  // narration reads as a novel's prose; speech is set in quotation marks
+  const body = bs.map((b) => (b.kind === 'act' ? `<p class="beat act" title="Click to hear it">${esc(b.text)}</p>` : `<p class="beat say" title="Click to hear it">“${esc(b.text.replace(/^[“"]+|[”"]+$/g, ''))}”</p>`)).join('') || esc(m.text);
   return `<div class="msg npc" data-speaker="${sp?.id || ''}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}<button class="speak-all" title="Hear it">🔊</button></div><div class="beats">${body}</div>${m.applied?.length ? `<div class="applied">${m.applied.map(esc).join('<br>')}</div>` : ''}</div>`;
 }
 // Voices: click a line to hear it, or the speaker icon to hear the whole reply
@@ -143,10 +145,16 @@ export function wireVoices(root) {
     if (ra) { stopSpeaking(); await speak(ra.dataset.text, app.state.characters[ra.dataset.readAloud] || { id: 'maester', age: 60 }); return; }
     const msg = e.target.closest('.msg.npc'); if (!msg) return;
     const who = app.state.characters[msg.dataset.speaker];
-    if (e.target.closest('.speak-all')) { stopSpeaking(); for (const p of msg.querySelectorAll('.beat.say')) { p.classList.add('speaking'); await speak(p.textContent, who); p.classList.remove('speaking'); } return; }
-    const line = e.target.closest('.beat.say'); if (!line) return;
+    const clean = (p) => p.textContent.replace(/^[“"]+|[”"]+$/g, '');
+    if (e.target.closest('.speak-all')) {
+      // the whole scene, top to bottom: narration and speech in order
+      const ps = [...msg.querySelectorAll('.beat')];
+      await speakBeats(ps.map((p) => ({ kind: p.classList.contains('act') ? 'act' : 'say', text: clean(p), p })), who, (b, on) => b.p.classList.toggle('speaking', on));
+      return;
+    }
+    const line = e.target.closest('.beat'); if (!line) return;
     msg.querySelectorAll('.speaking').forEach((x) => x.classList.remove('speaking'));
-    line.classList.add('speaking'); await speak(line.textContent, who); line.classList.remove('speaking');
+    line.classList.add('speaking'); await speak(clean(line), who, { narrator: line.classList.contains('act') }); line.classList.remove('speaking');
   });
 }
 /** Play the newest replies as a scene: each beat appears in turn, and the spoken lines are voiced. */
@@ -159,7 +167,8 @@ export async function playScene(msgs) {
     if (playScene.token !== token) { all.forEach(({ b: x }) => x.classList.remove('hidden-beat')); return; }
     b.classList.remove('hidden-beat'); b.classList.add('reveal');
     b.closest('.chat-log')?.scrollTo({ top: 1e9, behavior: 'smooth' });
-    if (b.classList.contains('say') && auto) { b.classList.add('speaking'); await speak(b.textContent, app.state.characters[m.dataset.speaker]); b.classList.remove('speaking'); await wait(250); }
+    const narrated = b.classList.contains('act') && voiceSettings().narrate;
+    if (auto && (b.classList.contains('say') || narrated)) { b.classList.add('speaking'); await speak(b.textContent.replace(/^[“"]+|[”"]+$/g, ''), app.state.characters[m.dataset.speaker], { narrator: narrated }); b.classList.remove('speaking'); await wait(200); }
     else await wait(b.classList.contains('act') ? 700 + Math.min(1600, b.textContent.length * 18) : 400 + Math.min(2500, b.textContent.length * 22));
   }
 }

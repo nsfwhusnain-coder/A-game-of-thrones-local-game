@@ -1,14 +1,17 @@
 // Voices for the characters.
-// Two engines:
+// Three engines:
+//  - 'neural':  natural voices (Kokoro-82M) generated in the browser itself, in a worker; the default;
 //  - 'browser': the system's speech voices (Web Speech API), shaped per character with pitch and pace;
 //  - 'server':  any local OpenAI-compatible text-to-speech server (/v1/audio/speech — e.g. Kokoro-FastAPI, openedai-speech,
 //               a Piper or XTTS bridge), proxied through the game server, with a voice per character.
 // Every character gets a stable voice: the main cast have hand-set profiles, everyone else is assigned one
 // from their sex, age and homeland.
-import { app, api } from './common.js';
+import { app, api, toast } from './common.js';
 
 const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } } };
-export const voiceSettings = () => ({ engine: store.get('voice-engine', 'browser'), volume: store.get('voice-volume', 0.9), auto: store.get('voice-auto', true), overrides: store.get('voice-overrides', {}) });
+// players who had the old robotic default move to the natural voices once
+if (store.get('voice-engine-v2', null) === null) { if (store.get('voice-engine', 'browser') === 'browser') store.set('voice-engine', 'neural'); store.set('voice-engine-v2', true); }
+export const voiceSettings = () => ({ engine: store.get('voice-engine', 'neural'), volume: store.get('voice-volume', 0.9), auto: store.get('voice-auto', true), narrate: store.get('voice-narrate', true), overrides: store.get('voice-overrides', {}) });
 export function setVoiceSetting(k, v) { store.set('voice-' + k, v); }
 
 // pitch / rate for the browser engine; srv = preferred voice on a Kokoro-style server; deep = prefer a low male voice
@@ -70,22 +73,78 @@ const FEMALE_NAMES = /female|woman|samantha|victoria|karen|serena|moira|tessa|fi
 const MALE_NAMES = /male|daniel|arthur|oliver|george|ryan|alex|fred|thomas|rishi|david|mark|guy|james|brian|matthew|joey|justin|kevin|russell|lee|eddy|reed|rocko|grandpa|ralph|bruce|junior/i;
 function browserVoice(prof) {
   if (!voices.length) loadVoices();
-  const gb = voices.filter((v) => /en[-_]GB|en[-_]IE|en[-_]AU|en[-_]NZ/i.test(v.lang)); // the Westerosi speak like the show: British and Irish voices first
-  const base = gb.length >= 2 ? gb : voices;
+  // the natural (neural/online) system voices sound far better than the old robotic ones: use them when present
+  const natural = voices.filter((v) => /natural|neural|online|google/i.test(v.name));
+  const pool0 = natural.length >= 2 ? natural : voices;
+  const gb = pool0.filter((v) => /en[-_]GB|en[-_]IE|en[-_]AU|en[-_]NZ/i.test(v.lang)); // the Westerosi speak like the show: British and Irish voices first
+  const base = gb.length >= 2 ? gb : pool0;
   const sexed = base.filter((v) => (prof.female ? FEMALE_NAMES.test(v.name) : MALE_NAMES.test(v.name) && !FEMALE_NAMES.test(v.name)));
   const pool = sexed.length ? sexed : base;
   return pool.length ? pool[prof.key % pool.length] : null;
 }
 
+// ---------- neural engine (Kokoro in a worker) ----------
+const REPO = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+const NARRATOR = { srv: 'am_echo', rate: 1.02, pitch: 1 };
+let worker = null, localModel = null, nid = 0; const reqs = new Map(); let lastPct = -1;
+async function neuralWorker() {
+  if (worker) return worker;
+  if (localModel === null) localModel = await fetch(`/models/${REPO}/config.json`, { method: 'HEAD' }).then((r) => r.ok).catch(() => false);
+  worker = new Worker('/js/ui/tts-worker.js', { type: 'module' });
+  worker.onmessage = (e) => {
+    const d = e.data || {};
+    if (d.type === 'progress') { const pct = Math.floor((100 * d.loaded) / d.total); if (pct >= lastPct + 25 || (pct === 100 && lastPct < 100)) { lastPct = pct; toast(`Preparing natural voices… ${pct}% (a one-time download)`); } return; }
+    if (d.type === 'ready') return;
+    const r = reqs.get(d.id); if (!r) return; reqs.delete(d.id);
+    d.error ? r.reject(new Error(d.error)) : r.resolve(d);
+  };
+  worker.onerror = (e) => { for (const r of reqs.values()) r.reject(new Error(e.message || 'voice worker failed')); reqs.clear(); worker = null; };
+  worker.postMessage({ type: 'warm', local: localModel });
+  return worker;
+}
+/** Start the voices loading in the background (called when an audience opens). */
+export function warmVoices() { if (voiceSettings().engine === 'neural') neuralWorker().catch(() => {}); }
+function synth(text, voice, speed) { return neuralWorker().then((w) => new Promise((resolve, reject) => { const id = ++nid; reqs.set(id, { resolve, reject }); w.postMessage({ id, text, voice, speed, local: localModel }); })); }
+let actx = null;
+function playPCM(pcm, rate, playbackRate, volume, token) {
+  actx ??= new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume();
+  return new Promise((resolve) => {
+    if (token !== speakToken) return resolve();
+    const buf = actx.createBuffer(1, pcm.length, rate); buf.copyToChannel(pcm, 0);
+    const src = actx.createBufferSource(); src.buffer = buf; src.playbackRate.value = playbackRate;
+    const g = actx.createGain(); g.gain.value = volume; src.connect(g); g.connect(actx.destination);
+    src.onended = resolve; current = { stop: () => { try { src.stop(); } catch { /* */ } resolve(); } };
+    src.start();
+  });
+}
+// long replies are spoken sentence by sentence: the first plays while the rest are still being voiced
+const sentences = (t) => (t.match(/[^.!?…]+[.!?…]+["'”’)]*\s*|[^.!?…]+$/g) || [t]).reduce((acc, x) => { const last = acc.at(-1); if (last && (last.length < 40 || x.length < 12) && last.length + x.length < 220) acc[acc.length - 1] = last + x; else acc.push(x); return acc; }, []).map((x) => x.trim()).filter(Boolean);
+async function speakNeural(text, prof, token) {
+  const cfg = voiceSettings();
+  const voice = cfg.overrides[prof.id] || prof.srv || 'bm_george';
+  // a little quicker than life, so a scene moves; slightly pitched per character so shared voices still differ
+  const pr = Math.max(0.94, Math.min(1.05, 1 + (prof.pitch - 1) * 0.12));
+  const speed = Math.max(0.9, Math.min(1.35, (prof.rate || 1) * 1.12)) / pr;
+  const jobs = sentences(text).map((t) => synth(t, voice, speed));
+  for (const job of jobs) {
+    const d = await job; if (token !== speakToken) return;
+    await playPCM(d.pcm, d.rate, pr, cfg.volume, token);
+  }
+}
+
 // ---------- playback ----------
-let current = null; // { stop() }
-export function stopSpeaking() { try { current?.stop(); } catch { /* */ } current = null; window.speechSynthesis?.cancel(); }
-/** Speak a line as a character. Resolves when finished (or immediately if voices are off). */
-export async function speak(text, character) {
+let current = null; let speakToken = 0; // { stop() }
+export function stopSpeaking() { speakToken++; try { current?.stop(); } catch { /* */ } current = null; window.speechSynthesis?.cancel(); }
+/** Speak a line as a character (or, with opts.narrator, as the narrator). Resolves when finished. */
+export async function speak(text, character, opts = {}) {
   const cfg = voiceSettings(); text = String(text || '').replace(/\*[^*]*\*/g, ' ').replace(/\s+/g, ' ').trim();
   if (!text || cfg.engine === 'off') return;
-  stopSpeaking();
-  const prof = profileFor(character);
+  if (!opts.keep) stopSpeaking();
+  const token = speakToken;
+  const prof = opts.narrator ? { ...NARRATOR, id: '_narrator' } : { ...profileFor(character), id: character?.id };
+  if (cfg.engine === 'neural') {
+    try { await speakNeural(text, prof, token); return; } catch (e) { if (!speak.warnedN) { speak.warnedN = true; toast(`Natural voices unavailable (${e.message}); using your system's voices.`, true); } }
+  }
   if (cfg.engine === 'server') {
     try {
       const res = await fetch('/api/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, voice: prof.srv, speed: prof.rate }) });
@@ -94,19 +153,31 @@ export async function speak(text, character) {
       const audio = new Audio(url); audio.volume = cfg.volume;
       await new Promise((resolve) => { current = { stop: () => { audio.pause(); resolve(); } }; audio.onended = resolve; audio.onerror = resolve; audio.play().catch(resolve); });
       URL.revokeObjectURL(url); return;
-    } catch (e) { if (!speak.warned) { speak.warned = true; app.toast?.(`Voice server unavailable (${e.message}); using the browser's voices.`, true); } }
+    } catch (e) { if (!speak.warned) { speak.warned = true; toast(`Voice server unavailable (${e.message}); using the browser's voices.`, true); } }
   }
-  if (!window.speechSynthesis) return;
+  if (!window.speechSynthesis || token !== speakToken) return;
   await new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text);
     const v = browserVoice(prof); if (v) u.voice = v;
-    u.pitch = prof.pitch; u.rate = prof.rate * 0.95; u.volume = cfg.volume;
-    u.onend = resolve; u.onerror = resolve;
-    current = { stop: () => { window.speechSynthesis.cancel(); resolve(); } };
+    u.pitch = prof.pitch; u.rate = (prof.rate || 1) * 1.08; u.volume = cfg.volume;
+    let done = false; const finish = () => { if (!done) { done = true; clearInterval(watch); resolve(); } };
+    u.onend = finish; u.onerror = finish;
+    current = { stop: () => { window.speechSynthesis.cancel(); finish(); } };
     window.speechSynthesis.speak(u);
-    // some browsers never fire onend for long lines
-    setTimeout(resolve, 1500 + text.length * 90);
+    // some browsers never fire onend: finish when the synthesiser has truly gone quiet
+    let quiet = 0; const watch = setInterval(() => { if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) { if (++quiet >= 3) finish(); } else quiet = 0; }, 400);
   });
+}
+/** Speak a whole scene top to bottom: narration in the narrator's voice, speech in the character's. */
+export async function speakBeats(list, character, onBeat) {
+  stopSpeaking(); const token = speakToken; const cfg = voiceSettings();
+  for (const b of list) {
+    if (token !== speakToken) return;
+    if (b.kind === 'act' && !cfg.narrate) continue;
+    onBeat?.(b, true);
+    await speak(b.text, character, { narrator: b.kind === 'act', keep: true });
+    onBeat?.(b, false);
+  }
 }
 
 /** Split a reply into beats: actions (between asterisks) and speech. */

@@ -6,3 +6,4 @@ config.json
 *.log
 public/assets/sigils/
 relay/
+public/models/

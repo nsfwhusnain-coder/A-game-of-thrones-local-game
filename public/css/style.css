@@ -506,3 +506,9 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .lbl.holding.dot::before { display: none; }
 /* parchment event cards keep their parchment on hover */
 .event:hover { background: #f7efdc; }
+
+/* audiences read like the books: narration as prose, speech in quotation marks */
+.beat.act { font-style: italic; color: #5e4c38; font-size: 0.92rem; cursor: pointer; border-radius: 3px; padding: 0 0.15rem; }
+.beat.act:hover { background: rgba(0,0,0,0.05); }
+.beat.act.speaking { background: rgba(94,76,56,0.1); box-shadow: inset 3px 0 0 #8a7050; }
+.beat.say { color: #1e1610; font-size: 0.98rem; }

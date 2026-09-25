@@ -374,8 +374,9 @@ async function showSettings() {
     <h4>Sound &amp; voices</h4>
     <div class="grid2">
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-music" ${musicSettings().on ? 'checked' : ''}> Music</label><input type="range" id="snd-mvol" min="0" max="1" step="0.05" value="${musicSettings().volume}" style="width:100%"></div>
-      <div><label>Character voices</label><select id="snd-engine"><option value="browser">Your system's voices</option><option value="server">Local voice server (Kokoro, Piper, XTTS…)</option><option value="off">Off</option></select><input type="range" id="snd-vvol" min="0" max="1" step="0.05" value="${voiceSettings().volume}" style="width:100%"></div>
+      <div><label>Character voices</label><select id="snd-engine"><option value="neural">Natural voices (runs in your browser; ~90 MB once)</option><option value="browser">Your system's voices</option><option value="server">Local voice server (Kokoro, Piper, XTTS…)</option><option value="off">Off</option></select><input type="range" id="snd-vvol" min="0" max="1" step="0.05" value="${voiceSettings().volume}" style="width:100%"></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-sfx" ${sfxSettings().on ? 'checked' : ''}> Sound effects</label><input type="range" id="snd-svol" min="0" max="1" step="0.05" value="${sfxSettings().volume}" style="width:100%"></div>
+      <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-narrate" ${voiceSettings().narrate ? 'checked' : ''}> A narrator reads the scene's actions</label></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-auto" ${voiceSettings().auto ? 'checked' : ''}> Speak replies aloud as they arrive</label></div>
       <div><button class="btn small" id="snd-test">Hear Lord Tywin</button> <button class="btn small" id="snd-test2">Hear Lady Catelyn</button></div>
       <div style="grid-column:1/-1"><label>Voice server URL <span class="muted">(OpenAI-compatible <code>/v1/audio/speech</code>, e.g. Kokoro-FastAPI <code>http://localhost:8880/v1</code>)</span></label><input class="input" id="snd-tts" value="${esc(c.ttsUrl || '')}" placeholder="http://localhost:8880/v1"></div>
@@ -422,6 +423,7 @@ async function showSettings() {
   $('#snd-engine').onchange = (e) => setVoiceSetting('engine', e.target.value);
   $('#snd-vvol').oninput = (e) => setVoiceSetting('volume', Number(e.target.value));
   $('#snd-auto').onchange = (e) => setVoiceSetting('auto', e.target.checked);
+  $('#snd-narrate').onchange = (e) => setVoiceSetting('narrate', e.target.checked);
   $('#snd-over').onchange = (e) => { try { setVoiceSetting('overrides', JSON.parse(e.target.value || '{}')); } catch { toast('Voice overrides are not valid JSON', true); } };
   $('#snd-tts').onchange = async (e) => { await api('/config', { body: { ttsUrl: e.target.value.trim() } }); };
   $('#snd-test').onclick = () => speak('A lion does not concern himself with the opinion of sheep. Sit. We have much to discuss.', { id: 'tywin_lannister', age: 57 });

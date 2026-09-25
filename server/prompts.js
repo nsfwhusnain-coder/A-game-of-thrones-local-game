@@ -81,12 +81,12 @@ export const JSON_RULES = `JSON RULES (your reply is read by a program — one b
 - Keep it compact: finish the whole object. A shorter complete reply is always better than a long one cut off.`;
 
 // How characters answer in audiences: a small scene, so the player sees them act and hears them speak
-export const SCENE_STYLE = `HOW TO WRITE YOUR REPLY — a short scene of 2 to 5 beats:
-- ACTIONS are written between asterisks, in the third person present, as the player sees them: *Lord Tywin sets down his quill and regards you without warmth.* Show gesture, expression, the room, a pause — what a watchful visitor would notice.
-- SPEECH is your own words, in the first person, spoken straight to the player ("you"), with no quotation marks and no name labels.
-- Alternate them naturally, e.g.: *He leans back.* You ask a great deal, my lord. *A thin smile.* But I am listening.
-- Stay in your own voice: your vocabulary, your temper, your secrets. Never narrate the player's feelings or actions, and never speak for them.
-- By raven: write the letter itself in the first person (it may begin with a greeting and end with your name), with at most one *note about the letter* (the seal, the hand, a stain).
+export const SCENE_STYLE = `HOW TO WRITE YOUR REPLY — a short scene of 2 to 5 beats, written like a page of the books:
+- NARRATION goes between asterisks: third person, past tense, as an unseen narrator describes the scene the player is watching. Name the character or use he/she; never "I", "me" or "my" inside asterisks. Example: *Robb stood in the great hall, his posture rigid, the firelight catching the auburn in his hair.*
+- SPEECH is the character's own words, first person, spoken to the player ("you"), outside the asterisks, with no quotation marks and no name labels.
+- Alternate them naturally: *Robb glanced toward the high table before he answered.* You mean to leave for King's Landing, Father. *His jaw tightened.* Then I will hold Winterfell until you return.
+- Show gesture, expression, the room, a pause — what a watchful visitor would notice. Stay in the character's voice: their vocabulary, temper and secrets. Never describe the player's feelings or actions, and never speak for them.
+- By raven: write the letter itself in the first person (it may begin with a greeting and end with a name), with at most one *narration about the letter* (the seal, the hand, a stain).
 - Inside the JSON string, never use double quotes; use single quotes if you must quote something.`;
 
 // ---------------- World digest ----------------
@@ -331,7 +331,7 @@ Allowed ops: figure, character, relation, pact, raven, army_update, army_move, a
   const here = playerLord?.loc || ph.seat; const apart = c.loc && here && String(c.loc) !== String(here) && !String(c.loc).startsWith('army:');
   const how = apart
     ? `You are at ${placeName(state, c.loc)} and I am at ${placeName(state, here)}: this came to you by raven. Answer with a LETTER in your own hand (first person, a greeting and your name; one *note* about the letter at most). Put in writing only what you would risk a raven carrying.`
-    : `We are face to face at ${placeName(state, c.loc)}: a short scene, *actions* between asterisks, your words in the first person to me.`;
+    : `We are face to face at ${placeName(state, c.loc)}: a short scene — *narration between asterisks, third person, past tense (never I/my inside them)*, and your words in the first person to me.`;
   messages.push({ role: 'user', content: `${message}\n\n[Answer in character as ${c.name}. ${how} Keep your true aims as guarded as ${c.name} would. Reply with JSON only: {"reply":"...","changes":[]}]` });
   return messages;
 }
