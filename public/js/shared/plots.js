@@ -28,11 +28,21 @@ export const THREADS = [
   {
     id: 'kings_ride', name: 'The King rides north', stages: [
       {
-        id: 'arrival', at: YM(298, 9), needs: (s) => alive(s, 'robert_baratheon', 'eddard_stark') && s.characters.robert_baratheon.status !== 'imprisoned',
+        id: 'progress', at: YM(298, 8), grace: 1, needs: (s) => alive(s, 'robert_baratheon') && at(s, 'robert_baratheon', 'baratheon', 'kings_landing'),
+        fire: (s) => ({
+          events: [ev('The King rides north', 'King Robert\'s progress has crossed the Green Fork at the Twins — the Queen, her brothers, the royal children and three hundred knights, a mile of wagons — bound for Winterfell. Men say he means to make Lord Eddard Stark his Hand, now that Jon Arryn is dead.', 'frey', 4, 'court', ['baratheon', 'stark'])],
+          // the court has been a moon on the kingsroad already when the tale begins: it is at the Twins, mounted
+          changes: [{ op: 'army_create', id: 'royal_progress', owner: 'baratheon', name: 'The King\'s progress', commander: 'robert_baratheon', at: 'frey', men: 1400, composition: 'The royal household: knights and riders of the court, men-at-arms, the Queen\'s wheelhouse', status: 'marching' }],
+          // the court rides with the host, and the host walks the kingsroad at a wheelhouse's pace
+          post: (st) => { const a = st.armies.royal_progress; if (!a) return; a.march = { to: 'stark', since: st.meta.turn }; a.at = null; for (const id of ['robert_baratheon', 'cersei_lannister', 'jaime_lannister', 'tyrion_lannister', 'joffrey_baratheon', 'myrcella_baratheon', 'tommen_baratheon', 'sandor_clegane']) if (st.characters[id]?.alive && at(st, id, 'baratheon', 'kings_landing')) st.characters[id].loc = 'army:royal_progress'; },
+        }),
+      },
+      {
+        id: 'arrival', at: YM(298, 9), grace: 4, needs: (s) => alive(s, 'robert_baratheon', 'eddard_stark') && s.characters.robert_baratheon.status !== 'imprisoned' && (!s.armies.royal_progress || s.armies.royal_progress.at === 'stark' || !s.armies.royal_progress.march),
         fire: (s) => {
           const out = {
             events: [ev('The King comes to Winterfell', 'King Robert rides through the gates of Winterfell with the Queen, her brothers, the royal children and three hundred knights. He has come, he roars, to make his oldest friend the Hand of the King.', 'stark', 4, 'court', ['stark', 'baratheon'])],
-            changes: [{ op: 'character', id: 'robert_baratheon', loc: 'stark' }, { op: 'character', id: 'cersei_lannister', loc: 'stark' }, { op: 'character', id: 'jaime_lannister', loc: 'stark' }, { op: 'character', id: 'tyrion_lannister', loc: 'stark' }, { op: 'character', id: 'joffrey_baratheon', loc: 'stark' }],
+            changes: [{ op: 'character', id: 'robert_baratheon', loc: 'stark' }, { op: 'character', id: 'cersei_lannister', loc: 'stark' }, { op: 'character', id: 'jaime_lannister', loc: 'stark' }, { op: 'character', id: 'tyrion_lannister', loc: 'stark' }, { op: 'character', id: 'joffrey_baratheon', loc: 'stark' }, ...(s.armies.royal_progress ? [{ op: 'army_update', army: 'royal_progress', status: 'camped before Winterfell' }] : [])],
           };
           if (plays(s, 'stark')) {
             out.decision = {
@@ -63,6 +73,7 @@ export const THREADS = [
         id: 'southward', at: YM(298, 10), needs: (s) => alive(s, 'robert_baratheon') && at(s, 'robert_baratheon', 'stark'),
         fire: (s) => {
           const ch = [{ op: 'character', id: 'robert_baratheon', loc: 'baratheon' }, { op: 'character', id: 'cersei_lannister', loc: 'baratheon' }, { op: 'character', id: 'jaime_lannister', loc: 'baratheon' }, { op: 'character', id: 'joffrey_baratheon', loc: 'baratheon' }];
+          if (s.armies.royal_progress) { ch.length = 0; const a = s.armies.royal_progress; a.march = { to: 'baratheon', since: s.meta.turn }; a.at = null; a.status = 'marching'; for (const id of ['robert_baratheon', 'cersei_lannister', 'jaime_lannister', 'joffrey_baratheon', 'myrcella_baratheon', 'tommen_baratheon', 'sandor_clegane']) if (alive(s, id) && at(s, id, 'stark')) s.characters[id].loc = 'army:royal_progress'; }
           if (alive(s, 'tyrion_lannister')) ch.push({ op: 'character', id: 'tyrion_lannister', loc: 'nights_watch' });
           if (alive(s, 'jon_snow') && s.characters.jon_snow.house === 'stark') ch.push({ op: 'character', id: 'jon_snow', house: 'nights_watch', title: 'Recruit of the Night\'s Watch', loc: 'nights_watch' });
           // the new Hand rides south with his King, as in the books — with his daughters if he chose to bring them
@@ -571,7 +582,8 @@ export function worldTick(state, days) {
     const r = st.fire(s);
     s.plots.stages[t.id] = i + 1;
     if (!r) continue;
-    events.push(...(r.events || [])); changes.push(...(r.changes || []));
+    events.push(...(r.events || []));
+    if (r.post) { applyChanges(s, r.changes || [], { source: 'The ravens' }); r.post(s); } else changes.push(...(r.changes || []));
     Object.assign(s.plots.flags, r.flags || {});
     if (r.decision) decisions.push(r.decision);
     (s.plots.log = s.plots.log || []).push({ thread: t.id, stage: st.id, turn: s.meta.turn, date: s.meta.date && `${s.meta.date.month}/${s.meta.date.year}`, title: r.events?.[0]?.title || t.name });

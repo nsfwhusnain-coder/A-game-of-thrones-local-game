@@ -1,6 +1,6 @@
 // Prompt construction for the simulation. The model is the game engine: it narrates,
 // decides what every other house does, and emits structured changes that the engine applies.
-import { threadsDigest } from '../public/js/shared/plots.js';
+import { threadsDigest, THREADS } from '../public/js/shared/plots.js';
 import { VOICES, HOUSE_WAYS } from '../public/data/voices.js';
 import { personaFor } from '../public/data/histories.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
@@ -370,14 +370,37 @@ function diplomacySinceLastTurn(state) {
 function todaysBeats(state, days) {
   const live = AGENDAS.filter((a) => { const c = state.characters[a.who]; return c?.alive && !/imprisoned|captive|missing/.test(c.status || '') && (!a.when || a.when(state)); });
   if (!live.length) return '';
-  const n = days <= 3 ? 2 : days <= 14 ? 3 : 4;
-  const seed = state.meta.turn * 7 + 3; const out = [];
-  for (let i = 0; i < n && i < live.length; i++) {
-    const a = live[(seed + i * 5) % live.length]; const c = state.characters[a.who];
-    out.push(`${i + 1}. ${c.name} (at ${placeName(state, c.loc)}) ${a.moves[(seed + i) % a.moves.length]}.`);
+  // chosen at random each turn — people near the player, or in the day's great matters, more often — and a move
+  // told recently is not told again soon (state.plots.told)
+  state.plots = state.plots || {}; const told = (state.plots.told = state.plots.told || {});
+  const p = state.meta.player; const myRegion = state.houses[p]?.region;
+  const weight = (a) => { const c = state.characters[a.who]; const h = state.houses[c.house]; return (h?.region === myRegion ? 2.5 : 1) * (['crown', 'paramount'].includes(h?.rank) ? 1.4 : 1) * (state.meta.turn - (told[a.who] ?? -99) < 4 ? 0.15 : 1); };
+  const n = days <= 3 ? 2 : days <= 14 ? 3 : 4; const out = []; const pool = [...live];
+  for (let i = 0; i < n && pool.length; i++) {
+    const total = pool.reduce((x, a) => x + weight(a), 0); let r = Math.random() * total; let k = 0;
+    for (; k < pool.length - 1; k++) { r -= weight(pool[k]); if (r <= 0) break; }
+    const a = pool.splice(k, 1)[0]; const c = state.characters[a.who];
+    const fresh = a.moves.filter((m) => !(told[a.who + '|' + m] > state.meta.turn - 30));
+    const move = (fresh.length ? fresh : a.moves)[Math.floor(Math.random() * (fresh.length || a.moves.length))];
+    told[a.who] = state.meta.turn; told[a.who + '|' + move] = state.meta.turn;
+    out.push(`${i + 1}. ${c.name} (at ${placeName(state, c.loc)}) — ${move}. You may change the details or the outcome to fit what has happened; make it their own.`);
   }
-  return `TODAY IN THE REALM — the engine has chosen these; tell each one as an event (the person acting, by name; where; one line of what it means), with any change it causes, alongside whatever the player's orders bring. Do not write that nothing happened.\n${out.join('\n')}`;
+  return `TODAY IN THE REALM — the engine has chosen these; tell each as an event (the person acting, by name; where; one line of what it means), with any change it causes, alongside the player's orders and the great matters. Do not write that nothing happened.\n${out.join('\n')}`;
 }
+
+// The great matters of the day: the main story in motion, so every turn is part of one tale
+function greatMatters(state) {
+  const out = [];
+  const rp = state.armies?.royal_progress;
+  if (rp) out.push(rp.march ? `The King's progress — King Robert, the Queen, her brothers, the royal children and three hundred knights — is on the kingsroad near ${placeName(state, nearestPlace(state, rp.pos))}, bound for ${placeName(state, rp.march.to)}. The realm talks of little else: inns lay in stores, lords ride out to meet it.` : `The King's progress is camped at ${placeName(state, rp.at)}.`);
+  for (const l of (state.plots?.log || []).slice(-4)) out.push(`Lately: ${l.title}.`);
+  const T = state.plots?.stages || {};
+  const now = state.meta.date.year * 12 + state.meta.date.month - 1;
+  for (const t of THREADS) { const st = t.stages[T[t.id] || 0]; if (st && st.at - now <= 1 && st.at - now >= 0) out.push(`Coming soon (the engine brings it; foreshadow it, do not tell it): ${t.name}.`); }
+  const wars = (state.wars || []).filter((w) => w.status !== 'ended'); if (wars.length) out.push('At war: ' + wars.map((w) => w.name).join('; ') + '.');
+  return out.length ? 'THE GREAT MATTERS OF THE DAY (the main story in motion — let the day\'s events reflect them: people talk of them, prepare for them, react to them)\n' + out.map((x) => '- ' + x).join('\n') : '';
+}
+function nearestPlace(state, pos) { let best = null, d = Infinity; for (const h of Object.values(state.holdings)) { const x = Math.hypot(h.pos[0] - pos[0], h.pos[1] - pos[1]); if (x < d) { d = x; best = h.id; } } return best; }
 
 export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
   const sc = SCENARIOS[state.meta.scenario];
@@ -418,6 +441,7 @@ Only use ids that exist in the tables below. Change only what the story justifie
     diplomacySinceLastTurn(state),
     `CURRENT DATE: ${dateStr(state.meta.date)}. Simulate the next ${span.label} (${span.days} days).`,
     `PLAYER'S ORDERS FOR THIS PERIOD:\n${orders.length ? orders.map((o, i) => `${i + 1}. ${o.text}${o.note ? ' ' + o.note : ''}`).join('\n') : '(The player issues no orders and waits.)'}`,
+    greatMatters(state),
     todaysBeats(state, span.days),
     `Now simulate the ${span.label}. Reply with the JSON object only: {"summary":"...","events":[...],"changes":[...]} — complete and valid.`,
   ].filter(Boolean).join('\n\n');

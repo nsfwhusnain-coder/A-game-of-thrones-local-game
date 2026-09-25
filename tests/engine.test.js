@@ -203,3 +203,21 @@ test('a losing war tempts the schemers first: the Boltons treat with the enemy l
   assert.ok(boltonTurned);
   assert.ok(!s.plotting.manderly?.with && s.houses.manderly.liege === 'stark');
 });
+
+// ── Orders: the sworn hosts answering the call are the player's to command ──
+import { executeActions, commandable, carryOutOrders } from '../server/orders.js';
+test('"march the whole host to Moat Cailin" sends the sworn hosts on the road there too', async () => {
+  const s = fresh();
+  apply(s, [{ op: 'army_create', id: 'hb', owner: 'bolton', name: 'Host of House Bolton', at: 'bolton', men: 4000 }]);
+  s.houses.bolton.obligations = { levies: 'answered', host: 'hb', muster: 'stark' };
+  assert.ok(commandable(s, s.armies.hb));
+  s.orders = [{ id: 'o1', text: 'Raise the whole host and march to Moat Cailin.' }];
+  await carryOutOrders(s, async () => ({ actions: [{ op: 'raise', order: 1, at: 'stark', men: 3000, to: 'Moat Cailin' }], story: [] }));
+  assert.equal(s.armies.hb.march?.to, 'moat_cailin');
+  assert.ok(Object.values(s.armies).some((a) => a.owner === 'stark' && a.march?.to === 'moat_cailin'));
+});
+test('an order against a house marches on its seat', () => {
+  const s = fresh(); apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'Host', at: 'stark', men: 5000 }]);
+  executeActions(s, [{ op: 'march', order: 1, army: 'the army', to: 'the Lannisters' }]);
+  assert.equal(s.armies.nh.march?.to, 'lannister');
+});
