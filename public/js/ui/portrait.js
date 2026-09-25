@@ -86,6 +86,7 @@ export function lookFor(c, house) {
     else build = female ? pick(r, ['slight', 'slight', 'average']) : pick(r, ['lean', 'average', 'average', 'broad', 'heavy']);
   }
   if (age < 13) build = 'child';
+  if (age < 4) { build = 'infant'; style = age < 2 ? 'bald' : 'short'; } // a babe in arms: a round face, big eyes, a swaddling blanket, a little down of hair
   // garb
   const nw = c.house === 'nights_watch' || /night'?s watch|\bcrow\b|ranger|steward of the watch/i.test(title);
   let garb = base.garb;
@@ -199,7 +200,8 @@ function paint(ctx, c, house) {
   const L = lookFor(c, house);
   const r = rngFrom(L.seed);
   const W = 128, H = 154, cx = 64;
-  const child = L.build === 'child';
+  const infant = L.build === 'infant';
+  const child = L.build === 'child' || infant;
   const dwarf = L.feat.has('dwarf');
   // proportions
   const G = {
@@ -209,7 +211,8 @@ function paint(ctx, c, house) {
     eyeDx: child ? 9.6 : 10, eyeW: child ? 5.4 : 5, neck: ({ slight: 8, lean: 9, average: 10, broad: 12, heavy: 13, fat: 15, huge: 15, child: 7 })[L.build] || 10,
     shoulder: ({ slight: 44, lean: 50, average: 54, broad: 60, heavy: 60, fat: 62, huge: 66, child: 38 })[L.build] || 54,
   };
-  if (L.female) { G.jw -= 1.5; G.cw -= 0.8; G.shoulder -= 5; G.neck -= 1.5; }
+  if (infant) Object.assign(G, { infant: true, top: 38, eyeY: 80, noseY: 88, mouthY: 95, chinY: 105, cw: 27, jw: 25, eyeDx: 11, eyeW: 6.4, neck: 3, shoulder: 34 });
+  if (L.female && !infant) { G.jw -= 1.5; G.cw -= 0.8; G.shoulder -= 5; G.neck -= 1.5; }
   if (L.feat.has('gaunt')) { G.jw -= 1.5; }
   if (dwarf) { G.cw += 2; G.jw += 2.5; G.top -= 2; G.chinY -= 1; G.shoulder -= 12; G.neck -= 1; }
   if (L.feat.has('frog')) { G.jw += 3; G.chinY -= 3; G.mouthY -= 1; }
@@ -391,7 +394,7 @@ function scalp(ctx, L, G) {
 
 // ── body and garb ──
 function shouldersPath(ctx, G, H, extra = 0) {
-  const { cx } = G; const s = G.shoulder + extra; const y = G.chinY + 9;
+  const { cx } = G; const s = G.shoulder + extra; const y = G.chinY + (G.infant ? -2 : 9); // a babe's blanket comes up to the chin
   ctx.beginPath();
   ctx.moveTo(cx - s - 12, H + 2);
   ctx.bezierCurveTo(cx - s - 10, y + 26, cx - s + 2, y + 10, cx - G.neck - 6, y + 2);
@@ -400,11 +403,11 @@ function shouldersPath(ctx, G, H, extra = 0) {
   ctx.closePath();
 }
 function body(ctx, L, G, r, W, H) {
-  const { cx } = G; const y = G.chinY + 9; const g = L.garb;
+  const { cx } = G; const y = G.chinY + (G.infant ? -2 : 9); const g = L.build === 'infant' ? 'swaddle' : L.garb;
   const cloth = {
     noble: L.main, fur: shade(L.main, -0.35), armor: '#8e959d', mail: '#6e747a', maester: '#6d6a64', kingsguard: '#ecebe6', watch: '#17171a',
     silk: L.main, dothraki: L.skin, iron: '#3a3c3e', gown: L.main, septon: '#d8d4ca', red_priest: '#8e1812', wildling: '#5a4a3a', leather: '#5a3e28',
-    drowned: '#4a5a5a', smith: '#5a3e28', plain: '#6a5e50', goldcloak: '#2a2a2c', sworn: '#6e747a',
+    drowned: '#4a5a5a', smith: '#5a3e28', plain: '#6a5e50', goldcloak: '#2a2a2c', sworn: '#6e747a', swaddle: mix(L.main, '#efe6d2', 0.72),
   }[g] || L.main;
   // base torso
   shouldersPath(ctx, G, H);

@@ -250,7 +250,6 @@ export async function advance(id, { span = '1m', orders } = {}) {
   // every event has its day in the period, so the turn can be told in order
   for (const e of events) if (!e.day) e.day = 1 + Math.floor(Math.random() * spanInfo.days);
   events.sort((a, b) => a.day - b.day);
-  events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; });
   for (const a of applied.filter((x) => x.op === 'succession')) {
     const hh = state.houses[a.house];
     events.unshift({ title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === state.meta.player ? 5 : 4, type: 'court', houses: [a.house] });
@@ -258,6 +257,9 @@ export async function advance(id, { span = '1m', orders } = {}) {
   const p = state.meta.player;
   const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
   for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house] });
+  // every event has its day (successions at the start, the steward's accounts at the end) and an id for its pin
+  for (const e of events) if (!e.day) e.day = /^A new head/.test(e.title) ? 1 : spanInfo.days;
+  events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; });
   const record = { carried, turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
   state.history.push(record);
   state.orders = [];
