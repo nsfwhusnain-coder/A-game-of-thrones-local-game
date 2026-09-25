@@ -110,15 +110,15 @@ export function profileFor(c) {
   let voice = p.voice;
   if (!voice) {
     const pool = POOLS[FAR.test(region) ? (female ? 'fFar' : 'mFar') : female ? (age < 16 ? 'fYoung' : 'f') : age >= 60 ? 'mOld' : age < 20 ? 'mYoung' : 'm'];
-    const a = pool.base[h % pool.base.length]; let b = pool.colour[(h >> 4) % pool.colour.length]; if (b === a) b = pool.colour[((h >> 4) + 1) % pool.colour.length];
-    const w = 0.62 + ((h >> 9) % 25) / 100; // 0.62-0.86 of the main voice
+    const a = pool.base[h % pool.base.length]; let b = pool.colour[(h >>> 4) % pool.colour.length]; if (b === a) b = pool.colour[((h >>> 4) + 1) % pool.colour.length];
+    const w = 0.62 + ((h >>> 9) % 25) / 100; // 0.62-0.86 of the main voice
     voice = `${a}*${w.toFixed(2)}+${b}*${(1 - w).toFixed(2)}`;
   }
   const override = voiceSettings().overrides[c.id];
   if (override) voice = override;
   // unknown characters: shaped by age and sex, with a little individual colour
   const pitch = p.pitch ?? Math.max(0.9, Math.min(1.14, 1 + (age < 14 ? 0.1 : age > 60 ? -0.03 : 0) + ((h % 9) - 4) * 0.006));
-  const rate = p.rate ?? Math.max(0.8, Math.min(1.12, 1 + (age > 65 ? -0.12 : age > 55 ? -0.06 : age < 18 ? 0.05 : 0) + (((h >> 5) % 9) - 4) * 0.01));
+  const rate = p.rate ?? Math.max(0.8, Math.min(1.12, 1 + (age > 65 ? -0.12 : age > 55 ? -0.06 : age < 18 ? 0.05 : 0) + (((h >>> 5) % 9) - 4) * 0.01));
   return { pitch, rate, female, voice, srv: voice.split(/[*+]/)[0], key: h };
 }
 

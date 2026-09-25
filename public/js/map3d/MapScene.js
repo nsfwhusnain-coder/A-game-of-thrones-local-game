@@ -365,7 +365,7 @@ export class MapScene {
         for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; const t = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.1, 5), new THREE.MeshStandardMaterial({ color: '#c8b48a', flatShading: true })); t.position.set(Math.cos(a) * rec.radius * 0.95, 0.55, Math.sin(a) * rec.radius * 0.95); tents.add(t); }
         rec.siege = new THREE.Group(); rec.siege.add(ring, tents); rec.group.add(rec.siege);
       } else if (!sieged && rec.siege) { rec.group.remove(rec.siege); rec.siege = null; }
-      if (rec.label.el.textContent !== hd.name) rec.label.el.textContent = hd.name;
+      if (rec.label.el.textContent !== hd.name) { rec.label.el.textContent = hd.name; rec.label.bw = 0; }
       rec.label.el.classList.toggle('mine', this.isMine(hd.owner));
       rec.label.el.classList.toggle('enemy', this.atWarWith(hd.owner));
       rec.label.el.dataset.status = hd.status !== 'normal' ? hd.status : '';
@@ -539,7 +539,7 @@ export class MapScene {
 
   updateLabels() {
     const w = this.cssW, h = this.cssH; const v = new THREE.Vector3(); const d = this.dist;
-    const placed = []; const armyBoxes = [];
+    const placed = []; const armyBoxes = []; const nameBoxes = [];
     // realm labels: size scales with realm and zoom, largest first to avoid collisions
     for (const l of this.labels) {
       v.copy(l.pos).project(this.camera);
@@ -553,7 +553,7 @@ export class MapScene {
         const dotD = tier >= 5 ? 99999 : tier >= 4 ? 2400 : 1500;
         show = vis && d < dotD;
         const dot = d >= nameD;
-        if (l.dot !== dot) { l.dot = dot; l.el.classList.toggle('dot', dot); }
+        if (l.dot !== dot) { l.dot = dot; l.bw = 0; l.el.classList.toggle('dot', dot); }
       } else if (c.startsWith('realm')) {
         show = vis && d > 620 && this.mode !== 'terrain';
         scale = clamp((l.size * 900) / d, 9, 46) / 16;
@@ -571,8 +571,15 @@ export class MapScene {
         // stack army plates that would overlap on screen
         const bw = (l.el.offsetWidth || 90), bh = (l.el.offsetHeight || 20) + 3;
         let guard = 0;
-        while (guard++ < 8 && armyBoxes.some((b) => Math.abs(b.x - x) < (b.w + bw) / 2 && Math.abs(b.y - y) < bh)) y -= bh;
+        // never across a castle's name: step the plate below it; then stack plates that would overlap
+        const nameBox = nameBoxes.find((b) => Math.abs(b.x - x) < (b.w + bw) / 2 && Math.abs(b.y - y) < (b.h + bh) / 2);
+        if (nameBox) y = nameBox.y + (nameBox.h + bh) / 2 + 1;
+        while (guard++ < 8 && armyBoxes.some((b) => Math.abs(b.x - x) < (b.w + bw) / 2 && Math.abs(b.y - y) < bh)) y += bh;
         armyBoxes.push({ x, y, w: bw });
+      } else if (c.startsWith('holding') && !l.dot) {
+        // sizes are cached: reading them every frame would force a layout per label
+        if (!l.bw) { l.bw = l.el.offsetWidth || 80; l.bh = l.el.offsetHeight || 16; }
+        nameBoxes.push({ x, y, w: l.bw, h: l.bh });
       }
       l.sx = x; l.sy = y;
       l.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)${scale !== 1 ? ` scale(${scale.toFixed(3)})` : ''}${l.rot ? ` rotate(${l.rot}rad)` : ''}`;

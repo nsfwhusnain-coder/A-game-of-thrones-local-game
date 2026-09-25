@@ -160,7 +160,8 @@ export function portraitLazy(c, house, size = 128) {
 const later = (f) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: 60 }) : setTimeout(f, 16));
 function pump() {
   const done = []; const t0 = performance.now();
-  for (const [ph, args] of pending) {
+  // newest first: the sheet or audience just opened is what the player is looking at, not the long list behind it
+  for (const [ph, args] of [...pending].reverse()) {
     if (done.length && performance.now() - t0 > 10) break;
     done.push([ph, portraitURL(...args)]); pending.delete(ph);
   }

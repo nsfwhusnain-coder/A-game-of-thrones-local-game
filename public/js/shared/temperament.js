@@ -20,23 +20,27 @@ const level = (s, table, dflt) => { s = String(s || '').toLowerCase(); for (cons
 // ── Temperament: a person's nature as numbers (0..1) ──
 export function temperament(c) {
   const P = personaFor(c); const t = String(c.traits || '').toLowerCase(); const dm = DEMEANOURS[c.id];
-  const courage = level(P.courage, [[/coward|timid|avoids danger|lets others fight/, 0.15], [/patient|cautious|hides it|mild/, 0.35], [/once brave|boastful|in boast|for her children|when it counts|growing/, 0.5], [/fearless|reckless|unbending/, 0.95], [/brave/, 0.75]], 0.55);
+  // for those without a written nature, their manner (data/demeanours.js) and traits speak for them
+  const manner = `${dm?.reg || ''} ${dm?.never || ''} ${t}`.toLowerCase();
+  const courage0 = level(P.courage, [[/coward|timid|avoids danger|lets others fight/, 0.15], [/patient|cautious|hides it|mild/, 0.35], [/once brave|boastful|in boast|for her children|when it counts|growing/, 0.5], [/fearless|reckless|unbending/, 0.95], [/brave/, 0.75]], 0.55);
+  const derived = !P.history || P.history === c.bio; // personaFor() read it from traits, not from the books
+  const courage = derived && /fierce|fanatic|zealous|hard|fearless|brutal|bold|warrior/.test(manner) ? Math.max(courage0, 0.8) : derived && /nervous|timid|craven|frightened/.test(manner) ? Math.min(courage0, 0.25) : courage0;
   const pride = level(P.pride, [[/immense|arrogant|vain|contempt|grandiose|loud and proud/, 0.92], [/proud|wounded|touchy|jealous|resentful|prickly|insecure/, 0.78], [/humble|modest/, 0.2], [/hid|quiet|wry/, 0.55]], 0.5);
   const wits = level(P.wits, [[/not very clever|not clever|dull|foolish|narrow|simple|shallow/, 0.2], [/brilliant/, 0.92], [/sharp|shrewd|clever|cunning|learned|wise|quick|capable|perceptive|practical/, 0.68]], 0.5);
   const guile = level(P.guile, [[/master schemer/, 0.95], [/schemer|cunning|corrupt|lies|charming schemer/, 0.75], [/honest|none|blunt/, 0.12], [/guarded|secretive|hide|mocking/, 0.5]], 0.45);
-  const volatility = level(P.temper, [[/volatile|hot|savage|fierce|hysterical|rage|cruel|passionate|querulous|spiteful|bluster/, 0.85], [/never|cold|calm|patient|controlled|steady|gentle|mild|weary|easy/, 0.15]], 0.45);
+  const volatility = /^\s*(cold|calm|patient|controlled|never)/i.test(P.temper || '') ? 0.15 : level(P.temper, [[/volatile|hot|savage|fierce|hysterical|rage|cruel|passionate|querulous|spiteful|bluster/, 0.85], [/never|cold|calm|patient|controlled|steady|gentle|mild|weary|easy/, 0.15]], 0.45);
   const warmth = level(`${P.temper} ${t} ${dm?.reg || ''}`, [[/cold|contempt|cruel|savage|petulant|sneer|querulous|shrill|bitter|surly|withering|cutting|brutal|harsh|grim|humourless/, 0.18], [/jovial|genial|warm|gentle|kind|charming|generous|easy|earnest|courteous|gracious/, 0.8]], 0.5);
   const stubbornSrc = `${P.weakness} ${P.courage} ${P.temper} ${t} ${dm?.never || ''}`.toLowerCase();
-  const stubborn = clamp(pride * 0.5 + (1 - guile) * 0.1 + (/stubborn|unbend|inflexib|grudge|never forgive|will not bend|headstrong|will not be told/.test(stubbornSrc) ? 0.35 : 0) + (courage > 0.8 ? 0.1 : 0), 0, 1);
+  const stubborn = clamp(pride * 0.5 + (1 - guile) * 0.1 + (/stubborn|unbend|inflexib|grudge|never forgive|will not bend|headstrong|will not be told|fanatic|zealous|bend to|nothing for nothing|trusts no one/.test(stubbornSrc + ' ' + manner) ? 0.35 : 0) + (courage > 0.8 ? 0.1 : 0), 0, 1);
   const sw = `${P.swayedBy} ${P.weakness}`.toLowerCase();
   const sway = {
     flattery: /flatter|admiration|vain|called king|respect|recognition|approval/.test(sw) || /vain|pompous/.test(t),
-    gold: /gold|coin|bribe|advantage|trade/.test(sw) || /greedy/.test(t),
+    gold: /gold|coin|bribe|advantage|trade|food|steel/.test(sw) || /greedy/.test(t),
     fear: /fear|safety|safe/.test(sw),
     duty: /duty|oath|law|justice|rights/.test(sw),
     honour: /honou?r/.test(sw),
-    family: /family|children|son|daughter|kin|sister|legacy/.test(sw),
-    faith: /faith|god|light/.test(sw),
+    family: /family|children|son|daughter|\bkin\b|sister|legacy|his people|her people/.test(sw),
+    faith: /\bfaith\b|\bgods?\b|lord of light|r'hllor/.test(sw),
     power: /power|crown|advancement|throne|legacy|climb|winning side/.test(sw),
     vengeance: /vengeance|revenge/.test(sw),
     strength: /strength|boldness|courage|victory/.test(sw),
