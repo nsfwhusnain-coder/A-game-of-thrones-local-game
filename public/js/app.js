@@ -34,7 +34,9 @@ async function initTitle() {
   $('#house-filters').innerHTML = filters.map(([k, n]) => `<button data-f="${k}" class="${k === app.houseFilter ? 'active' : ''}">${n}</button>`).join('');
   $('#house-filters').onclick = (e) => { const f = e.target.dataset.f; if (!f) return; app.houseFilter = f; $$('#house-filters button').forEach((b) => b.classList.toggle('active', b.dataset.f === f)); renderHouseGrid(); };
   $('#house-search').oninput = renderHouseGrid;
-  renderHouseGrid(); renderSaves(); refreshLLMStatus();
+  // open on the house last played (or the Starks), so the realm is never an empty page
+  if (!app.chosenHouse) { let last = null; try { last = localStorage.getItem('wc-last-house'); } catch { /* private window */ } app.chosenHouse = HOUSES.some((h) => h.id === last) ? last : 'stark'; applyHouseTheme(HOUSES.find((h) => h.id === app.chosenHouse)); }
+  renderHouseGrid(); renderHouseDetail(); renderSaves(); refreshLLMStatus();
   $('#house-search').placeholder = `Search ${HOUSES.filter((h) => !h.landless || h.rank === 'exile').length} houses…`;
   try { drawTitleMap($('#title-map')); } catch (e) { console.warn('title map', e); }
   if (!app.titleResize) { app.titleResize = true; let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { if (!$('#title-screen').classList.contains('hidden')) drawTitleMap($('#title-map')); }, 250); }); }
@@ -63,9 +65,9 @@ function renderHouseDetail() {
     ${(() => { const b = briefFor(h, { houses: Object.fromEntries(HOUSES.map((x) => [x.id, x])) }); return `<p style="line-height:1.45">${esc(b.situation)}</p><div class="grid2"><div><h4>Strengths</h4>${b.strengths.map((x) => `<div style="font-size:0.88rem">✦ ${esc(x)}</div>`).join('')}</div><div><h4>Weaknesses</h4>${b.weaknesses.map((x) => `<div style="font-size:0.88rem">✧ ${esc(x)}</div>`).join('')}</div></div>`; })()}
     <div class="kv"><span class="k">Seat</span><span>${esc(h.seat || '— (landless)')}</span><span class="k">Liege</span><span>${liege ? esc(liege.name) : 'None'}</span><span class="k">Vassals</span><span>${vassals.length ? vassals.length + ' houses' : '—'}</span></div>
     ${people.length ? `<h4>Your people</h4><div class="portrait-row">${people.map((c) => `<div class="p" title="${esc(c.title)}"><img src="${portraitURL({ ...c, alive: true }, h, 96)}"><div>${esc(c.name.replace(/^(Ser|Maester|Lord|Lady|Grand Maester) /, '').split(' ')[0])}</div></div>`).join('')}</div>` : ''}
-    ${lord ? `<p class="muted" style="font-size:0.9rem;margin-top:0.8rem">You will play as <b>${esc(lord.name)}</b>${lord.title ? ', ' + esc(lord.title) : ''}.</p>` : ''}
+    ${lord ? `<div class="lord-card"><img src="${portraitURL({ ...lord, alive: true }, h, 160)}" alt=""><div><div class="lc-k">You will play as</div><div class="lc-name">${esc(lord.name)}</div><div class="lc-title">${esc(lord.title || '')}</div><div class="lc-traits">${esc(lord.traits || '')}</div></div></div>` : ''}
     <button class="btn primary" style="font-size:1.05rem;padding:0.6rem 1.4rem;margin-top:0.5rem" id="begin">Begin as House ${esc(h.name)} ▶</button>`;
-  $('#begin').onclick = async () => { try { const r = await api('/games', { body: { scenario: 'agot_298', house: h.id } }); startGame(r.id, r.state); } catch (e) { toast(e.message, true); } };
+  $('#begin').onclick = async () => { try { try { localStorage.setItem('wc-last-house', h.id); } catch { /* ignore */ } const r = await api('/games', { body: { scenario: 'agot_298', house: h.id } }); startGame(r.id, r.state); } catch (e) { toast(e.message, true); } };
 }
 async function renderSaves() {
   const saves = await api('/saves');
@@ -91,6 +93,20 @@ async function refreshLLMStatus() {
 }
 
 // ═════════════ Game ═════════════
+const LOADING_LINES = [
+  'When you play the game of thrones, you win or you die. There is no middle ground.',
+  'The man who passes the sentence should swing the sword.',
+  'A Lannister always pays his debts.',
+  'The night is dark and full of terrors.',
+  'Winter is coming.',
+  'Fear cuts deeper than swords.',
+  'A reader lives a thousand lives before he dies. The man who never reads lives only one.',
+  'The things I do for love.',
+  'Power resides where men believe it resides.',
+  'In the game of thrones, even the humblest pieces can have wills of their own.',
+  'The North remembers.',
+  'Words are wind.',
+];
 async function startGame(id, state) {
   app.saveId = id;
   app.state = state || await api('/games/' + id);
@@ -98,6 +114,12 @@ async function startGame(id, state) {
   $('#title-screen').classList.add('hidden'); $('#game-screen').classList.remove('hidden');
   if (!app.map) {
     $('#map-loading').classList.remove('hidden');
+    const me = app.state.houses[app.state.meta.player];
+    $('#map-loading-banner').src = bannerURL(me.sigil, 80, 120);
+    $('#map-loading-words').textContent = me.words ? `“${me.words}”` : '';
+    let qi = Math.floor(Math.random() * LOADING_LINES.length);
+    const showLine = () => { const el = $('#map-loading-quote'); el.classList.remove('in'); void el.offsetWidth; el.textContent = LOADING_LINES[qi++ % LOADING_LINES.length]; el.classList.add('in'); };
+    showLine(); app.loadingTimer = setInterval(showLine, 6000);
     try {
       const { MapScene } = await import('./map3d/MapScene.js');
       app.map = new MapScene($('#map-wrap'), {
@@ -113,7 +135,7 @@ async function startGame(id, state) {
       toast('The map failed to load: ' + e.message, true);
       return;
     }
-    $('#map-loading').classList.add('hidden');
+    $('#map-loading').classList.add('hidden'); clearInterval(app.loadingTimer);
   }
   app.map.state = null;
   app.map.setState(app.state);
