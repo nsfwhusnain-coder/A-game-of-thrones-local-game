@@ -327,7 +327,12 @@ Allowed ops: figure, character, relation, pact, raven, army_update, army_move, a
   ].filter(Boolean).join('\n\n');
   const messages = [{ role: 'system', content: system + '\n\n' + context }];
   for (const m of log) messages.push({ role: m.role === 'player' ? 'user' : 'assistant', content: m.role === 'player' ? m.text : JSON.stringify({ reply: m.text, changes: [] }) });
-  messages.push({ role: 'user', content: `${message}\n\n[Answer in character as ${c.name}: a short scene, *actions* between asterisks, your words in the first person to me. Reply with JSON only: {"reply":"...","changes":[]}]` });
+  // Say plainly whether this is a face-to-face audience or a letter; small models miss the general rule
+  const here = playerLord?.loc || ph.seat; const apart = c.loc && here && String(c.loc) !== String(here) && !String(c.loc).startsWith('army:');
+  const how = apart
+    ? `You are at ${placeName(state, c.loc)} and I am at ${placeName(state, here)}: this came to you by raven. Answer with a LETTER in your own hand (first person, a greeting and your name; one *note* about the letter at most). Put in writing only what you would risk a raven carrying.`
+    : `We are face to face at ${placeName(state, c.loc)}: a short scene, *actions* between asterisks, your words in the first person to me.`;
+  messages.push({ role: 'user', content: `${message}\n\n[Answer in character as ${c.name}. ${how} Keep your true aims as guarded as ${c.name} would. Reply with JSON only: {"reply":"...","changes":[]}]` });
   return messages;
 }
 
