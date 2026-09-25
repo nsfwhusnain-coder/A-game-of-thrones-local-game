@@ -39,15 +39,15 @@ export const THREADS = [
               id: 'hand_offer', title: 'The King asks you to be his Hand', from: 'robert_baratheon', days: 10,
               text: '"Ned, I need you. The realm needs you. Jon is dead and I am surrounded by flatterers and fools." Robert offers you the chain of the Hand, and a match between Sansa and Prince Joffrey. Maester Luwin has had a letter from Lysa Arryn, in a cipher only Catelyn knows: the Lannisters murdered Jon Arryn.',
               options: [
-                { label: 'Accept the chain and go south', hint: 'Power at court and the King\'s ear; Winterfell left to Robb', fx: [{ plot: ['ned_hand', true] }, { rel: ['baratheon', 20] }, { rel: ['lannister', -5] }, { ops: [{ op: 'character', id: 'eddard_stark', title: 'Hand of the King, Lord of Winterfell' }, { op: 'travel', character: 'eddard_stark', to: 'kings_landing', men: 300, name: 'The Hand\'s household', companions: ['jory_cassel', 'vayon_poole', 'sansa_stark', 'arya_stark', 'septa_mordane'] }] }] },
+                { label: 'Accept the chain and go south', hint: 'Power at court and the King\'s ear; Winterfell left to Robb. You ride with the King when he leaves', fx: [{ plot: ['ned_hand', true] }, { plot: ['hand_daughters', true] }, { rel: ['baratheon', 20] }, { rel: ['lannister', -5] }, { ops: [{ op: 'character', id: 'eddard_stark', title: 'Hand of the King, Lord of Winterfell' }] }] },
                 { label: 'Refuse him: your place is in the North', hint: 'Robert is wounded; the Lannisters fill the empty chair', fx: [{ plot: ['ned_hand', false] }, { rel: ['baratheon', -20] }, { ops: [{ op: 'character', id: 'tywin_lannister', title: 'Hand of the King, Lord of Casterly Rock' }] }] },
-                { label: 'Accept, but leave your daughters home', hint: 'The chain without the hostages', fx: [{ plot: ['ned_hand', true] }, { rel: ['baratheon', 10] }, { ops: [{ op: 'character', id: 'eddard_stark', title: 'Hand of the King, Lord of Winterfell' }, { op: 'travel', character: 'eddard_stark', to: 'kings_landing', men: 300, name: 'The Hand\'s household', companions: ['jory_cassel', 'vayon_poole'] }] }] },
+                { label: 'Accept, but leave your daughters home', hint: 'The chain without the hostages', fx: [{ plot: ['ned_hand', true] }, { plot: ['hand_daughters', false] }, { rel: ['baratheon', 10] }, { ops: [{ op: 'character', id: 'eddard_stark', title: 'Hand of the King, Lord of Winterfell' }] }] },
               ],
-              lapse: [{ plot: ['ned_hand', true] }, { ops: [{ op: 'character', id: 'eddard_stark', title: 'Hand of the King, Lord of Winterfell' }, { op: 'travel', character: 'eddard_stark', to: 'kings_landing', men: 300, name: 'The Hand\'s household', companions: ['jory_cassel', 'vayon_poole', 'sansa_stark', 'arya_stark'] }] }],
+              lapse: [{ plot: ['ned_hand', true] }, { plot: ['hand_daughters', true] }, { ops: [{ op: 'character', id: 'eddard_stark', title: 'Hand of the King, Lord of Winterfell' }] }],
             };
           } else {
-            out.changes.push({ op: 'character', id: 'eddard_stark', title: 'Hand of the King, Lord of Winterfell' }, { op: 'travel', character: 'eddard_stark', to: 'kings_landing', men: 300, name: 'The Hand\'s household', companions: ['jory_cassel', 'vayon_poole', 'sansa_stark', 'arya_stark'] });
-            out.flags = { ned_hand: true };
+            out.changes.push({ op: 'character', id: 'eddard_stark', title: 'Hand of the King, Lord of Winterfell' });
+            out.flags = { ned_hand: true, hand_daughters: true };
           }
           return out;
         },
@@ -65,6 +65,8 @@ export const THREADS = [
           const ch = [{ op: 'character', id: 'robert_baratheon', loc: 'baratheon' }, { op: 'character', id: 'cersei_lannister', loc: 'baratheon' }, { op: 'character', id: 'jaime_lannister', loc: 'baratheon' }, { op: 'character', id: 'joffrey_baratheon', loc: 'baratheon' }];
           if (alive(s, 'tyrion_lannister')) ch.push({ op: 'character', id: 'tyrion_lannister', loc: 'nights_watch' });
           if (alive(s, 'jon_snow') && s.characters.jon_snow.house === 'stark') ch.push({ op: 'character', id: 'jon_snow', house: 'nights_watch', title: 'Recruit of the Night\'s Watch', loc: 'nights_watch' });
+          // the new Hand rides south with his King, as in the books — with his daughters if he chose to bring them
+          if (flag(s, 'ned_hand') && free(s, 'eddard_stark') && at(s, 'eddard_stark', 'stark')) ch.push({ op: 'travel', character: 'eddard_stark', to: 'kings_landing', men: 300, name: 'The Hand\'s household', companions: ['jory_cassel', 'vayon_poole', 'septa_mordane', ...(flag(s, 'hand_daughters') ? ['sansa_stark', 'arya_stark'] : [])] });
           return { events: [ev('The court goes south', 'The King\'s party leaves Winterfell by the kingsroad. Jon Snow rides north to take the black, and Tyrion Lannister goes with him to see the Wall.', 'stark', 2, 'court', ['stark', 'baratheon'])], changes: ch };
         },
       },
