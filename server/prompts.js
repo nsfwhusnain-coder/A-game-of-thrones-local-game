@@ -154,7 +154,9 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   const p = state.meta.player;
   const parts = [];
   const season = SEASONS[state.world?.season || 'summer'];
-  parts.push(`SEASON: ${season.label}. ${state.world?.seasonNote || season.note}`);
+  const sk = state.world?.season || 'summer';
+  const weather = { summer: 'Summer: warm, long days, roads open; no snow south of the Wall (only in the high mountains and beyond the Wall). Hosts lose few men on the march.', autumn: 'Autumn: cooler, rains and mud, first frosts in the North; a march in the North costs a few more men.', winter: 'Winter: snow and cold, hard in the North, blizzards possible; hosts that march lose men to cold and hunger.', spring: 'Spring: thaw, floods and mud, fields sown.' }[sk];
+  parts.push(`SEASON: ${season.label}. ${state.world?.seasonNote || season.note}\nWEATHER MUST FIT THE SEASON — ${weather} Armies lose men mainly in battle; do not invent storms or blizzards that the season does not allow.`);
   // Realms
   const tops = Object.values(state.houses).filter((h) => !h.liege || h.rank === 'paramount' || h.rank === 'crown' || h.independent);
   const realmLines = tops.map((h) => {

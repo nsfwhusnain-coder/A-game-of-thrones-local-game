@@ -141,7 +141,7 @@ export async function advance(id, { span = '1m', orders } = {}) {
   state.meta.turn += 1;
   const orderText = state.orders.map((o) => o.text).join(' ');
   const playerChoseAllegiance = /fealty|swear|kneel|bend the knee|independen|king in the north|secede|declare (my|our)|crown (me|myself)|renounce/i.test(orderText);
-  const { applied, rejected } = applyChanges(state, [...(obj.changes || []), ...naturalDeaths], { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance });
+  const { applied, rejected } = applyChanges(state, [...(obj.changes || []), ...naturalDeaths], { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, spanDays: spanInfo.days });
   const deathEvents = naturalDeaths.map((d) => state.characters[d.id]).filter((c) => c && !c.alive).map((c) => ({ title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, type: 'court', houses: [c.house] }));
   // Vassals whose obligations the story did not settle act on their own temper: dues, and the banners
   const touched = new Set((obj.changes || []).filter((c) => c && ['obligation', 'vassal'].includes(c.op)).map((c) => String(c.house || '').toLowerCase()));

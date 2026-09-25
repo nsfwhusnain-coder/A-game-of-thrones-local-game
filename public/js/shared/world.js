@@ -406,6 +406,9 @@ export function applyChanges(state, changes, ctx = {}) {
   registerPlaces(state);
   const applied = []; const rejected = [];
   const date = dateStr(state.meta.date);
+  // houses that fought a battle in this same set of changes may lose men freely; others only by the season
+  const battleHouses = new Set((Array.isArray(changes) ? changes : []).filter((c) => c && c.op === 'battle').flatMap((c) => [c.attacker, c.defender, c.victor].map((x) => findHouse(state, x)).filter(Boolean)));
+  ctx = { ...ctx, battleHouses };
   const src = ctx.source || 'The simulation';
   const seen = new Set();
   for (const ch of Array.isArray(changes) ? changes : []) {
@@ -528,7 +531,20 @@ function applyOne(state, ch, ctx) {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
       const a = state.armies[id]; const out = [];
       const men = num(ch.men), d = num(ch.delta);
-      if (men !== null || d !== null) { const old = a.men; a.men = Math.max(0, Math.round(men ?? a.men + d)); out.push(`men ${fmt(old)} → ${fmt(a.men)}`); }
+      if (men !== null || d !== null) {
+        const old = a.men; let nv = Math.max(0, Math.round(men ?? a.men + d));
+        // Physics of the realm: without a battle, siege, ambush, plague or wreck a host loses men only to
+        // desertion, sickness and weather: ~2% a moon in summer, 4% in autumn, 8% in winter.
+        const violent = ctx.battleHouses?.has(a.owner) || /battle|siege|storm(ed|ing)|ambush|assault|slaughter|massacre|plague|pox|flux|shipwreck|wreck|drown|sack/i.test(`${ch.cause || ''} ${ch.reason || ''} ${ch.note || ''} ${ch.status || ''}`);
+        if (nv < old && !violent && a.type !== 'fleet' && ctx.source !== 'Your decision') {
+          const season = state.world?.season || 'summer';
+          const rate = ({ summer: 0.02, spring: 0.025, autumn: 0.04, winter: 0.08 })[season] ?? 0.03;
+          const months = Math.max(1, (ctx.spanDays || 30) / 30);
+          const floor = Math.round(old * (1 - Math.min(0.5, rate * months * (/march/.test(a.status || '') ? 1.5 : 1))));
+          if (nv < floor) { nv = floor; out.push(`(losses limited: no battle, ${season})`); }
+        }
+        a.men = nv; out.push(`men ${fmt(old)} → ${fmt(a.men)}`);
+      }
       if (num(ch.ships) !== null) { a.ships = num(ch.ships); out.push(`ships ${a.ships}`); }
       for (const k of ['morale', 'supply']) if (num(ch[k]) !== null) { a[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${a[k]}`); }
       if (ch.status) { a.status = ch.status; out.push(ch.status); }
