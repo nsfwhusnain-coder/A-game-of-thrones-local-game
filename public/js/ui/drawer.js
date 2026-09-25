@@ -18,7 +18,7 @@ export function renderDrawer() {
 }
 
 export function eventHtml(e) {
-  return `<div class="event imp-${e.importance}" ${e.where ? `data-where="${e.where}"` : ''}>${eventArt(e)}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div><div class="meta">${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
+  return `<div class="event imp-${e.importance}" ${e.where ? `data-where="${e.where}"` : ''}>${eventArt(e)}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<details class="ev-more"><summary>More</summary><div>${esc(e.details)}</div></details>` : ''}<div class="meta">${e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
 }
 export function decisionsHtml() {
   const s = app.state;

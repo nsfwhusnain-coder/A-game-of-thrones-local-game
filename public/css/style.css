@@ -512,3 +512,21 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .beat.act:hover { background: rgba(0,0,0,0.05); }
 .beat.act.speaking { background: rgba(94,76,56,0.1); box-shadow: inset 3px 0 0 #8a7050; }
 .beat.say { color: #1e1610; font-size: 0.98rem; }
+
+/* ---------- the turn told in order ---------- */
+.reel { position: absolute; top: 4.6rem; left: 50%; transform: translateX(-50%); width: min(34rem, 92vw); z-index: 40; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; box-shadow: 0 16px 40px rgba(0,0,0,0.6); padding: 0.7rem 0.8rem 0.6rem; animation: fadein .3s ease both; }
+.reel.reel-out { opacity: 0; transition: opacity .3s; }
+.reel-head { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 0.1rem 0.8rem; margin-bottom: 0.5rem; }
+.reel-day { font-family: var(--display); font-size: 1.15rem; color: var(--gold2); letter-spacing: 0.04em; }
+.reel-date { color: var(--muted); font-style: italic; text-align: right; }
+.reel-bar { grid-column: 1 / -1; height: 0.25rem; background: #2a2018; border-radius: 2px; overflow: hidden; }
+.reel-bar div { height: 100%; width: 0; background: linear-gradient(90deg, #8a6a2a, var(--gold2)); transition: width .12s linear; }
+.reel-card .event { margin: 0; }
+.reel-card .event .et { font-size: 1.05rem; }
+.reel-in { animation: beatIn .45s ease both; }
+.reel-ctl { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.55rem; }
+.reel-ctl .grow { flex: 1; }
+.reel-count { font-size: 0.75rem; color: var(--muted); }
+.ev-more { margin: 0.25rem 0 0.1rem; }
+.ev-more summary { cursor: pointer; font-size: 0.78rem; color: color-mix(in srgb, var(--accent, #8a2a1a) 75%, #1a120a); font-family: var(--display); letter-spacing: 0.03em; }
+.ev-more div { font-size: 0.9rem; line-height: 1.45; margin-top: 0.2rem; }

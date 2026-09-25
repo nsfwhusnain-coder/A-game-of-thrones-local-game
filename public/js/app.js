@@ -3,6 +3,7 @@ import { startIconizer, icon } from './ui/icons.js';
 import { drawTitleMap } from './ui/titlemap.js';
 import { startMusic, setMood, musicSettings, setMusic } from './ui/music.js';
 import { sfx, wireSfx, sfxSettings, setSfx } from './ui/sfx.js';
+import { playTurn } from './ui/playback.js';
 import { voiceSettings, setVoiceSetting, speak } from './ui/voice.js';
 import { atWar } from './shared/warfare.js';
 import { CHARACTERS } from '../data/characters.js';
@@ -325,11 +326,11 @@ async function advance() {
     const unreadBefore = app.state.ravens.filter((x) => !x.read).length;
     const r = await api(`/games/${app.saveId}/advance`, { body: { span, orders: app.state.orders } });
     app.setState(r.state); setDrawer('feed');
-    // the hours pass; then the news: horns for battle, a raven for letters
+    // the hours pass; then the news is told in order, day by day, before the report
     sfx('bell');
-    if (r.turn.events.some((e) => e.type === 'war' && e.importance >= 4)) setTimeout(() => sfx('horn'), 1100);
-    if (r.state.ravens.filter((x) => !x.read).length > unreadBefore) setTimeout(() => sfx('raven'), 2400);
-    showTurnReport(r.turn);
+    const newRavens = r.state.ravens.filter((x) => !x.read).length > unreadBefore;
+    busy(false);
+    playTurn(r.turn, { onDone: () => { showTurnReport(r.turn); if (newRavens) sfx('raven'); } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
   } catch (e) { toast(e.message, true); } finally { busy(false); }
 }

@@ -188,11 +188,15 @@ export async function advance(id, { span = '1m', orders } = {}) {
   } else { state.world.seasonDays = 0; }
   // Settle the books for the period (after the story has changed the causes)
   const econNotes = settle(state, spanInfo.days);
-  const events = (Array.isArray(obj.events) ? obj.events : []).map((e) => ({
-    title: String(e.title || 'Untitled'), text: String(e.text || e.description || ''), where: resolvePlaceId(e.where || e.location) || null,
+  const events = (Array.isArray(obj.events) ? obj.events : []).map((e, k) => ({
+    day: Math.max(1, Math.min(spanInfo.days, Math.round(Number(e.day) || Math.round(((k + 1) / ((obj.events?.length || 1) + 1)) * spanInfo.days)))),
+    title: String(e.title || 'Untitled'), text: String(e.text || e.description || ''), details: e.details ? String(e.details) : '', where: resolvePlaceId(e.where || e.location) || null,
     importance: Math.max(1, Math.min(5, Number(e.importance) || 2)), type: String(e.type || 'court'), houses: Array.isArray(e.houses) ? e.houses : [],
   }));
   events.push(...deathEvents, ...vt.events);
+  // every event has its day in the period, so the turn can be told in order
+  for (const e of events) if (!e.day) e.day = 1 + Math.floor(Math.random() * spanInfo.days);
+  events.sort((a, b) => a.day - b.day);
   for (const a of applied.filter((x) => x.op === 'succession')) {
     const hh = state.houses[a.house];
     events.unshift({ title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === state.meta.player ? 5 : 4, type: 'court', houses: [a.house] });
