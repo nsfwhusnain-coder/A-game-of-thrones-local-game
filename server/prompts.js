@@ -1,6 +1,7 @@
 // Prompt construction for the simulation. The model is the game engine: it narrates,
 // decides what every other house does, and emits structured changes that the engine applies.
 import { threadsDigest } from '../public/js/shared/plots.js';
+import { VOICES, HOUSE_WAYS } from '../public/data/voices.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
 import {
   dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS,
@@ -242,6 +243,7 @@ export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
     `You are the MAESTER-SIMULATOR: the game engine of a grand strategy role-playing game set in the world of A Song of Ice and Fire. You simulate the whole Known World turn by turn.`,
     WORLD_PRIMER,
     'SCENARIO BACKGROUND\n' + sc.lore.map((l) => '- ' + l).join('\n'),
+    'HOW THE GREAT HOUSES BEHAVE (move them by their nature; they act every turn whether or not the player does)\n' + Object.entries(HOUSE_WAYS).map(([k, v]) => `- ${k}: ${v}`).join('\n'),
     RULES,
     CHANGE_SCHEMA,
     JSON_RULES,
@@ -302,6 +304,8 @@ export function buildChatPrompt(state, charId, message, chronicleMd, cfg) {
   const system = [
     `You are ${c.name}${c.title ? ', ' + c.title : ''}, of House ${h?.name || c.house}, in the world of A Song of Ice and Fire. Stay fully in character: voice, knowledge, loyalties, fears, secrets and agenda. Never break character or mention being an AI or a game.`,
     `Your traits: ${c.traits || 'unknown'}. Age ${c.age}. Currently at ${placeName(state, c.loc)}${c.status !== 'free' ? ` (${c.status})` : ''}. ${c.bio || ''}`,
+    VOICES[c.id] ? `How you speak: ${VOICES[c.id].voice}\nWhat you want: ${VOICES[c.id].wants}\nWhat you fear: ${VOICES[c.id].fears}` : '',
+    HOUSE_WAYS[c.house] ? `The way of your house: ${HOUSE_WAYS[c.house]}` : '',
     c.secret ? `Your secret (protect it unless you have strong reason): ${c.secret}` : '',
     c.memories?.length ? `Things you remember:\n- ${c.memories.join('\n- ')}` : '',
     `You are speaking with ${playerLord ? playerLord.name : 'the head'} of House ${ph.name} (the player). ${rel}`,
@@ -350,7 +354,7 @@ export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {
   const key = 'council:' + [...ids].sort().join(',');
   const log = (state.chats[key] || []).slice(-30);
   const system = [
-    `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
+    `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${VOICES[c.id] ? '; speaks: ' + VOICES[c.id].voice : ''}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
     'Each counsellor speaks in their own voice, from their own expertise and interests; they may disagree with one another and with the lord. Officers give concrete numbers from the ledger. 1-4 of them speak per round, whoever is most relevant. Never break character.',
     SCENE_STYLE.replace('HOW TO WRITE YOUR REPLY — a short scene of 2 to 5 beats', 'HOW EACH COUNSELLOR SPEAKS — each reply is a short scene of 1 to 3 beats'),
     `Reply ONLY with JSON: {"replies":[{"speaker":CHAR_ID,"text":"*what the player sees them do* and what they say, in first person"}],"changes":[optional change operations the council's reports imply — e.g. a steward's corrected figures]}`,
