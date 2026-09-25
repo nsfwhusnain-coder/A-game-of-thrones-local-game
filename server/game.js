@@ -10,6 +10,8 @@ import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
 import { worldTick } from '../public/js/shared/plots.js';
+import { resolveWarfare } from '../public/js/shared/battles.js';
+import * as court from './court.js';
 import { carryOutOrders, readOrdersByRule, executeActions } from './orders.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
@@ -185,6 +187,15 @@ export async function advance(id, { span = '1m', orders } = {}) {
   for (const a of Object.values(state.armies)) {
     if (!a.march || a.movedTurn === state.meta.turn) continue;
     const to = a.march.to; // read before the move: arriving clears the march order
+    // a host may be ordered against another host: it follows it wherever it goes, and the engine fights them when they meet
+    if (String(to).startsWith('army:')) {
+      const foe = state.armies[String(to).slice(5)];
+      if (!foe) { delete a.march; a.status = 'holding'; continue; }
+      const m = marchDays(a, a.pos, foe.pos); const f = Math.min(1, spanInfo.days / Math.max(1, m.days));
+      a.pos = [a.pos[0] + (foe.pos[0] - a.pos[0]) * f, a.pos[1] + (foe.pos[1] - a.pos[1]) * f]; a.dest = foe.pos; a.destName = foe.name; a.at = null; a.status = f >= 1 ? 'engaging' : 'pursuing'; a.movedTurn = state.meta.turn;
+      if (f >= 1) delete a.march;
+      continue;
+    }
     const dest = placePos(to, state.holdings); if (!dest) { delete a.march; continue; }
     const m = marchDays(a, a.pos, dest);
     const f = Math.min(1, spanInfo.days / Math.max(1, m.days));
@@ -208,6 +219,10 @@ export async function advance(id, { span = '1m', orders } = {}) {
       if (c.house === state.meta.player) vt.events.push({ title: `${c.name} reaches ${placeName(state, to)}`, text: `${c.name} has arrived at ${placeName(state, to)}, as you commanded.`, where: to, importance: 2, type: 'court', houses: [c.house] });
     }
   }
+  // Hosts in contact fight; hosts before enemy walls besiege them (unless the story told that battle itself)
+  const toldBattles = new Set((obj.changes || []).filter((c) => c?.op === 'battle').flatMap((c) => [c.attacker, c.defender]).map((x) => String(x || '').toLowerCase()));
+  const wf = resolveWarfare(state, spanInfo.days, { skip: toldBattles });
+  vt.events.push(...wf.events); applied.push(...wf.applied);
   vt.events.push(...fieldService(state, spanInfo.days), ...gatherMusters(state));
   // The world goes on: the great threads of the story, rising threats, the other houses' lives
   const wt = worldTick(state, spanInfo.days);
@@ -508,6 +523,13 @@ export function act(id, body) {
     }
     case 'march': {
       const a = state.armies[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
+      if (String(body.to).startsWith('army:')) {
+        const foe = state.armies[String(body.to).slice(5)]; if (!foe) throw httpError(400, 'no such host');
+        const m = marchDays(a, a.pos, foe.pos);
+        a.march = { to: 'army:' + foe.id, since: state.meta.turn }; a.dest = foe.pos; a.destName = foe.name; a.at = null; a.status = 'pursuing';
+        addOrder(`${a.name} marches to attack ${foe.name} (House ${state.houses[foe.owner]?.name}, ~${foe.men} men), ~${m.days} days away${body.intent ? ' — ' + body.intent : ''}.`, '[The engine will fight this battle when the hosts meet; narrate the approach.]');
+        break;
+      }
       const to = resolvePlaceId(body.to) || body.to; body.to = to;
       const dest = placePos(to, state.holdings); if (!dest) throw httpError(400, 'unknown destination');
       const m = marchDays(a, a.pos, dest);
@@ -517,6 +539,13 @@ export function act(id, body) {
     }
     case 'order': {
       addOrder(String(body.text || '').slice(0, 2000));
+      break;
+    }
+    // the lord's own acts, settled at once (server/court.js)
+    case 'gift': case 'feast': case 'tourney': case 'judge': case 'declare_war': {
+      let r;
+      try { r = body.kind === 'gift' ? court.gift(state, body) : body.kind === 'feast' ? court.feast(state) : body.kind === 'tourney' ? court.tourney(state) : body.kind === 'judge' ? court.judge(state, body) : court.declareWar(state, body); } catch (e) { throw httpError(e.status || 400, e.message); }
+      addOrder(r.text, r.note); result.summary = r.summary;
       break;
     }
     default: throw httpError(400, 'unknown action');

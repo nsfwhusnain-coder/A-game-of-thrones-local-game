@@ -252,7 +252,7 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   parts.push('PACTS & AGREEMENTS\n' + (pacts.length ? pacts.map((x) => `${x.type} | ${x.a} & ${x.b} | ${x.status} | ${x.terms}`).join('\n') : 'none'));
   parts.push('ARMIES & FLEETS IN THE FIELD\n' + Object.values(state.armies).map((a) => armyLine(state, a)).join('\n'));
   const wr = warRoom(state);
-  if (wr.length) parts.push('WAR ROOM (engine estimates — let battles, sieges and marches follow these odds and timings unless the story gives a strong reason; upsets happen but are rare)\n' + wr.join('\n'));
+  if (wr.length) parts.push('WAR ROOM (the ENGINE fights the battles between hosts in contact and runs the sieges after your turn, by these odds — do not emit battle ops for them or kill their men yourself; narrate the approach, the councils of war, the fear in the camps)\n' + wr.join('\n'));
 
   const changedHoldings = Object.values(state.holdings).filter((x) => x.owner !== (x.seatOf || x.owner) || x.status !== 'normal' || x.unrest >= 40 || x.notes.length);
   if (changedHoldings.length) parts.push('NOTABLE HOLDINGS\n' + changedHoldings.map((x) => `${x.id} | ${x.name} | owner:${x.owner} | ${x.status} | unrest ${x.unrest} | ${x.notes.slice(-2).join(' / ')}`).join('\n'));

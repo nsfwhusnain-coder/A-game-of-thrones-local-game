@@ -18,7 +18,7 @@ export const REGION_NAMES = { north: 'The North', wall: 'The Wall', beyond: 'Bey
 export const RANK_NAMES = { crown: 'The Crown', paramount: 'Great House', major: 'Major House', minor: 'Minor House', city_state: 'Free City', order: 'Sworn Order', tribe: 'Host', exile: 'Exiles', company: 'Sellswords' };
 
 // each kind of order has its sound: steel for the host, coin for the treasury, wax for decisions
-const ACT_SOUND = { raise: 'steel', call_banners: 'steel', march: 'steel', disband: 'steel', tax: 'coins', dues: 'coins', project: 'coins', cancel_project: 'coins', grant: 'coins', decide: 'seal', appoint: 'seal' };
+const ACT_SOUND = { raise: 'steel', call_banners: 'steel', march: 'steel', disband: 'steel', tax: 'coins', dues: 'coins', project: 'coins', cancel_project: 'coins', grant: 'coins', decide: 'seal', appoint: 'seal', gift: 'coins', feast: 'bell', tourney: 'horn', judge: 'seal', declare_war: 'horn' };
 export async function api(path, opts = {}) {
   const res = await fetch('/api' + path, { method: opts.method || (opts.body ? 'POST' : 'GET'), headers: { 'Content-Type': 'application/json' }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));

@@ -129,7 +129,7 @@ async function startGame(id, state) {
       const { MapScene } = await import('./map3d/MapScene.js');
       app.map = new MapScene($('#map-wrap'), {
         onSelect: (hid) => { if (app.picking) return finishPick(hid); if (hid) openSheet('holding', hid); else closeSheet(); },
-        onSelectArmy: (aid) => openSheet('army', aid),
+        onSelectArmy: (aid) => { if (app.picking) return finishPickArmy(aid); openSheet('army', aid); },
         onHover: showTooltip,
         onPin: (where) => openPin(where),
       });
@@ -206,7 +206,7 @@ orderInput.onkeydown = (e) => {
 app.startPick = (kind, id) => {
   const a = app.state.armies[id];
   app.picking = { kind, id };
-  $('#pick-hint').textContent = `Click a destination on the map for ${a.name} (Esc to cancel)`; $('#pick-hint').classList.remove('hidden');
+  $('#pick-hint').textContent = `Click a destination for ${a.name} — or an enemy host to attack it (Esc to cancel)`; $('#pick-hint').classList.remove('hidden');
 };
 function finishPick(hid) {
   const pk = app.picking; app.picking = null; $('#pick-hint').classList.add('hidden');
@@ -215,6 +215,17 @@ function finishPick(hid) {
   const hostile = hd.owner !== app.state.meta.player && app.map.atWarWith(hd.owner);
   api(`/games/${app.saveId}/act`, { body: { kind: 'march', army: a.id, to: hid, intent: hostile ? 'lay siege and take it' : '' } })
     .then((r) => { app.setState(r.state); toast(`${a.name} marches on ${hd.name}. The route is on the map.`); app.map.flash(hd.pos); })
+    .catch((e) => toast(e.message, true));
+}
+
+// march against another host: the engine fights the battle when they meet
+function finishPickArmy(aid) {
+  const pk = app.picking; app.picking = null; $('#pick-hint').classList.add('hidden');
+  const a = app.state.armies[pk.id]; const foe = app.state.armies[aid];
+  if (!a || !foe || foe.id === a.id) return;
+  if (foe.owner === app.state.meta.player || !app.map.atWarWith(foe.owner)) { toast(`You are not at war with House ${app.state.houses[foe.owner]?.name}. Declare it first, or march to a place.`, true); return; }
+  api(`/games/${app.saveId}/act`, { body: { kind: 'march', army: a.id, to: 'army:' + foe.id, intent: 'bring them to battle' } })
+    .then((r) => { app.setState(r.state); toast(`${a.name} marches to attack ${foe.name}.`); app.map.flash(foe.pos); })
     .catch((e) => toast(e.message, true));
 }
 

@@ -53,6 +53,7 @@ function realm() {
       <div class="s"><div class="k">Vassals</div><div class="v">${vas.length}</div></div>
       <div class="s"><div class="k">Holdings</div><div class="v">${holdings.length}</div></div>
     </div>
+    <div class="section"><h4>Hold court</h4><div class="row-actions"><button class="btn" data-court="feast" title="Your sworn lords feast at your table: their loyalty rises. ~${fmt(1200 + vassalsOf(s, s.meta.player).length * 150)} dragons.">🍷 Hold a feast</button><button class="btn" data-court="tourney" title="Knights of the realm break lances for your purses: goodwill and glory, and sometimes blood. 5,000 dragons.">🏇 Hold a tourney</button></div></div>
     <div class="section"><h4>Your holdings</h4>${holdings.map((x) => `<div class="row clickable" data-hold="${x.id}"><div class="grow"><div class="title">${esc(x.name)} ${x.status !== 'normal' ? `<span class="pill bad">${esc(x.status)}</span>` : ''}</div>
       <div class="sub">~${fmt(x.population)} souls · walls ${'■'.repeat(x.fort || 0)}${'□'.repeat(Math.max(0, 5 - (x.fort || 0)))} · ${Object.entries(x.resources || {}).filter(([, v]) => v >= 0.5).map(([k]) => RESOURCES[k]?.icon || '').join(' ')}</div>
       <div style="display:flex;gap:0.5rem"><div style="flex:1" title="Prosperity ${x.prosperity}">${meter(x.prosperity, '#7fb85a')}</div><div style="flex:1" title="Unrest ${x.unrest}">${meter(x.unrest, '#d0604a')}</div></div></div>${x.id !== h.seat && vas.length ? `<button class="btn small" data-grant="${x.id}">Grant…</button>` : ''}</div>`).join('')}</div>
@@ -362,10 +363,10 @@ function characterSheet(id) {
     ${c.alive && !isRuler ? `<hr><div class="row-actions">
       <button class="btn primary" data-talk="${c.id}">${s.characters[player().lord]?.loc === c.loc ? '🗣 Speak' : '✉ Send a raven'}</button>
       <button class="btn" data-order-tpl="Summon ${esc(c.name)} to ${esc(s.holdings[player().seat]?.name || 'my court')}. ">Summon</button>
-      <button class="btn" data-order-tpl="Send a gift to ${esc(c.name)}: ">Send gift</button>
+      ${!mine ? `<button class="btn" data-gift="${c.id}">🎁 Send a gift</button>` : ''}
       ${!c.spouse && c.age >= 10 ? `<button class="btn" data-order-tpl="Propose a match for ${esc(c.name)} with ">Propose match</button>` : ''}
       ${mine ? `<button class="btn" data-order-tpl="Grant ${esc(c.name)} ">Grant…</button>` : ''}
-      ${c.status === 'imprisoned' ? `<button class="btn danger" data-order-tpl="Pass judgement on ${esc(c.name)}: ">Judge</button>` : ''}
+      ${/imprisoned|captive|hostage/.test(c.status || '') && !mine ? `<span class="judge-row"><b>Judge:</b> <button class="btn small" data-judge="release" data-who="${c.id}">Release</button><button class="btn small" data-judge="ransom" data-who="${c.id}">Ransom</button><button class="btn small" data-judge="wall" data-who="${c.id}">Send to the Wall</button><button class="btn small danger" data-judge="execute" data-who="${c.id}">Execute</button></span>` : ''}
       ${s.holdings[c.loc] ? `<button class="btn ghost" data-hold="${c.loc}">Show on map</button>` : ''}</div>` : ''}`;
 }
 
@@ -496,7 +497,8 @@ function houseSheet(id) {
       <button class="btn" data-propose="trade" data-target="${id}">Trade pact</button>
       <button class="btn" data-order-tpl="Embargo House ${esc(h.name)}: no trade with their lands or ships. ">Embargo</button>
       ${h.liege !== p ? `<button class="btn" data-propose="fealty" data-target="${id}">Demand fealty</button>` : ''}
-      <button class="btn danger" data-order-tpl="Declare war on House ${esc(h.name)}. Casus belli: ">Declare war</button></div>` : ''}`;
+      <button class="btn" data-gift="${id}">🎁 Send a gift</button>
+      <button class="btn danger" data-declare="${id}">⚔ Declare war</button></div>` : ''}`;
 }
 
 // proposals open an audience with the lord, pre-filled
@@ -509,3 +511,38 @@ document.addEventListener('click', (e) => {
   app.openChat(lord.id, text);
 });
 document.addEventListener('click', (e) => { const w = e.target.closest('[data-win-open]'); if (w) openWindow(w.dataset.winOpen); });
+
+// ── the lord's own acts, settled by the engine at once (server/court.js) ──
+async function courtAct(body, after) {
+  try { const r = await api(`/games/${app.saveId}/act`, { body }); app.setState(r.state); if (r.summary) toast(r.summary); after?.(); return r; } catch (err) { toast(err.message, true); return null; }
+}
+document.addEventListener('click', (e) => {
+  const g = e.target.closest('[data-gift]');
+  if (g) {
+    const s = app.state; const c = s.characters[g.dataset.gift]; const h = c ? s.houses[c.house] : s.houses[g.dataset.gift];
+    const have = Math.floor(Number(player().figures.treasury.v) || 0); const start = Math.min(have, 1000);
+    modal(`<h2>🎁 A gift for ${esc(c ? c.name : 'House ' + h.name)}</h2><p class="muted">Gold speaks every tongue — though what is a fortune to a hedge lord is nothing to the Lannisters. Their treasury: ~${fmt(h.figures.treasury.v)} dragons.</p>
+      <div class="scale-row"><input type="range" id="gift-n" min="50" max="${Math.max(50, have)}" step="50" value="${start}" style="flex:1"><b id="gift-v">${fmt(start)}</b>&nbsp;dragons</div>
+      <div class="report-actions"><button class="btn ghost" data-action="close-modal">Not now</button><button class="btn primary" id="gift-go">Send it</button></div>`);
+    $('#gift-n').oninput = (ev) => { $('#gift-v').textContent = fmt(Number(ev.target.value)); };
+    $('#gift-go').onclick = () => courtAct({ kind: 'gift', to: g.dataset.gift, gold: Number($('#gift-n').value) }, () => $('#modal').classList.add('hidden'));
+    return;
+  }
+  const j = e.target.closest('[data-judge]');
+  if (j) {
+    const c = app.state.characters[j.dataset.who];
+    if (j.dataset.judge === 'execute' && !confirm(`Execute ${c.name}? House ${app.state.houses[c.house]?.name} will never forget it.`)) return;
+    courtAct({ kind: 'judge', character: c.id, verdict: j.dataset.judge });
+    return;
+  }
+  const d = e.target.closest('[data-declare]');
+  if (d) {
+    const h = app.state.houses[d.dataset.declare];
+    modal(`<h2>⚔ War on House ${esc(h.name)}</h2><p>Once the heralds ride, there is no calling them back. ${player().liege === h.id ? '<b>They are your liege: this is rebellion.</b>' : ''}</p><label>Your cause, for the heralds to cry</label><input class="input" id="cb-text" placeholder="e.g. the murder of my father; the lands they stole at the Twins">
+      <div class="report-actions"><button class="btn ghost" data-action="close-modal">Stay your hand</button><button class="btn danger" id="cb-go">Declare war</button></div>`);
+    $('#cb-go').onclick = () => courtAct({ kind: 'declare_war', house: h.id, reason: $('#cb-text').value.trim() }, () => $('#modal').classList.add('hidden'));
+    return;
+  }
+  const f = e.target.closest('[data-court]');
+  if (f) courtAct({ kind: f.dataset.court });
+});

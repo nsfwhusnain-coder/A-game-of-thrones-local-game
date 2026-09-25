@@ -106,3 +106,50 @@ test('the recent-turn log is one line per event, background life only when it ma
   assert.match(line, /- d4 Winterfell: T — x/);
   assert.doesNotMatch(line, /Fair/);
 });
+
+// ── Temperament: different people take the same words differently ──
+import { weighAudience, holdToVerdict } from '../public/js/shared/temperament.js';
+test('a bribe buys Janos Slynt but not Tywin Lannister', () => {
+  const line = 'I offer you 5,000 gold dragons for your alliance.';
+  let s = fresh(); assert.equal(weighAudience(s, s.characters.janos_slynt, line).verdict, 'agree');
+  s = fresh(); assert.notEqual(weighAudience(s, s.characters.tywin_lannister, line).verdict, 'agree');
+});
+test('Tywin will not be threatened; Walder Frey is frightened', () => {
+  const line = 'Swear fealty to me or I will burn your castle to the ground.';
+  let s = fresh(); const t = weighAudience(s, s.characters.tywin_lannister, line); assert.equal(t.verdict, 'refuse'); assert.ok(t.mood.anger > t.mood.fear);
+  s = fresh(); const w = weighAudience(s, s.characters.walder_frey, line); assert.ok(w.mood.fear > 0);
+});
+test('insults run out a proud man\'s patience and close the audience', () => {
+  const s = fresh(); let r; let n = 0;
+  do { r = weighAudience(s, s.characters.viserys_targaryen, 'You are a craven fool.'); n++; } while (r.verdict !== 'dismiss' && n < 10);
+  assert.ok(n <= 2); assert.ok(s.moods.viserys_targaryen.closed);
+});
+test('a refusal signs no pact; an agreement is recorded even if the model forgets', () => {
+  const s = fresh(); const c = s.characters.janos_slynt;
+  const refused = holdToVerdict(s, c, { verdict: 'refuse', proposal: 'alliance' }, [{ op: 'pact', type: 'alliance', a: 'stark', b: c.house, status: 'active' }]);
+  assert.ok(!refused.some((x) => x.op === 'pact'));
+  const agreed = holdToVerdict(s, c, { verdict: 'agree', proposal: 'alliance' }, []);
+  assert.ok(agreed.some((x) => x.op === 'pact' && x.type === 'alliance'));
+});
+
+// ── Battles and sieges ──
+import { resolveWarfare } from '../public/js/shared/battles.js';
+import { applyChanges as apply } from '../public/js/shared/world.js';
+test('hosts at war in contact fight: losses, a rout, a battlefield on the map', () => {
+  const s = fresh();
+  apply(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['stark'] }, { op: 'army_create', id: 'n1', owner: 'stark', name: 'N', at: 'tully', men: 10000 }, { op: 'army_create', id: 'l1', owner: 'lannister', name: 'L', at: 'tully', men: 10000 }]);
+  const r = resolveWarfare(s, 30, { r: () => 0.3 });
+  assert.equal(r.events.length, 1);
+  const total = (s.armies.n1?.men || 0) + (s.armies.l1?.men || 0);
+  assert.ok(total < 20000 && total > 10000);
+  assert.ok(s.battles.length === 1 && s.landmarks.some((l) => l.kind === 'battle'));
+});
+test('a great castle is not stormed in a moon; a siege starves it in time', () => {
+  const s = fresh();
+  apply(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['tully'] }, { op: 'army_create', id: 's1', owner: 'lannister', name: 'S', at: 'tully', men: 9000 }]);
+  for (const a of Object.values(s.armies)) if (a.id !== 's1' && ['tully', 'stark'].includes(a.owner)) delete s.armies[a.id];
+  resolveWarfare(s, 30, { r: () => 0.99 });
+  assert.equal(s.holdings.tully.status, 'besieged'); assert.equal(s.holdings.tully.owner, 'tully');
+  for (let i = 0; i < 40 && s.holdings.tully.owner === 'tully'; i++) resolveWarfare(s, 30, { r: () => 0.99 });
+  assert.equal(s.holdings.tully.owner, 'lannister');
+});
