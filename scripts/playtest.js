@@ -44,7 +44,7 @@ for (let t = 1; t <= turns; t++) {
     try { const r = game.act(id, k % 3 === 2 ? { kind: 'decide', decision: d.id, custom: 'I will think on it — but tell them House Stark does not forget its friends.' } : { kind: 'decide', decision: d.id, option: 0 }); log(`- decided "${d.title}": ${k % 3 === 2 ? '(own words)' : d.options[0].label}${r.effects?.length ? ' — ' + r.effects.join(', ') : ''}`); } catch (e) { log(`- decide failed: ${e.message}`); }
   }
   const t0 = Date.now();
-  let r; try { r = await game.advance(id, { span: t % 5 === 0 ? '1w' : '1d', orders: (step.orders || []).map((text) => ({ text })) }); } catch (e) { log(`- ADVANCE FAILED: ${e.message}`); continue; }
+  let r; try { r = await game.advance(id, { span: t <= Number(args.weeks || 0) ? '1w' : t % 5 === 0 ? '1w' : '1d', orders: (step.orders || []).map((text) => ({ text })) }); } catch (e) { log(`- ADVANCE FAILED: ${e.message}`); continue; }
   const tr = r.turn; const u = tr.usage || {};
   log(`- ${tr.dateFrom} → ${tr.date} · ${((Date.now() - t0) / 1000).toFixed(0)}s · prompt ${u.prompt_tokens ?? '?'} (cached ${u.prompt_tokens_details?.cached_tokens ?? '?'}) · reply ${u.completion_tokens ?? '?'}${tr.salvaged ? ' · SALVAGED' : ''}`);
   if (step.orders) for (const c of tr.carried || []) log(`- carried out: ${c.order} → ${c.result.join('; ')}`);

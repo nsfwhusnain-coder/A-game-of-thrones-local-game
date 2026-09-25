@@ -610,3 +610,11 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .bf-item:not(:first-child) { opacity: 0.55; }
 .bf-t { font-family: var(--display); font-size: 0.95rem; }
 .bf-x { font-size: 0.85rem; line-height: 1.3; }
+
+/* the feed, compact: a turn is its date, a line of summary, and its headlines */
+.summary.small { font-size: 0.82rem; font-style: italic; color: var(--muted); line-height: 1.4; margin: 0.2rem 0 0.4rem; }
+.event.compact { padding: 0.4rem 0.6rem; margin-bottom: 0.35rem; }
+.event.compact .et { font-size: 0.88rem; }
+.event.compact .eb { font-size: 0.84rem; line-height: 1.35; }
+.event.compact .ev-more summary { font-size: 0.72rem; }
+.event.compact .meta { font-size: 0.68rem; }

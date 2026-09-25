@@ -280,7 +280,8 @@ export async function advance(id, { span = '1d', orders } = {}) {
   }
   const p = state.meta.player;
   const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
-  for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house] });
+  // the steward's small notes are the life of your lands, not headlines; only the grave ones are news
+  for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house], ...(n.important ? {} : { bg: true, mine: true }) });
   // every event has its day (successions at the start, the steward's accounts at the end) and an id for its pin
   for (const e of events) if (!e.day) e.day = /^A new head/.test(e.title) ? 1 : spanInfo.days;
   events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; });

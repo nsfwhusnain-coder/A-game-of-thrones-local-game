@@ -365,6 +365,20 @@ function diplomacySinceLastTurn(state) {
 
 // ---------------- Prompt builders ----------------
 
+// The engine chooses what moves in the realm this turn: a move or two by the great players (data/agendas.js),
+// rotating through them, which the model must tell as events — so no day is 'the North remains quiet'
+function todaysBeats(state, days) {
+  const live = AGENDAS.filter((a) => { const c = state.characters[a.who]; return c?.alive && !/imprisoned|captive|missing/.test(c.status || '') && (!a.when || a.when(state)); });
+  if (!live.length) return '';
+  const n = days <= 3 ? 2 : days <= 14 ? 3 : 4;
+  const seed = state.meta.turn * 7 + 3; const out = [];
+  for (let i = 0; i < n && i < live.length; i++) {
+    const a = live[(seed + i * 5) % live.length]; const c = state.characters[a.who];
+    out.push(`${i + 1}. ${c.name} (at ${placeName(state, c.loc)}) ${a.moves[(seed + i) % a.moves.length]}.`);
+  }
+  return `TODAY IN THE REALM — the engine has chosen these; tell each one as an event (the person acting, by name; where; one line of what it means), with any change it causes, alongside whatever the player's orders bring. Do not write that nothing happened.\n${out.join('\n')}`;
+}
+
 export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
   const sc = SCENARIOS[state.meta.scenario];
   const span = SPANS[spanKey] || SPANS['1m'];
@@ -384,7 +398,7 @@ export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
   "events": [ {"day":DAY_OF_THE_PERIOD,"title":"a headline, like a herald's cry: 'The King is dead'","text":"ONE sentence: what happened","details":"2-4 sentences: how it happened, who was there and how they reacted, and what it means for the realm and for the player","where":PLACE_ID,"importance":1-5,"type":"war|diplomacy|economy|intrigue|court|disaster|rumor|religion|magic","houses":[HOUSE_IDS]} ],
   "changes": [ ...change operations... ]
 }
-LENGTH: for a single day or a few days — the usual turn — the summary is 1-2 sentences and there are 0-3 events and up to 8 changes: most days are quiet, and a quiet day is fine; do not invent drama to fill it, but let what is under way move on (a host marches, an envoy arrives, a lord decides). For a week or two: 2-4 events and up to 12 changes; for a moon: 3-6 events and up to 20 changes. Each event: a headline and ONE sentence of "text" naming the people involved; "details" (1-2 sentences) only when there is more worth knowing. "day" is the day of the period on which it happened (1 = the first day); give events in that order.
+LENGTH: for a single day or a few days — the usual turn — the summary is 1-2 sentences and there are 1-3 events and up to 8 changes. The player\'s own lands may be quiet on a given day; THE REALM IS NEVER QUIET: every day at least one event must be a new step by one of the people in WHAT IS IN MOTION — somewhere else in the realm, done by them, named, concrete (who did what, where, and why it matters) — not weather, not "whispers", not "the North remains quiet". Do not narrate that nothing happened. For a week or two: 2-4 events and up to 12 changes; for a moon: 3-6 events and up to 20 changes. Each event: a headline and ONE sentence of "text" naming the people involved; "details" (1-2 sentences) only when there is more worth knowing. "day" is the day of the period on which it happened (1 = the first day); give events in that order.
 EVENTS ARE ABOUT PEOPLE: name who did it — Lord Varys, Ser Jaime Lannister, Petyr Baelish, the captain of the gold cloaks, a hedge knight called Ser Duncan — not "House Lannister". Headlines are short, like a herald\'s cry.
 THE ENGINE ALREADY WRITES THE SMALL LIFE OF THE REALM — weddings, harvests, blights, outlaws, tourneys, fairs, weather, septons, rumours, the canon story beats in THREADS, vassal musters, the ledger. Do not write those. Your events are the consequential ones: what the great houses decide and do, war, intrigue, diplomacy, and above all how the world answers the player\'s orders and decisions. Include changes for every consequence that should appear on the map or in the numbers. Rumours may be inaccurate; changes must reflect the TRUE state.
 
@@ -404,6 +418,7 @@ Only use ids that exist in the tables below. Change only what the story justifie
     diplomacySinceLastTurn(state),
     `CURRENT DATE: ${dateStr(state.meta.date)}. Simulate the next ${span.label} (${span.days} days).`,
     `PLAYER'S ORDERS FOR THIS PERIOD:\n${orders.length ? orders.map((o, i) => `${i + 1}. ${o.text}${o.note ? ' ' + o.note : ''}`).join('\n') : '(The player issues no orders and waits.)'}`,
+    todaysBeats(state, span.days),
     `Now simulate the ${span.label}. Reply with the JSON object only: {"summary":"...","events":[...],"changes":[...]} — complete and valid.`,
   ].filter(Boolean).join('\n\n');
   return [{ role: 'system', content: system }, { role: 'user', content: user }];

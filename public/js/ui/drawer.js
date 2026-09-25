@@ -18,8 +18,8 @@ export function renderDrawer() {
   renderFeed(body);
 }
 
-export function eventHtml(e) {
-  return `<div class="event imp-${e.importance}" ${e.where ? `data-where="${e.where}"` : ''}>${eventArt(e)}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<details class="ev-more"><summary>More</summary><div>${esc(e.details)}</div></details>` : ''}<div class="meta">${e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
+export function eventHtml(e, compact = false) {
+  return `<div class="event imp-${e.importance}${compact ? ' compact' : ''}" ${e.where ? `data-where="${e.where}"` : ''}>${!compact || e.importance >= 4 ? eventArt(e) : ''}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<details class="ev-more"><summary>More</summary><div>${esc(e.details)}</div></details>` : ''}<div class="meta">${e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
 }
 // The small life of the realm, told briefly beneath the turn's great events, grouped by where it happened
 const REGION_ORDER = ['north', 'wall', 'beyond', 'iron_islands', 'riverlands', 'vale', 'westerlands', 'crownlands', 'reach', 'stormlands', 'dorne', 'essos'];
@@ -74,7 +74,7 @@ function renderFeed(body) {
   const s = app.state;
   const turns = [...s.history].reverse().slice(0, 15);
   body.innerHTML = decisionsHtml() + (turns.length ? turns.map((t) => `<div class="turn-block"><div class="turn-head"><span>Turn ${t.turn}</span><span>${esc(t.date)}</span></div>
-      <div class="summary">${esc(t.summary)}</div>${mainEvents(t.events).map(eventHtml).join('')}${meanwhileHtml(t.events)}
+      <div class="summary small">${esc(t.summary)}</div>${mainEvents(t.events).map((e) => eventHtml(e, true)).join('')}${meanwhileHtml(t.events)}
       ${t.ledger ? `<div class="changes">🪙 Treasury ${t.ledger.net >= 0 ? '+' : ''}${fmt(t.ledger.net)} → ${fmt(t.ledger.treasury)} gd · food ${t.ledger.food} moons</div>` : ''}
       ${t.applied?.length ? `<details class="changes"><summary>${t.applied.length} changes to the world</summary><ul>${t.applied.map((a) => `<li>${esc(a.text)}</li>`).join('')}</ul></details>` : ''}</div>`).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>
