@@ -1,7 +1,7 @@
 // Side windows & detail sheets (CK3-style panels).
 import { app, $, $$, esc, fmt, placeName, getRelation, api, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
 import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf } from '../shared/world.js';
-import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS } from '../shared/economy.js';
+import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS, tradeModifier } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
 import { vassalTemper } from '../shared/vassals.js';
 import { disposition } from '../shared/diplomacy.js';
@@ -126,6 +126,35 @@ function military() {
 }
 
 // ───────────── Economy ─────────────
+// The last moon's accounts summed from the turns' ledgers (turns are often a single day)
+function moonAccounts(h) {
+  const Ls = (h.ledger || []); let days = 0; const lines = new Map(); let foodFrom = null;
+  for (let i = Ls.length - 1; i >= 0 && days < 30; i--) {
+    const e = Ls[i]; days += e.days || 0; foodFrom = e.food;
+    for (const l of e.lines || []) { const k = `${l.kind}|${l.label}`; lines.set(k, (lines.get(k) || 0) + (l.amount || 0)); }
+  }
+  if (!days || Ls.length < 2) return '';
+  const inc = [...lines].filter(([k]) => k.startsWith('income')).sort((a, b) => b[1] - a[1]);
+  const exp = [...lines].filter(([k]) => k.startsWith('expense')).sort((a, b) => b[1] - a[1]);
+  const tot = (a) => a.reduce((n, [, v]) => n + v, 0);
+  const row = ([k, v], sign) => `<tr class="${sign > 0 ? 'inc' : 'exp'}"><td>${esc(k.split('|')[1])}</td><td class="n">${sign > 0 ? '+' : '−'}${fmt(Math.round(v))}</td></tr>`;
+  const food = Ls.at(-1)?.food;
+  return `<div class="section"><h4>The last ${days} days, all told</h4><table class="ledger">${inc.map((x) => row(x, 1)).join('')}${exp.map((x) => row(x, -1)).join('')}
+    <tr class="sum"><td>Net</td><td class="n">${tot(inc) - tot(exp) >= 0 ? '+' : ''}${fmt(Math.round(tot(inc) - tot(exp)))}</td></tr>
+    <tr><td>Granaries</td><td class="n">${foodFrom != null && food != null ? `${foodFrom} → ${food} moons` : ''}</td></tr></table>
+    <p class="muted" style="font-size:0.78rem">Levies cost bread, not wages: a host in the field eats from your granaries and leaves its fields untended. Men-at-arms and sellswords are paid in gold.</p></div>`;
+}
+// Trade: agreements lift what your markets and ports earn; embargoes and wars choke them
+function tradeSection(s, p) {
+  const pacts = (s.pacts || []).filter((x) => x.status === 'active' && (x.type === 'trade' || x.type === 'embargo') && (x.a === p || x.b === p));
+  const m = tradeModifier(s, p);
+  const partners = Object.values(s.houses).filter((h) => h.id !== p && ['paramount', 'city_state', 'crown', 'major'].includes(h.rank) && !pacts.some((x) => [x.a, x.b].includes(h.id))).sort((a, b) => a.name.localeCompare(b.name));
+  return `<div class="section"><h4>Trade</h4>
+    <div class="muted" style="font-size:0.82rem">Your trade runs at <b style="color:${m >= 1 ? '#a8e08a' : '#ec9a8a'}">${Math.round(m * 100)}%</b> — each agreement +10%, each embargo −18%, each war −10%.</div>
+    ${pacts.map((x) => { const o = s.houses[x.a === p ? x.b : x.a]; return `<div class="row clickable" data-house="${o.id}">${sig(o)}<div class="grow"><div class="title">${x.type === 'trade' ? 'Trade agreement' : 'Embargo'} with House ${esc(o.name)}</div><div class="sub">${esc(x.terms || '')}</div></div><span class="pill ${x.type === 'trade' ? '' : 'bad'}">${x.type === 'trade' ? '+10%' : '−18%'}</span></div>`; }).join('') || '<div class="muted">No agreements yet.</div>'}
+    <div class="row-actions" style="margin-top:0.4rem"><select id="trade-with">${partners.map((h) => `<option value="${h.id}">House ${esc(h.name)}</option>`).join('')}</select><button class="btn small" id="trade-go">Seek a trade agreement</button></div></div>`;
+}
+
 function economy() {
   const s = app.state, p = s.meta.player, h = player();
   const pr = project(s, p);
@@ -152,7 +181,9 @@ function economy() {
       <p class="muted" style="font-size:0.8rem">${esc(season.label)}: ${esc(s.world?.seasonNote || season.note)}</p></div>
     <div class="section"><h4>Taxation</h4><div class="tpl-grid">${Object.entries(TAX_LEVELS).map(([k, t]) => `<div class="tpl" data-tax="${k}" style="${k === tax ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t.label}${k === tax ? ' ✓' : ''}</b><div class="c">${esc(t.desc)}</div></div>`).join('')}</div></div>
     ${h.liege && s.houses[h.liege] ? (() => { const cur = h.obligations?.tribute || 'paying'; const D = { paying: ['Pay in full', 'What is owed, on time. Your liege is content.'], late: ['Pay late', 'Excuses and partial sums. Patience wears thin.'], withholding: ['Withhold', 'Keep the gold. Your liege will notice, and will act.'] }; return `<div class="section"><h4>Dues to House ${esc(s.houses[h.liege].name)}</h4><div class="tpl-grid">${Object.entries(D).map(([k, [t, d]]) => `<div class="tpl" data-dues="${k}" style="${k === cur ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t}${k === cur ? ' ✓' : ''}</b><div class="c">${d}</div></div>`).join('')}</div></div>`; })() : ''}
-    ${L ? `<div class="section"><h4>Last accounts — ${esc(L.date)} (${L.days} days)${L.reporter ? ', by ' + esc(L.reporter) : ''}</h4><table class="ledger">
+    ${moonAccounts(h)}
+    ${tradeSection(s, p)}
+    ${L ? `<div class="section"><h4>Last accounts — ${esc(L.date)} (${L.days} day${L.days > 1 ? 's' : ''})${L.reporter ? ', by ' + esc(L.reporter) : ''}</h4><table class="ledger">
       ${L.lines.map((l) => `<tr class="${l.kind === 'income' ? 'inc' : 'exp'} ${l.note && /withheld|late|short/.test(l.note) ? 'warn' : ''}"><td>${esc(l.label)}${l.note ? `<div class="note">${esc(l.note)}${l.expected ? ` — expected ~${fmt(l.expected)}` : ''}</div>` : ''}${l.detail ? `<div class="note">${l.detail.filter((d) => d.amount).slice(0, 6).map((d) => `${esc(d.label)} ${fmt(d.amount)}${d.note ? ' (' + esc(d.note) + ')' : ''}`).join(' · ')}</div>` : ''}</td><td class="n">${l.kind === 'income' ? '+' : '−'}${fmt(l.amount)}</td></tr>`).join('')}
       <tr class="sum"><td>Net</td><td class="n">${L.net >= 0 ? '+' : ''}${fmt(L.net)}</td></tr></table></div>` : '<p class="muted">No accounts yet — the first reckoning comes when time advances.</p>'}
     <div class="section"><h4>Works & projects</h4>${projs.filter((x) => x.status === 'active').map((x) => `<div class="proj"><div style="display:flex;justify-content:space-between"><b>${esc(x.name)}</b><button class="btn small danger" data-cancel-proj="${x.id}">Cancel</button></div><div class="muted" style="font-size:0.78rem">${fmt(Math.round(x.cost - x.remaining))} / ${fmt(x.cost)} gd · ${Math.round(x.monthsLeft * 10) / 10} moons left</div>${meter(100 - (x.monthsLeft / x.months) * 100)}</div>`).join('') || '<div class="muted" style="font-size:0.85rem">Nothing under way.</div>'}
@@ -261,6 +292,7 @@ const wire = {
     };
   },
   economy(body) {
+    const tg = $('#trade-go', body); if (tg) tg.onclick = () => { const h = app.state.houses[$('#trade-with', body).value]; const lord = h?.lord && app.state.characters[h.lord]; if (!lord?.alive) return toast('There is no one to treat with.', true); app.openChat?.(lord.id, `Let our merchants trade freely between our lands — your goods for ours, with fair tolls on both sides. What say you?`); };
     $$('[data-tax]', body).forEach((el) => el.onclick = async () => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'tax', level: el.dataset.tax } }); app.setState(r.state); toast(`Taxes set to ${TAX_LEVELS[el.dataset.tax].label.toLowerCase()}. Your lords will notice.`); } catch (e) { toast(e.message, true); } });
     $$('[data-dues]', body).forEach((el) => el.onclick = async () => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'dues', status: el.dataset.dues } }); app.setState(r.state); toast(el.dataset.dues === 'paying' ? 'Your dues will be paid in full.' : el.dataset.dues === 'late' ? 'Your steward will find reasons for delay.' : 'Not a single dragon goes to your liege.'); } catch (e) { toast(e.message, true); } });
     $$('[data-proj]', body).forEach((el) => el.onclick = async () => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'project', template: el.dataset.proj, holding: $('#proj-hold', body).value } }); app.setState(r.state); toast('Work begins. Coin will flow out each moon until it is done.'); } catch (e) { toast(e.message, true); } });

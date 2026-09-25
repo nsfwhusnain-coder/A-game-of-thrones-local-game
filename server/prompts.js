@@ -17,6 +17,7 @@ import { dispositionText } from '../public/js/shared/diplomacy.js';
 import { temperament, natureTags } from '../public/js/shared/temperament.js';
 import { DEMEANOURS } from '../public/data/demeanours.js';
 import { beliefsAboutPlayer } from '../public/js/shared/intel.js';
+import { AGENDAS } from '../public/data/agendas.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
@@ -254,6 +255,14 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   const pacts = state.pacts.filter((x) => x.status !== 'ended');
   parts.push('PACTS & AGREEMENTS\n' + (pacts.length ? pacts.map((x) => `${x.type} | ${x.a} & ${x.b} | ${x.status} | ${x.terms}`).join('\n') : 'none'));
   parts.push('ARMIES & FLEETS IN THE FIELD\n' + Object.values(state.armies).map((a) => armyLine(state, a)).join('\n'));
+  // what is in motion: the great players' aims and next moves (rotating, so a different few move each day)
+  const live = AGENDAS.filter((a) => { const c = state.characters[a.who]; return c?.alive && !/imprisoned|captive|missing/.test(c.status || '') && (!a.when || a.when(state)); });
+  if (live.length) {
+    const k = (state.meta.turn * 5) % live.length; const pick = [...live.slice(k), ...live.slice(0, k)].slice(0, 8);
+    parts.push('WHAT IS IN MOTION (the great players and what they are working at — each day, move one or two of these on through the people themselves; the world must never stand still)\n' + pick.map((a) => `${a.who} (at ${placeName(state, state.characters[a.who].loc)}): wants ${a.aim}. Might next: ${a.moves.join('; ')}.`).join('\n'));
+  }
+  const heard = (state.history || []).slice(-6).flatMap((t) => (t.events || []).filter((e) => !e.bg).map((e) => e.title));
+  if (heard.length) parts.push('RECENT HEADLINES (already told — do not tell them again; if a matter goes on, tell what is NEW about it)\n' + [...new Set(heard)].slice(-12).join(' · '));
   const talks = Object.entries(state.plotting || {}).filter(([, x]) => x.with).map(([h, x]) => `${h} (lord ${state.houses[h]?.lord}) treats in secret with ${x.with} against its liege ${state.houses[h]?.liege}${x.known ? ' — the player KNOWS' : ' — the player does not know'}`);
   if (talks.length) parts.push('SECRET TALKS (the engine\'s: let these lords act two-faced — courteous to their liege, slow to answer calls, quick to excuses; do not reveal them to the player unless the story finds them out)\n' + talks.join('\n'));
   const beliefs = beliefsAboutPlayer(state, placeName);
@@ -304,9 +313,9 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
 export function memoryBlock(state, chronicleMd, budgetTokens, keepRecent) {
   const out = [];
   if (chronicleMd && chronicleMd.trim()) out.push('THE CHRONICLE (long-term memory of the story so far)\n' + chronicleWithin(chronicleMd, Math.min(CHRONICLE_CAP, Math.floor(budgetTokens * 0.5))));
-  const recent = state.history.filter((t) => t.turn > state.consolidatedThrough).slice(-Math.max(keepRecent, 1));
-  // the latest turn in full; the ones before it only for what mattered (the chronicle keeps the rest)
-  if (recent.length) out.push('RECENT TURNS (compact log: day of the period, place, what happened)\n' + trimToTokens(recent.map((t, i) => turnLog(state, t, { minImp: i === recent.length - 1 ? 2 : 3 })).join('\n\n'), Math.floor(budgetTokens * 0.5), true));
+  const recent = state.history.filter((t) => t.turn > state.consolidatedThrough).slice(-Math.max(keepRecent, 14));
+  // one line per event that mattered; append-only, so the model server's cache holds from turn to turn
+  if (recent.length) out.push('RECENT TURNS (compact log: day of the period, place, what happened)\n' + trimToTokens(recent.map((t) => turnLog(state, t, { minImp: 2 })).join('\n\n'), Math.floor(budgetTokens * 0.5), true));
   return out.join('\n\n');
 }
 

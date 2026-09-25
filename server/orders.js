@@ -23,7 +23,7 @@ function context(state) {
 
 export function ordersPrompt(state, orders) {
   const system = `You turn a lord's written orders into game actions, exactly as he gives them. His household and bannermen obey him; do not refuse, soften or second-guess an order — if it can be carried out, emit the action.
-Reply with ONE JSON object: {"actions":[...],"story":[...]}.
+Reply with ONE JSON object: {"actions":[...],"story":[...]}. Only concrete moves are actions — someone travels, a host marches, men are recruited (a number you are given or can infer), an officer is hired or appointed. Drilling, counting, inspecting, writing, feasting, judging, spying and the like are for the story: put their order numbers in "story" and emit no action for them.
 "actions" — only these kinds, one object per thing to do, each with "order": the number of the order it comes from:
 - {"op":"travel","order":1,"character":"<person id>","to":"<place name>","men":<number of men to take, 0 if none>}   — someone rides somewhere (with a party of men if asked)
 - {"op":"march","order":1,"army":"<host id>","to":"<place name>"}   — a host marches
@@ -89,6 +89,8 @@ export function executeActions(state, actions) {
   const note = (i, text) => { (results[i] = results[i] || []).push(text); };
   for (const a of actions || []) {
     const i = Number(a.order) || 0;
+    // an action with nothing in it (recruit 0 men) is no action: the story tells that order
+    if (['recruit', 'hire_men'].includes(a.op) && !(Number(a.men) >= 10)) continue;
     try {
       if (a.op === 'march') {
         const army = state.armies[a.army] || Object.values(state.armies).find((x) => x.owner === p && slug(x.name) === slug(a.army || ''));

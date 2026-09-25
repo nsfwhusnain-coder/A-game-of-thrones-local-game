@@ -1,0 +1,44 @@
+// What the great players of the realm are working at, and the moves they might make next. Each turn the
+// prompt shows the story model a handful of these (rotating, and only for those alive and free), so every
+// day something moves somewhere — through named people — instead of the realm "whispering" in place.
+// Their past is in data/histories.js; this is their present: the aim, and concrete next steps to choose from.
+// when(s): optional — the agenda applies only while the world fits it.
+
+const A = (who, aim, moves, when) => ({ who, aim, moves, when });
+const at = (s, id, ...places) => places.includes(String(s.characters[id]?.loc || ''));
+const flag = (s, k) => s.plots?.flags?.[k];
+
+export const AGENDAS = [
+  A('robert_baratheon', 'to be rid of ruling: hunt, drink, feast — and to have Ned beside him again', ['hunts in the kingswood and comes back with a boar and a hangover', 'holds a feast that runs three days and costs the crown more than it has', 'quarrels with the Queen in front of the court', 'sends a gift of Arbor gold to an old companion from the Rebellion', 'talks again of the Targaryen girl across the sea and the dragons she may bring']),
+  A('cersei_lannister', 'to keep her children safe on the throne and her secret buried', ['has a servant who saw too much sent away to Casterly Rock', 'writes to her father at Casterly Rock asking for men in the city', 'charms a lord of the small council over wine', 'has the Stark party watched on the kingsroad', 'places a Lannister cousin in the King\'s household']),
+  A('jaime_lannister', 'to be near Cersei, and to be judged for more than one sword stroke', ['wins a melee in the yard of the Red Keep and mocks the loser', 'rides out with the King\'s hunt and watches him drink', 'trades barbs with Ser Barristan about their vows']),
+  A('tyrion_lannister', 'to see the Wall, drink the realm dry, and be taken seriously for once', ['stays a night at an inn on the kingsroad and pays for everyone\'s wine', 'argues philosophy with Maester Aemon at Castle Black', 'writes a sharp letter to his sister']),
+  A('tywin_lannister', 'the House of Lannister\'s legacy: the crown in his grandson\'s hand, the realm in his debt', ['calls in a loan from a riverlands lord who cannot pay', 'orders Ser Gregor Clegane to "keep the peace" on the Red Fork — which means burn it', 'receives the lords of the West at Casterly Rock and takes the measure of each', 'moves gold to the Iron Bank\'s agents in Lannisport']),
+  A('petyr_baelish', 'to climb: chaos is a ladder — a quarrel between Stark and Lannister above all', ['buys another brothel on the Street of Silk', 'finds the crown a loan from a Faith that did not know it was lending', 'lets slip, to the right ear, that a dagger in the north was once his — and he lost it to the Imp', 'writes secretly to Lady Lysa at the Eyrie', 'pays the gold cloaks\' captains out of his own purse']),
+  A('varys', 'the realm stable under the right ruler — and his little birds everywhere', ['learns of a plot against the Targaryen girl and tells the King about it — or does not', 'has a stranger\'s ship searched at the Mud Gate', 'visits Illyrio\'s agents in secret in Flea Bottom', 'feeds the Hand a truth he can use']),
+  A('lysa_arryn', 'to keep her son safe in the Eyrie and blame the Lannisters for her husband\'s death', ['refuses to send her son to foster at Dragonstone or Casterly Rock', 'orders Ser Vardis Egen to close the Bloody Gate to all Lannister men', 'writes to her sister Catelyn that the Lannisters murdered Jon Arryn', 'has a singer thrown from the Moon Door for a careless verse']),
+  A('stannis_baratheon', 'the truth of Joffrey\'s birth, and his own rights by law', ['broods on Dragonstone with a book of lineages and Jon Arryn\'s notes', 'refuses a summons to court', 'lets Lady Selyse bring a red priestess before him', 'orders his fleet drilled in the Gullet']),
+  A('melisandre', 'Azor Ahai reborn — and Stannis is he', ['burns the old gods\' images on Dragonstone', 'shows Lady Selyse a vision in the flames', 'wins a septon\'s servants to the Lord of Light']),
+  A('renly_baratheon', 'the crown, because he would wear it better than his brothers', ['hosts Ser Loras and a dozen Reach lordlings at Storm\'s End', 'talks with Lady Olenna\'s people of a match for Margaery', 'makes the court laugh at Stannis\'s expense']),
+  A('olenna_tyrell', 'Margaery a queen, and the Tyrells above the fools', ['sends a clever letter to Lord Renly', 'mocks her son in front of his bannermen and changes his mind for him', 'buys a debt the crown owes a Reach lord']),
+  A('mace_tyrell', 'a royal grandson, and glory he does not have to fight for', ['holds a great harvest feast at Highgarden', 'boasts of Ashford at every table', 'offers the crown grain at a price']),
+  A('doran_martell', 'justice for Elia — in time — and Dorne safe until then', ['receives a Lannister envoy with perfect courtesy and gives him nothing', 'sends Prince Oberyn to Lys on an errand no one names', 'writes in cipher to someone across the narrow sea']),
+  A('oberyn_martell', 'vengeance on the Mountain and on Tywin Lannister', ['duels a Marcher knight over a slight and wins', 'buys a poison he cannot name in the market of Lys', 'teaches his daughters the spear at the Water Gardens']),
+  A('balon_greyjoy', 'a crown for the Iron Islands, and revenge for his dead sons', ['counts the longships at Pyke and orders more built', 'lets reavers raid the Stony Shore and says nothing', 'hears the drowned priests preach the Old Way', 'sends for Victarion and the Iron Fleet']),
+  A('walder_frey', 'marriages for his countless get, respect, and the toll at the Twins', ['offers a granddaughter to a passing lordling', 'raises the toll again and lets a Tully knight wait at the gate', 'complains to anyone who will listen that the Tullys slight him']),
+  A('hoster_tully', 'to see his children safe before he dies', ['takes a turn for the worse and asks for Catelyn', 'makes Edmure promise to hold the rivers together']),
+  A('edmure_tully', 'to rule the Riverlands well and be taken seriously', ['rides out to settle a quarrel between the Blackwoods and the Brackens', 'musters the river lords for a review at Riverrun']),
+  A('roose_bolton', 'advantage: the Boltons above the Starks, in time', ['has himself leeched and receives no one', 'sends a rider to the Dreadfort\'s bastard with orders no one else reads', 'buys horses from the Ryswells, more than he needs']),
+  A('wyman_manderly', 'White Harbor rich, and loyal to the Starks who took his house in', ['launches a new war galley at White Harbor', 'feasts a Braavosi trader and buys his whole cargo']),
+  A('jeor_mormont', 'men for the Wall, and the truth of what moves beyond it', ['sends Yoren south for recruits', 'plans a great ranging and asks the lords for horses', 'reads reports of empty wildling villages']),
+  A('mance_rayder', 'every clan of the free folk south of the Wall before the dead come', ['wins over the Thenns with a feast and a threat', 'sends Tormund to the Frostfangs', 'searches the haunted forest for the Horn of Winter']),
+  A('viserys_targaryen', 'his crown, and the army his sister\'s marriage will buy', ['threatens Daenerys for displeasing him', 'boasts in Illyrio\'s manse that he will be king by summer\'s end', 'demands Drogo march at once']),
+  A('daenerys_targaryen', 'to survive her brother, and to learn to be a khaleesi', ['learns to ride a silver mare across the Dothraki sea', 'learns Dothraki from her handmaids', 'stands up to her brother for the first time']),
+  A('illyrio_mopatis', 'a Targaryen restoration that profits him', ['sends a cipher letter to Varys', 'gives Viserys another gift he cannot afford', 'hires sellswords he does not yet need']),
+  A('khal_drogo', 'glory, horses, and a son', ['leads his khalasar east across the grass', 'raids a Lhazareen village and takes slaves', 'laughs at the silver king\'s demands']),
+  A('janos_slynt', 'gold, and a lordship he has not earned', ['takes a bribe to look away at the Mud Gate', 'hangs a cutpurse to show the Hand he is diligent']),
+  A('grand_maester_pycelle', 'Lannister favour and his chain secure', ['sends a raven to Casterly Rock that no one else sees', 'dozes in council and hears everything']),
+  A('barristan_selmy', 'to serve a king worth serving', ['keeps the King alive at a boar hunt', 'refuses a Lannister\'s gift']),
+  A('catelyn_stark', 'her children safe, and justice for any wrong to them', ['keeps vigil in the sept of Winterfell', 'questions the servants about the King\'s party', 'writes to her sister at the Eyrie'], (s) => !flag(s, 'cat_south')),
+  A('benjen_stark', 'the truth of what stirs beyond the Wall', ['rides beyond the Wall with six men', 'reports the wildlings moving north, away from the Wall'], (s) => at(s, 'benjen_stark', 'nights_watch', 'castle_black')),
+];

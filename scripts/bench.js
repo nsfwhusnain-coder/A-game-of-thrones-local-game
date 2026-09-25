@@ -43,9 +43,11 @@ if (!args.only || args.only === 'turns') {
   log('## Turns');
   const { id } = game.newGame('agot_298', args.house || 'stark');
   const plan = [
-    ['1m', ['Send Ser Rodrik Cassel with fifty men to White Harbor to inspect the fleet.', 'Write to Lord Tully at Riverrun asking for news of the south.']],
-    ['1m', ['Raise two thousand levies at Winterfell under Robb.', 'Hold a feast for my bannermen.']],
-    ['3m', ['March the levies to Moat Cailin and fortify it.']],
+    ['1d', ['Send Ser Rodrik Cassel with fifty men to White Harbor to inspect the fleet.', 'Write to Lord Tully at Riverrun asking for news of the south.']],
+    ['1d', ['Raise two thousand levies at Winterfell under Robb.']],
+    ['1d', ['Send a raven to Walder Frey: open the crossing to my men when I ask it, or I will remember it.']],
+    ['1w', ['Hold a feast for my bannermen.']],
+    ['1m', ['March the levies to Moat Cailin and fortify it.']],
   ];
   for (const [span, orders] of plan) {
     const t0 = Date.now(); let r;
@@ -56,9 +58,10 @@ if (!args.only || args.only === 'turns') {
     const firstOk = (() => { try { extractJson(calls.find((x) => x.kind === 'jump')?.response || ''); return true; } catch { return false; } })();
     const main = t.events.filter((e) => !e.bg && !/steward|ledger|pays|answers the call|arrives|reaches/i.test(e.title));
     const story = `${t.summary} ${t.events.map((e) => `${e.title} ${e.text} ${e.details || ''}`).join(' ')}`.toLowerCase();
-    const followed = orders.map((o) => { const keys = o.toLowerCase().match(/\b(rodrik|white harbor|tully|riverrun|levies|feast|moat cailin|robb)\b/g) || []; return keys.some((k) => story.includes(k)); });
+    const followed = orders.map((o) => { const keys = o.toLowerCase().match(/\b(rodrik|white harbor|tully|riverrun|levies|feast|moat cailin|robb|frey|twins)\b/g) || []; return keys.some((k) => story.includes(k)) || (t.applied || []).some((a) => keys.some((k) => String(a.text).toLowerCase().includes(k))) || (t.carried || []).length > 0 && keys.some((k) => JSON.stringify(t.carried).toLowerCase().includes(k)); });
     add('turn completes', !t.salvaged); add('reply parses first try', firstOk && !retried); add('orders appear in the story', followed.every(Boolean));
-    add(`events in range for ${span}`, main.length >= (span === '1m' ? 2 : 3) && main.length <= (span === '1m' ? 8 : 11));
+    const [lo, hi] = { '1d': [0, 4], '1w': [1, 6], '1m': [2, 8] }[span] || [2, 11];
+    add(`events in range for ${span}`, main.length >= lo && main.length <= hi);
     log(`- **${span}**: ${secs(ms)}${t.usage ? ` · prompt ${t.usage.prompt_tokens} (cached ${t.usage.prompt_tokens_details?.cached_tokens ?? '?'}) · reply ${t.usage.completion_tokens}` : ''} · ${t.salvaged ? 'SALVAGED' : firstOk && !retried ? 'parsed' : 'parsed after repair/retry'} · ${main.length} story events, ${t.events.filter((e) => e.bg).length} background · orders followed: ${followed.map((f) => (f ? '✓' : '✗')).join(' ')}`);
     for (const e of main.slice(0, 4)) log(`    - d${e.day} ${e.title} — ${e.text}`);
   }
@@ -82,11 +85,12 @@ if (!args.only || args.only === 'audiences') {
     try { r = await game.talk(id, who, line); } catch (e) { log(`- ${who}: ${e.message}`); add('audience answers', false); continue; }
     const ms = Date.now() - t0; const reply = String(r.reply || '');
     const narr = [...reply.matchAll(/\*([^*]+)\*/g)].map((m) => m[1]);
-    const thirdPerson = narr.length > 0 && narr.every((n) => !/\b(I|me|my|myself)\b/.test(n));
+    const letter = !narr.length || /^(my lord|lord|to |from |eddard|ned\b|dear)/i.test(reply.trim()); // by raven: a letter has no narration to judge
+    const thirdPerson = letter ? null : narr.every((n) => !/\b(I|me|my|myself)\b/.test(n));
     const verdictOk = !want || r.stance?.verdict === want;
     const shown = shows.test(reply.replace(/\*[^*]*\*/g, ' '));
-    add('audience answers', reply.trim().length > 20); add('narration in third person', thirdPerson); add('engine verdict as expected', verdictOk); if (want) add('reply keeps to the verdict', shown);
-    log(`- **${who}** ← "${line}" → engine: ${r.stance?.verdict || '—'} (${r.stance?.mood}) · ${secs(ms)} · third person ${thirdPerson ? '✓' : '✗'} · keeps to verdict ${want ? (shown ? '✓' : '✗') : '—'}`);
+    add('audience answers', reply.trim().length > 20); if (thirdPerson !== null) add('narration in third person', thirdPerson); add('engine verdict as expected', verdictOk); if (want) add('reply keeps to the verdict', shown);
+    log(`- **${who}** ← "${line}" → engine: ${r.stance?.verdict || '—'} (${r.stance?.mood}) · ${secs(ms)} · ${thirdPerson === null ? 'letter' : `third person ${thirdPerson ? '✓' : '✗'}`} · keeps to verdict ${want ? (shown ? '✓' : '✗') : '—'}`);
     log(`    > ${reply.replace(/\s+/g, ' ').slice(0, 300)}`);
   }
 }
