@@ -8,7 +8,7 @@ import { atWar } from './shared/warfare.js';
 import { CHARACTERS } from '../data/characters.js';
 import { briefFor } from '../data/briefs.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
-import { portraitURL } from './ui/portrait.js';
+import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
 import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, wireDecisions, wireVoices } from './ui/drawer.js';
@@ -27,6 +27,7 @@ function moodFor(s) {
 }
 async function initTitle() {
   wireSfx();
+  await loadCustomPortraits();
   setMood('title');
   $('#title-screen').classList.remove('hidden'); $('#game-screen').classList.add('hidden');
   await loadSigilArt();

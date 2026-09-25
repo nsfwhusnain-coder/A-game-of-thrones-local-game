@@ -82,6 +82,12 @@ const server = http.createServer(async (req, res) => {
       try { files = fs.readdirSync(dirp).filter((f) => /\.(mp3|ogg|oga|m4a|wav|flac|opus|webm)$/i.test(f)); } catch { /* none */ }
       return send(res, 200, { files: files.map((f) => '/music/' + encodeURIComponent(f)) });
     }
+    if (url.pathname === '/api/portraits' && req.method === 'GET') {
+      // your own art: public/portraits/<character_id>.png|jpg|webp replaces the painted portrait
+      const dirp = path.join(PUBLIC, 'portraits'); let files = [];
+      try { files = fs.readdirSync(dirp).filter((f) => /\.(png|jpe?g|webp|avif)$/i.test(f)); } catch { /* none */ }
+      return send(res, 200, { portraits: Object.fromEntries(files.map((f) => [f.replace(/\.[^.]+$/, ''), '/portraits/' + encodeURIComponent(f)])) });
+    }
     if (url.pathname.startsWith('/api/')) {
       for (const r of routes) {
         if (r.method !== req.method) continue;

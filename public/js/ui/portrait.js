@@ -142,8 +142,12 @@ const keyOf = (c, house, size) => `${c.id}|${c.alive}|${c.age}|${house?.id}|${ho
 // Lazy portraits for long lists: a silhouette now, the painting a moment later (painted in idle time,
 // a few at a time, so opening a window of 300 people never stalls the game).
 const pending = new Map(); let pumping = false;
+// Hand-painted art wins: files in public/portraits/ named by character id replace the generated portrait
+let custom = {};
+export async function loadCustomPortraits() { try { custom = (await (await fetch('/api/portraits')).json()).portraits || {}; } catch { custom = {}; } }
 export function portraitLazy(c, house, size = 128) {
   if (!c) return '';
+  if (custom[c.id] && c.alive !== false) return custom[c.id];
   const key = keyOf(c, house, size);
   if (cache.has(key)) return cache.get(key);
   const col = house?.sigil?.f && lum(house.sigil.f) < 0.8 ? house.sigil.f : house?.color || '#5a4a3a';
@@ -166,6 +170,7 @@ function pump() {
 
 export function portraitURL(c, house, size = 128) {
   if (!c) return '';
+  if (custom[c.id] && c.alive !== false) return custom[c.id];
   const key = keyOf(c, house, size);
   if (cache.has(key)) return cache.get(key);
   const k = Math.max(1, Math.min(3, (size * 2) / 128));
