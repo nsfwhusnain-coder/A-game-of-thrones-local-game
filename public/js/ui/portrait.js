@@ -212,11 +212,17 @@ function paint(ctx, c, house) {
   if (L.feat.has('gaunt')) { G.jw -= 1.5; }
   if (dwarf) { G.cw += 2; G.jw += 2.5; G.top -= 2; G.chinY -= 1; G.shoulder -= 12; G.neck -= 1; }
   if (L.feat.has('frog')) { G.jw += 3; G.chinY -= 3; G.mouthY -= 1; }
+  // every face its own: spacing of the eyes, length of the nose, fullness of the lips, set of the jaw
+  const vr = rngFrom((L.seed ^ 0x9e3779b9) >>> 0); const j = (a) => (vr() - 0.5) * 2 * a;
+  G.eyeDx += j(0.9); G.eyeW += j(0.45); G.eyeY += j(1.1); G.noseY += j(1.3); G.mouthY += j(0.9);
+  G.chinY += j(2); G.cw += j(1.1); G.jw += j(1.5); G.top += j(1.4);
+  G.noseW = 1 + j(0.2); G.lipK = 1 + j(0.28); G.browY = j(0.9); G.tilt = j(0.035);
 
   background(ctx, L, W, H, r);
   hairBack(ctx, L, G, r);
   body(ctx, L, G, r, W, H);
   neck(ctx, L, G);
+  ctx.save(); ctx.translate(cx, G.chinY); ctx.rotate(G.tilt); ctx.translate(-cx, -G.chinY);
   ears(ctx, L, G);
   face(ctx, L, G, r);
   if (L.feat.has('burned')) burn(ctx, L, G, r);
@@ -227,6 +233,7 @@ function paint(ctx, c, house) {
   mouth(ctx, L, G);
   beard(ctx, L, G, r);
   hairFront(ctx, L, G, r);
+  ctx.restore();
   regalia(ctx, L, G, r);
   finish(ctx, L, W, H);
 }
@@ -652,7 +659,7 @@ function brows(ctx, L, G) {
   const stern = L.expr < 0; const warm = L.expr > 0;
   for (const d of [-1, 1]) {
     if (d > 0 && L.noBrowRight) continue;
-    const x = cx + d * G.eyeDx; const y = eyeY - 6.2;
+    const x = cx + d * G.eyeDx; const y = eyeY - 6.2 + (G.browY || 0);
     const inner = [cx + d * 3.6, y + (stern ? 1.6 : warm ? -0.4 : 0.6)], mid = [x + d * 0.5, y - (warm ? 2.4 : 2)], outer = [x + d * (G.eyeW + 2.4), y + (L.female ? 0.4 : 1.2)];
     ctx.fillStyle = rgba(tone, L.age > 70 ? 0.55 : 0.9);
     ctx.beginPath(); ctx.moveTo(inner[0], inner[1] - 0.9 * heavy); ctx.quadraticCurveTo(mid[0], mid[1] - 1.2 * heavy, outer[0], outer[1]);
@@ -660,7 +667,7 @@ function brows(ctx, L, G) {
   }
 }
 function nose(ctx, L, G) {
-  const { cx, eyeY, noseY } = G; const hawk = L.feat.has('hawk_nose'); const wide = L.feat.has('flat_face') || L.feat.has('dwarf') || L.feat.has('frog') ? 1.35 : L.female ? 0.85 : 1;
+  const { cx, eyeY, noseY } = G; const hawk = L.feat.has('hawk_nose'); const wide = (L.feat.has('flat_face') || L.feat.has('dwarf') || L.feat.has('frog') ? 1.35 : L.female ? 0.85 : 1) * (G.noseW || 1);
   const skew = L.feat.has('broken_nose') ? 1.2 : 0;
   soft(ctx, 1.2, () => {
     ctx.strokeStyle = rgba(shade(L.skin, -0.5), 0.55); ctx.lineWidth = 1.5;
@@ -677,7 +684,7 @@ function nose(ctx, L, G) {
 function mouth(ctx, L, G) {
   const { cx, mouthY } = G; const w = (L.female ? 5.4 : 6) * (L.feat.has('frog') ? 1.5 : 1) * (L.build === 'child' ? 0.85 : 1);
   const lip = L.feat.has('lipstick') ? '#8e2a2e' : mix(L.skin, '#a8423e', L.female ? 0.48 : 0.3);
-  const up = L.expr > 0 ? 1 : L.expr < 0 ? -0.8 : 0; const thin = L.feat.has('pale') || L.feat.has('gaunt') ? 0.7 : 1;
+  const up = L.expr > 0 ? 1 : L.expr < 0 ? -0.8 : 0; const thin = (L.feat.has('pale') || L.feat.has('gaunt') ? 0.7 : 1) * (G.lipK || 1);
   // philtrum
   soft(ctx, 0.8, () => { blob(ctx, cx, mouthY - 3.6, 1.4, 1.8, rgba(shade(L.skin, -0.3), 0.3)); });
   // upper lip with a cupid's bow
