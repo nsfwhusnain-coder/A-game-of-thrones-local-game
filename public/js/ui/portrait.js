@@ -149,17 +149,19 @@ export function portraitLazy(c, house, size = 128) {
   const col = house?.sigil?.f && lum(house.sigil.f) < 0.8 ? house.sigil.f : house?.color || '#5a4a3a';
   const ph = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 154"><!--${key}--><defs><radialGradient id="g" cx="0.45" cy="0.35" r="0.8"><stop offset="0" stop-color="${mix(col, '#1a1612', 0.45)}"/><stop offset="1" stop-color="#0c0a08"/></radialGradient></defs><rect width="128" height="154" fill="url(#g)"/><ellipse cx="64" cy="60" rx="21" ry="28" fill="#000" opacity="0.35"/><path d="M8 156 C14 118 40 104 64 104 C88 104 114 118 120 156Z" fill="#000" opacity="0.35"/></svg>`)}`;
   if (!pending.has(ph)) pending.set(ph, [c, house, size]);
-  if (!pumping) { pumping = true; (window.requestIdleCallback || ((f) => setTimeout(() => f({ timeRemaining: () => 12 }), 16)))(pump); }
+  if (!pumping) { pumping = true; later(pump); }
   return ph;
 }
-function pump(deadline) {
-  const done = [];
+// the map renders every frame, so true idle time is rare: paint ~10 ms' worth per slice, at least every 60 ms
+const later = (f) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: 60 }) : setTimeout(f, 16));
+function pump() {
+  const done = []; const t0 = performance.now();
   for (const [ph, args] of pending) {
-    if (done.length && deadline.timeRemaining() < 4) break;
+    if (done.length && performance.now() - t0 > 10) break;
     done.push([ph, portraitURL(...args)]); pending.delete(ph);
   }
   if (done.length) { const map = new Map(done); for (const img of document.images) { const u = map.get(img.getAttribute('src')); if (u) img.src = u; } }
-  if (pending.size) (window.requestIdleCallback || ((f) => setTimeout(() => f({ timeRemaining: () => 12 }), 16)))(pump, { timeout: 200 }); else pumping = false;
+  if (pending.size) later(pump); else pumping = false;
 }
 
 export function portraitURL(c, house, size = 128) {
