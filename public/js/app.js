@@ -131,6 +131,7 @@ async function startGame(id, state) {
         onSelectArmy: (aid) => { if (app.picking) return finishPickArmy(aid); openSheet('army', aid); },
         onHover: showTooltip,
         onPin: (where) => openPin(where),
+        onChar: (id) => openSheet('char', id),
       });
       await app.map.generate(app.state.holdings, (p, msg) => { $('#map-loading-bar').style.width = Math.round(p * 100) + '%'; $('#map-loading-text').textContent = msg + '…'; });
     } catch (e) {
@@ -336,12 +337,14 @@ async function advance() {
   try {
     const unreadBefore = app.state.ravens.filter((x) => !x.read).length;
     const r = await api(`/games/${app.saveId}/advance`, { body: { span, orders: app.state.orders } });
+    // the hosts march across the map as the replay's days go by
+    if (app.map) { app.map.reelHold = true; app.map.reelF = 0; }
     app.setState(r.state); setDrawer('feed');
     // the hours pass; then the news is told in order, day by day, before the report
     sfx('bell');
     const newRavens = r.state.ravens.filter((x) => !x.read).length > unreadBefore;
     busy(false);
-    playTurn(r.turn, { onDone: () => { showTurnReport(r.turn); if (newRavens) sfx('raven'); } });
+    playTurn(r.turn, { onDone: () => { if (app.map) { app.map.reelHold = false; app.map.reelF = 1; } showTurnReport(r.turn); if (newRavens) sfx('raven'); } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
   } catch (e) { toast(e.message, true); } finally { busy(false); }
 }

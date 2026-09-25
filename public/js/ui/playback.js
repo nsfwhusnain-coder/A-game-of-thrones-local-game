@@ -25,7 +25,7 @@ export async function playTurn(turn, { onDone } = {}) {
   $('#reel-next').onclick = () => { ctl.next = true; };
   $('#reel-skip').onclick = () => { ctl.skip = true; };
   let shownDay = 1;
-  const setDay = (d) => { shownDay = d; $('#reel-day').textContent = `Day ${d} of ${span}`; $('#reel-date').textContent = dayDate(d); $('#reel-bar').style.width = `${Math.round((100 * d) / span)}%`; };
+  const setDay = (d) => { shownDay = d; if (app.map) app.map.reelF = d / span; $('#reel-day').textContent = `Day ${d} of ${span}`; $('#reel-date').textContent = dayDate(d); $('#reel-bar').style.width = `${Math.round((100 * d) / span)}%`; };
   for (let i = 0; i < evs.length && !ctl.skip; i++) {
     const e = evs[i]; ctl.next = false;
     // the days run forward to this event
@@ -44,6 +44,7 @@ export async function playTurn(turn, { onDone } = {}) {
     sfx(e.importance >= 4 && e.type === 'war' ? 'horn' : 'open');
     await wait(2600 + (e.importance || 2) * 700 + Math.min(4000, (e.text || '').length * 30), ctl);
   }
+  if (!ctl.skip) for (let k = 1; k <= 10 && shownDay < span; k++) { setDay(Math.round(shownDay + ((span - shownDay) * k) / 10)); await wait(40, ctl); }
   el.classList.add('reel-out'); setTimeout(() => el.remove(), 350);
   onDone?.();
 }

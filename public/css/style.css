@@ -582,3 +582,7 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .voice-pick label { margin: 0; color: var(--muted); }
 .voice-pick select { flex: 1; min-width: 0; }
 .judge-row { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; font-size: 0.85rem; }
+.lbl.rider { pointer-events: auto; cursor: pointer; font-size: 0.68rem; padding: 0.05rem 0.35rem; border-radius: 0.6rem; background: rgba(20,16,12,0.8); border: 1px solid var(--line2); color: var(--muted); white-space: nowrap; }
+.lbl.rider.mine { border-color: var(--gold); color: var(--gold2); }
+.lbl.army.reported { opacity: 0.7; border-style: dashed !important; background: rgba(20,16,12,0.55) !important; }
+.lbl.army.reported i { font-style: italic; opacity: 0.8; }

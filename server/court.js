@@ -115,3 +115,36 @@ export function declareWar(state, { house, reason }) {
   applyChanges(state, ch, { source: 'Your declaration', protectPlayer: false, playerChoseAllegiance: true });
   return { text: `Declare war on House ${h.name}.${reason ? ' Casus belli: ' + reason : ''}`, note: `[Already done: war is declared${rebelling ? ' — this is REBELLION against your liege' : ''}. Narrate how each house reacts: who joins whom, who waits.]`, summary: `War is declared on House ${h.name}.${rebelling ? ' You are in rebellion.' : ''}` };
 }
+
+// Intrigue: the spymaster's work. Spies in a house show you its hosts wherever they march (fog of war);
+// digging for secrets may bring a lord's secret to light. Both can be discovered.
+function spymaster(state) {
+  const p = state.meta.player;
+  return Object.values(state.characters).find((c) => c.alive && c.house === p && (c.roles || []).includes('spymaster')) || null;
+}
+export function scheme(state, { house, kind }) {
+  const p = state.meta.player; const me = state.houses[p]; const h = state.houses[house];
+  if (!h || house === p) throw new CourtError('Against whom?');
+  const cost = kind === 'secrets' ? 1200 : 800;
+  if (gold(me) < cost) throw new CourtError(`Your spymaster needs ~${cost} dragons for bribes and silence.`);
+  spend(state, p, cost, 'Secret expenses');
+  const sm = spymaster(state); const skill = sm?.skills?.[3] ?? 5;
+  const chance = clamp(0.3 + skill * 0.035, 0.2, 0.88);
+  const roll = Math.random();
+  const who = sm ? sm.name : 'Your hired men';
+  if (roll < chance) {
+    if (kind === 'secrets') {
+      const lord = state.characters[h.lord];
+      const target = [lord, ...Object.values(state.characters).filter((c) => c.house === house && c.alive)].find((c) => c?.secret && !c.secretKnown);
+      if (target) { applyChanges(state, [{ op: 'character', id: target.id, revealSecret: true }]); return { text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} learned ${target.name}'s secret: ${target.secret}. Only the player knows. Narrate nothing of it openly.]`, summary: `${who} brings you ${target.name}'s secret: ${target.secret}` }; }
+      return { text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} found nothing worth the gold.]`, summary: `${who} dug, and found nothing House ${h.name} hides that you did not know.` };
+    }
+    state.intel = state.intel || { armies: {}, spies: {} }; state.intel.spies[house] = state.meta.turn;
+    return { text: `[SECRET] Plant spies in the household of House ${h.name}.`, note: `[Already done: ${who} has eyes in House ${h.name}; the player now sees their hosts.]`, summary: `${who} has placed eyes in House ${h.name}. Their hosts will be known to you wherever they march.` };
+  }
+  if (roll < chance + (1 - chance) * 0.45) {
+    applyChanges(state, [{ op: 'relation', a: p, b: house, delta: -15, reason: 'your spies were caught' }]);
+    return { text: `[SECRET] A scheme against House ${h.name}.`, note: `[Already done: the player's agents were CAUGHT by House ${h.name}. Narrate the discovery and their anger.]`, summary: `Your agents were caught in House ${h.name}'s household. They know who sent them.` };
+  }
+  return { text: `[SECRET] A scheme against House ${h.name}.`, note: `[Already done: the scheme came to nothing; no one noticed.]`, summary: `${who}'s agents came back with nothing. The gold is gone; no one noticed.` };
+}

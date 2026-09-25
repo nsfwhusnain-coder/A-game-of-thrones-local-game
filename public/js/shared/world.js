@@ -7,6 +7,7 @@ import { MAP_VERSION, warpOld } from '../../data/warp.js';
 import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.js';
 import { initEconomy, TAX_LEVELS, project } from './economy.js';
 import { heirOf } from './people.js';
+import { addReport, updateIntel } from './intel.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -154,7 +155,15 @@ export function createInitialState(scenarioId, playerHouse) {
     const pr = project(state, h.id);
     if (pr) h.figures.income = { ...h.figures.income, v: Math.round((pr.low + pr.high) / 2) };
   }
+  seedIntel(state);
   return state;
+}
+
+// What every lord knows at the start: where the great hosts and fleets of the realm were last heard of
+function seedIntel(state) {
+  state.intel = { armies: {}, spies: {} };
+  for (const a of Object.values(state.armies)) state.intel.armies[a.id] = { pos: [...a.pos], men: a.men, turn: state.meta.turn, source: 'common knowledge', owner: a.owner, name: a.name };
+  updateIntel(state);
 }
 
 /** Bring older saves up to date with new world features. */
@@ -177,6 +186,7 @@ export function migrateState(state) {
     if (!h.lord && h.rank !== 'company') { const c = generateLord(h, state.meta.date.year); if (!state.characters[c.id]) state.characters[c.id] = c; h.lord = c.id; }
   }
   if (state.houses.golden_company && !state.houses.golden_company.lord) state.houses.golden_company.lord = 'harry_strickland';
+  if (!state.intel) seedIntel(state); // saves from before the fog of war
   return state;
 }
 
@@ -561,7 +571,7 @@ function applyOne(state, ch, ctx) {
       }
       const miles = Math.hypot(to[0] - from[0], to[1] - from[1]) * MILES_PER_UNIT * 1.12;
       const days = Math.max(1, Math.round(miles / 38)); // a rider with a small escort
-      c.travel = { to: dest, days, left: days, since: date };
+      c.travel = { to: dest, days, left: days, since: date, from: [...from] };
       return { op, text: `${c.name} sets out for ${placeName(state, dest)} (~${days} days' ride)` };
     }
     case 'recruit': case 'hire_men': {
@@ -805,6 +815,14 @@ function applyOne(state, ch, ctx) {
       const d = { id: slug(ch.id || ch.title || 'decision') + '_' + Math.random().toString(36).slice(2, 6), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, status: 'pending', ...(resolvePlaceId(ch.where) && state.holdings[resolvePlaceId(ch.where)] ? { where: resolvePlaceId(ch.where) } : {}) };
       state.decisions.push(d);
       return { op, text: `A decision awaits you: ${d.title}` };
+    }
+    case 'report': case 'sighting': case 'rumour_host': {
+      // news of a host reaching the player — true, stale, or planted (fog of war: shared/intel.js)
+      const aid = findArmy(state, ch.army || ch.id);
+      const pos = ch.at ? posOf(state, ch.at) : null;
+      if (!aid && !ch.false && !ch.lie) throw new Error('unknown army ' + (ch.army || ch.id));
+      const r = addReport(state, { army: aid || null, pos: pos || (aid ? state.armies[aid].pos : null), men: num(ch.men), source: ch.source || 'a raven', false: !!(ch.false || ch.lie), owner: findHouse(state, ch.owner) || (aid && state.armies[aid].owner), name: ch.name });
+      return { op, text: `A report reaches you: ${r.name} (~${fmt(r.men)} men) near ${ch.at ? placeName(state, ch.at) : 'where it was last seen'} — ${r.source}` };
     }
     case 'chronicle': case 'memory': {
       state.chronicle.push({ date, text: String(ch.text || '') });

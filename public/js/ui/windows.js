@@ -9,6 +9,7 @@ import { atWar, battleOdds, marchDays, siegeEstimate } from '../shared/warfare.j
 import { THREADS, THREATS } from '../shared/plots.js';
 import { sfx } from './sfx.js';
 import { temperament, natureTags } from '../shared/temperament.js';
+import { viewOfArmies, ageText } from '../shared/intel.js';
 import { DEMEANOURS } from '../../data/demeanours.js';
 import { profileFor, VOICE_CHOICES, voiceSettings, setVoiceSetting, speak, stopSpeaking } from './voice.js';
 
@@ -268,6 +269,9 @@ const wire = {
   intrigue(body) {
     $('#plot-go', body).onclick = () => {
       const kind = $('#plot-kind', body).selectedOptions[0].text.replace('…', ''); const t = app.state.houses[$('#plot-target', body).value];
+      const key = $('#plot-kind', body).value;
+      // spies and secrets are the spymaster's own work, settled at once; the rest go to the world as secret orders
+      if (key === 'spy' || key === 'secrets') { courtAct({ kind: 'scheme', house: t.id, kind2: key }); return; }
       addOrder(`[SECRET SCHEME] ${kind} House ${t.name}. ${$('#plot-means', body).value}`.trim()); toast('The scheme is added to your orders — in secret.');
     };
   },
@@ -453,6 +457,14 @@ function holdingSheet(id) {
 function armySheet(id) {
   const s = app.state; const a = s.armies[id]; if (!a) return '';
   const h = s.houses[a.owner]; const cmd = a.commander ? s.characters[a.commander] : null; const mine = a.owner === s.meta.player || a.serving === s.meta.player;
+  // fog of war: a host you only have reports of shows the report, not the truth
+  const v = viewOfArmies(s).get(id);
+  if (!mine && v?.known === 'reported') {
+    const near = Object.values(s.holdings).sort((x, y) => Math.hypot(x.pos[0] - v.pos[0], x.pos[1] - v.pos[1]) - Math.hypot(y.pos[0] - v.pos[0], y.pos[1] - v.pos[1]))[0];
+    return `<div class="detail-hero"><img class="banner" src="${banner(h, 60, 90)}" style="width:4rem;opacity:0.6" alt=""><div><h2>${a.type === 'fleet' ? '⛵' : '⚔'} A host of House ${esc(h.name)}</h2><div class="muted">Known only by report</div></div></div>
+      <div class="stat-grid"><div class="s"><div class="k">Reported men</div><div class="v">~${fmt(v.men)}?</div></div><div class="s"><div class="k">Last heard of</div><div class="v" style="font-size:0.9rem">near ${esc(near?.name || '?')}</div></div><div class="s"><div class="k">Report</div><div class="v" style="font-size:0.9rem">${esc(v.source)}, ${ageText(v.age)}</div></div></div>
+      <p class="muted" style="font-size:0.85rem">No eyes of yours are on this host. It may have moved, grown, dwindled — or the report may be a lie. Hosts near your lands, your hosts and your allies are seen as they are; plant spies in House ${esc(h.name)} to follow theirs.</p>`;
+  }
   return `
     <div class="detail-hero"><img class="banner" src="${banner(h, 60, 90)}" style="width:4rem" alt=""><div><h2>${a.type === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</h2><div class="muted"><a href="#" data-house="${h.id}">House ${esc(h.name)}</a> · ${esc(a.status || '')}</div></div></div>
     <div class="stat-grid">

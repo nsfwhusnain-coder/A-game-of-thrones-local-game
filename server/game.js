@@ -11,6 +11,8 @@ import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
 import { worldTick } from '../public/js/shared/plots.js';
 import { resolveWarfare } from '../public/js/shared/battles.js';
+import { roadEncounters } from '../public/js/shared/roads.js';
+import { updateIntel } from '../public/js/shared/intel.js';
 import * as court from './court.js';
 import { carryOutOrders, readOrdersByRule, executeActions } from './orders.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
@@ -209,6 +211,9 @@ export async function advance(id, { span = '1m', orders } = {}) {
       delete a.march;
     }
   }
+  // The road is not safe: outlaws, foragers, floods and snow — and now and then a friend
+  const rd = roadEncounters(state, spanInfo.days);
+  vt.events.push(...rd.events); applied.push(...rd.applied);
   // Riders on the road: characters travelling alone arrive when their days are spent
   for (const c of Object.values(state.characters)) {
     if (!c.travel || !c.alive) continue;
@@ -232,6 +237,8 @@ export async function advance(id, { span = '1m', orders } = {}) {
     const turned = seasonTick(state, spanInfo.days);
     if (turned) { vt.events.unshift({ title: `A white raven: ${turned.season} has come`, text: turned.text, where: resolvePlaceId('oldtown'), importance: 5, type: 'court', houses: [] }); applied.push({ op: 'season', text: `The season turns: ${turned.season.toUpperCase()}` }); }
   } else { state.world.seasonDays = 0; }
+  // What the player's house has seen of the other hosts this period (fog of war)
+  updateIntel(state);
   // Settle the books for the period (after the story has changed the causes)
   const econNotes = settle(state, spanInfo.days);
   const events = (Array.isArray(obj.events) ? obj.events : []).map((e, k) => ({
@@ -542,9 +549,9 @@ export function act(id, body) {
       break;
     }
     // the lord's own acts, settled at once (server/court.js)
-    case 'gift': case 'feast': case 'tourney': case 'judge': case 'declare_war': {
+    case 'gift': case 'feast': case 'tourney': case 'judge': case 'declare_war': case 'scheme': {
       let r;
-      try { r = body.kind === 'gift' ? court.gift(state, body) : body.kind === 'feast' ? court.feast(state) : body.kind === 'tourney' ? court.tourney(state) : body.kind === 'judge' ? court.judge(state, body) : court.declareWar(state, body); } catch (e) { throw httpError(e.status || 400, e.message); }
+      try { r = body.kind === 'gift' ? court.gift(state, body) : body.kind === 'feast' ? court.feast(state) : body.kind === 'tourney' ? court.tourney(state) : body.kind === 'judge' ? court.judge(state, body) : body.kind === 'scheme' ? court.scheme(state, { house: body.house, kind: body.kind2 }) : court.declareWar(state, body); } catch (e) { throw httpError(e.status || 400, e.message); }
       addOrder(r.text, r.note); result.summary = r.summary;
       break;
     }

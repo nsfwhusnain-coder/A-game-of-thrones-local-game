@@ -47,6 +47,8 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
 - {"op":"landmark","name":"The Battle of the Whispering Wood","at":PLACE,"kind":"battle|camp|grave|site","note":"..."}   (marks a place on the map where something memorable happened; "remove":true clears it)
 - {"op":"decision","title":"...","text":"the situation, 1-3 sentences","from":CHAR_ID,"options":[{"label":"Accept the King's offer","hint":"likely consequences"},{"label":"...","hint":"..."}]}
     (put a real choice before the PLAYER when a character or event demands their answer: an offer, a demand, a crisis, a judgement. 2-4 options, each plausible. The player's choice arrives as an order next turn.)
+- {"op":"report","army":ARMY_ID,"at":PLACE,"men":N,"source":"a raven from Lord X / a merchant / a spy","false":true?}
+    (FOG OF WAR: the player sees only hosts near their own lands and hosts. Use this to bring them news of distant hosts — stale, exaggerated, or a planted lie with "false":true, e.g. a feint)
 - {"op":"chronicle","text":"one line recording a truly significant, lasting fact (deaths of great lords, wars, crowns, betrayals)"}`;
 
 // Compact schema for conversations (small models drown in the full list)

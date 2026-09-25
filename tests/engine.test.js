@@ -153,3 +153,34 @@ test('a great castle is not stormed in a moon; a siege starves it in time', () =
   for (let i = 0; i < 40 && s.holdings.tully.owner === 'tully'; i++) resolveWarfare(s, 30, { r: () => 0.99 });
   assert.equal(s.holdings.tully.owner, 'lannister');
 });
+
+// ── Orders read by rule: spelled-out numbers ──
+import { wordNumber } from '../server/orders.js';
+test('dictated numbers are read: "ten men", "a hundred riders", "two hundred and fifty men"', () => {
+  assert.equal(wordNumber('Ride to Oldtown with ten men.'), 10);
+  assert.equal(wordNumber('take a hundred riders'), 100);
+  assert.equal(wordNumber('two hundred and fifty men'), 250);
+  assert.equal(wordNumber('a score of knights'), 20);
+  assert.equal(wordNumber('send men north'), null);
+});
+
+// ── Fog of war ──
+import { viewOfArmies, updateIntel } from '../public/js/shared/intel.js';
+test('the player sees hosts near their lands; distant ones only by report, and the report ages', () => {
+  const s = fresh();
+  apply(s, [{ op: 'army_create', id: 'far', owner: 'martell', name: 'Dornish spears', at: 'martell', men: 5000 }, { op: 'army_create', id: 'near', owner: 'bolton', name: 'Bolton host', at: 'stark', men: 2000 }]);
+  let v = viewOfArmies(s);
+  assert.equal(v.get('near')?.known, 'seen');
+  assert.notEqual(v.get('far')?.known, 'seen'); // never reported: unknown
+  s.armies.far.pos = [...s.holdings.stark.pos]; updateIntel(s); // it marched into view
+  s.armies.far.pos = [...s.holdings.martell.pos]; s.meta.turn += 3; // and away again
+  v = viewOfArmies(s);
+  assert.equal(v.get('far').known, 'reported'); assert.equal(v.get('far').age, 3);
+  assert.deepEqual(v.get('far').pos, s.holdings.stark.pos);
+});
+test('a planted report shows a host that does not exist', () => {
+  const s = fresh();
+  apply(s, [{ op: 'report', at: 'moat_cailin', men: 8000, source: 'a frightened crofter', false: true, owner: 'lannister', name: 'A Lannister host' }]);
+  const ghost = [...viewOfArmies(s).values()].find((x) => x.false);
+  assert.ok(ghost && ghost.men === 8000);
+});

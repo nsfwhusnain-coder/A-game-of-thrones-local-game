@@ -38,6 +38,18 @@ Use only ids from the lists; places by their name as written. If an order names 
 }
 
 // Offline / fallback: the common orders, read by rule
+// Dictated orders spell their numbers: "ten men", "a hundred riders", "two thousand spears", "a score of knights"
+const UNITS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90, dozen: 12, score: 20 };
+export function wordNumber(t) {
+  const m = String(t).toLowerCase().match(/\b((?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|a dozen|a score|dozen|score)(?:[\s-]+(?:one|two|three|four|five|six|seven|eight|nine))?)(?:\s+(hundred|thousand))?(?:\s+and\s+(\w+))?(?:\s+(hundred|thousand))?\s+(?:of\s+)?(?:men|riders|swords|spears|soldiers|guards|knights|archers|horse|sellswords|levies|men-at-arms|bowmen|lances)/);
+  if (!m) return null;
+  let n = m[1].split(/[\s-]+/).reduce((a, w) => a + (UNITS[w] ?? 0), 0) || 1;
+  if (/^a (dozen|score)$/.test(m[1])) n = UNITS[m[1].slice(2)];
+  if (m[2] === 'hundred') n *= 100; if (m[2] === 'thousand') n *= 1000;
+  if (m[3] && UNITS[m[3]]) n += UNITS[m[3]] * (m[4] === 'hundred' ? 100 : 1);
+  return n;
+}
+
 export function readOrdersByRule(state, orders, addressee = null) {
   const p = state.meta.player; const me = state.houses[p]; const lord = state.characters[me.lord];
   const people = Object.values(state.characters).filter((c) => c.alive && c.house === p);
@@ -52,7 +64,7 @@ export function readOrdersByRule(state, orders, addressee = null) {
     return best;
   };
   const placeIn = (t) => { const m = t.match(/\b(?:to|for|at|in|towards?)\s+(?:the\s+)?([A-Z][\w'’]+(?:\s+(?:of\s+the\s+|of\s+|['’]s\s+)?[A-Z][\w'’]+)*)/); return m && resolvePlaceId(m[1]) ? m[1] : null; };
-  const num = (t) => { const m = t.replace(/,/g, '').match(/\b(\d{2,6})\b/); return m ? Number(m[1]) : null; };
+  const num = (t) => { const m = t.replace(/,/g, '').match(/\b(\d{1,6})\b/); return m ? Number(m[1]) : wordNumber(t); };
   const actions = [];
   orders.forEach((o, i) => {
     const t = o.text; const n = i + 1;

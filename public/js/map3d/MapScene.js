@@ -7,6 +7,10 @@ import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, banne
 import { PathGrid, pathLength, pointAlong } from './pathfind.js';
 import { makeNoise } from '../map/noise.js';
 import { openPins } from '../shared/pins.js';
+import { riderPos } from '../shared/roads.js';
+import { viewOfArmies, ageText } from '../shared/intel.js';
+
+const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 const GEN_VERSION = 'atlas-v3';
 // Graphics quality (Settings): terrain mesh density, pixel ratio and shadows
@@ -234,6 +238,7 @@ export class MapScene {
     if (this.provDirty) { this.provDirty = false; this.recolor(); }
     this.syncArmies(prev);
     this.syncEventPins();
+    this.syncRiders();
     this.syncLandmarks();
     if (first) this.buildPlaces();
     if (first) {
@@ -405,6 +410,17 @@ export class MapScene {
   // ───────────── armies ─────────────
   syncArmies(prev) {
     const s = this.state;
+    // fog of war: the player's map shows what their house knows (shared/intel.js), not the truth
+    const view = this.view = viewOfArmies(s);
+    // hosts that exist only in a report (perhaps a lie): a plate where the report put them, nothing more
+    for (const l of this.ghostLabels || []) l.el.remove();
+    this.labels = this.labels.filter((l) => !(this.ghostLabels || []).includes(l)); this.ghostLabels = [];
+    for (const v of view.values()) {
+      if (!v.ghost) continue; const o = s.houses[v.ghost.owner];
+      const l = this.addLabel('', [v.pos[0], this.groundAt(v.pos[0], v.pos[1]) + 6, v.pos[1]], 'army reported', {});
+      l.el.innerHTML = `<span class="flag" style="background:${o?.color || '#777'}"></span><b>~${fmt(v.men)}?</b>${v.age > 0 ? `<i>${ageText(v.age)}</i>` : ''}`;
+      l.el.title = `${v.ghost.name || "A host"}: ~${fmt(v.men)} men, by ${v.source}, ${ageText(v.age)} — not seen by your own eyes`; this.ghostLabels.push(l);
+    }
     for (const [id, rec] of this.armyObjs) if (!s.armies[id]) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.armyObjs.delete(id); }
     for (const a of Object.values(s.armies)) {
       const owner = s.houses[a.owner];
@@ -420,7 +436,8 @@ export class MapScene {
       const mode = a.type === 'fleet' ? 'sea' : 'land';
       if (rec.pos[0] !== a.pos[0] || rec.pos[1] !== a.pos[1]) {
         const path = this.grid.find(rec.pos, a.pos, mode);
-        rec.anim = { path, t0: performance.now(), dur: 1800 + Math.min(2500, pathLength(path) * 4) };
+        // during the turn's replay the march follows the day counter (reelF), not the clock
+        rec.anim = this.reelHold ? { path, scrub: true } : { path, t0: performance.now(), dur: 1800 + Math.min(2500, pathLength(path) * 4) };
       }
       rec.pos = [...a.pos];
       if (rec.route) { this.scene.remove(rec.route); rec.route = null; }
@@ -429,9 +446,16 @@ export class MapScene {
         rec.route = this.routeMesh(path, a.owner === s.meta.player ? '#f6e27a' : this.atWarWith(a.owner) ? '#ff5a44' : '#e8e0d0');
         this.scene.add(rec.route);
       }
-      const men = a.type === 'fleet' ? `${a.ships || '?'} ships` : fmt(a.men);
-      const cmd = a.commander ? s.characters[a.commander]?.name : '';
-      rec.label.el.innerHTML = `<span class="flag" style="background:${owner?.color || '#777'}"></span><b>${a.owner === s.meta.player ? '' : '~'}${men}</b>${cmd ? `<i>${cmd.split(' ').slice(-1)[0]}</i>` : ''}`;
+      const v = view.get(a.id); rec.view = v || null;
+      rec.group.visible = v?.known === 'seen'; rec.label.hidden = !v;
+      if (v?.known === 'reported' && rec.route) { this.scene.remove(rec.route); rec.route = null; }
+      const men = a.type === 'fleet' ? `${a.ships || '?'} ships` : fmt(v?.known === 'reported' ? v.men : a.men);
+      const cmd = a.commander && v?.known === 'seen' ? s.characters[a.commander]?.name : '';
+      rec.label.el.innerHTML = v?.known === 'reported'
+        ? `<span class="flag" style="background:${owner?.color || '#777'}"></span><b>~${men}?</b>${v.age > 0 ? `<i>${ageText(v.age)}</i>` : ''}`
+        : `<span class="flag" style="background:${owner?.color || '#777'}"></span><b>${a.owner === s.meta.player ? '' : '~'}${men}</b>${cmd ? `<i>${cmd.split(' ').slice(-1)[0]}</i>` : ''}`;
+      rec.label.el.classList.toggle('reported', v?.known === 'reported');
+      rec.label.el.title = v?.known === 'reported' ? `House ${owner?.name}: ~${men} men, by ${v.source}, ${ageText(v.age)} — not seen by your own eyes` : '';
       rec.label.el.classList.toggle('mine', this.isMine(a.owner));
       rec.label.el.classList.toggle('enemy', this.atWarWith(a.owner));
       rec.label.el.classList.toggle('sel', a.id === this.selectedArmy);
@@ -469,6 +493,23 @@ export class MapScene {
       if (n > 1) lbl.el.insertAdjacentHTML('beforeend', `<b class="pin-n">${n}</b>`);
       lbl.el.title = g.decisions.length ? `${g.decisions[0].title} — awaits your answer` : top.title;
       this.eventPins.push(lbl);
+    }
+  }
+  // People riding alone: yours always, and the great lords of the realm when they take to the road
+  syncRiders() {
+    for (const l of this.riderLabels || []) l.el.remove();
+    this.labels = this.labels.filter((l) => !(this.riderLabels || []).includes(l));
+    this.riderLabels = [];
+    const s = this.state; const p = s.meta.player;
+    for (const c of Object.values(s.characters)) {
+      if (!c.alive || !c.travel) continue;
+      const mine = c.house === p;
+      if (!mine && !(c.roles || []).some((r) => ['lord', 'ruler', 'heir', 'council'].includes(r))) continue;
+      const pos = riderPos(s, c); if (!pos) continue;
+      const dest = s.holdings[c.travel.to]?.name || '';
+      const lbl = this.addLabel(`🐎 ${c.name.replace(/^(Ser|Lord|Lady|Maester) /, '').split(' ')[0]}`, [pos[0], this.groundAt(pos[0], pos[1]) + 4, pos[1]], `rider${mine ? ' mine' : ''}`, { char: c.id });
+      lbl.el.title = `${c.name}, riding for ${dest} (~${Math.max(0, Math.round(c.travel.left))} days left)`;
+      this.riderLabels.push(lbl);
     }
   }
   // Canonical places that are not holdings: ruins (the Nightfort, Oldstones, Castamere), abandoned Wall castles,
@@ -560,9 +601,10 @@ export class MapScene {
         l.el.style.opacity = clamp((d - 620) / 300, 0, 1);
       } else if (c.startsWith('sea')) { show = vis && (c.includes('big') ? d > 500 : d < 1400 && d > 200); scale = clamp(((l.size || 12) * 700) / d, 8, 30) / 14; }
       else if (c.startsWith('feature')) { show = vis && d < 1300 && d > 250; }
-      else if (c.startsWith('army')) { show = vis; }
+      else if (c.startsWith('army')) { show = vis && !l.hidden; }
       else if (c.startsWith('event')) { show = vis; } // unread news and waiting matters stay findable at any zoom
       else if (c.startsWith('landmark')) { show = vis && d < 1100; }
+      else if (c.startsWith('rider')) { show = vis && d < 1800; }
       else if (c.startsWith('place')) { show = vis && d < 330; }
       if (!show) { if (l.shown !== false) { l.el.style.display = 'none'; l.shown = false; } continue; }
       if (l.shown !== true) { l.el.style.display = ''; l.shown = true; }
@@ -707,6 +749,7 @@ export class MapScene {
       if (t.dataset.army) { this.selectedArmy = t.dataset.army; this.h.onSelectArmy?.(t.dataset.army); this.syncArmies(); }
       else if (t.dataset.holding) { this.select(t.dataset.holding); this.h.onSelect?.(t.dataset.holding); }
       else if (t.dataset.pin) this.h.onPin?.(t.dataset.pin);
+      else if (t.dataset.char) this.h.onChar?.(t.dataset.char);
     }
   }
   hitTest(sx, sy) {
@@ -759,9 +802,10 @@ export class MapScene {
     const stacks = new Map();
     for (const [id, rec] of this.armyObjs) {
       const a = this.state?.armies[id]; if (!a) continue;
-      let p = a.pos, heading = null;
+      let p = rec.view?.known === 'reported' ? rec.view.pos : a.pos, heading = null;
+      if (rec.view?.known === 'reported') rec.anim = null;
       if (rec.anim) {
-        const t = clamp((now - rec.anim.t0) / rec.anim.dur, 0, 1); const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+        const t = rec.anim.scrub ? clamp(this.reelHold ? this.reelF ?? 0 : 1, 0, 1) : clamp((now - rec.anim.t0) / rec.anim.dur, 0, 1); const e = rec.anim.scrub ? t : t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
         p = pointAlong(rec.anim.path, e); const p2 = pointAlong(rec.anim.path, Math.min(1, e + 0.02)); heading = Math.atan2(p2[1] - p[1], p2[0] - p[0]);
         if (t >= 1) rec.anim = null;
       }
