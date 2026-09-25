@@ -14,7 +14,7 @@ import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler,
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
-import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName } from './shared/world.js';
+import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName, SPANS } from './shared/world.js';
 import { project, SEASONS } from './shared/economy.js';
 
 app.openChat = openChat; app.openCouncil = openCouncil;
@@ -245,10 +245,11 @@ function showTooltip(hit, e) {
 
 // ───── busy overlay ─────
 let busyTimer = null;
-function busy(on, text) {
-  app.busy = on; $('#busy').classList.toggle('hidden', !on); clearInterval(busyTimer);
+// live: the turn is being written — the map stays in view, and the news appears as the model writes it
+function busy(on, text, { live = false } = {}) {
+  app.busy = on; $('#busy').classList.toggle('hidden', !on); $('#busy').classList.toggle('live', on && live); clearInterval(busyTimer);
   if (on) {
-    $('#busy-text').textContent = text; const t0 = Date.now();
+    $('#busy-text').textContent = text; const t0 = Date.now(); $('#busy-feed').innerHTML = ''; let shown = 0;
     const lines = ['Ravens take wing…', 'Lords confer in their solars…', 'Hosts march along the kingsroad…', 'Coin changes hands in the shadows…', 'The maesters scratch at their ledgers…', 'Whispers pass through the Red Keep…', 'The smallfolk bring in the harvest…'];
     $('#busy-time').textContent = '';
     let prog = null, polling = false;
@@ -266,6 +267,14 @@ function busy(on, text) {
           : prog.note ? prog.note.charAt(0).toUpperCase() + prog.note.slice(1) + '…' : what;
       }
       $('#busy-time').textContent = `${sec}s — ${what}`;
+      // the events already written: each appears once, and the camera goes to where it happened
+      const evs = live && prog?.events || [];
+      for (; shown < evs.length; shown++) {
+        const e = evs[shown];
+        $('#busy-feed').insertAdjacentHTML('afterbegin', `<div class="bf-item"><div class="bf-t">${esc(e.title)}</div><div class="bf-x">${esc(e.text)}</div></div>`);
+        const pos = e.where && app.state?.holdings[e.where]?.pos; if (pos && app.map) { app.map.flyTo(pos, 420); app.map.flash?.(pos); }
+        sfx('open');
+      }
     }, 1000);
   }
 }
@@ -333,7 +342,7 @@ async function advance() {
   if (undecided.length && !confirm(`${undecided.length} decision${undecided.length > 1 ? 's await' : ' awaits'} your answer (${undecided.map((d) => d.title).join(', ')}). Silence is also an answer — advance anyway?`)) { setDrawer('feed'); return; }
   const pending = orderInput.value.trim(); if (pending) { addOrder(pending); orderInput.value = ''; }
   const span = $('#span-select').value;
-  busy(true, `The world moves forward ${$('#span-select').selectedOptions[0].text}…`);
+  busy(true, `${$('#span-select').value === '1d' ? 'A day passes' : `The world moves forward ${$('#span-select').selectedOptions[0].text}`}…`, { live: true });
   try {
     const unreadBefore = app.state.ravens.filter((x) => !x.read).length;
     const r = await api(`/games/${app.saveId}/advance`, { body: { span, orders: app.state.orders } });
@@ -344,9 +353,22 @@ async function advance() {
     sfx('bell');
     const newRavens = r.state.ravens.filter((x) => !x.read).length > unreadBefore;
     busy(false);
-    playTurn(r.turn, { onDone: () => { if (app.map) { app.map.reelHold = false; app.map.reelF = 1; } showTurnReport(r.turn); if (newRavens) sfx('raven'); } });
+    const short = (SPANS[r.turn.span]?.days || 30) <= 3;
+    playTurn(r.turn, { onDone: () => {
+      if (app.map) { app.map.reelHold = false; app.map.reelF = 1; }
+      // a day's turn ends on your choices, if any wait on you; a longer one with the full report
+      if (!short) showTurnReport(r.turn); else if ((app.state.decisions || []).some((d) => d.status === 'pending' && d.turn === app.state.meta.turn)) showChoices();
+      if (newRavens) sfx('raven');
+    } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
   } catch (e) { toast(e.message, true); } finally { busy(false); }
+}
+// Matters that came before you this turn, and nothing else
+function showChoices() {
+  const fresh = (app.state.decisions || []).filter((d) => d.status === 'pending' && d.turn === app.state.meta.turn);
+  if (!fresh.length) return;
+  modal(`<h2>${fresh.length > 1 ? 'Matters await your word' : 'A matter awaits your word'}</h2>${decisionsHtml(fresh)}<div class="report-actions"><button class="btn ghost" data-action="close-modal">Decide later</button></div>`);
+  wireDecisions($('#modal-box'), { onAllDone: () => closeModal() });
 }
 function showTurnReport(t) {
   const L = t.ledger;

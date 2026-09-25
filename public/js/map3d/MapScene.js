@@ -498,6 +498,7 @@ export class MapScene {
   }
   // People riding alone: yours always, and the great lords of the realm when they take to the road
   syncRiders() {
+    this.riderWas = Object.fromEntries((this.riderLabels || []).map((l) => [l.data.char, l.to || [l.pos.x, l.pos.z]]));
     for (const l of this.riderLabels || []) l.el.remove();
     this.labels = this.labels.filter((l) => !(this.riderLabels || []).includes(l));
     this.riderLabels = [];
@@ -509,6 +510,8 @@ export class MapScene {
       const pos = riderPos(s, c); if (!pos) continue;
       const dest = s.holdings[c.travel.to]?.name || '';
       const lbl = this.addLabel(`🐎 ${c.name.replace(/^(Ser|Lord|Lady|Maester) /, '').split(' ')[0]}`, [pos[0], this.groundAt(pos[0], pos[1]) + 4, pos[1]], `rider${mine ? ' mine' : ''}`, { char: c.id });
+      // during the replay, riders ride from where they were to where they are now
+      const was = this.riderWas?.[c.id]; if (was && this.reelHold) { lbl.from = was; lbl.to = pos; }
       lbl.el.title = `${c.name}, riding for ${dest} (~${Math.max(0, Math.round(c.travel.left))} days left)`;
       this.riderLabels.push(lbl);
     }
@@ -584,6 +587,7 @@ export class MapScene {
     const placed = []; const armyBoxes = []; const nameBoxes = [];
     // realm labels: size scales with realm and zoom, largest first to avoid collisions
     for (const l of this.labels) {
+      if (l.from) { const f = this.reelHold ? clamp(this.reelF ?? 0, 0, 1) : 1; const x = l.from[0] + (l.to[0] - l.from[0]) * f, z = l.from[1] + (l.to[1] - l.from[1]) * f; l.pos.set(x, this.groundAt(x, z) + 4, z); if (f >= 1 && !this.reelHold) l.from = null; }
       v.copy(l.pos).project(this.camera);
       const vis = v.z < 1 && v.x > -1.2 && v.x < 1.2 && v.y > -1.2 && v.y < 1.2;
       let show = vis; let scale = 1;

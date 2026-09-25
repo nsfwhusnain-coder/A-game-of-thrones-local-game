@@ -194,7 +194,7 @@ async function rawChatOnce(messages, cfg, opts, t0) {
       if (opts.onProgress && now - lastReport > 400) {
         lastReport = now;
         const inThink = (reasoning && !content) || (/<think>/i.test(content) && !/<\/think>/i.test(content));
-        opts.onProgress({ phase: inThink ? 'thinking' : 'writing', thinkTokens: Math.round((reasoning.length + (content.match(/<think>[\s\S]*?(<\/think>|$)/i)?.[0].length || 0)) / 3.6), tokens: Math.round(content.replace(/<think>[\s\S]*?(<\/think>|$)/i, '').length / 3.6), ms: now - t0 });
+        opts.onProgress({ ...(opts.streamText && !inThink ? { text: content } : {}), phase: inThink ? 'thinking' : 'writing', thinkTokens: Math.round((reasoning.length + (content.match(/<think>[\s\S]*?(<\/think>|$)/i)?.[0].length || 0)) / 3.6), tokens: Math.round(content.replace(/<think>[\s\S]*?(<\/think>|$)/i, '').length / 3.6), ms: now - t0 });
       }
     });
     if (!res.ok) {

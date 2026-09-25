@@ -36,7 +36,7 @@ export const THREADS = [
           };
           if (plays(s, 'stark')) {
             out.decision = {
-              id: 'hand_offer', title: 'The King asks you to be his Hand', from: 'robert_baratheon',
+              id: 'hand_offer', title: 'The King asks you to be his Hand', from: 'robert_baratheon', days: 10,
               text: '"Ned, I need you. The realm needs you. Jon is dead and I am surrounded by flatterers and fools." Robert offers you the chain of the Hand, and a match between Sansa and Prince Joffrey. Maester Luwin has had a letter from Lysa Arryn, in a cipher only Catelyn knows: the Lannisters murdered Jon Arryn.',
               options: [
                 { label: 'Accept the chain and go south', hint: 'Power at court and the King\'s ear; Winterfell left to Robb', fx: [{ plot: ['ned_hand', true] }, { rel: ['baratheon', 20] }, { rel: ['lannister', -5] }, { ops: [{ op: 'character', id: 'eddard_stark', title: 'Hand of the King, Lord of Winterfell' }, { op: 'travel', character: 'eddard_stark', to: 'kings_landing', men: 300, name: 'The Hand\'s household', companions: ['jory_cassel', 'vayon_poole', 'sansa_stark', 'arya_stark', 'septa_mordane'] }] }] },
@@ -320,7 +320,8 @@ export const THREADS = [
         },
       },
       {
-        id: 'whispering_wood', at: YM(299, 5), grace: 4, needs: (s) => inWar(s, 'stark', 'lannister') && free(s, 'jaime_lannister') && !plays(s, 'lannister'),
+        // the player's own battles are fought by the engine where their hosts are, never scripted for them
+        id: 'whispering_wood', at: YM(299, 5), grace: 4, needs: (s) => inWar(s, 'stark', 'lannister') && free(s, 'jaime_lannister') && !plays(s, 'lannister', 'stark', 'tully'),
         fire: (s) => {
           const win = Math.random() < (plays(s, 'stark') ? 0.6 : 0.7);
           return win
@@ -448,7 +449,7 @@ function threatTick(s, days) {
 function churn(s, days) {
   const out = { events: [], changes: [] };
   const great = Object.values(s.houses).filter((h) => h.status !== 'extinct' && h.lord && s.characters[h.lord]?.alive && h.id !== player(s) && !h.landless);
-  const n = Math.min(4, Math.round((days / 30) * (1.2 + Math.random())));
+  const x = (days / 30) * (1.2 + Math.random()); const n = Math.min(4, Math.floor(x) + (Math.random() < x % 1 ? 1 : 0));
   const lordName = (h) => s.characters[h.lord]?.name || `the lord of ${h.name}`;
   const tries = [
     () => { // an old feud flares
@@ -456,7 +457,7 @@ function churn(s, days) {
       if (!pairs.length) return;
       const [a, b] = pick(pairs); const ha = s.houses[a], hb = s.houses[b];
       const h = Object.values(s.holdings).find((x) => x.owner === b);
-      out.events.push(ev(`Blood between ${ha.name} and ${hb.name}`, `Men of House ${ha.name} and House ${hb.name} come to blows over an old grievance — a stolen herd, a burned mill, a dead squire. ${lordName(ha)} swears it was not his doing; ${lordName(hb)} does not believe him.`, h?.id || hb.seat, 2, 'war', [a, b]));
+      out.events.push(ev(`${lordName(ha)} and ${lordName(hb)} at odds`, `${lordName(ha)}'s men and ${lordName(hb)}'s came to blows over ${pick(['a stolen herd', 'a burned mill', 'a dead squire', 'a boundary stone', 'a runaway bride'])}. ${lordName(ha)} swears it was not his doing; ${lordName(hb)} does not believe him.`, h?.id || hb.seat, 2, 'war', [a, b]));
       out.changes.push({ op: 'relation', a, b, delta: -6 });
       if (h) out.changes.push({ op: 'holding', id: h.id, unrest: Math.min(100, (h.unrest || 0) + 6) });
     },
@@ -465,7 +466,7 @@ function churn(s, days) {
       const a = pick(cands); if (!a) return;
       const friends = Object.entries(s.relations || {}).filter(([k, r]) => r.v >= 20 && k.split('|').includes(a.id)).map(([k]) => k.split('|').find((x) => x !== a.id)).filter((x) => s.houses[x] && x !== player(s));
       const b = s.houses[pick(friends.length ? friends : great.filter((h) => h.region === a.region && h.id !== a.id).map((h) => h.id))]; if (!b) return;
-      out.events.push(ev(`A feast at ${s.holdings[a.seat]?.name || a.name}`, `House ${a.name} feasts House ${b.name} for a fortnight. There is talk of a match between their children, and more wine than wisdom.`, a.seat, 1, 'court', [a.id, b.id]));
+      out.events.push(ev(`${lordName(a)} feasts ${lordName(b)}`, `At ${s.holdings[a.seat]?.name || a.name}, ${lordName(a)} feasts ${lordName(b)} for a fortnight. There is talk of a match between their children, and more wine than wisdom.`, a.seat, 1, 'court', [a.id, b.id]));
       out.changes.push({ op: 'relation', a: a.id, b: b.id, delta: 5 });
     },
     () => { // outlaws where the land is restless
@@ -477,7 +478,7 @@ function churn(s, days) {
       const a = pick(great.filter((h) => ['paramount', 'major', 'crown'].includes(h.rank) && (s.wars || []).every((w) => w.status === 'ended' || !w.attackers.concat(w.defenders).includes(h.id)))); if (!a) return;
       const knights = Object.values(s.characters).filter((c) => c.alive && (c.roles || []).includes('knight') && !/imprisoned/.test(c.status || ''));
       const w = pick(knights); if (!w) return;
-      out.events.push(ev(`A tourney at ${s.holdings[a.seat]?.name || a.name}`, `House ${a.name} holds a tourney to celebrate a name-day. ${w.name} of House ${s.houses[w.house]?.name || '?'} unhorses all comers and crowns a lady queen of love and beauty.`, a.seat, 1, 'court', [a.id, w.house]));
+      out.events.push(ev(`${w.name} champion at ${s.holdings[a.seat]?.name || a.name}`, `At ${lordName(a)}'s tourney for a name-day, ${w.name} unhorses all comers and crowns a blushing girl queen of love and beauty.`, a.seat, 1, 'court', [a.id, w.house]));
       out.changes.push({ op: 'character', id: w.id, note: `Champion of the tourney at ${s.holdings[a.seat]?.name || a.name}.` });
     },
     () => { // a good harvest or a bad one somewhere
@@ -579,7 +580,7 @@ export function worldTick(state, days) {
   const hp = happenings(s, days); events.push(...hp.events); changes.push(...hp.changes);
   const { applied } = applyChanges(s, changes, { source: 'The ravens' });
   const pending = (s.decisions || []).filter((d) => d.status === 'pending').length;
-  if (!decisions.length && pending < 2 && Math.random() < 0.6) { const o = opportunity(s, th.raid); if (o) decisions.push(o); }
+  if (!decisions.length && pending < 2 && Math.random() < 0.6 * Math.min(1, days / 30)) { const o = opportunity(s, th.raid); if (o) decisions.push(o); }
   for (const d of decisions.slice(0, 2)) {
     const r = applyChanges(s, [{ op: 'decision', ...d }]); applied.push(...r.applied);
     const made = s.decisions.at(-1); if (made && d.lapse) made.lapse = d.lapse; if (made && d.from && s.characters[d.from]) made.from = d.from;

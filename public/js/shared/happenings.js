@@ -10,7 +10,8 @@ const pickR = (a, r) => a[Math.floor(r() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // how many happenings a period brings: a fortnight a handful, a year several dozen
-export function happeningCount(days) { return clamp(Math.round((days / 30) * 7), 2, 60); }
+// a quiet day may bring nothing; a moon about seven
+export function happeningCount(days, r = Math.random) { const x = (days / 30) * 7; return clamp(Math.floor(x) + (r() < x % 1 ? 1 : 0), 0, 60); }
 
 function atWar(s, house) {
   const r = realmOf(s, house);
@@ -107,7 +108,7 @@ export function happenings(state, days, r = Math.random) {
   const s = state; const out = { events: [], changes: [] };
   s.plots = s.plots || {}; const cd = (s.plots.hap = s.plots.hap || {});
   const turn = s.meta.turn;
-  const want = happeningCount(days);
+  const want = happeningCount(days, r);
   const usedPlaces = new Set();
   // gather everything the world fits now, with its weight
   const cands = [];

@@ -358,7 +358,11 @@ export function addDays(d, days) {
   const month = Math.floor(total / 30) + 1; const day = (total % 30) + 1;
   return { year, month, day };
 }
+/** Days since the start of the reckoning: for deadlines that run in days, whatever the length of a turn. */
+export const dayNumber = (d) => d.year * 360 + (d.month - 1) * 30 + (d.day - 1);
+
 export const SPANS = {
+  '1d': { days: 1, label: 'one day' }, '3d': { days: 3, label: 'three days' },
   '1w': { days: 7, label: 'one week' }, '2w': { days: 14, label: 'two weeks' }, '1m': { days: 30, label: 'one moon' },
   '3m': { days: 90, label: 'three moons' }, '6m': { days: 180, label: 'half a year' }, '1y': { days: 360, label: 'one year' },
 };
@@ -764,6 +768,8 @@ function applyOne(state, ch, ctx) {
       if (status === 'start' || status === 'declare' || status === 'ongoing') {
         const att = (Array.isArray(ch.attackers) ? ch.attackers : [ch.attacker]).map((x) => findHouse(state, x)).filter(Boolean);
         const def = (Array.isArray(ch.defenders) ? ch.defenders : [ch.defender]).map((x) => findHouse(state, x)).filter(Boolean);
+        // the story may bring war to the player, but only the player declares it
+        if (ctx.protectPlayer && !ctx.playerDeclaredWar && att.includes(state.meta.player)) throw new Error('only the player can declare the player\'s wars');
         if (!att.length || !def.length) throw new Error('war needs sides');
         const id = slug(ch.id || ch.name || `${att[0]}_vs_${def[0]}`);
         const existing = state.wars.find((w) => w.id === id);
@@ -800,6 +806,9 @@ function applyOne(state, ch, ctx) {
     }
     case 'battle': {
       const pos = posOf(state, ch.at || ch.location);
+      // the player's house fights only where the player has a host
+      const pl = state.meta.player;
+      if (ctx.protectPlayer && [findHouse(state, ch.attacker), findHouse(state, ch.defender)].includes(pl) && !Object.values(state.armies).some((a) => a.owner === pl && pos && Math.hypot(a.pos[0] - pos[0], a.pos[1] - pos[1]) < 45) && !Object.values(state.holdings).some((h) => h.owner === pl && pos && Math.hypot(h.pos[0] - pos[0], h.pos[1] - pos[1]) < 12)) throw new Error('the player has no host there');
       state.battles = state.battles || [];
       state.battles.push({ name: ch.name || `Battle at ${placeName(state, ch.at)}`, pos, date, turn: state.meta.turn, attacker: findHouse(state, ch.attacker), defender: findHouse(state, ch.defender), victor: findHouse(state, ch.victor), losses: ch.losses || {}, summary: ch.summary || '' });
       state.battles = state.battles.slice(-40);
@@ -815,7 +824,7 @@ function applyOne(state, ch, ctx) {
       const opts = (Array.isArray(ch.options) ? ch.options : []).map((o) => (typeof o === 'string' ? { label: o } : { label: String(o.label || o.text || ''), hint: String(o.hint || o.effect || ''), ...(Array.isArray(o.fx) ? { fx: o.fx } : {}) })).filter((o) => o.label);
       if (opts.length < 2) throw new Error('a decision needs at least two options');
       state.decisions = state.decisions || [];
-      const d = { id: slug(ch.id || ch.title || 'decision') + '_' + Math.random().toString(36).slice(2, 6), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, status: 'pending', ...(resolvePlaceId(ch.where) && state.holdings[resolvePlaceId(ch.where)] ? { where: resolvePlaceId(ch.where) } : {}) };
+      const d = { id: slug(ch.id || ch.title || 'decision') + '_' + Math.random().toString(36).slice(2, 6), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, day: dayNumber(state.meta.date), days: Math.max(1, Math.round(num(ch.days) ?? 14)), status: 'pending', ...(resolvePlaceId(ch.where) && state.holdings[resolvePlaceId(ch.where)] ? { where: resolvePlaceId(ch.where) } : {}) };
       state.decisions.push(d);
       return { op, text: `A decision awaits you: ${d.title}` };
     }

@@ -59,7 +59,8 @@ export function updateIntel(state, r = Math.random) {
     if (E.friends.has(a.owner)) { delete state.intel.armies[a.id]; continue; }
     if (isSeen(state, a, E)) { state.intel.armies[a.id] = { pos: [...a.pos], men: a.men, turn: t, source: 'seen', owner: a.owner, name: a.name, confirmed: true }; continue; }
     // word travels: ravens, merchants, septons — a feint sends the word the wrong way
-    if (r() < newsChance(a)) {
+    const rooks = state.houses[state.meta.player]?.intel || 0; // rookeries: word comes surer
+    if (r() < Math.min(0.98, newsChance(a) * (1 + rooks * 0.25))) {
       const feint = a.feint && state.holdings[a.feint];
       const pos = feint ? [...feint.pos] : [...a.pos];
       const rounded = Math.max(100, Math.round(a.men * (0.75 + r() * 0.5) / 100) * 100); // reports are never exact

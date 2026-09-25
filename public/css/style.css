@@ -518,11 +518,11 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .beat.say { color: #1e1610; font-size: 0.98rem; }
 
 /* ---------- the turn told in order ---------- */
-.reel { position: absolute; top: 4.6rem; left: 50%; transform: translateX(-50%); width: min(34rem, 92vw); z-index: 40; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; box-shadow: 0 16px 40px rgba(0,0,0,0.6); padding: 0.7rem 0.8rem 0.6rem; animation: fadein .3s ease both; }
+.reel { position: absolute; top: 4.6rem; left: 1rem; width: min(24rem, 90vw); z-index: 40; background: linear-gradient(180deg, rgba(14,11,8,0.92), rgba(14,11,8,0.78)); border: 1px solid var(--line2); border-radius: 6px; box-shadow: 0 16px 40px rgba(0,0,0,0.6); padding: 0.7rem 0.8rem 0.6rem; animation: fadein .3s ease both; }
 .reel.reel-out { opacity: 0; transition: opacity .3s; }
 .reel-head { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 0.1rem 0.8rem; margin-bottom: 0.5rem; }
-.reel-day { font-family: var(--display); font-size: 1.15rem; color: var(--gold2); letter-spacing: 0.04em; }
-.reel-date { color: var(--muted); font-style: italic; text-align: right; }
+.reel-day { color: var(--muted); font-size: 0.8rem; text-align: right; }
+.reel-date { font-family: var(--display); font-size: 1.05rem; color: var(--gold2); letter-spacing: 0.04em; }
 .reel-bar { grid-column: 1 / -1; height: 0.25rem; background: #2a2018; border-radius: 2px; overflow: hidden; }
 .reel-bar div { height: 100%; width: 0; background: linear-gradient(90deg, #8a6a2a, var(--gold2)); transition: width .12s linear; }
 .reel-card .event { margin: 0; }
@@ -589,3 +589,24 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .unknown-banner { width: 4rem; height: 6rem; flex: none; background: repeating-linear-gradient(135deg, #3a3833 0 6px, #4a4740 6px 12px); clip-path: polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%); opacity: 0.8; }
 .unknown-dot { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #6f6a62; flex: none; }
 .secrecy .btn.on { border-color: var(--gold2); color: var(--gold2); background: color-mix(in srgb, var(--gold) 18%, transparent); }
+
+/* ── the turn told as it happens: a stack of headlines at the side, the newest on top ── */
+.reel-stack { display: flex; flex-direction: column; gap: 0.45rem; }
+.reel-item { padding: 0.5rem 0.65rem; border-left: 3px solid var(--gold); background: rgba(243,231,203,0.94); color: var(--ink); border-radius: 3px; animation: beatIn .45s ease both; transition: opacity .4s, transform .4s; }
+.reel-item.past { opacity: 0.5; transform: scale(0.97); transform-origin: top left; }
+.reel-item.past .ri-x { display: none; }
+.reel-item.imp-4, .reel-item.imp-5 { border-left-color: var(--red); }
+.reel-item.type-war { border-left-color: #a8321e; } .reel-item.type-intrigue { border-left-color: #5a3a7a; } .reel-item.type-diplomacy { border-left-color: #2f5f95; }
+.ri-where { font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: #7a6040; font-family: var(--display); }
+.ri-t { font-family: var(--display); font-size: 1rem; line-height: 1.2; margin: 0.1rem 0; }
+.ri-x { font-size: 0.9rem; line-height: 1.35; }
+/* the turn being written: the map stays in view; the news comes in at the side */
+.busy.live { inset: auto; top: 4.6rem; left: 1rem; width: min(24rem, 90vw); background: linear-gradient(180deg, rgba(14,11,8,0.92), rgba(14,11,8,0.8)); border: 1px solid var(--line2); border-radius: 6px; padding: 0.7rem 0.8rem; justify-content: flex-start; backdrop-filter: none; box-shadow: 0 16px 40px rgba(0,0,0,0.6); }
+.busy.live .busy-inner { text-align: left; font-size: 1rem; width: 100%; }
+.busy.live .raven { display: none; }
+.busy.live #busy-time { font-family: var(--serif); font-size: 0.78rem; margin-top: 0.2rem; }
+.busy-feed { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; max-height: 60vh; overflow: hidden; }
+.bf-item { padding: 0.45rem 0.6rem; border-left: 3px solid var(--gold); background: rgba(243,231,203,0.94); color: var(--ink); border-radius: 3px; animation: beatIn .45s ease both; font-family: var(--serif); }
+.bf-item:not(:first-child) { opacity: 0.55; }
+.bf-t { font-family: var(--display); font-size: 0.95rem; }
+.bf-x { font-size: 0.85rem; line-height: 1.3; }

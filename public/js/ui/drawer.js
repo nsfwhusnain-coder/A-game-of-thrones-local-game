@@ -88,7 +88,7 @@ function renderFeed(body) {
       • Click any castle, army or person. Speak to anyone — distant lords get a raven. Each answers after their nature and mood: some bargain, some refuse, some throw you out.<br>
       • <b>Pins</b> on the map mark news you have not read and matters awaiting your word — click one to read it or answer.<br>
       • <b>Hold court</b> (Realm): feasts and tourneys. Send gifts, judge prisoners, declare war from a person's or house's sheet.<br>
-      • You see only what your house knows: distant hosts are dashed reports, and reports can lie. Plant spies (Intrigue) to follow them.<br>
+      • You see only what your house knows: hosts in grey are unconfirmed word — whose, and who leads them, you cannot be sure. Plant spies (Intrigue) to follow a house; march in secret or feint to fool them in turn.<br>
       • <b>Advance ▶</b> — time passes; the world acts, the map changes.<br>
       • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></details>`);
   wireDecisions(body);

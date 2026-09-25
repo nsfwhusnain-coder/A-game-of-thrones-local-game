@@ -98,8 +98,14 @@ export function armyUpkeep(a) {
     const reavers = /ironborn|reaver|longship/i.test(a.composition || '') ? 0.45 : 1; // ironborn crews live off the sea and the iron price
     return ((a.ships || 0) * 12 + a.men * 0.1) * reavers * (a.status === 'anchored' ? 0.8 : 1); // crews fish, trade and raid between wars
   }
+  // Levies are the lord's own smallfolk, called from their fields and fed from his stores: they cost bread (the
+  // food stores, and fields left untended) and a little coin for carts, spears and shoes — not wages. Sworn
+  // houses feed and arm their own contingents. Men-at-arms are paid; sellswords are paid dearly.
   const sell = /sellsword|company|mercenar/i.test(a.composition || '') || /company/i.test(a.name || '');
-  return a.men * (sell ? 1.1 : 0.28) * (a.status === 'garrison' ? 0.5 : 1);
+  const sworn = Object.values(a.contingents || {}).reduce((x, y) => x + y, 0);
+  const own = Math.max(0, a.men - Math.min(a.men, sworn));
+  const paid = /men-at-arms|household|knights|guard|gold cloak/i.test(a.composition || '') && !/levies/i.test(a.composition || '');
+  return own * (sell ? 1.1 : paid ? 0.22 : 0.04) * (a.status === 'garrison' ? 0.5 : 1);
 }
 
 function houseHoldings(state, id) { return Object.values(state.holdings).filter((x) => x.owner === id); }
@@ -297,6 +303,7 @@ export function settle(state, days) {
 function completeProject(state, p) {
   const h = state.houses[p.house]; if (!h) return;
   const e = p.effect || {};
+  if (e.intel) h.intel = (h.intel || 0) + e.intel; // rookeries: news travels to this house faster
   for (const [k, v] of Object.entries(e.figures || {})) {
     if (!h.figures[k]) continue; h.figures[k] = { ...h.figures[k], v: Math.max(0, Math.round((Number(h.figures[k].v) || 0) + v)), src: `Completed: ${p.name}` };
   }
@@ -308,6 +315,7 @@ function completeProject(state, p) {
     if (e.unrest) hold.unrest = clamp(hold.unrest + e.unrest, 0, 100);
     if (e.building) hold.buildings = [...new Set([...(hold.buildings || []), e.building])];
     if (e.resource) hold.resources[e.resource.type] = (hold.resources[e.resource.type] || 0) + e.resource.amount;
+    if (e.garrison) hold.garrison = (hold.garrison || 0) + e.garrison;
   }
 }
 
@@ -327,6 +335,13 @@ export const PROJECT_TEMPLATES = [
   { key: 'market', name: 'Charter a market & fair', icon: '⚖', cost: 7000, months: 5, effect: { prosperity: 5, resource: { type: 'trade', amount: 0.3 }, building: 'Chartered market' }, desc: 'Draws merchants. More coin in the long run.' },
   { key: 'men_at_arms', name: 'Train men-at-arms', icon: '🛡', cost: 9000, months: 4, effect: { figures: { menAtArms: 300 } }, desc: '300 armoured, drilled soldiers in your pay.' },
   { key: 'sept', name: 'Endow a sept / godswood', icon: '🕯', cost: 3000, months: 2, effect: { unrest: -12, building: 'Endowed sept' }, desc: 'Piety calms the smallfolk.' },
+  { key: 'rookery', name: 'Raise a rookery and a maester\'s tower', icon: '🐦', cost: 2500, months: 2, effect: { building: 'Rookery', intel: 1 }, desc: 'More ravens, trained to more castles: word of distant hosts reaches you sooner and surer.' },
+  { key: 'harbour', name: 'Deepen the harbour and build wharves', icon: '⚓', cost: 8000, months: 5, effect: { prosperity: 4, resource: { type: 'trade', amount: 0.35 }, building: 'Deep harbour' }, needs: (h) => h.coastal, desc: 'Bigger ships can put in: more trade, more tolls.' },
+  { key: 'barracks', name: 'Build barracks for the garrison', icon: '🏚', cost: 4000, months: 3, effect: { garrison: 200, building: 'Barracks' }, desc: 'Room and arms for two hundred more men on the walls.' },
+  { key: 'smithy', name: 'Endow smithies and an armoury', icon: '⚒', cost: 5000, months: 3, effect: { figures: { menAtArms: 100 }, prosperity: 2, building: 'Armoury' }, desc: 'Steel for your men-at-arms, and a hundred more to wield it.' },
+  { key: 'stables', name: 'Breed horses: new stables and studs', icon: '🐎', cost: 4500, months: 6, effect: { resource: { type: 'horses', amount: 0.3 }, building: 'Stud farms' }, desc: 'Destriers and coursers: cavalry for your hosts, horses to sell.' },
+  { key: 'inn', name: 'Build inns and a toll bridge on the road', icon: '🍺', cost: 3500, months: 3, effect: { prosperity: 3, resource: { type: 'trade', amount: 0.15 }, building: 'Road inns & toll bridge' }, desc: 'Travellers stop, pay and talk: tolls, and news.' },
+  { key: 'almshouse', name: 'Found an almshouse and a hospice', icon: '🕯', cost: 2000, months: 2, effect: { unrest: -8, prosperity: 1, building: 'Almshouse' }, desc: 'Bread for the poor and care for the sick; the smallfolk remember.' },
   { key: 'mines', name: 'Open new mine shafts', icon: '⛏', cost: 15000, months: 8, effect: { resource: { type: 'iron', amount: 0.4 }, building: 'New mine shafts' }, desc: 'Iron from the hills (gold if the gods are kind).' },
 ];
 export { RESOURCES, TAX_LEVELS };

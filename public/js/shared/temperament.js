@@ -67,7 +67,7 @@ export function readIntent(text) {
   const insult = has(/\b(coward|craven|fool|idiot|traitor|turncloak|oathbreaker|liar|whore|cunt|bastard|snake|worm|pig|dog|craven|weakling|kingslayer|imp|halfman|old fool|fat)\b/) && !has(/\b(not a|no) (coward|fool|traitor)\b/);
   const flattery = has(/\b(wise|wisest|great(est)?|renowned|famed|mighty|noble|honou?red|brave(st)?|glorious|none (braver|wiser|finer)|your (wisdom|valour|courage|beauty|grace is)|legendary|admire)\b/) && !insult;
   const apology = has(/\b(forgive me|i('m| am) sorry|apologi[sz]e|my apologies|i was wrong|pardon me|beg your pardon)\b/);
-  const demand = has(/\b(i demand|you will|you must|you shall|i command|i order|i insist|surrender|hand over|give me|pay me|yield)\b/) && !has(/\bwill you\b/);
+  const demand = (has(/\b(i demand|you will|you must|you shall|i command|i order|i insist|surrender|hand over|give me|pay me|yield|open (the|your)|release|free|bend the knee)\b/) && !has(/\bwill you\b/)) || threat; // a threat is a demand with teeth
   const request = !demand && has(/\b(will you|would you|could you|can you|i ask|i beg|i request|i would have you|please|may i|let us)\b/);
   const offer = gold > 0 || has(/\b(i offer|i will give|i('ll| will) pay|in exchange|in return|a gift|gifts|as a token|you shall have|i can give|i promise you)\b/);
   const question = /\?\s*$/.test(s.trim()) || has(/^\s*(what|where|who|why|how|when|is|are|do|does|did|have|has)\b/);

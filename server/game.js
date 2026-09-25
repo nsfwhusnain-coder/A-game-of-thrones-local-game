@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { chat, extractJson, extractField, loadConfig, estimateTokens } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt } from './prompts.js';
-import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId } from '../public/js/shared/world.js';
+import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId, dayNumber } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
@@ -110,7 +110,26 @@ export function setOrders(id, orders) {
 
 // What the model is doing right now, per save (polled by the browser while it waits)
 const progress = new Map();
-export function getProgress(id) { const p = progress.get(id); return p ? { ...p, ms: Date.now() - p.t0 } : null; }
+export function getProgress(id) {
+  const p = progress.get(id); if (!p) return null;
+  const { text, ...rest } = p;
+  return { ...rest, ms: Date.now() - p.t0, ...(text ? { events: streamedEvents(text) } : {}) };
+}
+// The turn's events as the model writes them: every event object already closed in the stream, so the player
+// watches the news come in instead of a spinner (the full, checked turn follows when the reply is done)
+function streamedEvents(text) {
+  const i = text.search(/"events"\s*:\s*\[/); if (i < 0) return [];
+  const out = []; let depth = 0, start = -1, inStr = false, esc = false;
+  for (let k = text.indexOf('[', i) + 1; k < text.length; k++) {
+    const c = text[k];
+    if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === '{') { if (depth === 0) start = k; depth++; }
+    else if (c === '}') { depth--; if (depth === 0 && start >= 0) { try { const e = JSON.parse(text.slice(start, k + 1)); if (e.title) out.push({ title: String(e.title), text: String(e.text || ''), where: resolvePlaceId(e.where) || null, day: e.day, type: e.type, importance: e.importance }); } catch { /* half-repaired */ } start = -1; } }
+    else if (c === ']' && depth === 0) break;
+  }
+  return out.slice(0, 20);
+}
 const tracker = (id, kind) => { const t0 = Date.now(); progress.set(id, { kind, phase: 'waiting', ms: 0, t0 }); return (p) => progress.set(id, { kind, t0, ...progress.get(id), ...p, ms: Date.now() - t0 }); };
 const done = (id) => progress.delete(id);
 
@@ -137,7 +156,7 @@ async function askJsonInner(id, kind, messages, extra) {
 
 const consolidating = new Map(); // save id -> promise (memory is compressed in the background)
 
-export async function advance(id, { span = '1m', orders } = {}) {
+export async function advance(id, { span = '1d', orders } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
@@ -147,7 +166,7 @@ export async function advance(id, { span = '1m', orders } = {}) {
   // so they truly happen; the story model is told what was done and narrates what follows.
   const carried = await carryOutOrders(state, cfg.provider === 'mock' ? null : async (msgs) => (await askJson(id, 'orders', msgs, cfg, { maxTokens: 900 })).obj).catch((e) => { console.warn('orders:', e.message); return []; });
   const messages = buildJumpPrompt(state, state.orders, span, chronicle, cfg);
-  let { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: (SPANS[span] || SPANS['1m']).days });
+  let { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: (SPANS[span] || SPANS['1m']).days, streamText: true });
   let salvaged = false;
   if (!obj) {
     // Unreadable even after repair and a retry: the realm still moves on (the ledger, vassals, seasons and marches
@@ -180,7 +199,8 @@ export async function advance(id, { span = '1m', orders } = {}) {
   state.meta.turn += 1;
   const orderText = state.orders.map((o) => o.text).join(' ');
   const playerChoseAllegiance = /fealty|swear|kneel|bend the knee|independen|king in the north|secede|declare (my|our)|crown (me|myself)|renounce/i.test(orderText);
-  const { applied, rejected } = applyChanges(state, [...(obj.changes || []), ...naturalDeaths], { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, spanDays: spanInfo.days });
+  const playerDeclaredWar = /\b(declare war|make war|attack|march on|invade|assault|lay siege|besiege|ride against|strike at)\b/i.test(orderText);
+  const { applied, rejected } = applyChanges(state, [...(obj.changes || []), ...naturalDeaths], { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days });
   const deathEvents = naturalDeaths.map((d) => state.characters[d.id]).filter((c) => c && !c.alive).map((c) => ({ title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, type: 'court', houses: [c.house] }));
   // Vassals whose obligations the story did not settle act on their own temper: dues, and the banners
   const touched = new Set((obj.changes || []).filter((c) => c && ['obligation', 'vassal'].includes(c.op)).map((c) => String(c.house || '').toLowerCase()));
@@ -270,7 +290,7 @@ export async function advance(id, { span = '1m', orders } = {}) {
   // If the simulator raised no matter for the player over a moon or more, the realm brings one itself
   const newDecision = applied.some((a) => a.op === 'decision');
   const pendingCount = (state.decisions || []).filter((d) => d.status === 'pending').length;
-  if (!newDecision && pendingCount === 0 && spanInfo.days >= 28 && Math.random() < 0.75) {
+  if (!newDecision && pendingCount === 0 && Math.random() < 0.75 * Math.min(1, spanInfo.days / 30)) {
     // the same kind of matter does not come before you twice in quick succession
     state.plots = state.plots || {}; const seen = state.plots.petitioned = state.plots.petitioned || {};
     const kindOf = (t) => t.replace(/House [A-Z][\w']*( of [A-Z][\w' ]*)?/g, '').replace(/[^a-z ]/gi, '').trim().slice(0, 40);
@@ -280,7 +300,9 @@ export async function advance(id, { span = '1m', orders } = {}) {
     if (pet) { const r = applyChanges(state, [{ op: 'decision', ...pet }]); record.applied.push(...r.applied); }
   }
   // Unanswered decisions lapse after a couple of turns — the world moved on without you
-  for (const d of state.decisions || []) if (d.status === 'pending' && state.meta.turn - d.turn >= 3) {
+  // a matter waits its days (the King will not wait a moon for his answer), then the world decides without you
+  const today = dayNumber(state.meta.date);
+  for (const d of state.decisions || []) if (d.status === 'pending' && (d.day != null ? today - d.day >= (d.days || 14) : state.meta.turn - d.turn >= 3)) {
     d.status = 'lapsed';
     if (d.kind === 'liege_call') applyPetitionFx(state, [{ call: 'refuse' }]); // silence is refusal
     const fx = (d.options || []).flatMap((o) => o.fx || []);
@@ -307,8 +329,12 @@ async function maybeConsolidate(id, state, cfg, force = false) {
   const pending = state.history.filter((t) => t.turn > state.consolidatedThrough);
   const pendingTokens = estimateTokens(JSON.stringify(pending.map((t) => [t.summary, t.events])));
   const tooBig = pendingTokens > cfg.contextTokens * 0.2;
-  if (!force && pending.length < cfg.consolidateEvery + cfg.keepRecentTurns && !tooBig) return null;
-  const batch = pending.slice(0, Math.max(1, pending.length - cfg.keepRecentTurns));
+  // turns may be a day or a moon: consolidate by the days they cover (about every moon), keeping the last fortnight verbatim
+  const daysOf = (t) => SPANS[t.span]?.days || 30;
+  const pendingDays = pending.reduce((n, t) => n + daysOf(t), 0);
+  let keep = 0, kept = 0; for (let i = pending.length - 1; i >= 0 && kept < 14; i--) { kept += daysOf(pending[i]); keep++; }
+  if (!force && pendingDays < 44 && !tooBig) return null;
+  const batch = pending.slice(0, Math.max(1, pending.length - keep));
   if (!batch.length) return null;
   const messages = buildConsolidatePrompt(state, batch, readChronicle(id));
   const { obj, text } = await askJson(id, 'consolidate', messages, cfg);

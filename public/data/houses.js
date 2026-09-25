@@ -205,6 +205,10 @@ export const HOUSES = [
     S('#121212', 'dragon', '#c41e16'), 'Fire and Blood', { landless: true, realmName: 'House Targaryen in exile' }),
   H('golden_company', 'The Golden Company', null, 1362, 2056, null, 'essos', 'company', '#c9a44a',
     S('#c9a44a', 'skull', '#111'), 'Beneath the gold, the bitter steel', { landless: true, realmName: 'The Golden Company' }),
+  H('brave_companions', 'The Brave Companions', null, 1330, 2090, null, 'essos', 'company', '#6a2a2a',
+    S('#1a1a1a', 'skull', '#a8321e'), '', { landless: true, realmName: 'The Brave Companions' }),
+  H('stone_crows', 'The Stone Crows', null, 840, 1200, null, 'vale', 'tribe', '#4a4a4a',
+    S('#3a3a3a', 'spear', '#ddd'), '', { landless: true, realmName: 'The clans of the Mountains of the Moon' }),
 ];
 
 // Extra named holdings owned by a house (not seats). [id, name, x, y, owner, type]

@@ -129,7 +129,7 @@ export async function carryOutOrders(state, ask) {
   if (!plan || !Array.isArray(plan.actions)) plan = readOrdersByRule(state, fresh);
   else if (!plan.actions.length) { const byRule = readOrdersByRule(state, fresh); if (byRule.actions.length) plan = byRule; }
   const results = executeActions(state, plan.actions);
-  const done = [];
+  const done = resolveEnvoys(state, fresh);
   fresh.forEach((o, k) => {
     const r = results[k + 1];
     if (r?.length) {
@@ -138,5 +138,45 @@ export async function carryOutOrders(state, ask) {
       done.push({ order: o.text, result: r });
     }
   });
+  return done;
+}
+
+// ── Words sent to other lords ──
+// "Send a raven to Walder Frey: open the crossing or I burn the Twins." An order that addresses a lord of
+// another house is weighed by the same temperament as a face-to-face audience (shared/temperament.js): he
+// agrees, names a price, stalls, refuses, gives in from fear, or answers in anger. The engine records the
+// outcome (a pact agreed, fealty sworn) and tells the story model, which writes his reply by raven.
+import { weighAudience, holdToVerdict } from '../public/js/shared/temperament.js';
+
+const SENDING = /\b(raven|letter|write|envoy|emissary|herald|word to|message|demand|threaten|warn|offer|propose|ask|tell|order|command|summon|insist|bid|urge|invite|request)\b/i;
+function addressed(state, text) {
+  const p = state.meta.player; const t = String(text);
+  const people = Object.values(state.characters).filter((c) => c.alive && c.house !== p && !/imprisoned|missing/.test(c.status || ''));
+  // full names first ("Walder Frey"), then "Lord Frey" / "Lady Arryn" meaning the head of that house
+  let hit = people.find((c) => t.includes(c.name) || t.includes(c.name.replace(/^(Ser|Lord|Lady|Maester|King|Queen|Prince|Princess) /, '')));
+  if (!hit) {
+    const m = t.match(/\b(Lord|Lady|King|Queen|Prince|Princess)\s+([A-Z][a-z']+)/);
+    if (m) {
+      const h = Object.values(state.houses).find((x) => x.name === m[2] && x.id !== p); const lord = h && state.characters[h.lord];
+      if (lord?.alive) hit = lord;
+      else hit = people.filter((c) => (c.roles || []).some((r) => ['lord', 'lady', 'ruler'].includes(r)) || Object.values(state.houses).some((x) => x.lord === c.id)).find((c) => c.name.split(' ')[0] === m[2] || c.name.split(' ')[1] === m[2]) || null; // "Lord Tywin"
+    }
+  }
+  return hit || null;
+}
+const OUTCOME = { agree: 'AGREES', bargain: 'will not agree yet and NAMES HIS PRICE', stall: 'PUTS YOU OFF — commits to nothing', refuse: 'REFUSES', rage: 'REFUSES IN ANGER', yield: 'GIVES IN, afraid', dismiss: 'REFUSES and will hear no more this moon' };
+export function resolveEnvoys(state, orders) {
+  const done = [];
+  for (const o of orders) {
+    if (o.auto || o.envoy || !SENDING.test(o.text)) continue;
+    const c = addressed(state, o.text); if (!c) continue;
+    const stance = weighAudience(state, c, o.text);
+    if (!stance.verdict) continue; // news, a greeting: the story model tells it
+    const changes = holdToVerdict(state, c, stance, []);
+    const r = applyChanges(state, changes, { source: `${c.name}'s answer`, protectPlayer: true });
+    o.envoy = { who: c.id, verdict: stance.verdict };
+    o.note = [o.note, `[The engine has weighed this message: ${c.name} ${OUTCOME[stance.verdict] || stance.verdict}${stance.proposal ? ` (${stance.proposal})` : ''}${r.applied.length ? ' — recorded: ' + r.applied.map((x) => x.text).join('; ') : ''}. ${stance.mood.fear > 40 ? 'He is afraid. ' : stance.mood.anger > 40 ? 'He is angry. ' : ''}Write his answer as a "raven" op from ${c.id}, in his own voice, and let the consequences follow.]`].filter(Boolean).join(' ');
+    done.push({ order: o.text, result: [`${c.name} ${OUTCOME[stance.verdict] || stance.verdict}`] });
+  }
   return done;
 }

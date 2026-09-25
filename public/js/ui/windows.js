@@ -278,7 +278,7 @@ const wire = {
   people(body) {
     const draw = () => {
       const s = app.state; const q = app.peopleFilter.toLowerCase();
-      const list = Object.values(s.characters).filter((c) => (app.peopleDead || c.alive) && (!app.peopleHouse || c.house === app.peopleHouse) && (!q || `${c.name} ${c.title} ${s.houses[c.house]?.name} ${placeName(s, c.loc)}`.toLowerCase().includes(q)));
+      const list = Object.values(s.characters).filter((c) => (app.peopleDead || c.alive) && (!app.peopleHouse || c.house === app.peopleHouse || kinOf(s, c, app.peopleHouse)) && (!q || `${c.name} ${c.title} ${s.houses[c.house]?.name} ${placeName(s, c.loc)}`.toLowerCase().includes(q)));
       list.sort((a, b) => (b.alive - a.alive) || a.name.localeCompare(b.name));
       $('#people-rows', body).innerHTML = list.slice(0, 200).map((c) => charRow(c)).join('') || '<div class="muted">No one.</div>';
     };
@@ -333,6 +333,13 @@ export function renderSheet() {
 function famMember(c, role) {
   if (!c) return '';
   return `<div class="m" data-char="${c.id}"><img src="${por(c, 80)}" alt=""><div class="rl">${role}</div><div>${esc(c.name.split(' ')[0])}${c.alive ? '' : ' ✝'}</div></div>`;
+}
+
+// Blood of a house serving elsewhere — Benjen Stark on the Wall, Genna Lannister at the Twins — is still its kin
+function kinOf(s, c, house) {
+  const h = s.houses[house]; if (!h) return false;
+  const par = [c.father, c.mother].map((x) => s.characters[x]).filter(Boolean);
+  return par.some((x) => x.house === house) || new RegExp(`\\b${h.name}$`).test(c.name.replace(/ of .*$/, ''));
 }
 
 function characterSheet(id) {
