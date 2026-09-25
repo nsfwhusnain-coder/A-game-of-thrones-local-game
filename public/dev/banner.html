@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><title>Banner</title><style>body{margin:0;background:#223}</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }</script>
+<script type="module">
+import * as THREE from 'three';
+import { buildBanner, clothUniforms, buildArmy } from '../js/map3d/models.js';
+import { HOUSES } from '../data/houses.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); document.body.append(r.domElement);
+const sc = new THREE.Scene(); sc.background = new THREE.Color('#556070');
+const cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 500);
+sc.add(new THREE.HemisphereLight('#dfe8ff', '#443322', 1.2)); const sun = new THREE.DirectionalLight('#fff4e0', 2.2); sun.position.set(-5, 10, 8); sc.add(sun);
+const ids = (q.get('h') || 'stark,lannister,baratheon,greyjoy,tully,targaryen').split(',');
+ids.forEach((id, i) => { const b = buildBanner(HOUSES.find((h) => h.id === id), 2); b.position.set((i - (ids.length - 1) / 2) * 3, 0, 0); sc.add(b); });
+if (q.get('army')) { ids.forEach((id, i) => { const a = buildArmy({ id: 'a' + i, men: 6000, composition: 'levies and heavy horse' }, HOUSES.find((h) => h.id === id)); a.position.set((i - (ids.length - 1) / 2) * 7, 0, 8); a.scale.setScalar(1.6); sc.add(a); }); }
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: '#5a6a3a' })); ground.rotation.x = -Math.PI / 2; sc.add(ground);
+cam.position.set(0, Number(q.get('cy') || 4), Number(q.get('cz') || 16)); cam.lookAt(0, Number(q.get('ly') || 3), Number(q.get('lz') || 0));
+clothUniforms.uTime.value = 1.3; r.render(sc, cam); document.title = 'done';
+</script>

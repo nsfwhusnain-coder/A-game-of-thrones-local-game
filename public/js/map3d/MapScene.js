@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { WORLD, WALL, LABELS, RIVERS, ROADS, JUNCTIONS, PLACE_NAMES, PLACE_KIND } from '../../data/geography.js';
 import { realmOf, getRelation, resolvePlaceId, fmt } from '../shared/world.js';
-import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, bannerTexture, tierOf, armyFigureCount } from './models.js';
+import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, bannerTexture, tierOf, armyFigureCount, clothUniforms } from './models.js';
 import { PathGrid, pathLength, pointAlong } from './pathfind.js';
 import { makeNoise } from '../map/noise.js';
 
@@ -345,8 +345,9 @@ export class MapScene {
         rec.materials.roof.color.set(owner?.color || '#777');
         if (rec.banner) { rec.group.remove(rec.banner); rec.banner = null; }
         if (owner && (hd.seatOf || rec.tier >= 4)) {
-          rec.banner = buildBanner(owner, 1.2 + rec.tier * 0.25);
-          rec.banner.position.set(0, rec.top - 1, 0); rec.banner.rotation.y = -rec.group.rotation.y + 0.4;
+          const bs = 1.2 + rec.tier * 0.25; const lift = bs * 0.5;
+          rec.banner = buildBanner(owner, bs, { lift });
+          rec.banner.position.set(0, rec.top - 1 + lift, 0); 
           rec.group.add(rec.banner);
         }
       }
@@ -380,6 +381,21 @@ export class MapScene {
     this.provinceStats(); this.provDirty = true;
   }
   isMine(owner) { const s = this.state; let x = s.houses[owner], g = 0; if (owner === s.meta.player) return true; while (x?.liege && g++ < 8) { if (x.liege === s.meta.player) return true; x = s.houses[x.liege]; } return false; }
+
+  // Neighbouring seats can sit closer than their models are wide (Castle Cerwyn is half a day from
+  // Winterfell): the lesser one is drawn smaller so the two never grow into each other.
+  fitSettlements() {
+    const recs = [...this.settlements.values()]; const base = 1.7;
+    for (const r of recs) r.fit = 1;
+    for (let i = 0; i < recs.length; i++) for (let j = i + 1; j < recs.length; j++) {
+      const a = recs[i], b = recs[j]; if (!a.radius || !b.radius) continue;
+      const d = Math.hypot(a.group.position.x - b.group.position.x, a.group.position.z - b.group.position.z);
+      const [big, small] = a.tier > b.tier || (a.tier === b.tier && a.radius >= b.radius) ? [a, b] : [b, a];
+      const room = d - big.radius * base * big.fit * 0.8;
+      if (room < small.radius * base * small.fit) small.fit = Math.max(0.35, room / (small.radius * base));
+    }
+    this.fitDirty = this.settlements.size;
+  }
 
   // ───────────── armies ─────────────
   syncArmies(prev) {
@@ -580,9 +596,10 @@ export class MapScene {
     this.sun.castShadow = this.dist < 900;
     // model visibility / scale by zoom
     const zf = 1.7 * clamp(this.dist / 520, 1, 2.6);
+    if (this.fitDirty !== this.settlements.size) this.fitSettlements();
     for (const rec of this.settlements.values()) {
       const vis = rec.tier >= 6 ? true : rec.tier >= 5 ? this.dist < 1900 : rec.tier >= 4 ? this.dist < 1100 : this.dist < 700;
-      rec.group.visible = vis; if (vis) rec.group.scale.setScalar(rec.tier >= 5 ? zf : Math.min(zf, 2.4));
+      rec.group.visible = vis; if (vis) rec.group.scale.setScalar((rec.tier >= 5 ? zf : Math.min(zf, 2.4)) * (rec.fit || 1));
     }
     for (const pl of this.places || []) pl.group.visible = this.dist < 520;
     const af = clamp(this.dist / 160, 1, 9);
@@ -702,6 +719,14 @@ export class MapScene {
         p = pointAlong(rec.anim.path, e); const p2 = pointAlong(rec.anim.path, Math.min(1, e + 0.02)); heading = Math.atan2(p2[1] - p[1], p2[0] - p[0]);
         if (t >= 1) rec.anim = null;
       }
+      // a host resting at a castle camps before its gates, not inside the keep
+      if (!rec.anim && a.type !== 'fleet') {
+        for (const st of this.settlements.values()) {
+          const rr = (st.radius || 0) * st.group.scale.x; if (!rr) continue;
+          const dx = p[0] - st.group.position.x, dz = p[1] - st.group.position.z;
+          if (dx * dx + dz * dz < rr * rr) { p = [st.group.position.x + rr * 0.55, st.group.position.z + rr * 1.02]; break; }
+        }
+      }
       // armies sharing a spot fan out so both models and labels stay readable
       const key = Math.round(p[0] / 8) + ',' + Math.round(p[1] / 8);
       const idx = stacks.get(key) || 0; stacks.set(key, idx + 1);
@@ -713,9 +738,12 @@ export class MapScene {
       rec.label.pos.set(p[0], y + 6 * rec.group.scale.x, p[1]);
     }
     // banners flutter
-    const flutter = Math.sin(time * 2.2) * 0.12;
+    clothUniforms.uTime.value = time;
+    // banners turn to face the viewer, so the sigil always reads and the pole stays behind the cloth
+    const yaw = Math.atan2(this.camera.position.x - this.target.x, this.camera.position.z - this.target.z);
+    for (const rec of this.armyObjs.values()) { const b = rec.group?.userData.banner; if (b) b.rotation.y = yaw - rec.group.rotation.y; }
     for (const rec of this.settlements.values()) {
-      if (rec.banner) rec.banner.children[1].rotation.y = flutter + Math.sin(time * 3.1 + rec.top) * 0.05;
+      if (rec.banner) rec.banner.rotation.y = yaw - rec.group.rotation.y;
       if (rec.siege) rec.siege.children[0].material.opacity = 0.55 + 0.35 * Math.sin(time * 3);
     }
     this.renderer.render(this.scene, this.camera);

@@ -429,3 +429,15 @@ details.howto .eb, details.howto .et { color: #ece6da; }
 .action-ring .ico { width: 1.35rem; height: 1.35rem; }
 .dock-badge { position: absolute; top: 0.15rem; right: 0.2rem; min-width: 1rem; height: 1rem; border-radius: 0.5rem; background: #c0392b; color: #fff; font-size: 0.6rem; font-family: sans-serif; display: flex; align-items: center; justify-content: center; padding: 0 0.2rem; box-shadow: 0 0 6px rgba(255,80,60,0.6); }
 .dock-badge.war { background: #8a1a10; }
+
+/* ---------- banners in the UI stir as if in a draught ---------- */
+@keyframes banner-sway {
+  0%, 100% { transform: rotate(-0.9deg) skewX(0.7deg) scaleY(1); }
+  30% { transform: rotate(0.4deg) skewX(-0.3deg) scaleY(1.004); }
+  60% { transform: rotate(1deg) skewX(-0.9deg) scaleY(0.998); }
+}
+.player-banner img, .detail-hero img.banner { transform-origin: 50% 0; animation: banner-sway 7s ease-in-out infinite; filter: url(#cloth); }
+.detail-hero img.banner { animation-duration: 8.5s; }
+.house-tile img { transform-origin: 50% 0; transition: transform .5s ease; }
+.house-tile:hover img, .house-tile.selected img { animation: banner-sway 4.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .player-banner img, .detail-hero img.banner, .house-tile img { animation: none !important; filter: none; } }

@@ -328,41 +328,81 @@ export function buildWall(points, heightAt) {
 }
 
 // ---------- banners ----------
+// Banners are real cloth: a shared vertex shader ripples every banner in the wind, the wave growing
+// towards the free end, with normals bent to match so the folds catch the light.
+export const clothUniforms = { uTime: { value: 0 }, uWind: { value: 1 } };
 const bannerTexCache = new Map();
 export function bannerTexture(house) {
   const key = house.id + JSON.stringify(house.sigil);
   if (bannerTexCache.has(key)) return bannerTexCache.get(key);
-  const c = document.createElement('canvas'); c.width = 64; c.height = 96;
-  drawBanner(c.getContext('2d'), house.sigil, 64, 96);
+  const c = document.createElement('canvas'); c.width = 128; c.height = 192;
+  drawBanner(c.getContext('2d'), house.sigil, 128, 192);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   bannerTexCache.set(key, t); return t;
 }
-const bannerGeom = new THREE.PlaneGeometry(1, 1.5, 4, 1).translate(0.5, -0.75, 0);
-const poleGeom = new THREE.CylinderGeometry(0.05, 0.05, 1, 5).translate(0, 0.5, 0);
-export function buildBanner(house, size = 2.2) {
+const CLOTH_WAVE = `
+  float hang = clamp(-position.y / 1.5, 0.0, 1.0);
+  float seedC = modelMatrix[3][0] * 0.131 + modelMatrix[3][2] * 0.071;
+  float ph = uTime * 2.3 * uWind + position.x * 2.2 + position.y * 2.6 + seedC;
+  float amp = (0.18 + hang * 0.9) * 0.16 * uWind;
+  float wz = sin(ph) * amp + sin(ph * 2.1 + 1.3) * amp * 0.3;
+  float dzdy = (cos(ph) * 2.6 + cos(ph * 2.1 + 1.3) * 0.63 * 2.6) * amp;
+  float dzdx = (cos(ph) * 2.2 + cos(ph * 2.1 + 1.3) * 0.63 * 2.2) * amp;
+`;
+const clothMats = new Map();
+function clothMaterial(map) {
+  if (clothMats.has(map)) return clothMats.get(map);
+  const m = new THREE.MeshStandardMaterial({ map, side: THREE.DoubleSide, roughness: 0.82, alphaTest: 0.4, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: 0.22 });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = clothUniforms.uTime; sh.uniforms.uWind = clothUniforms.uWind;
+    sh.vertexShader = 'uniform float uTime;\nuniform float uWind;\n' + sh.vertexShader
+      .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>\n${CLOTH_WAVE}\n  objectNormal = normalize(vec3(-dzdx, -dzdy, 1.0));`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>\n  transformed.z += wz;\n  transformed.x += sin(uTime * 1.1 + position.y * 1.8 + seedC) * 0.05 * hang * uWind;`);
+  };
+  m.customProgramCacheKey = () => 'cloth-v1';
+  clothMats.set(map, m); return m;
+}
+// hangs from a crossbar: top edge at y=0, 1 wide, 1.5 long, finely divided so it can ripple
+const bannerGeom = new THREE.PlaneGeometry(1, 1.5, 10, 14).translate(0, -0.75, 0);
+const poleGeom = new THREE.CylinderGeometry(0.035, 0.045, 1, 6).translate(0, 0.5, 0);
+const barGeom = new THREE.CylinderGeometry(0.03, 0.03, 1.16, 5).rotateZ(Math.PI / 2);
+const finialGeom = new THREE.SphereGeometry(0.075, 8, 6);
+export function buildBanner(house, size = 2.2, { lift = 0 } = {}) {
+  // lift raises the cloth on a longer pole so it clears roofs below it
   const g = new THREE.Group();
-  const pole = new THREE.Mesh(poleGeom, mat('#3a2a1a')); pole.scale.set(size, size * 2.2, size); g.add(pole);
-  const flag = new THREE.Mesh(bannerGeom, new THREE.MeshStandardMaterial({ map: bannerTexture(house), side: THREE.DoubleSide, roughness: 0.9, transparent: true, alphaTest: 0.3 }));
-  flag.scale.set(size, size, size); flag.position.set(0.05 * size, size * 2.15, 0); flag.userData.flag = true; flag.castShadow = true;
+  const wood = mat('#3a2a1a'); const gold = mat('#c9a24a', { metalness: 0.7, roughness: 0.35, flatShading: false });
+  const pole = new THREE.Mesh(poleGeom, wood); pole.scale.set(size, size * 2.3 + lift, size); pole.position.y = -lift; g.add(pole);
+  const bar = new THREE.Mesh(barGeom, wood); bar.scale.setScalar(size); bar.position.set(0, size * 2.18, 0.02 * size); g.add(bar);
+  for (const d of [-1, 1]) { const f = new THREE.Mesh(finialGeom, gold); f.scale.setScalar(size); f.position.set(d * 0.58 * size, size * 2.18, 0.02 * size); g.add(f); }
+  const top = new THREE.Mesh(finialGeom, gold); top.scale.setScalar(size * 1.3); top.position.y = size * 2.32; g.add(top);
+  const flag = new THREE.Mesh(bannerGeom, clothMaterial(bannerTexture(house)));
+  flag.scale.set(size, size, size); flag.position.set(0, size * 2.16, 0.05 * size); flag.userData.flag = true; flag.castShadow = true;
   g.add(flag);
   return g;
 }
 
 // ---------- armies & fleets ----------
-const soldierGeom = (() => {
-  const body = new THREE.BoxGeometry(0.38, 0.62, 0.26).translate(0, 0.31, 0);
-  const head = new THREE.SphereGeometry(0.14, 6, 4).translate(0, 0.76, 0);
-  const spear = new THREE.BoxGeometry(0.04, 1.3, 0.04).translate(0.22, 0.6, 0);
-  return mergeGeometries([body.toNonIndexed(), head.toNonIndexed(), spear.toNonIndexed()]);
-})();
-const horseGeom = (() => {
-  const b = new THREE.BoxGeometry(0.3, 0.35, 0.9).translate(0, 0.55, 0);
-  const n = new THREE.BoxGeometry(0.2, 0.4, 0.25).translate(0, 0.82, 0.45);
-  const legs = [[-0.1, -0.3], [0.1, -0.3], [-0.1, 0.3], [0.1, 0.3]].map(([x, z]) => new THREE.BoxGeometry(0.08, 0.4, 0.08).translate(x, 0.2, z).toNonIndexed());
-  const rider = new THREE.BoxGeometry(0.28, 0.45, 0.2).translate(0, 0.95, 0);
-  const lance = new THREE.BoxGeometry(0.03, 0.03, 1.6).translate(0.15, 1.0, 0.5);
-  return mergeGeometries([b.toNonIndexed(), n.toNonIndexed(), ...legs, rider.toNonIndexed(), lance.toNonIndexed()]);
-})();
+// Soldiers and riders are split by material (surcoat, shield, steel, leather) so each part takes its
+// own colour: house colours on the tabard, the sigil's field on the shield, steel helms and spearpoints.
+const nx = (g) => (g.index ? g.toNonIndexed() : g);
+const merge = (...gs) => mergeGeometries(gs.map(nx));
+const FOOT = {
+  tabard: merge(new THREE.CylinderGeometry(0.15, 0.2, 0.46, 7).translate(0, 0.52, 0), new THREE.BoxGeometry(0.44, 0.1, 0.2).translate(0, 0.72, 0)),
+  shield: merge(new THREE.CylinderGeometry(0.19, 0.13, 0.04, 8, 1).rotateX(Math.PI / 2).scale(1, 1.35, 1).translate(-0.24, 0.52, 0.1)),
+  steel: merge(new THREE.SphereGeometry(0.12, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.6).translate(0, 0.86, 0), new THREE.BoxGeometry(0.02, 0.1, 0.03).translate(0, 0.83, 0.12),
+    new THREE.ConeGeometry(0.04, 0.16, 4).translate(0.22, 1.42, 0.02), new THREE.SphereGeometry(0.035, 5, 4).translate(-0.24, 0.52, 0.14)),
+  dark: merge(new THREE.BoxGeometry(0.08, 0.32, 0.09).translate(-0.07, 0.16, 0), new THREE.BoxGeometry(0.08, 0.32, 0.09).translate(0.07, 0.16, 0),
+    new THREE.CylinderGeometry(0.018, 0.018, 1.2, 4).translate(0.22, 0.76, 0.02), new THREE.SphereGeometry(0.085, 6, 5).translate(0, 0.8, 0.02)),
+};
+const HORSE = {
+  hide: merge(new THREE.CapsuleGeometry(0.17, 0.55, 3, 8).rotateX(Math.PI / 2).translate(0, 0.62, 0),
+    new THREE.CylinderGeometry(0.07, 0.1, 0.42, 6).rotateX(-0.75).translate(0, 0.86, 0.38), new THREE.BoxGeometry(0.1, 0.12, 0.26).rotateX(0.35).translate(0, 1.02, 0.56),
+    ...[[-0.09, -0.25], [0.09, -0.25], [-0.09, 0.25], [0.09, 0.25]].map(([x, z]) => new THREE.CylinderGeometry(0.035, 0.03, 0.46, 5).translate(x, 0.23, z))),
+  tabard: merge(new THREE.CylinderGeometry(0.2, 0.21, 0.26, 10, 1, true).rotateX(Math.PI / 2).scale(1.05, 1, 1).translate(0, 0.6, -0.05), // caparison
+    new THREE.CylinderGeometry(0.11, 0.14, 0.38, 7).translate(0, 1.02, -0.05)), // rider
+  steel: merge(new THREE.SphereGeometry(0.1, 8, 6).translate(0, 1.3, -0.05), new THREE.ConeGeometry(0.03, 0.14, 4).rotateX(Math.PI / 2).translate(0.16, 1.1, 1.22)),
+  dark: merge(new THREE.CylinderGeometry(0.018, 0.022, 1.5, 4).rotateX(Math.PI / 2 - 0.12).translate(0.16, 1.04, 0.45)),
+};
 const shipGeom = (() => {
   const hull = new THREE.CylinderGeometry(0.5, 0.25, 3.2, 6, 1, false).rotateZ(Math.PI / 2).rotateY(Math.PI / 2).scale(1, 0.55, 1).translate(0, 0.25, 0);
   const deck = new THREE.BoxGeometry(0.8, 0.12, 2.6).translate(0, 0.5, 0);
@@ -389,29 +429,46 @@ export function buildArmy(army, house) {
       s.rotation.y = 0.15;
       g.add(s);
     }
-    const b = buildBanner(house, 0.9); b.position.set(0, 2.4, -1); g.add(b);
+    const b = buildBanner(house, 0.9); b.position.set(0, 2.4, -1); g.add(b); g.userData.banner = b;
     g.userData.kind = 'fleet';
     return g;
   }
   const n = armyFigureCount(army.men);
-  const bodyM = new THREE.MeshStandardMaterial({ color, roughness: 0.8, flatShading: true });
-  const steelM = mat('#8a8e92', { metalness: 0.4, roughness: 0.5 });
-  const cav = /horse|cavalry|screamer|rider|knight/i.test(army.composition || '') ? Math.ceil(n * 0.4) : Math.floor(n * 0.15);
-  const soldiers = new THREE.InstancedMesh(soldierGeom, bodyM, Math.max(1, n - cav));
-  const horses = cav ? new THREE.InstancedMesh(horseGeom, steelM, cav) : null;
-  const m4 = new THREE.Matrix4(); let si = 0, hi = 0;
+  const field = house?.sigil?.f || color, charge = house?.sigil?.cc || '#ddd';
+  const M = {
+    tabard: new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true }),
+    shield: new THREE.MeshStandardMaterial({ color: field, roughness: 0.6, metalness: 0.1, flatShading: true, emissive: charge, emissiveIntensity: 0.06 }),
+    steel: mat('#9aa0a6', { metalness: 0.65, roughness: 0.38 }),
+    dark: mat('#3a2e24'),
+    hide: mat('#4a3526'),
+  };
+  const cav = /horse|cavalry|screamer|rider|knight|khalasar|dothraki/i.test(army.composition || '') ? Math.ceil(n * 0.4) : Math.floor(n * 0.15);
+  const foot = Math.max(1, n - cav);
+  const meshes = [];
+  const add = (geom, m, count) => { const im = new THREE.InstancedMesh(geom, m, count); im.castShadow = true; g.add(im); meshes.push(im); return im; };
+  const F = Object.fromEntries(Object.entries(FOOT).map(([k, geom]) => [k, add(geom, M[k], foot)]));
+  const Hs = cav ? Object.fromEntries(Object.entries(HORSE).map(([k, geom]) => [k, add(geom, M[k], cav)])) : null;
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+  const rnd = seeded(hashId(army.id || 'army')); const tint = new THREE.Color();
+  let si = 0, hi = 0;
   const cols = Math.ceil(Math.sqrt(n * 1.6));
   for (let i = 0; i < n; i++) {
     const r = Math.floor(i / cols), c = i % cols;
-    const x = (c - (cols - 1) / 2) * 0.62, z = r * 0.75 - 0.4;
-    if (i < cav && horses) { m4.makeTranslation(x * 1.3, 0, z - 1.2); horses.setMatrixAt(hi++, m4); }
-    else { m4.makeTranslation(x, 0, z); soldiers.setMatrixAt(si++, m4); }
+    const x = (c - (cols - 1) / 2) * 0.62 + (rnd() - 0.5) * 0.12, z = r * 0.75 - 0.4 + (rnd() - 0.5) * 0.12;
+    q.setFromAxisAngle(v.set(0, 1, 0), (rnd() - 0.5) * 0.25);
+    if (i < cav && Hs) { m4.compose(v.set(x * 1.3, 0, z - 1.2), q, one); for (const k in Hs) Hs[k].setMatrixAt(hi, m4); hi++; }
+    else {
+      m4.compose(v.set(x, 0, z), q, one);
+      for (const k in F) F[k].setMatrixAt(si, m4);
+      F.tabard.setColorAt(si, tint.set(color).offsetHSL(0, 0, (rnd() - 0.5) * 0.08));
+      si++;
+    }
   }
-  soldiers.count = si; soldiers.castShadow = true; g.add(soldiers);
-  if (horses) { horses.count = hi; horses.castShadow = true; g.add(horses); }
+  for (const k in F) F[k].count = si;
+  if (Hs) { for (const k in Hs) Hs[k].count = hi; }
   const base = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.12, 20), new THREE.MeshStandardMaterial({ color, roughness: 0.6, transparent: true, opacity: 0.55 }));
   const br = Math.max(1.4, cols * 0.42); base.scale.set(br, 1, br * 0.9); base.position.y = 0.06; g.add(base);
-  const b = buildBanner(house, 0.8); b.position.set(-cols * 0.33 - 0.3, 0, -0.8); g.add(b);
+  const b = buildBanner(house, 0.8); b.position.set(-cols * 0.33 - 0.3, 0, -0.8); g.add(b); g.userData.banner = b;
   g.userData.kind = 'army';
   return g;
 }
