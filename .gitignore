@@ -9,3 +9,19 @@ relay/
 public/models/
 bench/
 playtest/
+
+# your soundtrack stays on your machine (see public/music/README.txt)
+public/music/**/*.mp3
+public/music/**/*.ogg
+public/music/**/*.oga
+public/music/**/*.m4a
+public/music/**/*.aac
+public/music/**/*.wav
+public/music/**/*.flac
+public/music/**/*.opus
+public/music/**/*.webm
+public/music/*.mp3
+public/music/*.ogg
+public/music/*.m4a
+public/music/*.wav
+public/music/*.flac

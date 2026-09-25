@@ -1,7 +1,7 @@
 import { HOUSES } from '../data/houses.js';
 import { startIconizer, icon } from './ui/icons.js';
 import { drawTitleMap } from './ui/titlemap.js';
-import { startMusic, setMood, musicSettings, setMusic } from './ui/music.js';
+import { startMusic, setMood, setMusicHouse, musicSettings, setMusic } from './ui/music.js';
 import { sfx, wireSfx, sfxSettings, setSfx } from './ui/sfx.js';
 import { playTurn } from './ui/playback.js';
 import { voiceSettings, setVoiceSetting, speak } from './ui/voice.js';
@@ -115,6 +115,7 @@ async function startGame(id, state) {
   app.saveId = id;
   app.state = state || await api('/games/' + id);
   applyHouseTheme(app.state.houses[app.state.meta.player]);
+  setMusicHouse(app.state.meta.player); setMood(moodFor(app.state));
   $('#title-screen').classList.add('hidden'); $('#game-screen').classList.remove('hidden');
   if (!app.map) {
     $('#map-loading').classList.remove('hidden');
@@ -149,7 +150,7 @@ async function startGame(id, state) {
 }
 function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); }
 app.renderOrders = renderOrders; app.renderTop = renderTop;
-app.setState = (s, opts = {}) => { app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); if (!opts.keepDrawer) renderDrawer(); };
+app.setState = (s, opts = {}) => { app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); if (!opts.keepDrawer) renderDrawer(); };
 
 function renderTop() {
   const s = app.state, h = player();

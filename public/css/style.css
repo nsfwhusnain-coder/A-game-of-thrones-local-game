@@ -391,7 +391,7 @@ details.howto[open] > summary::before { content: '▾ '; }
 .event:hover { filter: brightness(1.03); }
 .summary { color: #f2ede3; font-size: 1rem; line-height: 1.55; }
 .turn-head { color: #d8d0c0; }
-details.howto { background: rgba(255,255,255,0.05); color: #ece6da; border-left-color: var(--gold); }
+details.howto, details.howto:hover, .event.howto:hover { background: rgba(255,255,255,0.05); color: #ece6da; border-left-color: var(--gold); filter: none; }
 details.howto .eb, details.howto .et { color: #ece6da; }
 
 /* audiences as scenes: actions in italics, words spoken */

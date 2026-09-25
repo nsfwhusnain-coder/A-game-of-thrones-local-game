@@ -80,9 +80,15 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/tts' && req.method === 'POST') return await ttsProxy(req, res);
     if (url.pathname === '/api/music' && req.method === 'GET') {
       // your own music: any audio files dropped into public/music/ play instead of the generated score
-      const dirp = path.join(PUBLIC, 'music'); let files = [];
-      try { files = fs.readdirSync(dirp).filter((f) => /\.(mp3|ogg|oga|m4a|wav|flac|opus|webm)$/i.test(f)); } catch { /* none */ }
-      return send(res, 200, { files: files.map((f) => '/music/' + encodeURIComponent(f)) });
+      // loose files play anywhere; a folder named for a house plays while you rule it (title/ and war/ for those scenes)
+      const dirp = path.join(PUBLIC, 'music'); const tracks = []; const audio = (f) => /\.(mp3|ogg|oga|m4a|wav|flac|opus|webm|aac)$/i.test(f);
+      try {
+        for (const d of fs.readdirSync(dirp, { withFileTypes: true })) {
+          if (d.isFile() && audio(d.name)) tracks.push({ url: '/music/' + encodeURIComponent(d.name), group: 'any' });
+          else if (d.isDirectory()) for (const f of fs.readdirSync(path.join(dirp, d.name))) if (audio(f)) tracks.push({ url: `/music/${encodeURIComponent(d.name)}/${encodeURIComponent(f)}`, group: d.name.toLowerCase() });
+        }
+      } catch { /* none */ }
+      return send(res, 200, { tracks, files: tracks.map((t) => t.url) });
     }
     if (url.pathname === '/api/portraits' && req.method === 'GET') {
       // your own art: public/portraits/<character_id>.png|jpg|webp replaces the painted portrait
