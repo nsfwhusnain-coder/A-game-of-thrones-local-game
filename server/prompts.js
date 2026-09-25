@@ -16,6 +16,7 @@ import { PLACE_NAMES } from '../public/data/geography.js';
 import { dispositionText } from '../public/js/shared/diplomacy.js';
 import { temperament, natureTags } from '../public/js/shared/temperament.js';
 import { DEMEANOURS } from '../public/data/demeanours.js';
+import { beliefsAboutPlayer } from '../public/js/shared/intel.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
@@ -253,6 +254,10 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   const pacts = state.pacts.filter((x) => x.status !== 'ended');
   parts.push('PACTS & AGREEMENTS\n' + (pacts.length ? pacts.map((x) => `${x.type} | ${x.a} & ${x.b} | ${x.status} | ${x.terms}`).join('\n') : 'none'));
   parts.push('ARMIES & FLEETS IN THE FIELD\n' + Object.values(state.armies).map((a) => armyLine(state, a)).join('\n'));
+  const talks = Object.entries(state.plotting || {}).filter(([, x]) => x.with).map(([h, x]) => `${h} (lord ${state.houses[h]?.lord}) treats in secret with ${x.with} against its liege ${state.houses[h]?.liege}${x.known ? ' — the player KNOWS' : ' — the player does not know'}`);
+  if (talks.length) parts.push('SECRET TALKS (the engine\'s: let these lords act two-faced — courteous to their liege, slow to answer calls, quick to excuses; do not reveal them to the player unless the story finds them out)\n' + talks.join('\n'));
+  const beliefs = beliefsAboutPlayer(state, placeName);
+  if (beliefs.length) parts.push('WHAT THE OTHER HOUSES BELIEVE ABOUT THE PLAYER\'S HOSTS (deception — move and speak for the other houses by what they believe, not the truth)\n' + beliefs.join('\n'));
   const wr = warRoom(state);
   if (wr.length) parts.push('WAR ROOM (the ENGINE fights the battles between hosts in contact and runs the sieges after your turn, by these odds — do not emit battle ops for them or kill their men yourself; narrate the approach, the councils of war, the fear in the camps)\n' + wr.join('\n'));
 

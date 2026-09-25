@@ -584,5 +584,8 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .judge-row { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; font-size: 0.85rem; }
 .lbl.rider { pointer-events: auto; cursor: pointer; font-size: 0.68rem; padding: 0.05rem 0.35rem; border-radius: 0.6rem; background: rgba(20,16,12,0.8); border: 1px solid var(--line2); color: var(--muted); white-space: nowrap; }
 .lbl.rider.mine { border-color: var(--gold); color: var(--gold2); }
-.lbl.army.reported { opacity: 0.7; border-style: dashed !important; background: rgba(20,16,12,0.55) !important; }
-.lbl.army.reported i { font-style: italic; opacity: 0.8; }
+.lbl.army.reported { opacity: 0.82; filter: grayscale(1); color: #c9c4ba !important; border-color: #6f6a62 !important; }
+.lbl.army.reported .flag { background: #8b867e !important; }
+.unknown-banner { width: 4rem; height: 6rem; flex: none; background: repeating-linear-gradient(135deg, #3a3833 0 6px, #4a4740 6px 12px); clip-path: polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%); opacity: 0.8; }
+.unknown-dot { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #6f6a62; flex: none; }
+.secrecy .btn.on { border-color: var(--gold2); color: var(--gold2); background: color-mix(in srgb, var(--gold) 18%, transparent); }

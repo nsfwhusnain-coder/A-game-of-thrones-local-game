@@ -416,10 +416,10 @@ export class MapScene {
     for (const l of this.ghostLabels || []) l.el.remove();
     this.labels = this.labels.filter((l) => !(this.ghostLabels || []).includes(l)); this.ghostLabels = [];
     for (const v of view.values()) {
-      if (!v.ghost) continue; const o = s.houses[v.ghost.owner];
+      if (!v.ghost) continue;
       const l = this.addLabel('', [v.pos[0], this.groundAt(v.pos[0], v.pos[1]) + 6, v.pos[1]], 'army reported', {});
-      l.el.innerHTML = `<span class="flag" style="background:${o?.color || '#777'}"></span><b>~${fmt(v.men)}?</b>${v.age > 0 ? `<i>${ageText(v.age)}</i>` : ''}`;
-      l.el.title = `${v.ghost.name || "A host"}: ~${fmt(v.men)} men, by ${v.source}, ${ageText(v.age)} — not seen by your own eyes`; this.ghostLabels.push(l);
+      l.el.innerHTML = `<span class="flag"></span><b>~${fmt(v.men)}</b>`;
+      l.el.title = `Unconfirmed: a host of ~${fmt(v.men)} reported ${ageText(v.age)} (${v.source})`; this.ghostLabels.push(l);
     }
     for (const [id, rec] of this.armyObjs) if (!s.armies[id]) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.armyObjs.delete(id); }
     for (const a of Object.values(s.armies)) {
@@ -451,11 +451,12 @@ export class MapScene {
       if (v?.known === 'reported' && rec.route) { this.scene.remove(rec.route); rec.route = null; }
       const men = a.type === 'fleet' ? `${a.ships || '?'} ships` : fmt(v?.known === 'reported' ? v.men : a.men);
       const cmd = a.commander && v?.known === 'seen' ? s.characters[a.commander]?.name : '';
+      // unconfirmed: a plain grey plate with the rumoured count; confirmed: the house's colours and who leads it
       rec.label.el.innerHTML = v?.known === 'reported'
-        ? `<span class="flag" style="background:${owner?.color || '#777'}"></span><b>~${men}?</b>${v.age > 0 ? `<i>${ageText(v.age)}</i>` : ''}`
+        ? `<span class="flag"></span><b>~${men}</b>`
         : `<span class="flag" style="background:${owner?.color || '#777'}"></span><b>${a.owner === s.meta.player ? '' : '~'}${men}</b>${cmd ? `<i>${cmd.split(' ').slice(-1)[0]}</i>` : ''}`;
       rec.label.el.classList.toggle('reported', v?.known === 'reported');
-      rec.label.el.title = v?.known === 'reported' ? `House ${owner?.name}: ~${men} men, by ${v.source}, ${ageText(v.age)} — not seen by your own eyes` : '';
+      rec.label.el.title = v?.known === 'reported' ? `Unconfirmed: a host of ~${men} reported ${ageText(v.age)} (${v.source})` : '';
       rec.label.el.classList.toggle('mine', this.isMine(a.owner));
       rec.label.el.classList.toggle('enemy', this.atWarWith(a.owner));
       rec.label.el.classList.toggle('sel', a.id === this.selectedArmy);

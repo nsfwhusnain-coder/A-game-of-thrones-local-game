@@ -3,6 +3,7 @@
 // and is told to the story model as an order already carried out, so it narrates how the realm takes it.
 import { applyChanges, vassalsOf, realmOf, getRelation } from '../public/js/shared/world.js';
 import { temperament } from '../public/js/shared/temperament.js';
+import { exposePlot } from '../public/js/shared/treachery.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -27,6 +28,7 @@ export function gift(state, { to, gold: amount }) {
   if (lord) ch.push({ op: 'character', id: lord.id, opinion: clamp((lord.opinion || 0) + warm, -100, 100), note: `Received a gift of ${n} dragons from House ${me.name}.` });
   applyChanges(state, ch, { source: 'Your gift' });
   if (lord && state.moods?.[lord.id]) state.moods[lord.id].trust = clamp(state.moods[lord.id].trust + warm, 0, 100);
+  if (state.plotting?.[house]) state.plotting[house].pressure = Math.max(0, state.plotting[house].pressure - warm * 1.5); // gold soothes a wavering oath
   const read = warm >= 18 ? 'is much pleased' : warm >= 8 ? 'is pleased' : T?.pride > 0.85 ? 'accepts it coolly; it is small to them' : 'accepts it';
   return { text: `Send ${n.toLocaleString('en-US')} gold dragons as a gift to ${lord ? lord.name : 'House ' + h.name}.`, note: `[Already done: the gold is sent; relations +${warm}. ${lord?.name || 'They'} ${read}. Narrate the gift's arrival.]`, summary: `${lord ? lord.name : 'House ' + h.name} ${read} (relations +${warm}).` };
 }
@@ -39,7 +41,7 @@ export function feast(state) {
   if (gold(me) < cost) throw new CourtError(`A feast worthy of your house would cost ~${cost.toLocaleString('en-US')} dragons.`);
   spend(state, p, cost, 'A great feast');
   const ch = [];
-  for (const v of vas) { const l = state.characters[v.lord]; ch.push({ op: 'relation', a: p, b: v.id, delta: 4, reason: 'feasted at your table' }, { op: 'character', id: l.id, loyalty: clamp((l.loyalty ?? 60) + 4, -100, 100) }); }
+  for (const v of vas) { if (state.plotting?.[v.id]) state.plotting[v.id].pressure = Math.max(0, state.plotting[v.id].pressure - 8); const l = state.characters[v.lord]; ch.push({ op: 'relation', a: p, b: v.id, delta: 4, reason: 'feasted at your table' }, { op: 'character', id: l.id, loyalty: clamp((l.loyalty ?? 60) + 4, -100, 100) }); }
   if (me.seat) ch.push({ op: 'holding', id: me.seat, unrest: clamp((state.holdings[me.seat].unrest || 0) - 4, 0, 100) });
   let incident = '';
   if (vas.length >= 2 && Math.random() < 0.25) {
@@ -140,6 +142,7 @@ export function scheme(state, { house, kind }) {
       return { text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} found nothing worth the gold.]`, summary: `${who} dug, and found nothing House ${h.name} hides that you did not know.` };
     }
     state.intel = state.intel || { armies: {}, spies: {} }; state.intel.spies[house] = state.meta.turn;
+    if (h.liege === p) { const found = exposePlot(state, house); return { text: `[SECRET] Plant spies in the household of House ${h.name}.`, note: `[Already done: ${who} has eyes in House ${h.name}. Finding: ${found}]`, summary: `${who} has eyes in House ${h.name}. ${found}` }; }
     return { text: `[SECRET] Plant spies in the household of House ${h.name}.`, note: `[Already done: ${who} has eyes in House ${h.name}; the player now sees their hosts.]`, summary: `${who} has placed eyes in House ${h.name}. Their hosts will be known to you wherever they march.` };
   }
   if (roll < chance + (1 - chance) * 0.45) {
@@ -147,4 +150,20 @@ export function scheme(state, { house, kind }) {
     return { text: `[SECRET] A scheme against House ${h.name}.`, note: `[Already done: the player's agents were CAUGHT by House ${h.name}. Narrate the discovery and their anger.]`, summary: `Your agents were caught in House ${h.name}'s household. They know who sent them.` };
   }
   return { text: `[SECRET] A scheme against House ${h.name}.`, note: `[Already done: the scheme came to nothing; no one noticed.]`, summary: `${who}'s agents came back with nothing. The gold is gone; no one noticed.` };
+}
+
+// How a host marches: openly, in secret, or behind a feint (fog of war — the story model is told what the other
+// houses believe, and they act on it; shared/intel.js)
+export function secrecy(state, { army, mode, to }) {
+  const p = state.meta.player; const a = state.armies[army];
+  if (!a || a.owner !== p) throw new CourtError('Not your host.');
+  const pn = (id) => state.holdings[id]?.name || id;
+  if (mode === 'open') { delete a.secrecy; delete a.feint; return { text: `${a.name} marches openly, banners flying.`, note: '', summary: `${a.name} marches openly.` }; }
+  if (mode === 'hidden') { a.secrecy = 'hidden'; delete a.feint; return { text: `${a.name} is to march in secret: by night, off the roads, no banners.`, note: '[Already done: the host marches in secret; other houses lose track of it unless it comes near them.]', summary: `${a.name} will march in secret — a little slower, and hard to follow.` }; }
+  if (mode === 'feint') {
+    if (!state.holdings[to]) throw new CourtError('Where should the realm think it goes?');
+    a.feint = to; delete a.secrecy;
+    return { text: `Spread word that ${a.name} marches on ${pn(to)}.`, note: `[Already done: word is spread that ${a.name} marches on ${pn(to)}. Those who have not seen it believe it.]`, summary: `Word goes out that ${a.name} marches on ${pn(to)}.` };
+  }
+  throw new CourtError('Unknown order.');
 }

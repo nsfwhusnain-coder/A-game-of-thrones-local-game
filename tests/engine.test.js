@@ -166,17 +166,17 @@ test('dictated numbers are read: "ten men", "a hundred riders", "two hundred and
 
 // ── Fog of war ──
 import { viewOfArmies, updateIntel } from '../public/js/shared/intel.js';
-test('the player sees hosts near their lands; distant ones only by report, and the report ages', () => {
+test('the player sees hosts near their lands; distant ones by word of mouth, which can be stale or feinted', () => {
   const s = fresh();
-  apply(s, [{ op: 'army_create', id: 'far', owner: 'martell', name: 'Dornish spears', at: 'martell', men: 5000 }, { op: 'army_create', id: 'near', owner: 'bolton', name: 'Bolton host', at: 'stark', men: 2000 }]);
-  let v = viewOfArmies(s);
-  assert.equal(v.get('near')?.known, 'seen');
-  assert.notEqual(v.get('far')?.known, 'seen'); // never reported: unknown
-  s.armies.far.pos = [...s.holdings.stark.pos]; updateIntel(s); // it marched into view
-  s.armies.far.pos = [...s.holdings.martell.pos]; s.meta.turn += 3; // and away again
-  v = viewOfArmies(s);
-  assert.equal(v.get('far').known, 'reported'); assert.equal(v.get('far').age, 3);
-  assert.deepEqual(v.get('far').pos, s.holdings.stark.pos);
+  apply(s, [{ op: 'army_create', id: 'far', owner: 'martell', name: 'Dornish spears', at: 'martell', men: 6000 }, { op: 'army_create', id: 'near', owner: 'bolton', name: 'Bolton host', at: 'stark', men: 2000 }]);
+  assert.equal(viewOfArmies(s).get('near')?.known, 'seen');
+  updateIntel(s, () => 0); // word travels: a great host is heard of
+  let v = viewOfArmies(s).get('far'); assert.equal(v.known, 'reported'); assert.ok(Math.abs(v.men - 6000) <= 1600);
+  s.armies.far.feint = 'tyrell'; s.meta.turn++; updateIntel(s, () => 0); // a feint sends word the wrong way
+  assert.deepEqual(viewOfArmies(s).get('far').pos, s.holdings.tyrell.pos);
+  delete s.armies.far.feint; s.armies.far.secrecy = 'hidden'; s.armies.far.pos = [...s.holdings.yronwood.pos];
+  for (let i = 0; i < 5; i++) { s.meta.turn++; updateIntel(s, () => 0.5); } // in secret: the realm loses track of it
+  assert.equal(viewOfArmies(s).get('far'), undefined);
 });
 test('a planted report shows a host that does not exist', () => {
   const s = fresh();
@@ -192,4 +192,14 @@ test('the Watch chooses a brother, not the Lord Commander\'s exiled son; Braavos
   const nw = heirOf(s, 'nights_watch', 'jeor_mormont');
   assert.ok(nw && s.characters[nw.id].house === 'nights_watch' && nw.id !== 'jorah_mormont');
   assert.equal(heirOf(s, 'braavos', s.houses.braavos.lord), null);
+});
+
+// ── Treachery ──
+import { treacheryTick } from '../public/js/shared/treachery.js';
+test('a losing war tempts the schemers first: the Boltons treat with the enemy long before the Manderlys waver', () => {
+  const s = fresh(); apply(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['stark'] }]); s.battles = [];
+  for (let t = 1; t <= 10; t++) { s.meta.turn = t; if (t % 3 === 0) s.battles.push({ turn: t, attacker: 'lannister', defender: 'stark', victor: 'lannister' }); treacheryTick(s, 30, () => 0.2); }
+  const boltonTurned = s.houses.bolton.liege === 'lannister' || s.plotting.bolton?.with === 'lannister';
+  assert.ok(boltonTurned);
+  assert.ok(!s.plotting.manderly?.with && s.houses.manderly.liege === 'stark');
 });

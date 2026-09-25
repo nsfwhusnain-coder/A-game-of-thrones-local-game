@@ -5,6 +5,7 @@
 // have the numbers. The story model narrates around this, and is told the results next turn.
 import { applyChanges } from './world.js';
 import { atWar, battleOdds, siegeEstimate } from './warfare.js';
+import { contingentsHoldBack } from './treachery.js';
 
 const CONTACT = 10;      // map units (~18 miles): hosts this close will meet
 const SIEGE_REACH = 7;   // a host this close to an enemy castle sits before its walls
@@ -29,7 +30,12 @@ const nameOf = (state, id) => state.characters[id]?.name || null;
 function fight(state, att, def, days, r) {
   const place = nearestHolding(state, def.pos);
   const atHold = def.at && state.holdings[def.at] && state.holdings[def.at].owner === def.owner ? state.holdings[def.at] : null;
-  const odds = battleOdds(state, att, def, { fort: atHold ? Math.min(2, (atHold.fort || 0) * 0.3) : 0 });
+  // treachery on the field: lords in secret talks with the enemy hold their men back — or turn them
+  const betray = []; const eff = { [att.id]: att.men, [def.id]: def.men };
+  for (const [side, other] of [[att, def], [def, att]]) for (const b of contingentsHoldBack(state, side, r)) {
+    eff[side.id] -= b.men; if (b.turn) eff[other.id] += b.men; betray.push({ ...b, side, other });
+  }
+  const odds = battleOdds(state, { ...att, men: Math.max(1, eff[att.id]) }, { ...def, men: Math.max(1, eff[def.id]) }, { fort: atHold ? Math.min(2, (atHold.fort || 0) * 0.3) : 0 });
   const p = odds.attacker / 100;
   const attWins = r() < p;
   const [win, lose] = attWins ? [att, def] : [def, att];
@@ -55,6 +61,13 @@ function fight(state, att, def, days, r) {
   }
   const wc = win.commander && state.characters[win.commander];
   if (wc?.alive && r() < 0.025) { changes.push({ op: 'character', id: wc.id, alive: false, cause: `fell in the hour of victory near ${place?.name}` }); fates.push(`${wc.name} fell in the hour of victory`); }
+  // the men who held back or turned leave the host they came with
+  for (const b of betray) {
+    changes.push({ op: 'army_update', army: b.side.id, delta: -Math.min(b.men, Math.max(0, b.side.men - (b.side === win ? winLoss : loseLoss) - 1)), cause: 'battle' });
+    if (b.side.contingents) delete b.side.contingents[b.vid];
+    const lordName = state.characters[state.houses[b.vid]?.lord]?.name || `House ${state.houses[b.vid]?.name}`;
+    fates.push(b.turn ? `${lordName}'s men turned on their own side at the height of the battle` : `${lordName}'s men held back and let others die`);
+  }
   const name = `The Battle of ${place?.name || 'the field'}`;
   const W = state.houses[win.owner], L = state.houses[lose.owner];
   changes.push({ op: 'battle', name, at: place?.id, attacker: att.owner, defender: def.owner, victor: win.owner, losses: { [win.owner]: winLoss, [lose.owner]: wiped ? lose.men : loseLoss }, summary: `${W?.name} defeated ${L?.name}${wiped ? ', whose host was destroyed' : ''}.` });

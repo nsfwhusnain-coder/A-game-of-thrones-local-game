@@ -13,6 +13,7 @@ import { worldTick } from '../public/js/shared/plots.js';
 import { resolveWarfare } from '../public/js/shared/battles.js';
 import { roadEncounters } from '../public/js/shared/roads.js';
 import { updateIntel } from '../public/js/shared/intel.js';
+import { treacheryTick } from '../public/js/shared/treachery.js';
 import * as court from './court.js';
 import { carryOutOrders, readOrdersByRule, executeActions } from './orders.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
@@ -224,6 +225,9 @@ export async function advance(id, { span = '1m', orders } = {}) {
       if (c.house === state.meta.player) vt.events.push({ title: `${c.name} reaches ${placeName(state, to)}`, text: `${c.name} has arrived at ${placeName(state, to)}, as you commanded.`, where: to, importance: 2, type: 'court', houses: [c.house] });
     }
   }
+  // Oaths are weighed: tempted lords treat with the enemy in secret, and the desperate turn their cloaks
+  const tr = treacheryTick(state, spanInfo.days);
+  vt.events.push(...tr.events); applied.push(...tr.applied);
   // Hosts in contact fight; hosts before enemy walls besiege them (unless the story told that battle itself)
   const toldBattles = new Set((obj.changes || []).filter((c) => c?.op === 'battle').flatMap((c) => [c.attacker, c.defender]).map((x) => String(x || '').toLowerCase()));
   const wf = resolveWarfare(state, spanInfo.days, { skip: toldBattles });
@@ -551,9 +555,9 @@ export function act(id, body) {
       break;
     }
     // the lord's own acts, settled at once (server/court.js)
-    case 'gift': case 'feast': case 'tourney': case 'judge': case 'declare_war': case 'scheme': {
+    case 'gift': case 'feast': case 'tourney': case 'judge': case 'declare_war': case 'scheme': case 'secrecy': {
       let r;
-      try { r = body.kind === 'gift' ? court.gift(state, body) : body.kind === 'feast' ? court.feast(state) : body.kind === 'tourney' ? court.tourney(state) : body.kind === 'judge' ? court.judge(state, body) : body.kind === 'scheme' ? court.scheme(state, { house: body.house, kind: body.kind2 }) : court.declareWar(state, body); } catch (e) { throw httpError(e.status || 400, e.message); }
+      try { r = body.kind === 'gift' ? court.gift(state, body) : body.kind === 'feast' ? court.feast(state) : body.kind === 'tourney' ? court.tourney(state) : body.kind === 'judge' ? court.judge(state, body) : body.kind === 'scheme' ? court.scheme(state, { house: body.house, kind: body.kind2 }) : body.kind === 'secrecy' ? court.secrecy(state, body) : court.declareWar(state, body); } catch (e) { throw httpError(e.status || 400, e.message); }
       addOrder(r.text, r.note); result.summary = r.summary;
       break;
     }

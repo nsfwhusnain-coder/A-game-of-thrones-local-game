@@ -37,7 +37,7 @@ export function temperament(c) {
     flattery: /flatter|admiration|vain|called king|respect|recognition|approval/.test(sw) || /vain|pompous/.test(t),
     gold: /gold|coin|bribe|advantage|trade|food|steel/.test(sw) || /greedy/.test(t),
     fear: /fear|safety|safe/.test(sw),
-    duty: /duty|oath|law|justice|rights/.test(sw),
+    duty: /duty|oath|law|justice|rights|loyal/.test(sw),
     honour: /honou?r/.test(sw),
     family: /family|children|son|daughter|\bkin\b|sister|legacy|his people|her people/.test(sw),
     faith: /\bfaith\b|\bgods?\b|lord of light|r'hllor/.test(sw),
