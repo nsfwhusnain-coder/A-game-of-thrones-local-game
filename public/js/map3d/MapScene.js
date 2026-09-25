@@ -543,7 +543,12 @@ export class MapScene {
       const c = l.cls;
       if (c.startsWith('holding')) {
         const tier = Number(c.match(/t(\d)/)?.[1] || 3);
-        show = vis && (tier >= 6 ? d < 2600 : tier >= 5 ? d < 1500 : tier >= 4 ? d < 800 : d < 480);
+        // near: the name; farther: a small seat marker so no castle ever simply vanishes; farthest: hidden
+        const nameD = tier >= 6 ? 99999 : tier >= 5 ? 1500 : tier >= 4 ? 800 : 480;
+        const dotD = tier >= 5 ? 99999 : tier >= 4 ? 2400 : 1500;
+        show = vis && d < dotD;
+        const dot = d >= nameD;
+        if (l.dot !== dot) { l.dot = dot; l.el.classList.toggle('dot', dot); }
       } else if (c.startsWith('realm')) {
         show = vis && d > 620 && this.mode !== 'terrain';
         scale = clamp((l.size * 900) / d, 9, 46) / 16;
@@ -599,11 +604,12 @@ export class MapScene {
     const sc = this.sun.shadow.camera; sc.left = -sd; sc.right = sd; sc.top = sd; sc.bottom = -sd; sc.near = 10; sc.far = 1800; sc.updateProjectionMatrix();
     this.sun.castShadow = this.dist < 900;
     // model visibility / scale by zoom
-    const zf = 1.7 * clamp(this.dist / 520, 1, 2.6);
+    // settlements keep one true size at every zoom (they no longer swell as you pull back); too far to model,
+    // they are shown by their map marker instead
     if (this.fitDirty !== this.settlements.size) this.fitSettlements();
     for (const rec of this.settlements.values()) {
-      const vis = rec.tier >= 6 ? true : rec.tier >= 5 ? this.dist < 1900 : rec.tier >= 4 ? this.dist < 1100 : this.dist < 700;
-      rec.group.visible = vis; if (vis) rec.group.scale.setScalar(Math.min(zf, rec.tier >= 5 ? 2.9 : 2.4) * (rec.fit || 1));
+      const vis = rec.tier >= 6 ? this.dist < 2600 : rec.tier >= 5 ? this.dist < 1900 : rec.tier >= 4 ? this.dist < 1100 : this.dist < 700;
+      rec.group.visible = vis; if (vis) rec.group.scale.setScalar(1.7 * (rec.fit || 1));
     }
     for (const pl of this.places || []) pl.group.visible = this.dist < 520;
     const af = clamp(this.dist / 160, 1, 9);
@@ -627,7 +633,10 @@ export class MapScene {
     const tt = (o.y - WATER_LEVEL) / -dir.y; return o.clone().addScaledVector(dir, tt);
   }
   bindInput() {
-    const el = this.renderer.domElement; let drag = null; let moved = false;
+    // pointer input on the whole map (canvas and labels), so a drag that starts on a place name still pans
+    const el = this.container; const cv = this.renderer.domElement; let drag = null; let moved = false; let last = null;
+    el.addEventListener('selectstart', (e) => e.preventDefault());
+    el.addEventListener('mousedown', (e) => { if (e.detail > 1) e.preventDefault(); }); // no word-select on double click
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('wheel', (e) => {
       e.preventDefault(); this.goal = null;
@@ -637,12 +646,20 @@ export class MapScene {
       const after = this.screenToGround(mx, my);
       this.target.x += before.x - after.x; this.target.z += before.z - after.z; this.updateCamera();
     }, { passive: false });
-    el.addEventListener('pointerdown', (e) => { this.goal = null; const r = el.getBoundingClientRect(); drag = { sx: e.clientX, sy: e.clientY, g: this.screenToGround(e.clientX - r.left, e.clientY - r.top) }; moved = false; el.setPointerCapture(e.pointerId); });
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || !e.isPrimary) return;
+      this.goal = null; this.vel = null; const r = el.getBoundingClientRect();
+      drag = { sx: e.clientX, sy: e.clientY, g: this.screenToGround(e.clientX - r.left, e.clientY - r.top), target: e.target, id: e.pointerId }; moved = false; last = null;
+    });
     el.addEventListener('pointermove', (e) => {
       const r = el.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top;
       if (drag) {
-        if (Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 4) moved = true;
-        if (moved) { const g = this.screenToGround(mx, my); this.target.x += drag.g.x - g.x; this.target.z += drag.g.z - g.z; this.updateCamera(); el.style.cursor = 'grabbing'; }
+        if (!moved && Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 4) { moved = true; try { el.setPointerCapture(drag.id); } catch { /* */ } }
+        if (moved) {
+          const g = this.screenToGround(mx, my); const dx = drag.g.x - g.x, dz = drag.g.z - g.z;
+          this.target.x += dx; this.target.z += dz; this.updateCamera(); el.style.cursor = 'grabbing';
+          const now = performance.now(); if (last) { const dt = Math.max(8, now - last.t); this.velSample = { x: dx / dt * 1000, z: dz / dt * 1000 }; } last = { t: now };
+        }
       } else {
         const hit = this.hitTest(mx, my); const key = hit ? hit.type + hit.id : null;
         el.style.cursor = hit && !hit.area ? 'pointer' : 'default';
@@ -652,7 +669,12 @@ export class MapScene {
     });
     el.addEventListener('pointerup', (e) => {
       el.style.cursor = 'default';
+      // a flick keeps the map gliding a moment
+      if (drag && moved && this.velSample && last && performance.now() - last.t < 80) this.vel = { ...this.velSample };
+      this.velSample = null;
       if (drag && !moved) {
+        const lbl = drag.target?.closest?.('.lbl');
+        if (lbl) { this.labelClick(lbl); drag = null; return; }
         const r = el.getBoundingClientRect(); const hit = this.hitTest(e.clientX - r.left, e.clientY - r.top);
         if (hit?.type === 'army') { this.selectedArmy = hit.id; this.h.onSelectArmy?.(hit.id); this.syncArmies(); }
         else if (hit?.type === 'holding') { this.selectedArmy = null; this.select(hit.id); this.h.onSelect?.(hit.id); }
@@ -660,17 +682,20 @@ export class MapScene {
       }
       drag = null;
     });
+    el.addEventListener('pointercancel', () => { drag = null; });
     el.addEventListener('pointerleave', () => this.h.onHover?.(null));
-    el.addEventListener('dblclick', (e) => { const r = el.getBoundingClientRect(); const g = this.screenToGround(e.clientX - r.left, e.clientY - r.top); this.flyTo([g.x, g.z], Math.max(120, this.dist * 0.5)); });
+    el.addEventListener('dblclick', (e) => { if (e.target.closest('.lbl')) return; const r = el.getBoundingClientRect(); const g = this.screenToGround(e.clientX - r.left, e.clientY - r.top); this.flyTo([g.x, g.z], Math.max(120, this.dist * 0.5)); });
     this.keys = new Set();
     window.addEventListener('keydown', (e) => { if (/input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return; this.keys.add(e.key.toLowerCase()); });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
-    this.labelLayer.addEventListener('click', (e) => {
-      const t = e.target.closest('.lbl'); if (!t) return;
+    void cv;
+  }
+  labelClick(t) {
+    {
       if (t.dataset.army) { this.selectedArmy = t.dataset.army; this.h.onSelectArmy?.(t.dataset.army); this.syncArmies(); }
       else if (t.dataset.holding) { this.select(t.dataset.holding); this.h.onSelect?.(t.dataset.holding); }
       else { const l = this.labels.find((x) => x.el === t); if (l?.data?.event) this.h.onEvent?.(l.data.event); }
-    });
+    }
   }
   hitTest(sx, sy) {
     if (!this.state || !this.heightF) return null;
@@ -703,6 +728,11 @@ export class MapScene {
       if (this.keys.has('d') || this.keys.has('arrowright')) this.target.x += sp;
       if (this.keys.has('q') || this.keys.has('-')) this.dist *= 1 + dt * 1.2;
       if (this.keys.has('e') || this.keys.has('=')) this.dist *= 1 - dt * 1.2;
+    }
+    if (this.vel) {
+      this.target.x += this.vel.x * dt; this.target.z += this.vel.z * dt;
+      const f = Math.pow(0.04, dt); this.vel.x *= f; this.vel.z *= f;
+      if (Math.abs(this.vel.x) + Math.abs(this.vel.z) < this.dist * 0.01) this.vel = null;
     }
     if (this.goal) {
       const k = 1 - Math.pow(0.02, dt);

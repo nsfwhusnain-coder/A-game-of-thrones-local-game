@@ -494,3 +494,15 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
   background: radial-gradient(ellipse at 50% 45%, transparent 58%, rgba(8,6,4,0.42) 100%), linear-gradient(180deg, rgba(255,214,150,0.04), rgba(20,30,50,0.06)); }
 /* the Begin button stays in reach however long the house's story runs */
 #house-detail #begin { position: sticky; bottom: 0.2rem; z-index: 2; box-shadow: 0 -10px 18px 6px var(--panel), 0 4px 12px rgba(0,0,0,0.5); }
+
+/* ---------- the map: nothing on it is selectable text; far seats become markers ---------- */
+#map-wrap, #map-wrap * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#map-wrap { touch-action: none; }
+.lbl.holding.dot { font-size: 0; padding: 0; margin-top: 0; }
+.lbl.holding.dot::after { content: ''; display: block; width: 0.42rem; height: 0.42rem; transform: rotate(45deg); background: #e8d8a8; border: 1px solid rgba(0,0,0,0.85); box-shadow: 0 0 3px rgba(0,0,0,0.9); }
+.lbl.holding.dot.t5::after, .lbl.holding.dot.t6::after { width: 0.6rem; height: 0.6rem; background: #f4e2a8; }
+.lbl.holding.dot.mine::after { background: #b8f0a0; }
+.lbl.holding.dot.enemy::after { background: #ff9a86; }
+.lbl.holding.dot::before { display: none; }
+/* parchment event cards keep their parchment on hover */
+.event:hover { background: #f7efdc; }
