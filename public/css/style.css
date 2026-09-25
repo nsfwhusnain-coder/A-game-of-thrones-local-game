@@ -120,7 +120,11 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .lbl.army.mine { border-color: #9be070; box-shadow: 0 0 8px rgba(140,230,100,0.5); }
 .lbl.army.enemy { border-color: #e0604a; }
 .lbl.army.sel { outline: 2px solid var(--gold2); }
-.lbl.event { color: var(--gold2); pointer-events: auto; cursor: pointer; width: 1.8rem; height: 1.8rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(#3a2a18, #1a120a); border: 2px solid var(--gold); font-size: 0.95rem; animation: bob 2.4s ease-in-out infinite; box-shadow: 0 0 12px rgba(255,200,100,0.5); }
+.lbl.event { color: var(--gold2); pointer-events: auto; cursor: pointer; width: 1.8rem; height: 1.8rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(#3a2a18, #1a120a); border: 2px solid var(--gold); font-size: 0.95rem; box-shadow: 0 0 10px rgba(255,200,100,0.4); transition: transform .15s; }
+.lbl.event:hover { transform: scale(1.15); }
+.lbl.event.asks { border-color: var(--gold2); animation: pin-ask 2.6s ease-out infinite; }
+@keyframes pin-ask { 0% { box-shadow: 0 0 0 0 rgba(242,204,85,0.55); } 70% { box-shadow: 0 0 0 0.7rem rgba(242,204,85,0); } 100% { box-shadow: 0 0 0 0 rgba(242,204,85,0); } }
+.pin-n { position: absolute; top: -0.45rem; right: -0.5rem; min-width: 1rem; height: 1rem; padding: 0 0.2rem; border-radius: 0.5rem; background: var(--red); color: #fff; font: 700 0.62rem/1rem var(--serif); text-align: center; }
 .lbl.event.imp4, .lbl.event.imp5, .lbl.event.battle { border-color: #ff6a4a; box-shadow: 0 0 14px rgba(255,90,60,0.7); }
 .lbl.pulse { width: 2rem; height: 2rem; border-radius: 50%; border: 3px solid var(--gold2); animation: pulse 1.4s ease-out 3; }
 @keyframes bob { 50% { margin-top: -0.3rem; } }
@@ -530,3 +534,30 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .ev-more { margin: 0.25rem 0 0.1rem; }
 .ev-more summary { cursor: pointer; font-size: 0.78rem; color: color-mix(in srgb, var(--accent, #8a2a1a) 75%, #1a120a); font-family: var(--display); letter-spacing: 0.03em; }
 .ev-more div { font-size: 0.9rem; line-height: 1.45; margin-top: 0.2rem; }
+
+/* ── the pin window: news from a place on the map ── */
+.pin-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 2rem 0.6rem 0; font-family: var(--display); color: var(--gold2); letter-spacing: 0.04em; }
+.pin-count { font-family: var(--serif); color: var(--muted); font-size: 0.85rem; }
+.pin-body.event { margin: 0; cursor: default; }
+.pin-body .et { font-size: 1.15rem; }
+.pin-details { margin-top: 0.6rem; font-size: 0.95rem; line-height: 1.5; }
+.pin-order { margin: 0.8rem 0 0; font-size: 0.9rem; }
+.pin-order summary { cursor: pointer; color: var(--muted); }
+.pin-order textarea { width: 100%; margin: 0.4rem 0; box-sizing: border-box; }
+.dec-own { display: flex; flex-direction: column; gap: 0.3rem; }
+.dec-own textarea { width: 100%; box-sizing: border-box; resize: vertical; }
+.dec-own .dec-custom { align-self: flex-end; }
+
+/* ── meanwhile: the small life of the realm ── */
+.meanwhile { margin: 0.6rem 0; border-top: 1px solid var(--line); padding-top: 0.4rem; }
+.meanwhile summary { cursor: pointer; font-family: var(--display); color: var(--gold2); font-size: 0.85rem; letter-spacing: 0.04em; }
+.mw-region { margin: 0.5rem 0 0.2rem; }
+.mw-title { font-family: var(--display); font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.15rem; }
+.mw-item { font-size: 0.85rem; line-height: 1.4; padding: 0.15rem 0 0.15rem 0.6rem; border-left: 2px solid var(--line); margin-bottom: 0.15rem; cursor: pointer; }
+.mw-item:hover { border-left-color: var(--gold); }
+.mw-item.mine { border-left-color: var(--gold); }
+
+.chron-tabs { display: flex; gap: 0.3rem; margin: 0 2rem 0.4rem 0; }
+.chron-tabs .btn.active { border-color: var(--gold2); color: var(--gold2); }
+.world-log h3 { font-family: var(--display); color: var(--gold2); font-size: 1rem; margin: 1.2rem 0 0.3rem; border-bottom: 1px solid var(--line); }
+.world-log li { font-size: 0.88rem; margin-bottom: 0.2rem; }

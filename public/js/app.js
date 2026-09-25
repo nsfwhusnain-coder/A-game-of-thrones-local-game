@@ -12,7 +12,8 @@ import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
 import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
-import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, wireDecisions, wireVoices } from './ui/drawer.js';
+import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
+import { openPin } from './ui/pins.js';
 import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName } from './shared/world.js';
 import { project, SEASONS } from './shared/economy.js';
 
@@ -130,7 +131,7 @@ async function startGame(id, state) {
         onSelect: (hid) => { if (app.picking) return finishPick(hid); if (hid) openSheet('holding', hid); else closeSheet(); },
         onSelectArmy: (aid) => openSheet('army', aid),
         onHover: showTooltip,
-        onEvent: (e) => { setDrawer('feed'); if (e.where && app.state.holdings[e.where]) app.map.flyTo(app.state.holdings[e.where].pos); toast(e.title + ' — ' + e.text); },
+        onPin: (where) => openPin(where),
       });
       await app.map.generate(app.state.holdings, (p, msg) => { $('#map-loading-bar').style.width = Math.round(p * 100) + '%'; $('#map-loading-text').textContent = msg + '…'; });
     } catch (e) {
@@ -340,7 +341,8 @@ function showTurnReport(t) {
   modal(`<h2>${esc(t.dateFrom)} → ${esc(t.date)}</h2>
     ${decs ? `<h4>Decisions await you</h4>${decs}<hr>` : ''}
     <div class="summary">${esc(t.summary)}</div><hr>
-    ${t.events.map(eventHtml).join('')}
+    ${mainEvents(t.events).map(eventHtml).join('')}
+    ${meanwhileHtml(t.events)}
     ${L ? `<hr><h4>Your accounts</h4><div class="kv"><span class="k">Income</span><span style="color:#a8e08a">+${fmt(L.income)}</span><span class="k">Expenses</span><span style="color:#ec9a8a">−${fmt(L.expense)}</span><span class="k">Treasury</span><span><b>${fmt(L.prevTreasury)} → ${fmt(L.treasury)}</b></span><span class="k">Food stores</span><span>${L.food} moons</span></div>
       ${L.lines.filter((l) => l.note && /withheld|late|short/.test(l.note)).map((l) => `<div class="muted" style="font-size:0.85rem">⚠ ${esc(l.label)} — ${esc(l.note)}</div>`).join('')}` : ''}
     ${t.applied?.length ? `<hr><details><summary><h4 style="display:inline">The world changes (${t.applied.length})</h4></summary><ul class="changes">${t.applied.map((a) => `<li>${esc(a.text)}</li>`).join('')}</ul></details>` : ''}
@@ -348,19 +350,28 @@ function showTurnReport(t) {
     <div class="report-actions"><button class="btn primary" data-action="close-modal">Continue</button></div>`);
   // once every decision here is answered, the report steps aside (it stays in the Events feed)
   wireDecisions($('#modal-box'), { onAllDone: () => { if (!(app.state.decisions || []).some((d) => d.status === 'pending')) closeModal(); } });
-  for (const e of t.events) if (e.where && app.state.holdings[e.where]) app.map.flash(app.state.holdings[e.where].pos);
+  for (const e of mainEvents(t.events)) if (e.where && app.state.holdings[e.where]) app.map.flash(app.state.holdings[e.where].pos);
 }
 
 async function showChronicle() {
   if (!app.saveId) return;
   const r = await api(`/games/${app.saveId}/chronicle`);
-  modal(`<h2>📜 The Chronicle</h2><p class="muted" style="font-size:0.85rem">The long memory of your story. Every few turns the archmaester compresses older events into this record (<code>saves/${esc(app.saveId)}/chronicle.md</code>). The simulator reads it every turn — edit it to correct or steer the tale.</p>
+  modal(`<div class="chron-tabs"><button class="btn small active" id="chron-tab-c">The Chronicle</button><button class="btn small" id="chron-tab-w">World log</button></div><h2>📜 The Chronicle</h2><p class="muted" style="font-size:0.85rem">The long memory of your story. Every few turns the archmaester compresses older events into this record (<code>saves/${esc(app.saveId)}/chronicle.md</code>). The simulator reads it every turn — edit it to correct or steer the tale.</p>
     <div class="md" id="chron-view">${md(r.text)}</div>
     <textarea class="chronicle-edit hidden" id="chron-edit">${esc(r.text)}</textarea>
     <div class="settings-actions"><button class="btn" id="chron-toggle">Edit</button><button class="btn hidden" id="chron-save">Save</button><button class="btn ghost" id="chron-consolidate">Consolidate now</button></div>`);
   $('#chron-toggle').onclick = () => { $('#chron-view').classList.toggle('hidden'); $('#chron-edit').classList.toggle('hidden'); $('#chron-save').classList.toggle('hidden'); };
   $('#chron-save').onclick = async () => { await api(`/games/${app.saveId}/chronicle`, { body: { text: $('#chron-edit').value } }); toast('Chronicle saved.'); showChronicle(); };
   $('#chron-consolidate').onclick = async () => { busy(true, 'The archmaester writes…'); try { await api(`/games/${app.saveId}/consolidate`, { body: {} }); app.state = await api('/games/' + app.saveId); showChronicle(); } catch (e) { toast(e.message, true); } finally { busy(false); } };
+  $('#chron-tab-w').onclick = showWorldLog;
+}
+// Everything that happened, turn by turn, newest first — the orders, the decisions, the great events and the small ones
+async function showWorldLog() {
+  const r = await api(`/games/${app.saveId}/worldlog`);
+  const turns = r.text.split(/\n(?=## Turn )/).filter((t) => t.startsWith('## Turn'));
+  modal(`<div class="chron-tabs"><button class="btn small" id="chron-tab-c">The Chronicle</button><button class="btn small active" id="chron-tab-w">World log</button></div><h2>📖 World log</h2><p class="muted" style="font-size:0.85rem">Everything that has happened, turn by turn — your orders, your decisions, the great events and the small life of the realm. Newest first. Also kept as <code>saves/${esc(app.saveId)}/world-log.md</code>.</p>
+    <div class="md world-log">${turns.length ? md(turns.reverse().join('\n\n')) : '<p class="muted">Nothing yet — advance time and the log begins.</p>'}</div>`);
+  $('#chron-tab-c').onclick = showChronicle;
 }
 
 async function showSettings() {
@@ -402,13 +413,14 @@ async function showSettings() {
       <div><label>Thinking (reasoning models such as Qwen3)</label><select id="cfg-think"><option value="auto">Server default</option><option value="on">On — deeper, slower turns</option><option value="off">Off — fast turns</option></select></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-thinkchat" ${c.thinkInAudiences ? 'checked' : ''}> Also think in audiences &amp; councils (slower replies)</label></div>
       <div><label>Thinking budget (extra tokens)</label><input class="input" id="cfg-tbudget" type="number" value="${c.thinkingBudget ?? 6000}"></div>
+      <div><label>Reasoning effort per turn</label><select class="input" id="cfg-effort"><option value="">Server default</option><option value="low">Low — fastest; the engine hands the model a digested world</option><option value="medium">Medium</option><option value="xhigh">Highest — slowest</option></select><small class="muted">For models with effort levels (Qwen3.8). Others ignore it.</small></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-stream" ${c.stream !== false ? 'checked' : ''}> Stream replies (shows live progress)</label></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-json" ${c.jsonMode ? 'checked' : ''}> Force JSON mode (response_format)</label></div>
       <div style="grid-column:1/-1"><label>Extra request parameters (JSON, e.g. {"top_p":0.9,"min_p":0.05})</label><input class="input" id="cfg-extra" value="${esc(JSON.stringify(c.extraBody || {}))}"></div>
     </div>
     <div class="settings-actions"><button class="btn primary" id="cfg-save">Save</button><button class="btn" id="cfg-test">Test connection</button><button class="btn ghost" id="cfg-models">Fetch models</button></div>
     <div id="cfg-result" class="muted" style="margin-top:0.6rem;white-space:pre-wrap;font-size:0.85rem"></div>`);
-  $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full'; $('#cfg-think').value = c.thinking || 'auto';
+  $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full'; $('#cfg-think').value = c.thinking || 'auto'; $('#cfg-effort').value = c.reasoningEffort ?? 'low';
   const showScale = (v) => { setUiScale(v); $('#ui-scale-v').textContent = Math.round(v * 100) + '%'; };
   $('#ui-scale').oninput = (e) => showScale(Number(e.target.value));
   $('#ui-scale-reset').onclick = () => { $('#ui-scale').value = 1; showScale(1); };
@@ -432,7 +444,7 @@ async function showSettings() {
   $$('[data-url]').forEach((b) => b.onclick = () => { $('#cfg-url').value = b.dataset.url; });
   const collect = () => {
     let extra = {}; try { extra = JSON.parse($('#cfg-extra').value || '{}'); } catch { toast('Extra parameters are not valid JSON', true); }
-    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, thinking: $('#cfg-think').value, thinkInAudiences: $('#cfg-thinkchat').checked, thinkingBudget: Number($('#cfg-tbudget').value) || 0, stream: $('#cfg-stream').checked, extraBody: extra };
+    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, thinking: $('#cfg-think').value, thinkInAudiences: $('#cfg-thinkchat').checked, thinkingBudget: Number($('#cfg-tbudget').value) || 0, reasoningEffort: $('#cfg-effort').value, stream: $('#cfg-stream').checked, extraBody: extra };
   };
   $('#cfg-save').onclick = async () => { const r = await api('/config', { body: collect() }); $('#cfg-url').value = r.baseUrl; toast('Settings saved.'); refreshLLMStatus(); };
   $('#cfg-test').onclick = async () => { await api('/config', { body: collect() }); $('#cfg-result').textContent = 'Testing…'; try { const r = await api('/llm/test', { body: {} }); $('#cfg-result').textContent = `✔ Connected (${r.ms} ms, ${r.model || 'model'})\n${r.text}`; } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } refreshLLMStatus(); };

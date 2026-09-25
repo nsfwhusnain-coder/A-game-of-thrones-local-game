@@ -8,7 +8,7 @@ import { sfx } from './sfx.js';
 const wait = (ms, ctl) => new Promise((r) => { const t0 = performance.now(); const tick = () => { if (ctl.skip || ctl.next) return r(); if (ctl.paused) { requestAnimationFrame(tick); return; } if (performance.now() - t0 >= ms) return r(); requestAnimationFrame(tick); }; tick(); });
 
 export async function playTurn(turn, { onDone } = {}) {
-  const evs = [...(turn.events || [])].filter((e) => e.importance >= 2).sort((a, b) => (a.day || 0) - (b.day || 0) || (b.importance || 0) - (a.importance || 0));
+  const evs = [...(turn.events || [])].filter((e) => e.importance >= 2 && (!e.bg || e.mine)).sort((a, b) => (a.day || 0) - (b.day || 0) || (b.importance || 0) - (a.importance || 0));
   if (!evs.length) { onDone?.(); return; }
   const span = SPANS[turn.span]?.days || 30;
   const end = app.state.meta.date;

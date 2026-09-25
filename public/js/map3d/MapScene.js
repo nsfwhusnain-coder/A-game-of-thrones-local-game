@@ -6,6 +6,7 @@ import { realmOf, getRelation, resolvePlaceId, fmt } from '../shared/world.js';
 import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, bannerTexture, tierOf, armyFigureCount, clothUniforms, roofTone } from './models.js';
 import { PathGrid, pathLength, pointAlong } from './pathfind.js';
 import { makeNoise } from '../map/noise.js';
+import { openPins } from '../shared/pins.js';
 
 const GEN_VERSION = 'atlas-v3';
 // Graphics quality (Settings): terrain mesh density, pixel ratio and shadows
@@ -451,19 +452,23 @@ export class MapScene {
     return grp;
   }
 
+  // Pins for news the player has not read and matters awaiting their word. One pin per place; it goes away
+  // once everything under it has been acknowledged or answered (see shared/pins.js).
   syncEventPins() {
     for (const p of this.eventPins) p.el.remove();
     this.labels = this.labels.filter((l) => !this.eventPins.includes(l));
     this.eventPins = [];
-    const s = this.state; const last = s.history.at(-1); if (!last) return;
-    for (const e of last.events) {
-      if (!e.where || !s.holdings[e.where]) continue;
-      const [x, z] = s.holdings[e.where].pos;
-      const lbl = this.addLabel(e.type === 'war' ? '⚔' : e.type === 'economy' ? '🪙' : e.type === 'diplomacy' ? '✉' : e.type === 'intrigue' ? '🗡' : e.type === 'disaster' ? '🔥' : '❖', [x, this.groundAt(x, z) + 14, z], `event imp${e.importance}`, { event: e });
-      lbl.el.title = e.title; this.eventPins.push(lbl);
-    }
-    for (const b of (s.battles || []).filter((b) => b.pos && s.meta.turn - b.turn <= 2)) {
-      const lbl = this.addLabel('⚔', [b.pos[0], this.groundAt(b.pos[0], b.pos[1]) + 10, b.pos[1]], 'event battle', { battle: b }); lbl.el.title = b.name; this.eventPins.push(lbl);
+    const s = this.state; if (!s) return;
+    const ICON = { war: '⚔', economy: '🪙', diplomacy: '✉', intrigue: '🗡', disaster: '🔥', magic: '✦', religion: '✧' };
+    for (const [where, g] of openPins(s)) {
+      const pos = g.pos || s.holdings[where]?.pos; if (!pos) continue;
+      const top = g.events[0]; const n = g.events.length + g.decisions.length;
+      const imp = Math.max(g.decisions.length ? 4 : 0, ...g.events.map((e) => e.importance || 2));
+      const icon = g.decisions.length ? '⚖' : ICON[top?.type] || '❖';
+      const lbl = this.addLabel(icon, [pos[0], this.groundAt(pos[0], pos[1]) + 14, pos[1]], `event pin imp${imp}${g.decisions.length ? ' asks' : ''}`, { pin: where });
+      if (n > 1) lbl.el.insertAdjacentHTML('beforeend', `<b class="pin-n">${n}</b>`);
+      lbl.el.title = g.decisions.length ? `${g.decisions[0].title} — awaits your answer` : top.title;
+      this.eventPins.push(lbl);
     }
   }
   // Canonical places that are not holdings: ruins (the Nightfort, Oldstones, Castamere), abandoned Wall castles,
@@ -556,7 +561,7 @@ export class MapScene {
       } else if (c.startsWith('sea')) { show = vis && (c.includes('big') ? d > 500 : d < 1400 && d > 200); scale = clamp(((l.size || 12) * 700) / d, 8, 30) / 14; }
       else if (c.startsWith('feature')) { show = vis && d < 1300 && d > 250; }
       else if (c.startsWith('army')) { show = vis; }
-      else if (c.startsWith('event')) { show = vis && d < 2200; }
+      else if (c.startsWith('event')) { show = vis; } // unread news and waiting matters stay findable at any zoom
       else if (c.startsWith('landmark')) { show = vis && d < 1100; }
       else if (c.startsWith('place')) { show = vis && d < 330; }
       if (!show) { if (l.shown !== false) { l.el.style.display = 'none'; l.shown = false; } continue; }
@@ -694,7 +699,7 @@ export class MapScene {
     {
       if (t.dataset.army) { this.selectedArmy = t.dataset.army; this.h.onSelectArmy?.(t.dataset.army); this.syncArmies(); }
       else if (t.dataset.holding) { this.select(t.dataset.holding); this.h.onSelect?.(t.dataset.holding); }
-      else { const l = this.labels.find((x) => x.el === t); if (l?.data?.event) this.h.onEvent?.(l.data.event); }
+      else if (t.dataset.pin) this.h.onPin?.(t.dataset.pin);
     }
   }
   hitTest(sx, sy) {

@@ -20,45 +20,60 @@ export function renderDrawer() {
 export function eventHtml(e) {
   return `<div class="event imp-${e.importance}" ${e.where ? `data-where="${e.where}"` : ''}>${eventArt(e)}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<details class="ev-more"><summary>More</summary><div>${esc(e.details)}</div></details>` : ''}<div class="meta">${e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
 }
-export function decisionsHtml() {
+// The small life of the realm, told briefly beneath the turn's great events, grouped by where it happened
+const REGION_ORDER = ['north', 'wall', 'beyond', 'iron_islands', 'riverlands', 'vale', 'westerlands', 'crownlands', 'reach', 'stormlands', 'dorne', 'essos'];
+const REGION_TITLE = { north: 'The North', wall: 'The Wall', beyond: 'Beyond the Wall', iron_islands: 'The Iron Islands', riverlands: 'The Riverlands', vale: 'The Vale', westerlands: 'The Westerlands', crownlands: 'The Crownlands', reach: 'The Reach', stormlands: 'The Stormlands', dorne: 'Dorne', essos: 'Across the Narrow Sea' };
+export const mainEvents = (evs) => (evs || []).filter((e) => !e.bg);
+export function meanwhileHtml(evs, open = false) {
+  const bg = (evs || []).filter((e) => e.bg); if (!bg.length) return '';
+  const s = app.state; const groups = new Map();
+  for (const e of bg) { const r = s.holdings[e.where]?.region || 'other'; if (!groups.has(r)) groups.set(r, []); groups.get(r).push(e); }
+  const regions = [...groups.keys()].sort((a, b) => REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b));
+  return `<details class="meanwhile"${open ? ' open' : ''}><summary>Meanwhile, across the realm <span class="muted">(${bg.length})</span></summary>${regions.map((r) => `<div class="mw-region"><div class="mw-title">${esc(REGION_TITLE[r] || 'Elsewhere')}</div>${groups.get(r).map((e) => `<div class="mw-item${e.mine ? ' mine' : ''}" ${e.where ? `data-where="${e.where}"` : ''}><b>${esc(e.title)}.</b> ${esc(e.text)}</div>`).join('')}</div>`).join('')}</details>`;
+}
+
+export function decisionsHtml(list) {
   const s = app.state;
-  const pend = (s.decisions || []).filter((d) => d.status === 'pending');
+  const pend = list || (s.decisions || []).filter((d) => d.status === 'pending');
   return pend.map((d) => {
     const who = d.from ? s.characters[d.from] : null;
     return `<div class="decision" data-dec="${d.id}"><div class="dec-head">${who ? `<img src="${por(who, 64)}" alt="">` : '<span class="dec-icon">⚖</span>'}<div><div class="dec-title">${esc(d.title)}</div><div class="muted" style="font-size:0.75rem">${who ? esc(who.name) + ' · ' : ''}${esc(d.date)}</div></div></div>
       <div class="eb">${esc(d.text)}</div>
       <div class="dec-opts">${d.options.map((o, i) => `<button class="btn dec-opt" data-dec-id="${d.id}" data-opt="${i}" title="${esc(o.hint || '')}">${esc(o.label)}${o.hint ? `<small>${esc(o.hint)}</small>` : ''}</button>`).join('')}</div>
-      <input class="input dec-note" placeholder="Add your own words or conditions (optional)…"></div>`;
+      <div class="dec-own"><textarea class="input dec-note" rows="2" placeholder="Or answer in your own words — or add conditions to a choice above…"></textarea><button class="btn small dec-custom" data-dec-id="${d.id}" disabled>Answer in my own words</button></div></div>`;
   }).join('');
 }
-export function wireDecisions(root, { onAllDone } = {}) {
-  $$('.dec-opt', root).forEach((b) => b.onclick = async () => {
+export function wireDecisions(root, { onAllDone, onDecided } = {}) {
+  $$('.dec-note', root).forEach((t) => t.oninput = () => { const b = t.parentElement.querySelector('.dec-custom'); if (b) b.disabled = !t.value.trim(); });
+  $$('.dec-opt, .dec-custom', root).forEach((b) => b.onclick = async () => {
     const card = b.closest('.decision'); if (card.classList.contains('busy')) return;
+    const own = b.classList.contains('dec-custom');
     const note = card.querySelector('.dec-note')?.value || '';
-    card.classList.add('busy'); $$('.dec-opt', card).forEach((x) => { x.disabled = true; x.classList.toggle('chosen', x === b); });
+    if (own && !note.trim()) return;
+    card.classList.add('busy'); $$('.dec-opt, .dec-custom', card).forEach((x) => { x.disabled = true; x.classList.toggle('chosen', x === b); });
     try {
-      const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'decide', decision: b.dataset.decId, option: Number(b.dataset.opt), note } });
+      const r = await api(`/games/${app.saveId}/act`, { body: own ? { kind: 'decide', decision: b.dataset.decId, custom: note } : { kind: 'decide', decision: b.dataset.decId, option: Number(b.dataset.opt), note } });
       // acknowledge the choice where it was made, then fold the card away
-      const label = b.childNodes[0]?.textContent || b.textContent;
+      const label = own ? note.trim() : b.childNodes[0]?.textContent || b.textContent;
       const title = card.querySelector('.dec-title')?.textContent || '';
       card.classList.remove('busy'); card.classList.add('decided');
       card.innerHTML = `<div class="dec-done"><span class="tick">✓</span><div><div class="dec-title">${esc(title)}</div><div>You chose <b>${esc(label)}</b>.${r.effects?.length ? ` <span class="muted">${esc(r.effects.join(' · '))}</span>` : ' <span class="muted">Your word goes out; the realm will answer.</span>'}</div></div></div>`;
-      toast(`Decided: ${label}`);
       setTimeout(() => {
         card.classList.add('folding');
         setTimeout(() => {
           app.setState(r.state);
+          onDecided?.(b.dataset.decId);
           if (!$$('.decision:not(.decided)', root).length) onAllDone?.();
         }, 450);
       }, 1100);
-    } catch (e) { card.classList.remove('busy'); $$('.dec-opt', card).forEach((x) => { x.disabled = false; x.classList.remove('chosen'); }); toast(e.message, true); }
+    } catch (e) { card.classList.remove('busy'); $$('.dec-opt, .dec-custom', card).forEach((x) => { x.disabled = false; x.classList.remove('chosen'); }); toast(e.message, true); }
   });
 }
 function renderFeed(body) {
   const s = app.state;
   const turns = [...s.history].reverse().slice(0, 15);
   body.innerHTML = decisionsHtml() + (turns.length ? turns.map((t) => `<div class="turn-block"><div class="turn-head"><span>Turn ${t.turn}</span><span>${esc(t.date)}</span></div>
-      <div class="summary">${esc(t.summary)}</div>${t.events.map(eventHtml).join('')}
+      <div class="summary">${esc(t.summary)}</div>${mainEvents(t.events).map(eventHtml).join('')}${meanwhileHtml(t.events)}
       ${t.ledger ? `<div class="changes">🪙 Treasury ${t.ledger.net >= 0 ? '+' : ''}${fmt(t.ledger.net)} → ${fmt(t.ledger.treasury)} gd · food ${t.ledger.food} moons</div>` : ''}
       ${t.applied?.length ? `<details class="changes"><summary>${t.applied.length} changes to the world</summary><ul>${t.applied.map((a) => `<li>${esc(a.text)}</li>`).join('')}</ul></details>` : ''}</div>`).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>
@@ -73,7 +88,7 @@ function renderFeed(body) {
       • <b>Advance ▶</b> — time passes; the world acts, the map changes.<br>
       • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></details>`);
   wireDecisions(body);
-  $$('.event[data-where]', body).forEach((el) => el.onclick = () => { const w = el.dataset.where; if (s.holdings[w]) { app.map.flyTo(s.holdings[w].pos); app.map.flash(s.holdings[w].pos); } });
+  $$('.event[data-where], .mw-item[data-where]', body).forEach((el) => el.onclick = () => { const w = el.dataset.where; if (s.holdings[w]) { app.map.flyTo(s.holdings[w].pos); app.map.flash(s.holdings[w].pos); } });
 }
 export function ravenHtml(r) {
   return `<div class="raven-card ${r.read ? '' : 'unread'}"><div class="from">From ${esc(r.fromName)} · ${esc(r.date)}</div>${esc(r.text)}<div style="margin-top:0.4rem;display:flex;gap:0.3rem">${r.from ? `<button class="btn small" data-talk="${r.from}">Reply</button>` : ''}<button class="btn small" data-read-aloud="${r.from || ''}" data-text="${esc(r.text)}">🔊 Read aloud</button></div></div>`;
