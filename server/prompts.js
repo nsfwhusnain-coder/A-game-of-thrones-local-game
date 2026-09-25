@@ -2,6 +2,7 @@
 // decides what every other house does, and emits structured changes that the engine applies.
 import { threadsDigest } from '../public/js/shared/plots.js';
 import { VOICES, HOUSE_WAYS } from '../public/data/voices.js';
+import { personaFor } from '../public/data/histories.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
 import {
   dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS,
@@ -88,6 +89,31 @@ export const SCENE_STYLE = `HOW TO WRITE YOUR REPLY — a short scene of 2 to 5 
 - Show gesture, expression, the room, a pause — what a watchful visitor would notice. Stay in the character's voice: their vocabulary, temper and secrets. Never describe the player's feelings or actions, and never speak for them.
 - By raven: write the letter itself in the first person (it may begin with a greeting and end with a name), with at most one *narration about the letter* (the seal, the hand, a stain).
 - Inside the JSON string, never use double quotes; use single quotes if you must quote something.`;
+
+// Who a character is and how they think: their past, their nature, and how the odds stand.
+// Everyone is not equally clever, brave or proud; the weak and cornered bargain or yield as their nature says.
+function personaBlock(state, c, playerHouse) {
+  const P = personaFor(c); const out = [];
+  if (P.history && P.history !== c.bio) out.push(`YOUR PAST (what you have lived through): ${P.history}`);
+  out.push(`YOUR NATURE — play it, do not play a clever generic noble: courage: ${P.courage}; wits: ${P.wits}; guile: ${P.guile}; pride: ${P.pride}; temper: ${P.temper}; you are swayed by: ${P.swayedBy}.${P.weakness ? ' Your weakness: ' + P.weakness : ''}`);
+  const dull = /dull|simple|foolish|not very clever|narrow/.test(P.wits); const naive = /honest/.test(P.guile) && !/sharp|brilliant/.test(P.wits);
+  if (dull) out.push('You are not clever: you miss hints and traps, take flattery and plain words at face value, and can be talked round by someone smooth.');
+  else if (naive) out.push('You are honest and expect honesty; a practised liar can deceive you.');
+  if (/schemer/.test(P.guile)) out.push('You scheme: you conceal your aims, test the other, and never give something for nothing.');
+  if (/coward|timid|avoids danger|cautious/.test(P.courage)) out.push('Threats and danger frighten you; faced with superior force you look for terms, delay, or flight.');
+  if (/reckless|fearless/.test(P.courage)) out.push('You do not frighten easily; threats make you angry rather than afraid.');
+  // the odds, so strength and weakness are real
+  if (c.house !== playerHouse && state.houses[c.house]) {
+    const mine = realmTotals(state, c.house), theirs = realmTotals(state, playerHouse);
+    const men = (t) => (Number(t.levies) || 0) + (Number(t.menAtArms) || 0);
+    const armies = (h) => Object.values(state.armies).filter((a) => a.owner === h).reduce((n, a) => n + (a.men || 0), 0);
+    const a = men(mine) + armies(c.house), b = men(theirs) + armies(playerHouse);
+    const ratio = b / Math.max(1, a);
+    const stance = ratio > 4 ? 'The player\'s power dwarfs yours; resisting them outright would be ruin — a sensible lord bargains or submits, a proud fool may still defy them.' : ratio > 1.8 ? 'The player is much stronger than you; you must weigh that before refusing.' : ratio < 0.3 ? 'You are far stronger than the player; you need not bend to them.' : ratio < 0.6 ? 'You are stronger than the player.' : 'You and the player are roughly matched.';
+    out.push(`THE ODDS: your house can field ~${Math.round(a).toLocaleString()} men; the player's ~${Math.round(b).toLocaleString()}. ${stance}`);
+  }
+  return out.join('\n');
+}
 
 // ---------------- World digest ----------------
 
@@ -307,6 +333,9 @@ export function buildChatPrompt(state, charId, message, chronicleMd, cfg) {
     `You are ${c.name}${c.title ? ', ' + c.title : ''}, of House ${h?.name || c.house}, in the world of A Song of Ice and Fire. Stay fully in character: voice, knowledge, loyalties, fears, secrets and agenda. Never break character or mention being an AI or a game.`,
     `Your traits: ${c.traits || 'unknown'}. Age ${c.age}. Currently at ${placeName(state, c.loc)}${c.status !== 'free' ? ` (${c.status})` : ''}. ${c.bio || ''}`,
     VOICES[c.id] ? `How you speak: ${VOICES[c.id].voice}\nWhat you want: ${VOICES[c.id].wants}\nWhat you fear: ${VOICES[c.id].fears}` : '',
+    personaBlock(state, c, p),
+    // one's own people serve: a sworn man obeys his lord
+    sameHouse && c.id !== ph.lord ? `YOUR LORD: ${playerLord ? playerLord.name : 'the player'} is your liege lord and you are sworn to his service${(c.roles || []).some((r) => ['family', 'heir', 'lady'].includes(r)) ? ' (you are also his kin: you may speak your mind more freely, but in the end you do as he bids)' : ''}. When he gives you a command you obey it at once and respectfully — "At once, my lord" — and you address him as "my lord". If it is in your nature you may voice a brief concern, but you never refuse, bargain or lecture him, and you never speak of his men or his household as yours. If he commands you to go somewhere, raise or hire men, or take someone into service, include the change so that it truly happens: {"op":"travel","character":"${c.id}","to":"<place>","men":<number or 0>} · {"op":"recruit","at":"<place>","men":<number>,"kind":"men-at-arms"} · {"op":"hire","role":"spymaster|steward|captain|knight|envoy","at":"<place>"}.` : '',
     HOUSE_WAYS[c.house] ? `The way of your house: ${HOUSE_WAYS[c.house]}` : '',
     c.secret ? `Your secret (protect it unless you have strong reason): ${c.secret}` : '',
     c.memories?.length ? `Things you remember:\n- ${c.memories.join('\n- ')}` : '',
@@ -316,7 +345,7 @@ export function buildChatPrompt(state, charId, message, chronicleMd, cfg) {
     'Distance matters: if you are not in the same place as the player, this exchange is by raven or envoy — write accordingly.',
     SCENE_STYLE,
     `Reply ONLY with a JSON object: {"reply":"the scene: *what the player sees you do* and what you say, in first person","changes":[optional change operations caused by this conversation, e.g. figure reports, opinion shifts ("character" op on yourself), pacts you firmly agree to]}.
-Allowed ops: figure, character, relation, pact, raven, army_update, army_move, army_create, liege, obligation, decision, chronicle. Only commit to what your character would genuinely do.`,
+Allowed ops: figure, character, relation, pact, raven, army_update, army_move, army_create, liege, obligation, decision, chronicle${sameHouse ? ', travel, recruit, hire' : ''}. Only commit to what your character would genuinely do.`,
     TALK_SCHEMA,
   ].filter(Boolean).join('\n\n');
   const sc = SCENARIOS[state.meta.scenario];
@@ -361,7 +390,7 @@ export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {
   const key = 'council:' + [...ids].sort().join(',');
   const log = (state.chats[key] || []).slice(-30);
   const system = [
-    `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${VOICES[c.id] ? '; speaks: ' + VOICES[c.id].voice : ''}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
+    `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${VOICES[c.id] ? '; speaks: ' + VOICES[c.id].voice : ''}; nature: courage ${personaFor(c).courage}, wits ${personaFor(c).wits}, guile ${personaFor(c).guile}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
     'Each counsellor speaks in their own voice, from their own expertise and interests; they may disagree with one another and with the lord. Officers give concrete numbers from the ledger. 1-4 of them speak per round, whoever is most relevant. Never break character.',
     SCENE_STYLE.replace('HOW TO WRITE YOUR REPLY — a short scene of 2 to 5 beats', 'HOW EACH COUNSELLOR SPEAKS — each reply is a short scene of 1 to 3 beats'),
     `Reply ONLY with JSON: {"replies":[{"speaker":CHAR_ID,"text":"*what the player sees them do* and what they say, in first person"}],"changes":[optional change operations the council's reports imply — e.g. a steward's corrected figures]}`,

@@ -2,7 +2,7 @@
 import { HOUSES, EXTRA_HOLDINGS, PLACE_ALIASES } from '../../data/houses.js';
 import { CHARACTERS } from '../../data/characters.js';
 import { SCENARIOS } from '../../data/scenarios.js';
-import { JUNCTIONS, PLACE_NAMES, LAND, LAKES } from '../../data/geography.js';
+import { JUNCTIONS, PLACE_NAMES, LAND, LAKES, MILES_PER_UNIT } from '../../data/geography.js';
 import { MAP_VERSION, warpOld } from '../../data/warp.js';
 import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.js';
 import { initEconomy, TAX_LEVELS, project } from './economy.js';
@@ -387,6 +387,11 @@ function findArmy(state, id) {
   if (hid) { const own = Object.values(state.armies).filter((a) => a.owner === hid); if (own.length === 1) return own[0].id; }
   return null;
 }
+export function charPos(state, c) {
+  if (!c) return null;
+  if (String(c.loc || '').startsWith('army:')) return state.armies[c.loc.slice(5)]?.pos || null;
+  const pid = resolvePlaceId(c.loc); return pid ? placePos(pid, state.holdings) : null;
+}
 function posOf(state, place) {
   if (Array.isArray(place) && place.length === 2) return [num(place[0]) ?? 0, num(place[1]) ?? 0];
   const pid = resolvePlaceId(place);
@@ -526,6 +531,83 @@ function applyOne(state, ch, ctx) {
       a.asOf = date; a.movedTurn = state.meta.turn;
       if (a.march && p >= 1 && resolvePlaceId(ch.to) === resolvePlaceId(a.march.to)) delete a.march;
       return { op, text: `${a.name} ${p >= 1 ? 'arrives at' : 'marches toward'} ${placeName(state, ch.to)}` };
+    }
+    // ── orders the engine carries out itself (so the player's commands really happen) ──
+    case 'travel': case 'ride': case 'send_character': {
+      const cid = findChar(state, ch.character || ch.id); if (!cid) throw new Error('unknown character ' + (ch.character || ch.id));
+      const c = state.characters[cid]; if (!c.alive) throw new Error(`${c.name} is dead`);
+      if (/imprisoned|captive/.test(c.status || '')) throw new Error(`${c.name} is a prisoner`);
+      const dest = resolvePlaceId(ch.to || ch.destination); const to = dest && placePos(dest, state.holdings);
+      if (!to) throw new Error('unknown destination ' + (ch.to || ch.destination));
+      const from = charPos(state, c); if (!from) throw new Error(`${c.name}'s whereabouts are unknown`);
+      const men = Math.max(0, Math.round(num(ch.men) ?? 0));
+      if (men >= 20) {
+        // a party of men: taken from a host of the house where the character is, else from the household guard
+        const here = c.loc?.startsWith('army:') ? state.armies[c.loc.slice(5)] : Object.values(state.armies).find((a) => a.owner === c.house && a.type !== 'fleet' && (a.at === c.loc || Math.hypot(a.pos[0] - from[0], a.pos[1] - from[1]) < 6));
+        const guard = state.houses[c.house]?.figures?.menAtArms;
+        let taken = 0, src = '';
+        if (here && here.men > men + 20) { here.men -= men; taken = men; src = `detached from ${here.name}`; }
+        else if (here && here.men <= men + 20 && here.men > 0) { taken = here.men; src = `the whole of ${here.name}`; here.men = 0; delete state.armies[here.id]; }
+        else if (guard && Number(guard.v) >= men) { guard.v = Number(guard.v) - men; taken = men; src = 'from the household guard'; }
+        else if (guard && Number(guard.v) > 20) { taken = Number(guard.v); guard.v = 0; src = 'every man of the household guard'; }
+        if (!taken) throw new Error(`no men to spare where ${c.name} is`);
+        let id = slug(`${c.name.split(' ')[0]}_riders`); while (state.armies[id]) id += '_2';
+        state.armies[id] = { id, owner: c.house, name: ch.name || `${c.name.replace(/^Ser /, '')}'s company`, commander: c.id, at: null, pos: [...from], dest: null, men: taken, type: 'army', composition: ch.composition || 'Household men-at-arms, mounted', status: 'marching', morale: 75, supply: 85, asOf: date, march: { to: dest, since: state.meta.turn } };
+        const origin = c.loc; c.loc = 'army:' + id; delete c.travel;
+        // companions ride with the party: those at the same place (family, officers, wards)
+        const comp = (Array.isArray(ch.companions) ? ch.companions : []).map((x) => state.characters[findChar(state, x)]).filter((x) => x && x.alive && x.id !== c.id && !/imprisoned|captive/.test(x.status || '') && x.loc === origin);
+        for (const x of comp) { x.loc = 'army:' + id; delete x.travel; }
+        return { op, text: `${c.name} rides for ${placeName(state, dest)} with ${fmt(taken)} men (${src})${comp.length ? `, with ${comp.map((x) => x.name).join(', ')}` : ''}` };
+      }
+      const miles = Math.hypot(to[0] - from[0], to[1] - from[1]) * MILES_PER_UNIT * 1.12;
+      const days = Math.max(1, Math.round(miles / 38)); // a rider with a small escort
+      c.travel = { to: dest, days, left: days, since: date };
+      return { op, text: `${c.name} sets out for ${placeName(state, dest)} (~${days} days' ride)` };
+    }
+    case 'recruit': case 'hire_men': {
+      const hid = findHouse(state, ch.house || ch.owner); if (!hid) throw new Error('unknown house');
+      const place = resolvePlaceId(ch.at || ch.location) || state.houses[hid].seat; const pos = placePos(place, state.holdings);
+      if (!pos) throw new Error('unknown place ' + (ch.at || ch.location));
+      // one may hire only where one's people are: one's own lands, a host there, or someone of the house present
+      const present = state.holdings[place]?.owner === hid || Object.values(state.armies).some((a) => a.owner === hid && (a.at === place || Math.hypot(a.pos[0] - pos[0], a.pos[1] - pos[1]) < 8))
+        || Object.values(state.characters).some((c) => c.alive && c.house === hid && (c.loc === place || (c.loc?.startsWith('army:') && state.armies[c.loc.slice(5)]?.at === place)));
+      if (!present) throw new Error(`House ${state.houses[hid].name} has no one at ${placeName(state, place)} to do the hiring`);
+      const kind = /sell|free ?company|merc/i.test(ch.kind || '') ? 'sellswords' : 'men-at-arms';
+      const price = kind === 'sellswords' ? 14 : 9; // dragons a head to arm and sign on
+      const pop = Number(state.holdings[place]?.pop || state.holdings[place]?.population) || 20000;
+      const cap = Math.max(50, Math.round(pop * 0.02));
+      const t = state.houses[hid].figures.treasury = state.houses[hid].figures.treasury || { v: 0 };
+      let men = Math.min(Math.round(num(ch.men) ?? 200), cap, Math.floor((Number(t.v) || 0) / price));
+      if (men < 10) throw new Error(`not enough gold to hire men (${price} dragons a head)`);
+      t.v = Math.round(Number(t.v) - men * price);
+      let host = Object.values(state.armies).find((a) => a.owner === hid && a.type !== 'fleet' && (a.at === place || Math.hypot(a.pos[0] - pos[0], a.pos[1] - pos[1]) < 8));
+      if (host) { host.men += men; host.composition = [host.composition, `${kind} hired at ${placeName(state, place)}`].filter(Boolean).join('; '); }
+      else {
+        let id = slug(`${state.houses[hid].name}_${placeName(state, place)}_company`); while (state.armies[id]) id += '_2';
+        const lord = Object.values(state.characters).find((c) => c.alive && c.house === hid && (c.loc === place));
+        host = state.armies[id] = { id, owner: hid, name: `The ${state.houses[hid].name} company at ${placeName(state, place)}`, commander: lord?.id || null, at: place, pos: [...pos], dest: null, men, type: 'army', composition: `${kind} hired at ${placeName(state, place)}`, status: 'garrison', morale: 65, supply: 80, asOf: date };
+      }
+      return { op, text: `${fmt(men)} ${kind} hired at ${placeName(state, place)} for ${fmt(men * price)} dragons${men < (num(ch.men) ?? 200) ? ' (all that could be found or paid for)' : ''}; ${host.name} now ${fmt(host.men)}` };
+    }
+    case 'hire': case 'hire_officer': {
+      const hid = findHouse(state, ch.house || ch.owner); if (!hid) throw new Error('unknown house');
+      const ROLE = { spymaster: 'Master of whisperers', steward: 'Steward', maester: 'Maester', captain: 'Captain of the guard', master_at_arms: 'Master-at-arms', knight: 'Sworn sword', envoy: 'Envoy', commander: 'Commander' };
+      const role = Object.keys(ROLE).find((r) => r === String(ch.role || '').toLowerCase().replace(/[^a-z_]/g, '_')) || (/spy|whisper/i.test(ch.role || '') ? 'spymaster' : /sword|guard|knight/i.test(ch.role || '') ? 'knight' : null);
+      if (!role) throw new Error('unknown office ' + ch.role);
+      const place = resolvePlaceId(ch.at || ch.location) || state.houses[hid].seat;
+      const t = state.houses[hid].figures.treasury; const cost = role === 'spymaster' ? 600 : role === 'maester' ? 400 : 250;
+      if (!t || Number(t.v) < cost) throw new Error(`not enough gold (${cost} dragons)`);
+      t.v = Number(t.v) - cost;
+      const c = generateKin(state, hid, { female: role === 'spymaster' && Math.random() < 0.3, age: 25 + Math.floor(Math.random() * 25) });
+      // officers are hired men, not kin: a common name and a byname, never the house's own
+      const BYNAMES = { spymaster: ['the Quiet', 'Softfoot', 'of the Street of Silk', 'Longfingers', 'the Grey'], steward: ['the Careful', 'of the Counting House', 'Inkfingers'], maester: [], captain: ['the Hard', 'Hardhand', 'of the Guard'], master_at_arms: ['Ironarm', 'the Old Bull'], knight: ['the Bold', 'of the Kingswood', 'Blackshield'], envoy: ['Silvertongue', 'the Fair'], commander: ['the Grim', 'Oakheart'] };
+      const first = c.name.split(' ')[0]; const by = BYNAMES[role] || [];
+      c.name = ch.name ? String(ch.name).slice(0, 60) : role === 'maester' ? `Maester ${first}` : role === 'knight' ? `Ser ${first} ${by[Math.floor(Math.random() * by.length)] || ''}`.trim() : `${first} ${by[Math.floor(Math.random() * by.length)] || ''}`.trim();
+      const nid = slug(c.name); if (!state.characters[nid]) { delete state.characters[c.id]; c.id = nid; state.characters[nid] = c; }
+      c.roles = [role, ...(role === 'knight' ? [] : [])]; c.title = `${ROLE[role]} of House ${state.houses[hid].name}`;
+      c.bio = ch.bio || `Taken into service at ${placeName(state, place)}.`; c.loc = place; c.loyalty = 55; c.father = undefined; c.mother = undefined;
+      if (role === 'spymaster') c.traits = 'discreet, watchful, well-connected';
+      return { op, text: `${c.name} enters the service of House ${state.houses[hid].name} as ${ROLE[role]} at ${placeName(state, place)} (${cost} dragons)` };
     }
     case 'army_update': case 'fleet_update': {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));

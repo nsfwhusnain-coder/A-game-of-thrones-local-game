@@ -10,6 +10,7 @@ import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
 import { worldTick } from '../public/js/shared/plots.js';
+import { carryOutOrders, readOrdersByRule, executeActions } from './orders.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 export const SAVES = path.join(ROOT, 'saves');
@@ -107,6 +108,9 @@ export async function advance(id, { span = '1m', orders } = {}) {
   const state = loadState(id);
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim()); }
   const chronicle = readChronicle(id);
+  // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
+  // so they truly happen; the story model is told what was done and narrates what follows.
+  const carried = await carryOutOrders(state, cfg.provider === 'mock' ? null : async (msgs) => (await askJson(id, 'orders', msgs, cfg, { maxTokens: 900 })).obj).catch((e) => { console.warn('orders:', e.message); return []; });
   const messages = buildJumpPrompt(state, state.orders, span, chronicle, cfg);
   let { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: (SPANS[span] || SPANS['1m']).days });
   let salvaged = false;
@@ -155,7 +159,23 @@ export async function advance(id, { span = '1m', orders } = {}) {
     const f = Math.min(1, spanInfo.days / Math.max(1, m.days));
     const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to: a.march.to, progress: f, status: f >= 1 ? 'arrived' : 'marching' }]);
     applied.push(...mv.applied);
-    if (f >= 1) delete a.march;
+    if (f >= 1) {
+      // those riding with the host have arrived too
+      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id && c.alive && c.id !== a.commander) c.loc = a.march.to;
+      const cmd = state.characters[a.commander]; if (cmd && cmd.loc === 'army:' + a.id) cmd.loc = a.march.to;
+      if (a.owner === state.meta.player) vt.events.push({ title: `${a.name} reaches ${placeName(state, a.march.to)}`, text: `${a.name} (${a.men.toLocaleString()} men) has arrived at ${placeName(state, a.march.to)}.`, where: a.march.to, importance: 2, type: 'war', houses: [a.owner] });
+      delete a.march;
+    }
+  }
+  // Riders on the road: characters travelling alone arrive when their days are spent
+  for (const c of Object.values(state.characters)) {
+    if (!c.travel || !c.alive) continue;
+    c.travel.left -= spanInfo.days;
+    if (c.travel.left <= 0) {
+      const to = c.travel.to; delete c.travel; c.loc = to;
+      applied.push({ op: 'character', text: `${c.name} arrives at ${placeName(state, to)}` });
+      if (c.house === state.meta.player) vt.events.push({ title: `${c.name} reaches ${placeName(state, to)}`, text: `${c.name} has arrived at ${placeName(state, to)}, as you commanded.`, where: to, importance: 2, type: 'court', houses: [c.house] });
+    }
   }
   vt.events.push(...fieldService(state, spanInfo.days), ...gatherMusters(state));
   // The world goes on: the great threads of the story, rising threats, the other houses' lives
@@ -180,7 +200,7 @@ export async function advance(id, { span = '1m', orders } = {}) {
   const p = state.meta.player;
   const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
   for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house] });
-  const record = { turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
+  const record = { carried, turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
   state.history.push(record);
   state.orders = [];
   // If the simulator raised no matter for the player over a moon or more, the realm brings one itself
@@ -282,7 +302,21 @@ export async function talk(id, charId, message) {
     const cur = Number(f.v) || 0;
     return cur === 0 ? v < 5000 : v / cur < 2.5 && v / cur > 0.4;
   });
-  const { applied, rejected } = applyChanges(state, changes, { source: c.name, protectPlayer: true });
+  // Commands to one's own people are carried out: they may ride, recruit and hire in the house's name;
+  // no one else may spend the player's gold or move the player's men.
+  const p = state.meta.player; const ownMan = c.house === p;
+  changes = changes.filter((ch) => {
+    if (!ch || !['travel', 'ride', 'recruit', 'hire', 'hire_men'].includes(String(ch.op))) return true;
+    if (!ownMan) return false;
+    ch.house = p; if (['travel', 'ride'].includes(String(ch.op)) && !ch.character) ch.character = c.id;
+    return true;
+  });
+  let { applied, rejected } = applyChanges(state, changes, { source: c.name, protectPlayer: true });
+  // the model forgot to act on a plain command to a servant: read it by rule, with the servant as the one addressed
+  if (ownMan && c.id !== state.houses[p].lord && !applied.some((a) => ['travel', 'ride', 'recruit', 'hire'].includes(a.op))) {
+    const plan = readOrdersByRule(state, [{ text: message }], c.id);
+    if (plan.actions.length) { const res = executeActions(state, plan.actions); for (const t of res[1] || []) (t.startsWith('could not') ? rejected : applied).push(t.startsWith('could not') ? { change: plan.actions[0], reason: t } : { op: plan.actions[0].op, text: t }); }
+  }
   const turn = state.meta.turn;
   state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn }, { role: 'npc', text: reply, date: dateStr(state.meta.date), turn, applied: applied.map((a) => a.text) }];
   if (state.chronicle.length) { appendChronicle(id, state.chronicle.map((x) => `- ${x.date}: ${x.text}`).join('\n') + '\n'); state.chronicle = []; }

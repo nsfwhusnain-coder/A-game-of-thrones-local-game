@@ -111,7 +111,7 @@ export async function chat(messages, opts = {}) {
   if (cfg.provider === 'mock') return mockResponse(messages, opts);
   if (cfg.provider === 'relay') return relayResponse(messages, opts, cfg);
   // audiences, councils, counsel and memory upkeep are quick exchanges: no deliberation unless asked for
-  const quick = ['chat', 'council', 'suggest', 'consolidate'].includes(opts.kind) && !cfg.thinkInAudiences && (cfg.thinking || 'auto') !== 'off';
+  const quick = ['chat', 'council', 'suggest', 'consolidate', 'orders'].includes(opts.kind) && !cfg.thinkInAudiences && (cfg.thinking || 'auto') !== 'off';
   const thinking = opts.thinking || (quick ? 'off' : cfg.thinking || 'auto');
   // long periods produce long chronicles: give them room (plus room to think)
   const spanK = opts.spanDays ? Math.min(2, 1 + Math.max(0, opts.spanDays - 30) / 330) : 1;

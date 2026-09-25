@@ -432,7 +432,7 @@ function armySheet(id) {
       <div class="s"><div class="k">Morale</div><div class="v">${a.morale}</div>${meter(a.morale, '#c9a44a')}</div>
       <div class="s"><div class="k">Supply</div><div class="v">${a.supply}</div>${meter(a.supply, '#7fb85a')}</div>
     </div>
-    <div class="kv"><span class="k">Position</span><span>${a.at ? esc(placeName(s, a.at)) : 'marching to ' + esc(a.destName || '?')}</span>
+    <div class="kv"><span class="k">Position</span><span>${a.march ? `marching to ${esc(placeName(s, a.march.to))}${(() => { const d = s.holdings[a.march.to]?.pos; return d ? ` · ~${marchDays(a, a.pos, d).days} days away` : ''; })()}` : a.at ? esc(placeName(s, a.at)) : 'in the field'}</span>
     <span class="k">Composition</span><span>${esc(a.composition || '—')}</span><span class="k">Reported</span><span>${esc(a.asOf || '')}</span></div>
     ${cmd ? `<h4>Commander</h4>${charRow(cmd)}` : ''}
     ${(() => {
