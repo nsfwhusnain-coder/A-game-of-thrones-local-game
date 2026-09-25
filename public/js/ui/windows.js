@@ -6,6 +6,7 @@ import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
 import { vassalTemper } from '../shared/vassals.js';
 import { disposition } from '../shared/diplomacy.js';
 import { atWar, battleOdds, marchDays, siegeEstimate } from '../shared/warfare.js';
+import { THREADS, THREATS } from '../shared/plots.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
 
@@ -186,7 +187,19 @@ function intrigue() {
       <label>Means & budget</label><input class="input" id="plot-means" placeholder="e.g. 2,000 dragons, a trusted sellsword, a letter forged in Lord Tywin's hand">
       <div class="row-actions"><button class="btn primary" id="plot-go">🗡 Set it in motion</button></div>
       <p class="muted" style="font-size:0.8rem">Schemes are resolved by the world when time advances. They may take months, fail, or be discovered — with consequences.</p></div>
+    ${shadowsHtml(s)}
     <div class="section"><h4>Whispers & intrigue</h4>${recent.map((e) => `<div class="event"><div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div><div class="meta">${esc(e.date)}</div></div>`).join('') || '<div class="muted">Nothing yet.</div>'}</div>`;
+}
+
+// What is rising in the dark, and what has already come to pass
+function shadowsHtml(s) {
+  const T = s.plots?.threats; if (!T) return '';
+  const tone = (v) => (v > 70 ? 'dire' : v > 45 ? 'grave' : 'calm');
+  const meters = Object.entries(THREATS).map(([k, t]) => { const v = Math.round(T[k] || 0); return `<div class="threat ${tone(v)}"><div class="th-top"><b>${esc(t.name)}</b><span>${v > 70 ? 'Dire' : v > 45 ? 'Rising' : 'Distant'}</span></div><div class="meter"><div style="width:${v}%"></div></div><div class="th-blurb">${esc(t.blurb(v))}</div></div>`; }).join('');
+  const log = (s.plots.log || []).slice(-12).reverse();
+  const thread = Object.fromEntries(THREADS.map((t) => [t.id, t.name]));
+  return `<div class="section"><h4>Shadows over the realm</h4><div class="threats">${meters}</div></div>
+    ${log.length ? `<div class="section"><h4>What has come to pass</h4><ol class="saga">${log.map((l) => `<li><span class="saga-date">${esc(thread[l.thread] || '')}</span><b>${esc(l.title || '')}</b></li>`).join('')}</ol></div>` : ''}`;
 }
 
 // ───────────── People ─────────────

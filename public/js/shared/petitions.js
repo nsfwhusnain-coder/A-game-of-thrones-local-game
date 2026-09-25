@@ -1,6 +1,6 @@
 // Matters of the realm: small petitions and disputes that come before a ruling lord.
 // Used when the simulator itself raised nothing for the player this turn.
-import { vassalsOf, getRelation, generateKin } from './world.js';
+import { vassalsOf, getRelation, generateKin, applyChanges } from './world.js';
 import { isFemale } from './people.js';
 import { answerCall, answerRising, answerRebel } from './vassals.js';
 
@@ -135,6 +135,10 @@ export function applyPetitionFx(state, fx, date = '') {
     if (e.rising) out.push(...answerRising(state, e.rising));
     if (e.rebel) out.push(...answerRebel(state, e.rebel));
     if (e.debt) { me.loans = [...(me.loans || []), { to: e.debt[0], amount: e.debt[1], turn: state.meta.turn }]; }
+    if (e.ops) out.push(...applyChanges(state, e.ops, { source: 'Your decision' }).applied.map((x) => x.text));
+    if (e.plot) { state.plots = state.plots || {}; state.plots.flags = { ...(state.plots.flags || {}), [e.plot[0]]: e.plot[1] }; }
+    if (e.prestige) { me.prestige = (me.prestige || 0) + e.prestige; out.push(`prestige ${e.prestige > 0 ? '+' : ''}${e.prestige}`); }
+    if (e.threat && state.plots?.threats) { const [k, d] = e.threat; state.plots.threats[k] = Math.max(0, Math.min(100, (state.plots.threats[k] || 0) + d)); }
     if (e.chance) { const [pr, yes, no] = e.chance; out.push(...applyPetitionFx(state, Math.random() < pr ? yes : no, date)); }
   }
   return out;

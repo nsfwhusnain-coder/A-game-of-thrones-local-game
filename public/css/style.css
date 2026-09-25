@@ -441,3 +441,19 @@ details.howto .eb, details.howto .et { color: #ece6da; }
 .house-tile img { transform-origin: 50% 0; transition: transform .5s ease; }
 .house-tile:hover img, .house-tile.selected img { animation: banner-sway 4.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .player-banner img, .detail-hero img.banner, .house-tile img { animation: none !important; filter: none; } }
+
+/* ---------- shadows over the realm ---------- */
+.threats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.threat { padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: 4px; background: rgba(0,0,0,0.18); }
+.threat .th-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.85rem; }
+.threat .th-top span { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.threat .meter { height: 0.3rem; margin: 0.3rem 0; }
+.threat.calm .meter div { background: #6f8f6a; }
+.threat.grave .meter div { background: #c9953a; }
+.threat.dire .meter div { background: #b8402e; box-shadow: 0 0 6px rgba(184,64,46,0.7); }
+.threat.dire .th-top span { color: #e0705a; }
+.threat .th-blurb { font-size: 0.78rem; color: var(--muted); font-style: italic; line-height: 1.3; }
+.saga { list-style: none; margin: 0; padding: 0 0 0 0.9rem; border-left: 1px solid var(--line); }
+.saga li { position: relative; padding: 0.25rem 0 0.35rem 0.4rem; font-size: 0.85rem; }
+.saga li::before { content: ''; position: absolute; left: -1.23rem; top: 0.55rem; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--bg, #15120f); }
+.saga-date { display: block; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.04em; }

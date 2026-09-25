@@ -9,6 +9,7 @@ import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '
 import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
+import { worldTick } from '../public/js/shared/plots.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 export const SAVES = path.join(ROOT, 'saves');
@@ -157,6 +158,9 @@ export async function advance(id, { span = '1m', orders } = {}) {
     if (f >= 1) delete a.march;
   }
   vt.events.push(...fieldService(state, spanInfo.days), ...gatherMusters(state));
+  // The world goes on: the great threads of the story, rising threats, the other houses' lives
+  const wt = worldTick(state, spanInfo.days);
+  vt.events.push(...wt.events); applied.push(...wt.applied);
   // The seasons turn on their own if the story does not turn them
   if (!applied.some((a) => a.op === 'season')) {
     const turned = seasonTick(state, spanInfo.days);
@@ -183,7 +187,12 @@ export async function advance(id, { span = '1m', orders } = {}) {
   const newDecision = applied.some((a) => a.op === 'decision');
   const pendingCount = (state.decisions || []).filter((d) => d.status === 'pending').length;
   if (!newDecision && pendingCount === 0 && spanInfo.days >= 28 && Math.random() < 0.75) {
-    const pet = realmPetition(state);
+    // the same kind of matter does not come before you twice in quick succession
+    state.plots = state.plots || {}; const seen = state.plots.petitioned = state.plots.petitioned || {};
+    const kindOf = (t) => t.replace(/House [A-Z][\w']*( of [A-Z][\w' ]*)?/g, '').replace(/[^a-z ]/gi, '').trim().slice(0, 40);
+    let pet = null;
+    for (let i = 0; i < 6 && !pet; i++) { const c = realmPetition(state); if (c && state.meta.turn - (seen[kindOf(c.title)] ?? -99) >= 6) pet = c; }
+    if (pet) seen[kindOf(pet.title)] = state.meta.turn;
     if (pet) { const r = applyChanges(state, [{ op: 'decision', ...pet }]); record.applied.push(...r.applied); }
   }
   // Unanswered decisions lapse after a couple of turns — the world moved on without you
@@ -194,6 +203,7 @@ export async function advance(id, { span = '1m', orders } = {}) {
     const rising = fx.find((e) => e.rising), rebel = fx.find((e) => e.rebel);
     if (rising) applyPetitionFx(state, [{ rising: [rising.rising[0], 'ignore'] }]);
     if (rebel) applyPetitionFx(state, [{ rebel: [rebel.rebel[0], 'release'] }]); // silence: they take themselves out of your realm
+    if (d.lapse) applyPetitionFx(state, d.lapse); // the world decides for you
   }
 
   // Flush chronicle ops + major events into the markdown chronicle

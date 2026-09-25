@@ -265,6 +265,9 @@ function playerAsVassal(state, me, months) {
   }
   // a liege at war calls on his sworn swords
   const atWarNow = state.wars.some((w) => w.status !== 'ended' && (w.attackers.includes(liege.id) || w.defenders.includes(liege.id)));
+  // no liege summons a vassal who is at war with him: that is rebellion, not service
+  const rebel = state.wars.some((w) => w.status !== 'ended' && ((w.attackers.includes(me.id) && w.defenders.includes(liege.id)) || (w.defenders.includes(me.id) && w.attackers.includes(liege.id))));
+  if (rebel) return events;
   if (atWarNow && (!ob.levies || ob.levies === 'not_called') && Math.random() < 0.45 * months) { ob.levies = 'called'; ob.muster = liege.seat; ob.calledDays = 0; }
   if (ob.levies === 'delayed') { ob.calledDays = (ob.calledDays || 0) + months * 30; if (ob.calledDays > 40) { ob.levies = 'called'; ob.calledDays = 0; state.relations[k] = { ...(state.relations[k] || {}), v: clamp((state.relations[k]?.v ?? 0) - 5, -100, 100) }; } }
   if (ob.levies === 'called' && !(state.decisions || []).some((d) => d.kind === 'liege_call' && d.status === 'pending')) {

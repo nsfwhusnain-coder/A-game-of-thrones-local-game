@@ -1,5 +1,6 @@
 // Prompt construction for the simulation. The model is the game engine: it narrates,
 // decides what every other house does, and emits structured changes that the engine applies.
+import { threadsDigest } from '../public/js/shared/plots.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
 import {
   dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS,
@@ -195,6 +196,8 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   }
   const people = ['HOUSES (id | name | seat | liege | lord | relation to player)\n' + houseLines.join('\n'), 'CHARACTERS (id | name | house | title | age | location | status)\n' + charLines.join('\n')];
   // houses & characters change little from turn to turn: callers put them first so the model server can reuse its cache
+  const threads = threadsDigest(state);
+  if (threads) parts.push('THREADS OF THE STORY (the engine brings these beats itself when their time comes; you may foreshadow them, and you must not contradict what has happened)\n' + threads);
   if (part === 'static') return people.join('\n\n');
   if (part === 'dynamic') return parts.join('\n\n');
   return [...parts, ...people].join('\n\n');
