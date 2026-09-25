@@ -8,6 +8,7 @@
 //  • Threats that grow with time: the free folk massing, the cold beyond the Wall, the Iron Bank's patience.
 //  • Opportunities: the world state throws up openings the player must answer in time, or lose.
 import { applyChanges } from './world.js';
+import { happenings } from './happenings.js';
 
 const ym = (d) => d.year * 12 + (d.month - 1);
 const YM = (y, m) => y * 12 + (m - 1);
@@ -480,7 +481,7 @@ function churn(s, days) {
       out.changes.push({ op: 'character', id: w.id, note: `Champion of the tourney at ${s.holdings[a.seat]?.name || a.name}.` });
     },
     () => { // a good harvest or a bad one somewhere
-      const h = pick(Object.values(s.holdings).filter((x) => x.owner !== player(s))); if (!h) return;
+      const h = pick(Object.values(s.holdings).filter((x) => x.owner !== player(s) && !['wall', 'beyond', 'essos'].includes(x.region))); if (!h) return;
       const good = Math.random() < 0.55;
       out.events.push(ev(good ? `Full granaries at ${h.name}` : `Blight at ${h.name}`, good ? `The harvest around ${h.name} is the best in memory; the lord's granaries are full to the rafters.` : `A blight has taken the wheat around ${h.name}. The smallfolk are already eating their seed corn.`, h.id, 1, 'economy', [h.owner]));
       out.changes.push({ op: 'holding', id: h.id, prosperity: Math.max(0, Math.min(100, (h.prosperity || 50) + (good ? 6 : -8))) });
@@ -497,7 +498,7 @@ function opportunity(s, raidAt) {
   if (raidAt && (s.holdings[raidAt]?.owner === p || s.houses[s.holdings[raidAt]?.owner]?.liege === p)) {
     const h = s.holdings[raidAt];
     opts.push({
-      id: 'wildling_raid', title: `Wildlings at ${h.name}`, from: s.houses[h.owner]?.lord,
+      id: 'wildling_raid', title: `Wildlings at ${h.name}`, from: s.houses[h.owner]?.lord, where: h.id,
       text: `Raiders from beyond the Wall have burned steadings around ${h.name}. The survivors want vengeance; the Night's Watch wants men.`,
       options: [
         { label: 'Send riders to hunt them down', hint: '100 men-at-arms for a season; unrest falls', fx: [{ menAtArms: -100 }, { unrest: [h.id, -12] }, { prosperity: [h.id, 3] }] },
@@ -573,7 +574,9 @@ export function worldTick(state, days) {
     (s.plots.log = s.plots.log || []).push({ thread: t.id, stage: st.id, turn: s.meta.turn, date: s.meta.date && `${s.meta.date.month}/${s.meta.date.year}`, title: r.events?.[0]?.title || t.name });
   }
   const th = threatTick(s, days); events.push(...(th.events || [])); changes.push(...(th.changes || []));
-  const ch = churn(s, days); events.push(...ch.events); changes.push(...ch.changes);
+  const ch = churn(s, days); for (const e of ch.events) e.bg = true; events.push(...ch.events); changes.push(...ch.changes);
+  // and the thousand small lives of the realm, from the books
+  const hp = happenings(s, days); events.push(...hp.events); changes.push(...hp.changes);
   const { applied } = applyChanges(s, changes, { source: 'The ravens' });
   const pending = (s.decisions || []).filter((d) => d.status === 'pending').length;
   if (!decisions.length && pending < 2 && Math.random() < 0.6) { const o = opportunity(s, th.raid); if (o) decisions.push(o); }
