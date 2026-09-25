@@ -16,6 +16,7 @@ import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtm
 import { openPin } from './ui/pins.js';
 import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName, SPANS } from './shared/world.js';
 import { project, SEASONS } from './shared/economy.js';
+import { underway, orderOutcome, STATUS_LABEL } from './shared/errands.js';
 
 app.openChat = openChat; app.openCouncil = openCouncil;
 
@@ -192,7 +193,13 @@ function renderPlayer() {
 // ───── orders ─────
 function renderOrders() {
   const s = app.state;
-  $('#orders').innerHTML = s.orders.map((o, i) => `<div class="order ${o.auto ? 'auto' : ''}"><span class="n">${i + 1}.</span><span class="t" contenteditable="true" data-oid="${o.id}">${esc(o.text)}</span><button data-del-order="${o.id}" title="Remove">✕</button></div>`).join('');
+  const moving = underway(s); const last = s.history.at(-1); const lastOut = (last?.orders || []).map(orderOutcome);
+  const failed = lastOut.filter((x) => x.status === 'failed').length;
+  const chip = moving.length || lastOut.length ? `<button class="errands-chip" data-action="errands">⏳ ${moving.length} under way${lastOut.length ? ` · last turn: ${lastOut.length - failed} carried out${failed ? `, <b>${failed} failed</b>` : ''}` : ''}</button>` : '';
+  $('#orders').innerHTML = chip + s.orders.map((o, i) => {
+    const st = o.status || 'queued'; const done = st !== 'queued';
+    return `<div class="order ${o.auto ? 'auto' : ''} st-${st}"><span class="n">${i + 1}.</span><span class="t" ${done ? '' : 'contenteditable="true"'} data-oid="${o.id}">${esc(o.text)}</span><span class="ost ${st}" title="${esc((o.result || []).join('; '))}">${STATUS_LABEL[st]}</span>${done ? '' : `<button data-del-order="${o.id}" title="Remove">✕</button>`}</div>`;
+  }).join('');
   $$('[data-del-order]').forEach((b) => b.onclick = () => { s.orders = s.orders.filter((o) => o.id !== b.dataset.delOrder); saveOrders(); renderOrders(); });
   $$('.order .t').forEach((el) => el.onblur = () => { const o = s.orders.find((x) => x.id === el.dataset.oid); if (o) { o.text = el.textContent.trim(); saveOrders(); } });
 }
@@ -246,6 +253,7 @@ function showTooltip(hit, e) {
 
 // ───── busy overlay ─────
 let busyTimer = null;
+const showDiagnostics = () => { try { return localStorage.getItem('model-diagnostics') === '1'; } catch { return false; } };
 // live: the turn is being written — the map stays in view, and the news appears as the model writes it
 function busy(on, text, { live = false } = {}) {
   app.busy = on; $('#busy').classList.toggle('hidden', !on); $('#busy').classList.toggle('live', on && live); clearInterval(busyTimer);
@@ -260,12 +268,16 @@ function busy(on, text, { live = false } = {}) {
       if (app.saveId && !polling) { polling = true; api(`/games/${app.saveId}/progress`).then((p) => { prog = p; }).catch(() => {}).finally(() => { polling = false; }); }
       let what = lines[Math.floor(sec / 6) % lines.length];
       if (prog && prog.phase && prog.phase !== 'idle') {
-        const tps = prog.tokens && prog.ms ? (prog.tokens / Math.max(1, (prog.ms - (prog.firstTokenMs || 0)) / 1000)).toFixed(0) : null;
-        what = prog.phase === 'waiting' ? 'The model is reading the state of the realm (processing the prompt)…'
-          : prog.phase === 'reading' ? `Reading the state of the realm… ${Math.round((100 * (prog.promptDone || 0)) / Math.max(1, prog.promptTotal || 1))}% of ${fmt(prog.promptTotal || 0)} tokens${prog.promptCached ? ` (${fmt(prog.promptCached)} remembered from last time)` : ''}`
-          : prog.phase === 'thinking' ? `The maesters deliberate… ~${fmt(prog.thinkTokens || 0)} tokens of thought`
-          : prog.phase === 'writing' ? `Writing… ~${fmt(prog.tokens || 0)} tokens${tps ? ` (${tps}/s)` : ''}${prog.thinkTokens ? ` after ~${fmt(prog.thinkTokens)} of thought` : ''}`
+        // in the world's words; the numbers only for those who ask for them (Settings → model diagnostics)
+        const pct = prog.phase === 'reading' ? Math.round((100 * (prog.promptDone || 0)) / Math.max(1, prog.promptTotal || 1)) : null;
+        what = prog.phase === 'waiting' || prog.phase === 'reading' ? `The maesters read the letters of the realm…${pct !== null ? ` ${pct}%` : ''}`
+          : prog.phase === 'thinking' ? 'The maesters deliberate…'
+          : prog.phase === 'writing' ? (live && prog.events?.length ? `The news comes in… (${prog.events.length} so far)` : 'The chronicle is written…')
           : prog.note ? prog.note.charAt(0).toUpperCase() + prog.note.slice(1) + '…' : what;
+        if (showDiagnostics()) {
+          const tps = prog.tokens && prog.ms ? (prog.tokens / Math.max(1, (prog.ms - (prog.firstTokenMs || 0)) / 1000)).toFixed(0) : null;
+          what += ` [${prog.phase}${prog.promptTotal ? ` · prompt ${fmt(prog.promptTotal)}${prog.promptCached ? `, ${fmt(prog.promptCached)} cached` : ''}` : ''}${prog.thinkTokens ? ` · think ${fmt(prog.thinkTokens)}` : ''}${prog.tokens ? ` · out ${fmt(prog.tokens)}` : ''}${tps ? ` @ ${tps}/s` : ''}]`;
+        }
       }
       $('#busy-time').textContent = `${sec}s — ${what}`;
       // the events already written: each appears once, and the camera goes to where it happened
@@ -304,10 +316,20 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) advance();
 });
 
+// What is under way, and how last turn's orders came out — read from the same state the map and People show
+function showErrands() {
+  const s = app.state; const moving = underway(s); const last = s.history.at(-1);
+  const ICON = { ride: '🐎', march: '⚔', banners: '🏳', works: '🔨' };
+  const rows = moving.map((m) => `<div class="errand"><span class="ei">${ICON[m.kind]}</span><div class="grow"><b>${esc(m.who)}</b> <span class="muted">${esc(m.text)}</span></div><span class="ed">${m.days ? `~${m.days} ${m.days === 1 ? 'day' : 'days'}` : '—'}</span></div>`).join('') || '<div class="muted">Nothing of yours is on the road or being built.</div>';
+  const outs = (last?.orders || []).map((o) => { const r = orderOutcome(o); return `<div class="errand"><span class="ost ${r.status}">${STATUS_LABEL[r.status]}</span><div class="grow">${esc(o.text)}${r.lines.length ? `<div class="muted" style="font-size:0.8rem">${r.lines.map(esc).join(' · ')}</div>` : ''}</div></div>`; }).join('');
+  modal(`<h2>Under way</h2>${rows}${outs ? `<h4 style="margin-top:1rem">Your orders of ${esc(last.dateFrom || last.date)}</h4>${outs}` : ''}`);
+}
+
 async function handleAction(action, el) {
   const s = app.state;
   switch (action) {
     case 'add-order': addOrder(orderInput.value); orderInput.value = ''; break;
+    case 'errands': return showErrands();
     case 'advance': return advance();
     case 'suggest': {
       busy(true, 'Your advisors deliberate…');
@@ -452,6 +474,7 @@ async function showSettings() {
       <div><label>Thinking budget (extra tokens)</label><input class="input" id="cfg-tbudget" type="number" value="${c.thinkingBudget ?? 6000}"></div>
       <div><label>Reasoning effort per turn</label><select class="input" id="cfg-effort"><option value="">Server default</option><option value="low">Low — fastest; the engine hands the model a digested world</option><option value="medium">Medium</option><option value="xhigh">Highest — slowest</option></select><small class="muted">For models with effort levels (Qwen3.8). Others ignore it.</small></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-stream" ${c.stream !== false ? 'checked' : ''}> Stream replies (shows live progress)</label></div>
+      <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-diag" ${showDiagnostics() ? 'checked' : ''}> Show model diagnostics while the turn is written (tokens, cache, speed)</label></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-json" ${c.jsonMode ? 'checked' : ''}> Force JSON mode (response_format)</label></div>
       <div style="grid-column:1/-1"><label>Extra request parameters (JSON, e.g. {"top_p":0.9,"min_p":0.05})</label><input class="input" id="cfg-extra" value="${esc(JSON.stringify(c.extraBody || {}))}"></div>
     </div>
@@ -465,6 +488,7 @@ async function showSettings() {
   $('#cfg-url').onchange = () => { if ($('#cfg-provider').value === 'mock') $('#cfg-provider').value = 'openai'; };
   $('#snd-engine').value = voiceSettings().engine; $('#snd-narrator').value = voiceSettings().narrator;
   try { $('#gfx-q').value = localStorage.getItem('gfx-quality') || 'balanced'; } catch { /* */ }
+  $('#cfg-diag').onchange = (e) => { try { localStorage.setItem('model-diagnostics', e.target.checked ? '1' : '0'); } catch { /* */ } };
   $('#gfx-q').onchange = (e) => { try { localStorage.setItem('gfx-quality', e.target.value); } catch { /* */ } toast('Graphics quality changes when the map next loads (reload the page).'); };
   $('#snd-music').onchange = (e) => { startMusic(); setMusic('on', e.target.checked); };
   $('#snd-sfx').onchange = (e) => { setSfx('on', e.target.checked); sfx('bell'); };

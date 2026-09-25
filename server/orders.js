@@ -3,16 +3,12 @@
 // an officer is hired, a levy is raised — and the engine carries them out. The story model is then told what
 // has already been done, so it narrates the consequences instead of deciding whether to obey.
 import { applyChanges, resolvePlaceId, placeName, slug } from '../public/js/shared/world.js';
+import { whereabouts } from '../public/js/shared/roads.js';
+import { commandable } from '../public/js/shared/errands.js';
+export { commandable };
 
 const OFFICES = ['spymaster', 'steward', 'maester', 'captain', 'master_at_arms', 'knight', 'envoy', 'commander'];
 
-// Hosts the player commands: their own, those serving them, and their sworn lords' hosts answering the call
-export function commandable(state, a) {
-  const p = state.meta.player;
-  if (a.owner === p || a.serving === p) return true;
-  const v = state.houses[a.owner];
-  return !!v && v.liege === p && v.obligations?.host === a.id;
-}
 // Where an order means to go: a place by name; a house ('the Lannisters') means its seat; a direction, the
 // obvious place on the road that way from the North and the Riverlands
 function destination(state, text) {
@@ -30,7 +26,7 @@ function context(state) {
   const people = Object.values(state.characters).filter((c) => c.alive && c.house === p).sort((a, b) => (b.roles?.length || 0) - (a.roles?.length || 0)).slice(0, 45);
   const hosts = Object.values(state.armies).filter((a) => commandable(state, a));
   const holds = Object.values(state.holdings).filter((h) => h.owner === p);
-  const where = (c) => (c.loc?.startsWith('army:') ? `with ${state.armies[c.loc.slice(5)]?.name || 'a host'}` : placeName(state, c.loc)) + (c.travel ? ` (riding to ${placeName(state, c.travel.to)})` : '');
+  const where = (c) => whereabouts(state, c).text;
   return [
     `PLAYER HOUSE: ${p} (House ${me.name}). The lord giving orders: ${lord ? `${lord.id} (${lord.name}), at ${where(lord)}` : 'unknown'}.`,
     `TREASURY: ${Math.round(Number(me.figures?.treasury?.v) || 0)} gold dragons. Household men-at-arms: ${Math.round(Number(me.figures?.menAtArms?.v) || 0)}. Unraised levies: ${Math.round(Number(me.figures?.levies?.v) || 0)}.`,
@@ -104,8 +100,23 @@ export function readOrdersByRule(state, orders, addressee = null) {
   return { actions, story: [] };
 }
 
-/** Carry out interpreted actions; returns per-order results. */
-export function executeActions(state, actions) {
+// Is this person the one the order means? Their name, or what they are to the lord ("my wife", "the maester")
+const KIN_WORDS = { wife: (s, c, l) => l?.spouse === c.id, husband: (s, c, l) => l?.spouse === c.id, lady: (s, c, l) => l?.spouse === c.id,
+  heir: (s, c) => s.houses[c.house]?.heir === c.id, son: (s, c, l) => c.father === l?.id || c.mother === l?.id, daughter: (s, c, l) => c.father === l?.id || c.mother === l?.id,
+  children: (s, c, l) => c.father === l?.id || c.mother === l?.id, maester: (s, c) => c.roles?.includes('maester'), steward: (s, c) => c.roles?.includes('steward'),
+  captain: (s, c) => c.roles?.includes('captain'), spymaster: (s, c) => c.roles?.includes('spymaster') };
+export function named(state, c, text) {
+  const t = String(text || ''); const lord = state.characters[state.houses[state.meta.player]?.lord];
+  const surname = state.houses[c.house]?.name;
+  const words = c.name.replace(/^(Ser|Maester|Lord|Lady|Septa|Old) /, '').split(/\s+/).map((w) => w.replace(/[^\w]/g, '')).filter((w) => w.length > 2 && w !== surname);
+  if (words.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(t))) return true;
+  return Object.entries(KIN_WORDS).some(([w, is]) => new RegExp(`\\b${w}\\b`, 'i').test(t) && is(state, c, lord));
+}
+const HIRING = /\b(recruit|hire|enlist|sign(?:s|ing)? on|take on|buy|sellswords?|free company|more men|new men|men-at-arms|raise (?:[\w,]+ ){0,3}(?:men|swords|spears|soldiers|guards))\b/i;
+const MEN_WORDS = /\b(men|riders|swords|guards?|escort|company|spears|knights|soldiers|retinue|household)\b/i;
+
+/** Carry out interpreted actions; returns per-order results. `orders` are the orders the actions came from. */
+export function executeActions(state, actions, orders = []) {
   const p = state.meta.player; const me = state.houses[p]; const results = {};
   const note = (i, text) => { (results[i] = results[i] || []).push(text); };
   for (const a of actions || []) {
@@ -142,7 +153,17 @@ export function executeActions(state, actions) {
         c.roles = [...new Set([...(c.roles || []), a.role])]; note(i, `${c.name} takes up the office of ${a.role.replace('_', ' ')}`); continue;
       }
       const op = { travel: 'travel', recruit: 'recruit', hire: 'hire' }[a.op]; if (!op) continue;
-      const r = applyChanges(state, [{ ...a, op, house: p }], { source: 'Your orders' });
+      const change = { ...a, op, house: p };
+      // gold is spent on men only when the order asks to hire them: "garrison", "drill", "count" hire no one
+      if (op === 'recruit' && orders[i - 1]?.text && !HIRING.test(orders[i - 1].text)) throw new Error('the order does not ask for men to be hired');
+      if (op === 'travel') {
+        // only the one the order names goes, only with men if it asks for men, and a direction is a place
+        const who = state.characters[a.character]; const text = orders[i - 1]?.text;
+        if (who && text && !named(state, who, text)) throw new Error(`the order does not name ${who.name}`);
+        if (text && !MEN_WORDS.test(text) && !/\d/.test(text)) change.men = 0;
+        change.to = destination(state, a.to) || a.to;
+      }
+      const r = applyChanges(state, [change], { source: 'Your orders' });
       r.applied.forEach((x) => note(i, x.text)); r.rejected.forEach((x) => note(i, `could not be done: ${x.reason}`));
     } catch (e) { note(i, `could not be done: ${e.message}`); }
   }
@@ -157,7 +178,7 @@ export async function carryOutOrders(state, ask) {
   if (ask) { try { plan = await ask(ordersPrompt(state, fresh)); } catch { plan = null; } }
   if (!plan || !Array.isArray(plan.actions)) plan = readOrdersByRule(state, fresh);
   else if (!plan.actions.length) { const byRule = readOrdersByRule(state, fresh); if (byRule.actions.length) plan = byRule; }
-  const results = executeActions(state, plan.actions);
+  const results = executeActions(state, plan.actions, fresh);
   // 'all my men', 'the whole host', 'the banners': every sworn host answering the call goes where the order sends the rest
   fresh.forEach((o, k) => {
     if (!/\b(all|every|everything|whole|entire|all my men|the army|my army|banners|bannermen|our strength)\b/i.test(o.text)) return;
@@ -215,7 +236,7 @@ export function resolveEnvoys(state, orders) {
     const changes = holdToVerdict(state, c, stance, []);
     const r = applyChanges(state, changes, { source: `${c.name}'s answer`, protectPlayer: true });
     o.envoy = { who: c.id, verdict: stance.verdict };
-    o.note = [o.note, `[The engine has weighed this message: ${c.name} ${OUTCOME[stance.verdict] || stance.verdict}${stance.proposal ? ` (${stance.proposal})` : ''}${r.applied.length ? ' — recorded: ' + r.applied.map((x) => x.text).join('; ') : ''}. ${stance.mood.fear > 40 ? 'He is afraid. ' : stance.mood.anger > 40 ? 'He is angry. ' : ''}Write his answer as a "raven" op from ${c.id}, in his own voice, and let the consequences follow.]`].filter(Boolean).join(' ');
+    o.note = [o.note, `[The engine has weighed this message: ${c.name} ${OUTCOME[stance.verdict] || stance.verdict}${stance.proposal ? ` (${stance.proposal})` : ''}${r.applied.length ? ' — recorded: ' + r.applied.map((x) => x.text).join('; ') : ''}. ${stance.mood.fear > 40 ? 'He is afraid. ' : stance.mood.anger > 40 ? 'He is angry. ' : ''}Write his answer as a "raven" op from ${c.id} to ${state.houses[state.meta.player].lord}, in his own voice, and let the consequences follow.]`].filter(Boolean).join(' ');
     done.push({ order: o.text, result: [`${c.name} ${OUTCOME[stance.verdict] || stance.verdict}`] });
   }
   return done;

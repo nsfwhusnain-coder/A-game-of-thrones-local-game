@@ -1,6 +1,7 @@
 // Side windows & detail sheets (CK3-style panels).
 import { app, $, $$, esc, fmt, placeName, getRelation, api, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
 import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf } from '../shared/world.js';
+import { whereabouts } from '../shared/roads.js';
 import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS, tradeModifier } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
 import { vassalTemper } from '../shared/vassals.js';
@@ -223,7 +224,7 @@ function intrigue() {
       <label>Target</label><select id="plot-target">${houses.map((h) => `<option value="${h.id}">House ${esc(h.name)}</option>`).join('')}</select>
       <label>Means & budget</label><input class="input" id="plot-means" placeholder="e.g. 2,000 dragons, a trusted sellsword, a letter forged in Lord Tywin's hand">
       <div class="row-actions"><button class="btn primary" id="plot-go">🗡 Set it in motion</button></div>
-      <p class="muted" style="font-size:0.8rem">Schemes are resolved by the world when time advances. They may take months, fail, or be discovered — with consequences.</p></div>
+      <p class="muted" style="font-size:0.8rem">Planting spies and uncovering secrets is your spymaster's work, settled at once and paid for now. Every other scheme becomes a secret order that unfolds as time advances — it may take months, fail, or be discovered.</p></div>
     ${shadowsHtml(s)}
     <div class="section"><h4>Whispers & intrigue</h4>${recent.map((e) => `<div class="event"><div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div><div class="meta">${esc(e.date)}</div></div>`).join('') || '<div class="muted">Nothing yet.</div>'}</div>`;
 }
@@ -235,7 +236,13 @@ function shadowsHtml(s) {
   const meters = Object.entries(THREATS).map(([k, t]) => { const v = Math.round(T[k] || 0); return `<div class="threat ${tone(v)}"><div class="th-top"><b>${esc(t.name)}</b><span>${v > 70 ? 'Dire' : v > 45 ? 'Rising' : 'Distant'}</span></div><div class="meter"><div style="width:${v}%"></div></div><div class="th-blurb">${esc(t.blurb(v))}</div></div>`; }).join('');
   const log = (s.plots.log || []).slice(-12).reverse();
   const thread = Object.fromEntries(THREADS.map((t) => [t.id, t.name]));
-  return `<div class="section"><h4>Shadows over the realm</h4><div class="threats">${meters}</div></div>
+  // the great matters that have begun: where each stands, never what comes next
+  const matters = THREADS.filter((t) => (s.plots.stages?.[t.id] || 0) > 0).map((t) => {
+    const i = s.plots.stages[t.id]; const lastLog = (s.plots.log || []).filter((l) => l.thread === t.id).at(-1);
+    const st = i >= t.stages.length ? ['done', 'Resolved'] : ['underway', 'Unfolding'];
+    return `<div class="errand"><span class="ost ${st[0]}">${st[1]}</span><div class="grow"><b>${esc(t.name)}</b>${lastLog?.title ? `<div class="muted" style="font-size:0.8rem">Last: ${esc(lastLog.title)}</div>` : ''}</div></div>`;
+  }).join('');
+  return `${matters ? `<div class="section"><h4>Great matters</h4>${matters}</div>` : ''}<div class="section"><h4>Shadows over the realm</h4><div class="threats">${meters}</div></div>
     ${log.length ? `<div class="section"><h4>What has come to pass</h4><ol class="saga">${log.map((l) => `<li><span class="saga-date">${esc(thread[l.thread] || '')}</span><b>${esc(l.title || '')}</b></li>`).join('')}</ol></div>` : ''}`;
 }
 
@@ -310,7 +317,7 @@ const wire = {
   people(body) {
     const draw = () => {
       const s = app.state; const q = app.peopleFilter.toLowerCase();
-      const list = Object.values(s.characters).filter((c) => (app.peopleDead || c.alive) && (!app.peopleHouse || c.house === app.peopleHouse || kinOf(s, c, app.peopleHouse)) && (!q || `${c.name} ${c.title} ${s.houses[c.house]?.name} ${placeName(s, c.loc)}`.toLowerCase().includes(q)));
+      const list = Object.values(s.characters).filter((c) => (app.peopleDead || c.alive) && (!app.peopleHouse || c.house === app.peopleHouse || kinOf(s, c, app.peopleHouse)) && (!q || `${c.name} ${c.title} ${s.houses[c.house]?.name} ${whereabouts(s, c).text}`.toLowerCase().includes(q)));
       list.sort((a, b) => (b.alive - a.alive) || a.name.localeCompare(b.name));
       $('#people-rows', body).innerHTML = list.slice(0, 200).map((c) => charRow(c)).join('') || '<div class="muted">No one.</div>';
     };
@@ -389,7 +396,7 @@ function characterSheet(id) {
       <div class="muted">${esc(c.title || c.roles.join(', '))}</div>
       <div style="margin:0.3rem 0">${sig(h, 1.3)} <a href="#" data-house="${h?.id}">House ${esc(h?.name)}</a></div>
       <div class="kv"><span class="k">Age</span><span>${c.alive ? c.age : `${c.age} (died ${c.died || '?'} AC)`}</span>
-      <span class="k">Where</span><span>${c.alive ? esc(placeName(s, c.loc)) : '—'}</span>
+      <span class="k">Where</span><span>${esc(whereabouts(s, c).text)}</span>
       ${c.alive && c.status !== 'free' ? `<span class="k">Status</span><span class="pill bad">${esc(c.status)}</span>` : ''}
       ${!mine && c.alive ? `<span class="k">Opinion of you</span><span>${relHtml(c.opinion || 0)}</span>` : ''}
       ${c.alive && c.house !== 'free_folk' ? `<span class="k">Loyalty</span><span>${meter(c.loyalty ?? 60, '#7fb85a')}</span>` : ''}</div>

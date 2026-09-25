@@ -421,3 +421,38 @@ async function relayResponse(messages, opts, cfg) {
   }
   throw Object.assign(new Error('Relay timed out waiting for ' + base + '.reply.txt'), { status: 504 });
 }
+
+/**
+ * A council's answer, whatever shape it came back in: the JSON asked for; speaker/text pairs pulled out of JSON
+ * too broken to parse; or plain prose ("Maester Luwin: …"). Code fences and JSON syntax never reach the player;
+ * a counsellor's run of fragments becomes one answer. `people` maps id → name.
+ */
+export function readReplies(text, people, fallback) {
+  const raw = String(text || '');
+  const unq = (t) => t.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  let replies = [], changes = [];
+  try { const o = extractJson(raw); replies = Array.isArray(o.replies) ? o.replies : []; changes = Array.isArray(o.changes) ? o.changes : []; } catch { /* salvaged below */ }
+  if (!replies.length) {
+    const pair = /"speaker"\s*:\s*"([^"]+)"\s*,\s*"text"\s*:\s*"((?:[^"\\]|\\.)*)"/g; let m;
+    while ((m = pair.exec(raw))) replies.push({ speaker: m[1], text: unq(m[2]) });
+  }
+  if (!replies.length) {
+    const prose = raw.replace(/```[a-z]*|```/gi, '').replace(/^\s*[{[].*$/gm, '').replace(/"(replies|speaker|text|changes)"\s*:/g, '').trim();
+    const names = Object.entries(people);
+    let cur = null;
+    for (const line of prose.split('\n')) {
+      const hit = names.find(([, n]) => new RegExp(`^\\**${n.split(' ')[0]}[^:]{0,30}:\\**`, 'i').test(line.trim()));
+      if (hit) { cur = { speaker: hit[0], text: line.trim().replace(/^[^:]+:\**\s*/, '') }; replies.push(cur); } else if (line.trim()) { if (!cur) { cur = { speaker: fallback, text: '' }; replies.push(cur); } cur.text += (cur.text ? '\n' : '') + line.trim(); }
+    }
+  }
+  const idOf = (sp) => (people[sp] ? sp : Object.keys(people).find((i) => people[i] === sp || people[i].split(' ')[0] === String(sp).split(' ')[0]) || fallback);
+  const clean = (t) => String(t || '').replace(/```[a-z]*|```/gi, '').replace(/^\s*[{[\]}],?\s*$/gm, '').trim();
+  const out = [];
+  for (const r of replies) {
+    const speaker = idOf(r.speaker); const t = clean(r.text); if (!t) continue;
+    if (out.at(-1)?.speaker === speaker) out.at(-1).text += '\n\n' + t; else out.push({ speaker, text: t });
+  }
+  // words, not only gestures: an answer that is all *stage direction* says nothing
+  const spoken = out.some((r) => r.text.replace(/\*[^*]*\*/g, '').trim().length > 12);
+  return { replies: out, changes, spoken };
+}

@@ -2,19 +2,30 @@
 // road and the goat tracks, and the road is not safe: outlaws where the land is restless, foragers where
 // there is war, floods and snow by the season — and now and then a friend, a hedge knight, a stranger with
 // news. The engine rolls for each traveller each turn; the player's own people's roads are pinned on the map.
-import { applyChanges } from './world.js';
-import { atWar } from './warfare.js';
+import { applyChanges, roadPos, placeName } from './world.js';
+import { atWar, marchDays } from './warfare.js';
 
 const pick = (a, r) => a[Math.floor(r() * a.length)];
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
 /** Where a rider is now, between where they set out and where they are going (for the map, too). */
-export function riderPos(state, c) {
-  const t = c.travel; if (!t) return null;
-  const to = state.holdings[t.to]?.pos; const from = t.from;
-  if (!to || !from) return to || null;
-  const f = Math.max(0, Math.min(1, 1 - t.left / Math.max(1, t.days)));
-  return [from[0] + (to[0] - from[0]) * f, from[1] + (to[1] - from[1]) * f];
+export function riderPos(state, c) { return roadPos(state, c); }
+
+/**
+ * Where someone is, the one way every view tells it: at a place; on the road (whence, whither, days left,
+ * the size of the party); or with a host (its men, and where it marches). Returns { text, place, to, days, men }.
+ */
+export function whereabouts(state, c) {
+  if (!c?.alive) return { text: '—' };
+  const t = c.travel;
+  if (t) return { text: `on the road to ${placeName(state, t.to)} · ~${Math.max(1, Math.round(t.left))} days`, to: t.to, days: Math.max(1, Math.round(t.left)), men: 0 };
+  if (String(c.loc || '').startsWith('army:')) {
+    const a = state.armies[c.loc.slice(5)]; if (!a) return { text: 'in the field' };
+    const dest = a.march?.to && state.holdings[a.march.to];
+    const days = dest ? marchDays(a, a.pos, dest.pos).days : 0;
+    return { text: `with ${a.name} (${a.men.toLocaleString('en-GB')} men)${dest ? ` · marching to ${dest.name}, ~${days} days` : a.at ? ` at ${placeName(state, a.at)}` : ''}`, place: a.at, to: a.march?.to, days, men: a.men };
+  }
+  return { text: placeName(state, c.loc), place: c.loc };
 }
 function nearest(state, pos) {
   let best = null, d = Infinity;

@@ -401,6 +401,14 @@ function findArmy(state, id) {
   if (hid) { const own = Object.values(state.armies).filter((a) => a.owner === hid); if (own.length === 1) return own[0].id; }
   return null;
 }
+/** Where a rider is now, between where they set out and where they are going. */
+export function roadPos(state, c) {
+  const t = c?.travel; if (!t) return null;
+  const to = placePos(t.to, state.holdings); const from = t.from;
+  if (!to || !from) return to || null;
+  const f = Math.max(0, Math.min(1, 1 - t.left / Math.max(1, t.days)));
+  return [from[0] + (to[0] - from[0]) * f, from[1] + (to[1] - from[1]) * f];
+}
 export function charPos(state, c) {
   if (!c) return null;
   if (String(c.loc || '').startsWith('army:')) return state.armies[c.loc.slice(5)]?.pos || null;
@@ -522,6 +530,7 @@ function applyOne(state, ch, ctx) {
     }
     case 'army_create': case 'fleet_create': case 'raise_army': {
       const owner = findHouse(state, ch.owner); if (!owner) throw new Error('unknown owner ' + ch.owner);
+      if (ctx.protectPlayer && owner === state.meta.player) throw new Error('only you raise your men');
       const pos = posOf(state, ch.at || ch.location) || placePos(owner, state.holdings) || placePos(state.houses[owner].seat, state.holdings);
       if (!pos) throw new Error('no position');
       let id = slug(ch.id || ch.name || `${owner}_host`);
@@ -538,6 +547,7 @@ function applyOne(state, ch, ctx) {
     case 'army_move': case 'fleet_move': case 'move_army': {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
       const a = state.armies[id];
+      if (ctx.protectPlayer && (a.owner === state.meta.player || a.serving === state.meta.player) && !ctx.mayMove?.includes(a.commander)) throw new Error(`only you move ${a.name}`);
       const dest = posOf(state, ch.to);
       if (!dest) throw new Error('unknown destination ' + ch.to);
       const p = clamp(num(ch.progress) ?? 1, 0, 1);
@@ -554,9 +564,21 @@ function applyOne(state, ch, ctx) {
       const cid = findChar(state, ch.character || ch.id); if (!cid) throw new Error('unknown character ' + (ch.character || ch.id));
       const c = state.characters[cid]; if (!c.alive) throw new Error(`${c.name} is dead`);
       if (/imprisoned|captive/.test(c.status || '')) throw new Error(`${c.name} is a prisoner`);
+      // the player's own people go where the player sends them, and nowhere else
+      if (ctx.protectPlayer && c.house === state.meta.player && !ctx.mayMove?.includes(c.id)) throw new Error(`only you send ${c.name} anywhere`);
       const dest = resolvePlaceId(ch.to || ch.destination); const to = dest && placePos(dest, state.holdings);
       if (!to) throw new Error('unknown destination ' + (ch.to || ch.destination));
-      const from = charPos(state, c); if (!from) throw new Error(`${c.name}'s whereabouts are unknown`);
+      if (c.travel?.to === dest) throw new Error(`${c.name} is already on the road to ${placeName(state, dest)}`);
+      // one who leads a small company turns the whole company, rather than riding off and leaving it on the road
+      const led = String(c.loc || '').startsWith('army:') && state.armies[c.loc.slice(5)];
+      if (led && led.commander === c.id && led.men < 400) {
+        if (led.march?.to === dest || led.at === dest) throw new Error(`${c.name} is already bound for ${placeName(state, dest)}`);
+        led.march = { to: dest, since: state.meta.turn }; led.status = 'marching'; led.at = null;
+        return { op, text: `${c.name} turns ${led.name} (${fmt(led.men)} men) for ${placeName(state, dest)}` };
+      }
+      if (!c.travel && resolvePlaceId(c.loc) === dest) throw new Error(`${c.name} is already at ${placeName(state, dest)}`);
+      // one already on the road turns back from where they are now, not from where they set out
+      const from = c.travel ? roadPos(state, c) : charPos(state, c); if (!from) throw new Error(`${c.name}'s whereabouts are unknown`);
       const men = Math.max(0, Math.round(num(ch.men) ?? 0));
       if (men >= 20) {
         // a party of men: taken from a host of the house where the character is, else from the household guard
@@ -578,8 +600,9 @@ function applyOne(state, ch, ctx) {
       }
       const miles = Math.hypot(to[0] - from[0], to[1] - from[1]) * MILES_PER_UNIT * 1.12;
       const days = Math.max(1, Math.round(miles / 38)); // a rider with a small escort
+      const turning = c.travel ? ` (turning back from the road to ${placeName(state, c.travel.to)})` : '';
       c.travel = { to: dest, days, left: days, since: date, from: [...from] };
-      return { op, text: `${c.name} sets out for ${placeName(state, dest)} (~${days} days' ride)` };
+      return { op, text: `${c.name} sets out for ${placeName(state, dest)} (~${days} days' ride)${turning}` };
     }
     case 'recruit': case 'hire_men': {
       const hid = findHouse(state, ch.house || ch.owner); if (!hid) throw new Error('unknown house');
@@ -712,7 +735,14 @@ function applyOne(state, ch, ctx) {
         const raw = ch.with || ch.loc || ch.location;
         const army = findArmy(state, String(raw).replace(/^army:/, ''));
         const l = army && !resolvePlaceId(raw) ? 'army:' + army : (resolvePlaceId(raw) || String(raw));
-        c.loc = l; out.push((army ? 'travels with ' : 'now at ') + placeName(state, l));
+        const here = charPos(state, c); const there = l.startsWith('army:') ? state.armies[army]?.pos : placePos(l, state.holdings);
+        const miles = here && there ? Math.hypot(there[0] - here[0], there[1] - here[1]) * MILES_PER_UNIT * 1.12 : 0;
+        if (ctx.protectPlayer && c.house === state.meta.player && !ctx.mayMove?.includes(c.id) && l !== c.loc) out.push(`stays where you left them (only you send ${c.name} anywhere)`);
+        else if (miles > 60 && !l.startsWith('army:') && c.alive && ch.alive !== false && !/imprisoned|captive|dead/.test(ch.status || c.status || '')) {
+          // no one crosses the realm in a day: a far move is a journey, taken on the road
+          const days = Math.max(2, Math.round(miles / 38));
+          if (c.travel?.to !== l) { c.travel = { to: l, days, left: days, since: date, from: [...(roadPos(state, c) || here)] }; out.push(`sets out for ${placeName(state, l)} (~${days} days)`); }
+        } else { c.loc = l; delete c.travel; out.push((army ? 'travels with ' : 'now at ') + placeName(state, l)); }
       }
       if (ch.title) { c.title = ch.title; out.push('now ' + ch.title); }
       if (ch.status && ch.alive !== false) { c.status = ch.status; out.push(ch.status); }
@@ -815,7 +845,17 @@ function applyOne(state, ch, ctx) {
       return { op, text: `BATTLE: ${state.battles.at(-1).name}${ch.victor ? ' — victory for ' + (state.houses[findHouse(state, ch.victor)]?.name || ch.victor) : ''}` };
     }
     case 'raven': case 'letter': case 'message': {
-      const from = findChar(state, ch.from);
+      const from = findChar(state, ch.from); const to = ch.to ? findChar(state, ch.to) : null;
+      const pl = state.meta.player; const lord = state.houses[pl]?.lord; const fc = from && state.characters[from];
+      // a letter between others is the story's, not the player's post
+      if (to && to !== lord && state.characters[to].house !== pl) {
+        if (ctx.protectPlayer && fc?.house === pl) throw new Error(`only you send ${fc.name}'s letters`);
+        const tc = state.characters[to]; tc.memories = [...(tc.memories || []), `${date}: a letter from ${fc?.name || ch.fromName || 'someone'}`].slice(-12);
+        return { op, text: `${fc?.name || ch.fromName || 'Someone'} writes to ${tc.name}` };
+      }
+      // one of the household at the lord's side speaks to him; no raven flies across a hall
+      const lc = lord && state.characters[lord];
+      if (fc && fc.house === pl && lc && !fc.travel && !lc.travel && fc.loc === lc.loc) throw new Error(`${fc.name} is with you; no raven is needed`);
       state.ravens.unshift({ id: Date.now() + Math.random(), from: from || null, fromName: from ? state.characters[from].name : (ch.fromName || ch.from || 'Unknown'), text: String(ch.text || ''), date, read: false });
       state.ravens = state.ravens.slice(0, 60);
       return { op, text: `A raven arrives from ${state.ravens[0].fromName}` };
@@ -865,8 +905,12 @@ function applyOne(state, ch, ctx) {
         p.status = status === 'complete' ? 'active' : 'cancelled'; if (status === 'complete') p.monthsLeft = 0;
         return { op, text: `${p.name}: ${status}` };
       }
+      if (ctx.protectPlayer && hid === state.meta.player) throw new Error('only you begin your own works');
       const cost = Math.max(0, num(ch.cost) ?? 1000), months = Math.max(0.25, num(ch.months) ?? 3);
       const hold = resolvePlaceId(ch.holding || ch.at) || state.houses[hid].seat;
+      // the same works at the same place are begun once
+      const twin = state.projects.find((x) => x.house === hid && x.status === 'active' && x.holding === hold && slug(x.name) === slug(ch.name || 'Works'));
+      if (twin) throw new Error(`${twin.name} is already under way`);
       const p = { id: slug(ch.id || ch.name || 'project') + '_' + Math.random().toString(36).slice(2, 6), house: hid, name: ch.name || 'Works', holding: hold, cost, remaining: cost, perMonth: cost / months, months, monthsLeft: months, effect: ch.effect || {}, status: 'active', started: date };
       state.projects.push(p);
       return { op, text: `House ${state.houses[hid].name} begins: ${p.name} (${fmt(cost)} gd over ${months} moons)` };

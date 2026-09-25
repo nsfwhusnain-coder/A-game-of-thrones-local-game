@@ -18,6 +18,7 @@ import { temperament, natureTags } from '../public/js/shared/temperament.js';
 import { DEMEANOURS } from '../public/data/demeanours.js';
 import { beliefsAboutPlayer } from '../public/js/shared/intel.js';
 import { AGENDAS } from '../public/data/agendas.js';
+import { whereabouts as whereNow } from '../public/js/shared/roads.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
@@ -37,7 +38,7 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
 - {"op":"war_join","war":"war name or id","house":HOUSE,"side":"attacker|defender"}
 - {"op":"pact","type":"alliance|trade|embargo|marriage|truce|non_aggression|loan|vassalage","a":HOUSE,"b":HOUSE,"terms":"...","status":"active|pending|ended|broken"}
 - {"op":"battle","name":"...","at":PLACE,"attacker":HOUSE,"defender":HOUSE,"victor":HOUSE,"losses":{"HOUSE":N},"summary":"..."}
-- {"op":"raven","from":CHAR_ID,"text":"a letter written in-character to the player"}
+- {"op":"raven","from":CHAR_ID,"to":CHAR_ID,"text":"the letter, in the writer's own words"}   "to" is whom it is for. Only a letter to the player's lord reaches the player; a letter between two others (a sister to a sister) is for the story alone and must name its "to". No one writes to someone in the same castle.
 - {"op":"obligation","house":VASSAL_HOUSE,"tribute":"paying|late|withholding","levies":"not_called|called|answered|delayed|refused","reason":"..."}
     (how a vassal answers its liege: THIS is how a lord refuses the banners or stops paying — the ledger engine then excludes their gold/men)
 - {"op":"tax","house":HOUSE,"level":"low|normal|high|crushing"}
@@ -312,7 +313,7 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
 // one line per event, the orders given and decisions made — rather than whole summaries, which repeat the events.
 export function memoryBlock(state, chronicleMd, budgetTokens, keepRecent) {
   const out = [];
-  if (chronicleMd && chronicleMd.trim()) out.push('THE CHRONICLE (long-term memory of the story so far)\n' + chronicleWithin(chronicleMd, Math.min(CHRONICLE_CAP, Math.floor(budgetTokens * 0.5))));
+  if (chronicleMd && chronicleMd.trim()) out.push('THE CHRONICLE (long-term memory: the past as it stood on the dates written. Where it differs from WHERE PEOPLE ARE and the present state, the present is true — a journey "under way" then may be over now. "Said, not confirmed" is rumour, not fact.)\n' + chronicleWithin(chronicleMd, Math.min(CHRONICLE_CAP, Math.floor(budgetTokens * 0.5))));
   const recent = state.history.filter((t) => t.turn > state.consolidatedThrough).slice(-Math.max(keepRecent, 14));
   // one line per event that mattered; append-only, so the model server's cache holds from turn to turn
   if (recent.length) out.push('RECENT TURNS (compact log: day of the period, place, what happened)\n' + trimToTokens(recent.map((t) => turnLog(state, t, { minImp: 2 })).join('\n\n'), Math.floor(budgetTokens * 0.5), true));
@@ -421,7 +422,7 @@ export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
   "events": [ {"day":DAY_OF_THE_PERIOD,"title":"a headline, like a herald's cry: 'The King is dead'","text":"ONE sentence: what happened","details":"2-4 sentences: how it happened, who was there and how they reacted, and what it means for the realm and for the player","where":PLACE_ID,"importance":1-5,"type":"war|diplomacy|economy|intrigue|court|disaster|rumor|religion|magic","houses":[HOUSE_IDS]} ],
   "changes": [ ...change operations... ]
 }
-LENGTH: for a single day or a few days — the usual turn — the summary is 1-2 sentences and there are 1-3 events and up to 8 changes. The player\'s own lands may be quiet on a given day; THE REALM IS NEVER QUIET: every day at least one event must be a new step by one of the people in WHAT IS IN MOTION — somewhere else in the realm, done by them, named, concrete (who did what, where, and why it matters) — not weather, not "whispers", not "the North remains quiet". Do not narrate that nothing happened. For a week or two: 2-4 events and up to 12 changes; for a moon: 3-6 events and up to 20 changes. Each event: a headline and ONE sentence of "text" naming the people involved; "details" (1-2 sentences) only when there is more worth knowing. "day" is the day of the period on which it happened (1 = the first day); give events in that order.
+LENGTH: for a single day or a few days — the usual turn — the summary is 1-2 sentences and there are 1-3 events and up to 8 changes. The player\'s own lands may be quiet on a given day; THE REALM IS NEVER QUIET: every day at least one event must be a new step by one of the people in WHAT IS IN MOTION — somewhere else in the realm, done by them, named, concrete (who did what, where, and why it matters) — not weather, not "whispers", not "the North remains quiet". Do not narrate that nothing happened. For a week or two: 2-4 events and up to 12 changes; for a moon: 3-6 events and up to 20 changes. Each event: a headline and ONE sentence of "text" naming the people involved; "details" (1-2 sentences) only when there is more worth knowing. "day" is the day of the period on which it happened (1 = the first day); give events in that order. PLACE: people act where WHERE PEOPLE ARE puts them, or on the road they are on. Someone far away takes part only by letter, envoy or rumour — and the event says so ("A raven from…", "It is said in King\'s Landing…"). No one appears somewhere without a "travel" op, and the journey takes days. The player\'s own people and hosts move only by the player\'s orders: never emit travel, army_move or army_create for them.
 EVENTS ARE ABOUT PEOPLE: name who did it — Lord Varys, Ser Jaime Lannister, Petyr Baelish, the captain of the gold cloaks, a hedge knight called Ser Duncan — not "House Lannister". Headlines are short, like a herald\'s cry.
 THE ENGINE ALREADY WRITES THE SMALL LIFE OF THE REALM — weddings, harvests, blights, outlaws, tourneys, fairs, weather, septons, rumours, the canon story beats in THREADS, vassal musters, the ledger. Do not write those. Your events are the consequential ones: what the great houses decide and do, war, intrigue, diplomacy, and above all how the world answers the player\'s orders and decisions. Include changes for every consequence that should appear on the map or in the numbers. Rumours may be inaccurate; changes must reflect the TRUE state.
 
@@ -519,13 +520,48 @@ export function buildSuggestPrompt(state, chronicleMd, cfg) {
   return [{ role: 'system', content: system }, { role: 'user', content: user }];
 }
 
+// The facts of a stretch of turns, as the engine recorded them — dated, and never contradicted by the story:
+// journeys begun and ended, deaths, wars, pacts, fealty, lands changing hands, hosts raised and destroyed.
+const FACT_OPS = new Set(['travel', 'ride', 'send_character', 'army_create', 'raise_army', 'army_destroy', 'army_disband', 'war', 'war_join', 'pact', 'treaty', 'alliance', 'marriage', 'liege', 'set_liege', 'fealty', 'battle', 'project', 'wed', 'marriage_characters', 'betroth', 'recruit', 'hire']);
+const FACT_TEXT = /\b(arrives at|reaches|sets out|rides for|turns .+ for|has died|dies\b|answers the call|marches for|declares|swears|passes from|is destroyed|ceased to exist|captured|imprisoned|released|executed|wed to|betrothed|begins:)/i;
+export function engineFacts(turns, max = 40) {
+  const out = [];
+  for (const t of turns) {
+    const when = t.dateFrom && t.dateFrom !== t.date && (SPANS[t.span]?.days || 1) > 1 ? `${t.dateFrom} – ${t.date}` : t.date;
+    const lines = [...new Set([
+      ...(t.carried || []).flatMap((c) => c.result || []).filter((x) => !/^could not/i.test(x)),
+      ...(t.applied || []).filter((a) => a && (FACT_OPS.has(a.op) || FACT_TEXT.test(a.text || ''))).map((a) => a.text),
+      ...(t.events || []).filter((e) => (e.importance || 0) >= 3).map((e) => `${e.title}${e.text ? ` — ${e.text}` : ''}`),
+    ].map((x) => String(x).replace(/\s+/g, ' ').trim()).filter(Boolean))];
+    for (const l of lines) out.push(`- **${when}** — ${l}`);
+  }
+  return out.slice(-max).join('\n');
+}
+
 export function buildConsolidatePrompt(state, turns, chronicleMd) {
-  const system = 'You are the Archmaester keeping the chronicle of a long game. Compress the given turns into a dense, factual chronicle entry that preserves everything that matters for the future: who holds what, who is dead, alliances, betrayals, debts, grudges, promises, secrets revealed, army and fleet movements, and the player\'s strategy. Use names and places. Reply ONLY with JSON: {"chronicle":"markdown bullet list, ~150-400 words"}';
+  const from = turns[0].dateFrom || turns[0].date, to = turns.at(-1).date;
+  const system = `You are the Archmaester keeping the chronicle of a long game. The dated FACTS of these days are already written by the engine and will stand above your words; do not restate them. You write the two things the engine cannot:
+- "threads": 3-8 bullets on what is IN MOTION or UNRESOLVED as of ${to} — each bullet begins "As of ${to}:" and names who, what and where (a plot, a quarrel, a debt, a journey not yet finished, a secret kept). Say "as of" — never write as though it is still true today.
+- "rumours": 0-5 bullets of what was SAID or SUSPECTED but not confirmed, each marked with who says it ("Rumour in King's Landing: ...").
+Past tense for what happened. Never contradict THE REALM NOW: the dead are dead, people are where it says. Names and places. Reply ONLY with JSON: {"threads":"markdown bullets","rumours":"markdown bullets"}`;
   const user = [
-    chronicleMd ? 'EXISTING CHRONICLE (do not repeat it):\n' + chronicleMd.slice(-6000) : '',
-    'TURNS TO CONSOLIDATE:\n' + turns.map((t) => `== Turn ${t.turn} (${t.dateFrom} → ${t.date}) ==\nOrders: ${t.orders.map((o) => o.text).join(' | ') || '(none)'}\n${t.summary}\n${t.events.map((e) => `- [${e.importance}] ${e.title}: ${e.text}`).join('\n')}\nChanges: ${(t.applied || []).map((a) => a.text).join('; ')}`).join('\n\n'),
+    chronicleMd ? 'EXISTING CHRONICLE (do not repeat it):\n' + chronicleMd.slice(-5000) : '',
+    `FACTS ALREADY WRITTEN (${from} – ${to}):\n${engineFacts(turns) || '(none)'}`,
+    'THE REALM NOW (the truth; the chronicle must agree with it):\n' + realmNow(state),
+    'TURNS TO CONSOLIDATE:\n' + turns.map((t) => `== ${t.dateFrom} → ${t.date} ==\nOrders: ${t.orders.map((o) => o.text).join(' | ') || '(none)'}\n${t.summary}\n${t.events.map((e) => `- [${e.importance}] ${e.title}: ${e.text}`).join('\n')}`).join('\n\n'),
   ].filter(Boolean).join('\n\n');
   return [{ role: 'system', content: system }, { role: 'user', content: user }];
+}
+// the present in a few lines: the player's people, the great lords, the dead of late, the wars
+function realmNow(state) {
+  const p = state.meta.player; const lines = [];
+  const who = Object.values(state.characters).filter((c) => c.house === p || Object.values(state.houses).some((h) => h.lord === c.id && ['crown', 'paramount'].includes(h.rank)) || (c.roles || []).includes('council'));
+  for (const c of who.filter((c) => c.alive).slice(0, 40)) lines.push(`${c.name}: ${whereNow(state, c).text}${c.status && c.status !== 'free' ? ` (${c.status})` : ''}`);
+  const dead = who.filter((c) => !c.alive && c.died && Number(c.died) >= (state.meta.date?.year || 0) - 1).map((c) => c.name);
+  if (dead.length) lines.push(`Dead: ${dead.join(', ')}`);
+  const wars = (state.wars || []).filter((w) => w.status !== 'ended').map((w) => `${w.name || 'War'}: ${w.attackers.join(', ')} against ${w.defenders.join(', ')}`);
+  lines.push(wars.length ? `Wars: ${wars.join('; ')}` : 'No open war.');
+  return lines.join('\n');
 }
 
 export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {

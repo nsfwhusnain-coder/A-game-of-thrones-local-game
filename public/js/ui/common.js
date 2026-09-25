@@ -3,6 +3,7 @@ import { sfx } from './sfx.js';
 import { sigilSrc, bannerURL } from '../sigils.js';
 import { portraitLazy } from './portrait.js';
 import { placeName, getRelation, fmt } from '../shared/world.js';
+import { whereabouts } from '../shared/roads.js';
 
 export const app = {
   saveId: null, state: null, map: null, win: null, winArg: null, sheet: null, drawerTab: 'feed', chatWith: null, council: null,
@@ -48,7 +49,7 @@ export const meter = (v, color = 'var(--gold)', max = 100) => `<div class="meter
 export function charRow(c, { showHouse = true, extra = '' } = {}) {
   const s = app.state; const h = s.houses[c.house];
   const status = !c.alive ? ' · <span style="color:#e0786a">dead</span>' : c.status && c.status !== 'free' ? ` · <b>${esc(c.status)}</b>` : '';
-  return `<div class="row clickable" data-char="${c.id}" style="${c.alive ? '' : 'opacity:0.55'}"><img class="por" src="${por(c, 64)}" alt=""><div class="grow"><div class="title">${esc(c.name)} ${showHouse && h ? sig(h, 1) : ''}</div><div class="sub">${esc(c.title || c.roles.join(', '))} · ${esc(placeName(s, c.loc))}${status}</div></div>${extra}${c.alive && c.id !== s.houses[s.meta.player].lord ? `<button class="btn small" data-talk="${c.id}">Speak</button>` : ''}</div>`;
+  return `<div class="row clickable" data-char="${c.id}" style="${c.alive ? '' : 'opacity:0.55'}"><img class="por" src="${por(c, 64)}" alt=""><div class="grow"><div class="title">${esc(c.name)} ${showHouse && h ? sig(h, 1) : ''}</div><div class="sub">${esc(c.title || c.roles.join(', '))} · ${esc(whereabouts(s, c).text)}${status}</div></div>${extra}${c.alive && c.id !== s.houses[s.meta.player].lord ? `<button class="btn small" data-talk="${c.id}">Speak</button>` : ''}</div>`;
 }
 export function houseRow(h, extra = '') {
   const s = app.state, p = s.meta.player;

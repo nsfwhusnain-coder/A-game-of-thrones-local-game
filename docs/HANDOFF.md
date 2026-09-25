@@ -315,6 +315,27 @@ quiet' every day.
 - 35 more characters; Brave Companions and Stone Crows houses; kin listed under their house; the Hand rides south with the King.
 - `scripts/playtest.js` plays a house turn by turn against the live model (`--turns N --weeks N`), writing `playtest/`.
 
+### One truth for orders, whereabouts and the chronicle (20-day playtest report, 2026-09-26)
+- **Only the player moves the player's people and hosts.** Under `protectPlayer`, `travel`, `army_move`, `army_create`, `project`
+  and a `character` op's `loc` are refused for the player's house. The exception is `ctx.mayMove`: people the player addressed or
+  named in an audience.
+- **No teleporting.** A far `character` loc change becomes a journey (`c.travel`). The `travel` op refuses a journey the person is
+  already on. A rider turned back starts from `roadPos`, and someone leading a company of under 400 turns the whole company.
+- **Orders name their people.** `orders.js named()` checks names and "my wife", "the maester"; an unnamed person is not sent. Men go
+  only if the order asks for men. `destination()` reads "north", "the Wall" and the like.
+- **`shared/roads.js whereabouts()`** feeds People, the character sheet, the order interpreter and the chronicle's "realm now".
+  `shared/errands.js` provides `underway()` and `orderOutcome()` for the ⏳ chip and the "Under way" modal.
+- **Acts settled at once are recorded, not queued.** These carry `status: 'done' | 'underway'` plus `executed`: tax, works, dues,
+  appoint, grant, raise, disband, march, banners and court acts. A duplicate active project is refused (409).
+- **Letters are routed.** The `raven` op takes `to`. A letter between two other people only becomes the recipient's memory, and one
+  of the household at the lord's side cannot send him a raven.
+- **Council:** `llm.js readReplies()` salvages broken or fenced JSON and prose, and merges one speaker's fragments. If only gestures
+  come back, it retries once.
+- **Chronicle entries:** the dated "What happened" section is the engine's (`prompts.js engineFacts`). The model writes only
+  "Still open, as of <date>" and "Said, not confirmed", against a "realm now" block. The prompt is told the present beats the
+  chronicle.
+- **Busy panel:** in-world text. Token and cache numbers appear only when Settings → "Show model diagnostics" is on.
+
 ## 5. In the middle of (when this was written)
 
 - **Turn playback:** finished and committed (`74380dd`).

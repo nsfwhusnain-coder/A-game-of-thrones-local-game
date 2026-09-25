@@ -14,6 +14,9 @@ fs.mkdirSync(path.join(work, 'saves'));
 fs.copyFileSync(path.join(ROOT, 'config.json'), path.join(work, 'config.json'));
 process.chdir(work);
 const game = await import(path.join(work, 'server/game.js'));
+const { whereabouts } = await import(path.join(work, 'public/js/shared/roads.js'));
+const { orderOutcome } = await import(path.join(work, 'public/js/shared/errands.js'));
+const seenRavens = new Set();
 const house = args.house || 'stark';
 const out = []; const log = (s) => { out.push(s); console.log(s); };
 const { id } = game.newGame('agot_298', house);
@@ -26,8 +29,10 @@ const script = {
   3: { orders: ['Send Jory Cassel to King\'s Landing with ten men to learn what he can of Jon Arryn\'s death.'] },
   4: { talk: [['greatjon_umber', 'Jon, your men were the first to answer. The North will not forget it.']] },
   5: { orders: ['Write to Lord Tywin Lannister: if any harm comes to my family on the Kingsroad, the North will march.'] },
-  7: { act: [{ kind: 'feast' }] },
-  9: { orders: ['Order Ser Rodrik to drill the levies at Winterfell and count our stores for winter.'] },
+  6: { orders: ['Keep the children close to Winterfell while the King is our guest.', 'Send Jon Snow to Castle Black to see the Wall for himself.'], act: [{ kind: 'project', template: 'rookery' }, { kind: 'project', template: 'rookery' }] },
+  7: { act: [{ kind: 'feast' }, { kind: 'scheme', house: 'lannister', kind2: 'secrets' }] },
+  8: { orders: ['Jon is to turn back and return to Winterfell at once.'], council: [['luwin', 'rodrik_cassel'], 'What do we know of the Lannisters\' intentions, and are our stores enough for a winter?'] },
+  9: { orders: ['Order Ser Rodrik to garrison Winterfell, drill the levies and count our stores for winter.'] },
 };
 const turns = Number(args.turns || 10);
 for (let t = 1; t <= turns; t++) {
@@ -37,6 +42,10 @@ for (let t = 1; t <= turns; t++) {
   for (const [who, line] of step.talk || []) {
     const t0 = Date.now();
     try { const r = await game.talk(id, who, line); log(`- **audience ${who}** (${((Date.now() - t0) / 1000).toFixed(0)}s, engine: ${r.stance?.verdict || '—'}, ${r.stance?.mood}) ← "${line}"\n  > ${String(r.reply).replace(/\s+/g, ' ')}${r.applied?.length ? `\n  applied: ${r.applied.map((x) => x.text).join('; ')}` : ''}`); } catch (e) { log(`- audience ${who} FAILED: ${e.message}`); }
+  }
+  if (step.council) {
+    const t0 = Date.now();
+    try { const r = await game.council(id, step.council[0], step.council[1]); log(`- **council** (${((Date.now() - t0) / 1000).toFixed(0)}s) ← "${step.council[1]}"\n${r.replies.map((x) => `  > ${x.speaker}: ${x.text.replace(/\s+/g, ' ')}`).join('\n')}`); } catch (e) { log(`- council FAILED: ${e.message}`); }
   }
   // answer what is pending: the first option, or in our own words for every third matter
   const st = game.loadState(id);
@@ -53,6 +62,10 @@ for (let t = 1; t <= turns; t++) {
   const bg = tr.events.filter((e) => e.bg); if (bg.length) log(`- meanwhile: ${bg.map((e) => e.title).join('; ')}`);
   if (tr.rejected?.length) log(`- rejected: ${tr.rejected.map((x) => `${x.change?.op} (${x.reason})`).join('; ')}`);
   const s2 = game.loadState(id); const h = s2.houses[house];
+  log(`- whereabouts: ${['robb_stark', 'sansa_stark', 'arya_stark', 'jon_snow', 'jory_cassel', 'rodrik_cassel'].map((c) => `${c.split('_')[0]} ${whereabouts(s2, s2.characters[c]).text}`).join(' · ')} · guard ${h.figures.menAtArms?.v}`);
+  const works = (s2.projects || []).filter((x) => x.house === house && x.status === 'active'); if (works.length) log(`- works: ${works.map((x) => x.name).join(', ')}`);
+  for (const x of s2.ravens.filter((x) => !seenRavens.has(x.id))) { seenRavens.add(x.id); log(`- raven from ${x.fromName}: ${x.text.replace(/\s+/g, ' ').slice(0, 140)}`); }
+  const out2 = (tr.orders || []).map((o) => `${o.text.slice(0, 50)} → ${orderOutcome(o).status}`); if (out2.length) log(`- order statuses: ${out2.join(' | ')}`);
   log(`- state: treasury ${Math.round(h.figures.treasury.v)} · food ${h.figures.food.v} · levies ${h.figures.levies.v} · hosts ${Object.values(s2.armies).filter((a) => a.owner === house).map((a) => `${a.name} ${a.men}`).join(', ') || 'none'} · pending decisions ${(s2.decisions || []).filter((d) => d.status === 'pending').map((d) => d.title).join(' | ') || 'none'}`);
 }
 const dir = path.join(ROOT, 'playtest'); fs.mkdirSync(dir, { recursive: true });

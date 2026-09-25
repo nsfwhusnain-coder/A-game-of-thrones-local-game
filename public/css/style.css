@@ -297,6 +297,17 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .order .t { flex: 1; outline: none; }
 .order.auto { border-color: #5a6a3a; }
 .order button { background: none; border: 0; color: var(--muted); cursor: pointer; }
+.ost { font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; padding: 0.05rem 0.4rem; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; align-self: center; }
+.ost.done, .ost.delivered, .ost.answered { color: #9fcf7a; border-color: #4f6a3a; }
+.ost.underway { color: var(--gold2); border-color: var(--gold); }
+.ost.failed { color: #e0786a; border-color: #7a3a32; }
+.ost.delayed { color: #e0b46a; border-color: #7a6232; }
+.order.st-done .t, .order.st-underway .t { opacity: 0.8; }
+.errands-chip { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); color: var(--text); font-size: 0.78rem; padding: 0.2rem 0.6rem; border-radius: 999px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+.errands-chip:hover { border-color: var(--gold); }
+.errand { display: flex; gap: 0.6rem; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+.errand .ei { width: 1.4rem; text-align: center; }
+.errand .ed { color: var(--gold2); white-space: nowrap; font-size: 0.82rem; }
 .cmd-row { display: flex; gap: 0.35rem; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 0.4rem; box-shadow: var(--shadow); }
 .cmd-row textarea { flex: 1; resize: none; background: #0f0b08; border: 1px solid var(--line); padding: 0.5rem 0.7rem; font-size: 0.98rem; border-radius: 4px; min-height: 2.5rem; max-height: 8rem; line-height: 1.35; }
 
