@@ -1,0 +1,5 @@
+Default soundtrack (downloaded by `npm run fetch-music`):
+Kevin MacLeod (incompetech.com) — "Teller of the Tales", "Moonlight Hall", "Five Armies", "Clash Defiant",
+"Crusade", "Heroic Age", "Achilles", "Celtic Impulse", "Dark Walk", "Master of the Feast", "Minstrel Guild",
+"Suonatore di Liuto", "Village Consort", "Folk Round", "Thatched Villagers".
+Licensed under Creative Commons: By Attribution 4.0 — http://creativecommons.org/licenses/by/4.0/

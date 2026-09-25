@@ -10,7 +10,8 @@
     "fetch-sigils": "node scripts/fetch-sigils.js",
     "fetch-voices": "node scripts/fetch-voices.js",
     "test": "node --test tests/*.test.js",
-    "bench": "node scripts/bench.js"
+    "bench": "node scripts/bench.js",
+    "fetch-music": "node scripts/fetch-music.js"
   },
   "engines": {
     "node": ">=18"

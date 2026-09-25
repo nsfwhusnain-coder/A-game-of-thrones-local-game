@@ -6,7 +6,7 @@
 // Tracks shuffle within their folder and crossfade when the scene changes. With no files there is silence —
 // the generated score is gone. Starts on the first click (browsers forbid sound before that).
 const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* */ } } };
-export const musicSettings = () => ({ on: store.get('music-on', true), volume: store.get('music-volume', 0.45) });
+export const musicSettings = () => ({ on: store.get('music-on', true), volume: store.get('music-volume', 0.3) });
 export function setMusic(k, v) { store.set('music-' + k, v); apply(); }
 
 let library = null, started = false, mood = 'title', house = null, playingGroup = null, el = null, fading = null;

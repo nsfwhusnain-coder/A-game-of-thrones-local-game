@@ -21,7 +21,7 @@
 }
 /* Everything is in rem and scales with the viewport — no tiny UI on large or zoomed screens */
 /* Proportional to the window, whatever its size or the browser zoom; --ui-scale is the player's own preference (Settings) */
-html { font-size: calc(max(12px, min(0.92vw, 1.7vh)) * var(--ui-scale, 1)); }
+html { font-size: calc(max(13px, min(1.1vw, 2vh)) * var(--ui-scale, 1)); }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--serif); overflow: hidden; }
 button, select, input, textarea { font-family: inherit; font-size: inherit; color: inherit; }
@@ -146,7 +146,7 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .res .v .up { color: var(--green); font-size: 0.75rem; } .res .v .down { color: #e0705a; font-size: 0.75rem; }
 .res.season .v { font-size: 0.85rem; }
 .hud-top-right { display: flex; align-items: center; gap: 0.6rem; }
-.date-box { text-align: right; font-family: var(--display); color: var(--gold2); font-size: 1rem; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 0.25rem 0.7rem; }
+.date-box { text-align: right; white-space: nowrap; font-family: var(--display); color: var(--gold2); font-size: 0.95rem; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 0.25rem 0.7rem; }
 .date-box .turn { font-size: 0.65rem; color: var(--muted); }
 .time-controls { display: flex; gap: 0.3rem; align-items: stretch; }
 .time-controls select { width: auto; font-family: var(--display); font-size: 0.8rem; }
@@ -247,7 +247,7 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .checklist label { display: flex; align-items: center; gap: 0.5rem; color: var(--text); margin: 0; padding: 0.2rem; font-size: 0.9rem; cursor: pointer; }
 
 /* ---------- drawer ---------- */
-.drawer { position: absolute; right: 0.8rem; top: 4.2rem; bottom: 0.8rem; width: min(26rem, 30vw); background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; box-shadow: var(--shadow); z-index: 10; display: flex; flex-direction: column; }
+.drawer { position: absolute; right: 0.8rem; top: 4.2rem; bottom: 0.8rem; width: min(21rem, 25vw); background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; box-shadow: var(--shadow); z-index: 10; display: flex; flex-direction: column; }
 .drawer-tabs { display: flex; border-bottom: 1px solid var(--line); }
 .drawer-tabs button { flex: 1; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); padding: 0.55rem 0.3rem; cursor: pointer; font-family: var(--display); font-size: 0.75rem; letter-spacing: 0.05em; }
 .drawer-tabs button.active { color: var(--gold2); border-bottom-color: var(--gold); }
@@ -289,7 +289,8 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .quick-asks button:hover { color: var(--gold2); border-color: var(--gold); }
 
 /* ---------- command bar ---------- */
-#command { position: absolute; left: 34.5rem; bottom: 0.8rem; width: min(42rem, calc(100vw - 70rem)); min-width: 20rem; z-index: 11; display: flex; flex-direction: column; gap: 0.35rem; }
+#command { position: absolute; left: 34.5rem; right: calc(min(21rem, 25vw) + 9.5rem); bottom: 0.8rem; max-width: 46rem; min-width: 16rem; z-index: 11; display: flex; flex-direction: column; gap: 0.35rem; }
+.drawer.hidden ~ #command, #drawer.hidden ~ #command { right: 9.5rem; }
 .orders { display: flex; flex-direction: column; gap: 0.25rem; max-height: 9rem; overflow: auto; }
 .order { display: flex; gap: 0.4rem; align-items: flex-start; background: var(--panel); border: 1px solid var(--line); padding: 0.3rem 0.5rem; font-size: 0.86rem; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
 .order .n { color: var(--gold); font-family: var(--display); }
@@ -299,7 +300,7 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .cmd-row { display: flex; gap: 0.35rem; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 0.4rem; box-shadow: var(--shadow); }
 .cmd-row textarea { flex: 1; resize: none; background: #0f0b08; border: 1px solid var(--line); padding: 0.5rem 0.7rem; font-size: 0.98rem; border-radius: 4px; min-height: 2.5rem; max-height: 8rem; line-height: 1.35; }
 
-.mapmodes { position: absolute; right: calc(min(26rem, 30vw) + 1.6rem); bottom: 0.8rem; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; z-index: 10; }
+.mapmodes { position: absolute; right: calc(min(21rem, 25vw) + 1.6rem); bottom: 0.8rem; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; z-index: 10; }
 .drawer.hidden ~ .mapmodes { right: 0.8rem; }
 .mapmodes button { background: none; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); color: var(--muted); padding: 0.34rem 0.75rem 0.34rem 0.55rem; cursor: pointer; font-family: var(--display); font-size: 0.66rem; text-align: left; display: flex; align-items: center; gap: 0.45rem; transition: color .12s, background .12s; }
 .mapmodes button:hover { color: var(--gold2); }
@@ -618,3 +619,20 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .event.compact .eb { font-size: 0.84rem; line-height: 1.35; }
 .event.compact .ev-more summary { font-size: 0.72rem; }
 .event.compact .meta { font-size: 0.68rem; }
+
+/* ── the news list: a date, then one row per event ── */
+.news-day { margin: 0 0 0.7rem; }
+.news-date { font-family: var(--display); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 0.2rem; margin-bottom: 0.3rem; }
+.news-row { display: flex; gap: 0.55rem; align-items: flex-start; padding: 0.35rem 0.3rem; border-radius: 4px; cursor: pointer; }
+.news-row:hover { background: rgba(255,230,180,0.06); }
+.news-ico { flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid var(--line2); color: var(--gold2); }
+.news-row.imp-4 .news-ico, .news-row.imp-5 .news-ico { border-color: #c0503a; color: #ffb3a0; }
+.news-txt { min-width: 0; }
+.news-t { font-family: var(--display); font-size: 0.86rem; color: var(--gold2); line-height: 1.25; }
+.news-x { font-size: 0.82rem; color: var(--text); opacity: 0.82; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.news-more, .news-quiet { font-size: 0.74rem; color: var(--muted); padding: 0.2rem 0.3rem 0 2.35rem; cursor: pointer; }
+.news-more:hover { color: var(--gold2); }
+/* ── map modes: one small control; click it to choose another ── */
+.mapmodes:not(.open) button:not(.active) { display: none; }
+.mapmodes button.active::after { content: '▴'; margin-left: auto; opacity: 0.6; font-size: 0.6rem; }
+.mapmodes.open button.active::after { content: ''; }

@@ -1,6 +1,6 @@
 // Right drawer: chronicle feed, letters, audiences (one-on-one or council).
 import { eventArt } from './event-art.js';
-import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow } from './common.js';
+import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal } from './common.js';
 import { dateStr } from '../shared/world.js';
 import { briefFor } from '../../data/briefs.js';
 import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices } from './voice.js';
@@ -70,13 +70,26 @@ export function wireDecisions(root, { onAllDone, onDecided } = {}) {
     } catch (e) { card.classList.remove('busy'); $$('.dec-opt, .dec-custom', card).forEach((x) => { x.disabled = false; x.classList.remove('chosen'); }); toast(e.message, true); }
   });
 }
+const NEWS_ICON = { war: '⚔', diplomacy: '✉', intrigue: '🗡', economy: '⚖', court: '♛', disaster: '🔥', religion: '✧', magic: '✦', rumor: '❝' };
+// One event, told in full, in a window over the map
+function openNews(turn, idx) {
+  const s = app.state; const t = s.history.find((x) => x.turn === turn); const e = t?.events?.[idx]; if (!e) return;
+  if (e.where && s.holdings[e.where]) { app.map?.flyTo(s.holdings[e.where].pos, 420); app.map?.flash(s.holdings[e.where].pos); }
+  modal(`<div class="pin-head"><span class="pin-place">${esc(e.where ? placeName(s, e.where) : '')}</span><span class="pin-count">${esc(t.date)}</span></div>
+    <div class="pin-body event imp-${e.importance}">${eventArt(e)}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<div class="pin-details">${esc(e.details)}</div>` : ''}</div>
+    <div class="report-actions"><button class="btn primary" data-action="close-modal">Close</button></div>`);
+}
+function openMeanwhile(turn) {
+  const t = app.state.history.find((x) => x.turn === turn); if (!t) return;
+  modal(`<h2>Across the realm — ${esc(t.date)}</h2>${meanwhileHtml(t.events, true)}<div class="report-actions"><button class="btn primary" data-action="close-modal">Close</button></div>`);
+}
 function renderFeed(body) {
   const s = app.state;
-  const turns = [...s.history].reverse().slice(0, 15);
-  body.innerHTML = decisionsHtml() + (turns.length ? turns.map((t) => `<div class="turn-block"><div class="turn-head"><span>Turn ${t.turn}</span><span>${esc(t.date)}</span></div>
-      <div class="summary small">${esc(t.summary)}</div>${mainEvents(t.events).map((e) => eventHtml(e, true)).join('')}${meanwhileHtml(t.events)}
-      ${t.ledger ? `<div class="changes">🪙 Treasury ${t.ledger.net >= 0 ? '+' : ''}${fmt(t.ledger.net)} → ${fmt(t.ledger.treasury)} gd · food ${t.ledger.food} moons</div>` : ''}
-      ${t.applied?.length ? `<details class="changes"><summary>${t.applied.length} changes to the world</summary><ul>${t.applied.map((a) => `<li>${esc(a.text)}</li>`).join('')}</ul></details>` : ''}</div>`).join('')
+  const turns = [...s.history].reverse().slice(0, 30);
+  // the news, as a list: a date, then one row per event (icon, headline, one line); click a row for the whole story
+  body.innerHTML = decisionsHtml() + (turns.length ? turns.map((t) => { const ev = mainEvents(t.events); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
+      ${ev.map((e, i) => `<div class="news-row imp-${e.importance}" data-news="${t.turn}:${(t.events || []).indexOf(e)}"><span class="news-ico">${NEWS_ICON[e.type] || '❖'}</span><div class="news-txt"><div class="news-t">${esc(e.title)}</div><div class="news-x">${esc(e.text)}</div></div></div>`).join('') || '<div class="news-quiet">No news of note.</div>'}
+      ${bg ? `<div class="news-more" data-meanwhile="${t.turn}">+ ${bg} small happening${bg > 1 ? 's' : ''} across the realm</div>` : ''}</div>`; }).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>
       ${(() => { const b = briefFor(s.houses[s.meta.player], s); return `<div class="event imp-4"><div class="et">Your situation</div><div class="eb">${esc(b.situation)}</div><div class="eb" style="margin-top:0.4rem"><b>Aims:</b> ${b.goals.map(esc).join(' · ')}</div></div>`; })()}
       <details class="event howto"${s.meta.turn === 0 ? ' open' : ''}><summary class="et">How to play</summary><div class="eb">
@@ -92,6 +105,8 @@ function renderFeed(body) {
       • <b>Advance ▶</b> — time passes; the world acts, the map changes.<br>
       • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></details>`);
   wireDecisions(body);
+  $$('[data-news]', body).forEach((el) => el.onclick = () => { const [t, i] = el.dataset.news.split(':').map(Number); openNews(t, i); });
+  $$('[data-meanwhile]', body).forEach((el) => el.onclick = () => openMeanwhile(Number(el.dataset.meanwhile)));
   $$('.event[data-where], .mw-item[data-where]', body).forEach((el) => el.onclick = () => { const w = el.dataset.where; if (s.holdings[w]) { app.map.flyTo(s.holdings[w].pos); app.map.flash(s.holdings[w].pos); } });
 }
 export function ravenHtml(r) {

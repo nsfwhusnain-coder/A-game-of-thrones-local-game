@@ -293,7 +293,7 @@ document.addEventListener('click', (e) => {
   const act = t.closest('[data-action]'); if (act) handleAction(act.dataset.action, act);
 });
 $('#drawer-tabs').addEventListener('click', (e) => { const tab = e.target.closest('[data-tab]')?.dataset.tab; if (tab) setDrawer(tab); });
-$('#mapmodes').onclick = (e) => { const b0 = e.target.closest('[data-mode]'); const m = b0?.dataset.mode; if (!m) return; $$('#mapmodes button').forEach((b) => b.classList.toggle('active', b.dataset.mode === m)); app.map.setMode(m); };
+$('#mapmodes').onclick = (e) => { const b0 = e.target.closest('[data-mode]'); const m = b0?.dataset.mode; if (!m) return; const box = $('#mapmodes'); if (!box.classList.contains('open')) { box.classList.add('open'); return; } box.classList.remove('open'); $$('#mapmodes button').forEach((b) => b.classList.toggle('active', b.dataset.mode === m)); app.map.setMode(m); };
 $('#modal').onclick = (e) => { if (e.target.id === 'modal') closeModal(); };
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (!$('#modal').classList.contains('hidden')) return closeModal(); if (app.picking) { app.picking = null; $('#pick-hint').classList.add('hidden'); return; } if (app.sheet) return closeSheet(); if (app.win) return closeWindow(); }
