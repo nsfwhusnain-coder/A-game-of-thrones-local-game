@@ -392,7 +392,8 @@ async function showSettings() {
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-auto" ${voiceSettings().auto ? 'checked' : ''}> Speak replies aloud as they arrive</label></div>
       <div><button class="btn small" id="snd-test">Hear Lord Tywin</button> <button class="btn small" id="snd-test2">Hear Lady Catelyn</button></div>
       <div style="grid-column:1/-1"><label>Voice server URL <span class="muted">(OpenAI-compatible <code>/v1/audio/speech</code>, e.g. Kokoro-FastAPI <code>http://localhost:8880/v1</code>)</span></label><input class="input" id="snd-tts" value="${esc(c.ttsUrl || '')}" placeholder="http://localhost:8880/v1"></div>
-      <div style="grid-column:1/-1"><label>Voice for a character <span class="muted">(optional overrides as JSON, e.g. {"tywin_lannister":"bm_george"})</span></label><input class="input" id="snd-over" value="${esc(JSON.stringify(voiceSettings().overrides))}"></div>
+      <div><label>Narrator</label><select id="snd-narrator"><option value="storyteller">The storyteller — a woman's voice, clear and warm</option><option value="maester">The maester — an old man, grave</option><option value="chronicler">The chronicler — a man, wry and light</option></select></div>
+      <div><label>Character voices</label><div class="muted" style="font-size:0.82rem">Every character has a voice of their own. To change one, open their sheet and choose under <i>Nature → Voice</i>.</div></div>
       <p class="muted" style="grid-column:1/-1;font-size:0.78rem;margin:0">Every character has a voice of their own. The main cast are shaped by hand (Tywin deep and slow, Robert booming, Arya quick and young); everyone else by sex, age and homeland. Drop your own music into <code>public/music/</code> to replace the score.</p>
     </div>
     <div class="settings-section"></div>
@@ -426,7 +427,7 @@ async function showSettings() {
   $('#ui-scale-reset').onclick = () => { $('#ui-scale').value = 1; showScale(1); };
   $('#house-theme').onchange = (e) => { setHouseTheming(e.target.checked); applyHouseTheme(app.state ? app.state.houses[app.state.meta.player] : HOUSES.find((x) => x.id === app.chosenHouse)); };
   $('#cfg-url').onchange = () => { if ($('#cfg-provider').value === 'mock') $('#cfg-provider').value = 'openai'; };
-  $('#snd-engine').value = voiceSettings().engine;
+  $('#snd-engine').value = voiceSettings().engine; $('#snd-narrator').value = voiceSettings().narrator;
   try { $('#gfx-q').value = localStorage.getItem('gfx-quality') || 'balanced'; } catch { /* */ }
   $('#gfx-q').onchange = (e) => { try { localStorage.setItem('gfx-quality', e.target.value); } catch { /* */ } toast('Graphics quality changes when the map next loads (reload the page).'); };
   $('#snd-music').onchange = (e) => { startMusic(); setMusic('on', e.target.checked); };
@@ -437,7 +438,7 @@ async function showSettings() {
   $('#snd-vvol').oninput = (e) => setVoiceSetting('volume', Number(e.target.value));
   $('#snd-auto').onchange = (e) => setVoiceSetting('auto', e.target.checked);
   $('#snd-narrate').onchange = (e) => setVoiceSetting('narrate', e.target.checked);
-  $('#snd-over').onchange = (e) => { try { setVoiceSetting('overrides', JSON.parse(e.target.value || '{}')); } catch { toast('Voice overrides are not valid JSON', true); } };
+  $('#snd-narrator').onchange = (e) => { setVoiceSetting('narrator', e.target.value); speak('The night is dark, and the realm holds its breath.', null, { narrator: true }); };
   $('#snd-tts').onchange = async (e) => { await api('/config', { body: { ttsUrl: e.target.value.trim() } }); };
   $('#snd-test').onclick = () => speak('A lion does not concern himself with the opinion of sheep. Sit. We have much to discuss.', { id: 'tywin_lannister', age: 57 });
   $('#snd-test2').onclick = () => speak('I have given the North five children. I will not give it a sixth for nothing.', { id: 'catelyn_stark', age: 35, gender: 'f' });

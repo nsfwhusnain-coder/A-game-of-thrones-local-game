@@ -8,6 +8,9 @@ import { disposition } from '../shared/diplomacy.js';
 import { atWar, battleOdds, marchDays, siegeEstimate } from '../shared/warfare.js';
 import { THREADS, THREATS } from '../shared/plots.js';
 import { sfx } from './sfx.js';
+import { temperament, natureTags } from '../shared/temperament.js';
+import { DEMEANOURS } from '../../data/demeanours.js';
+import { profileFor, VOICE_CHOICES, voiceSettings, setVoiceSetting, speak, stopSpeaking } from './voice.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
 
@@ -351,6 +354,7 @@ function characterSheet(id) {
     <div>${traits.map((t) => `<span class="pill trait">${esc(t)}</span>`).join('')}</div>
     ${c.bio ? `<p style="font-size:0.92rem;line-height:1.45">${esc(c.bio)}</p>` : ''}
     ${c.secret && (mine || c.secretKnown) ? `<p style="font-size:0.88rem;border-left:3px solid var(--red);padding-left:0.5rem">🗝 <b>Secret:</b> <i>${esc(c.secret)}</i></p>` : c.secret && !mine ? '<p class="muted" style="font-size:0.8rem">🔒 There is more to this one than meets the eye.</p>' : ''}
+    ${natureHtml(c)}
     ${!mine && c.alive && c.house !== p ? dispositionHtml(id) : ''}
     <h4>Family <button class="btn small" data-tree="${c.id}" style="float:right">Family tree</button></h4>
     <div class="family">${famMember(father, 'Father')}${famMember(mother, 'Mother')}${famMember(spouse, 'Spouse')}${famMember(betrothed, 'Betrothed')}${kids.map((k) => famMember(k, 'Child')).join('')}${sibs.slice(0, 8).map((k) => famMember(k, 'Sibling')).join('')}</div>
@@ -363,6 +367,30 @@ function characterSheet(id) {
       ${mine ? `<button class="btn" data-order-tpl="Grant ${esc(c.name)} ">Grant…</button>` : ''}
       ${c.status === 'imprisoned' ? `<button class="btn danger" data-order-tpl="Pass judgement on ${esc(c.name)}: ">Judge</button>` : ''}
       ${s.holdings[c.loc] ? `<button class="btn ghost" data-hold="${c.loc}">Show on map</button>` : ''}</div>` : ''}`;
+}
+
+// Their nature as the engine reads it (what decides how they answer you), and the voice they speak with
+const VOICE_NAMES = { bm_george: 'George — deep, older (British)', bm_lewis: 'Lewis — low, grave (British)', bm_fable: 'Fable — light, wry (British)', bm_daniel: 'Daniel — young (British)', am_fenrir: 'Fenrir — rough, strong', am_michael: 'Michael — warm, smooth', am_puck: 'Puck — bright, quick', am_onyx: 'Onyx — very deep', bf_emma: 'Emma — clear, noble (British)', bf_isabella: 'Isabella — cool, mature (British)', bf_alice: 'Alice — soft (British)', bf_lily: 'Lily — girlish (British)', af_heart: 'Heart — warm', af_bella: 'Bella — rich', af_nicole: 'Nicole — breathy, low', af_kore: 'Kore — firm', af_aoede: 'Aoede — light', af_sky: 'Sky — young' };
+function natureHtml(c) {
+  if (!c.alive) return '';
+  const { tags, sway } = natureTags(temperament(c)); const dm = DEMEANOURS[c.id];
+  const cur = voiceSettings().overrides[c.id] || '';
+  return `<h4>Nature</h4><div>${tags.map((t) => `<span class="pill trait">${esc(t)}</span>`).join('')}${sway.length ? `<span class="muted" style="font-size:0.8rem"> moved by ${esc(sway.join(', '))}</span>` : ''}</div>
+    ${dm ? `<div class="muted" style="font-size:0.82rem;margin-top:0.2rem"><i>${esc(dm.reg)} — ${esc(dm.tics)}</i></div>` : ''}
+    <div class="voice-pick"><label>Voice</label><select data-voice-pick="${c.id}"><option value="">Their own (${esc(profileFor(c).voice.split('+').map((x) => x.split('*')[0].replace(/^[ab][mf]_/, '')).join(' & '))})</option>${VOICE_CHOICES.map((v) => `<option value="${v}"${cur === v ? ' selected' : ''}>${esc(VOICE_NAMES[v] || v)}</option>`).join('')}</select><button class="btn small" data-voice-hear="${c.id}">🔊 Hear</button></div>`;
+}
+document.addEventListener('change', (e) => {
+  const sel = e.target.closest?.('[data-voice-pick]'); if (!sel) return;
+  const o = { ...voiceSettings().overrides }; if (sel.value) o[sel.dataset.voicePick] = sel.value; else delete o[sel.dataset.voicePick];
+  setVoiceSetting('overrides', o);
+  hear(sel.dataset.voicePick);
+});
+document.addEventListener('click', (e) => { const b = e.target.closest?.('[data-voice-hear]'); if (b) hear(b.dataset.voiceHear); });
+function hear(id) {
+  const c = app.state.characters[id]; if (!c) return;
+  const lines = { f: ['Winter is coming, my lord. Whatever the south may tell you.', 'My house remembers its friends — and its enemies.'], m: ['The realm is a dangerous place, my lord. Choose your friends with care.', 'I have given you my answer. I will not give it twice.'] };
+  const pool = profileFor(c).female ? lines.f : lines.m;
+  stopSpeaking(); speak(pool[Math.floor(Math.random() * pool.length)], c);
 }
 
 const DISP_COLOR = { eager: '#a8e08a', favourable: '#cfe0a0', open: '#e0d8b0', reluctant: '#e8c870', unwilling: '#ec9a8a', hostile: '#ff6a5a' };

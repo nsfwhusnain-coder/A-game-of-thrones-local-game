@@ -578,3 +578,6 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .verdict.v-refuse, .verdict.v-rage, .verdict.v-dismiss { background: #9a3a2a; }
 .verdict.v-bargain { background: #9a7a2a; }
 .chat-closed { margin-top: 0.6rem; padding: 0.7rem; border: 1px dashed #9a3a2a; border-radius: 4px; color: #ffcfc8; font-style: italic; text-align: center; }
+.voice-pick { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem; font-size: 0.82rem; }
+.voice-pick label { margin: 0; color: var(--muted); }
+.voice-pick select { flex: 1; min-width: 0; }

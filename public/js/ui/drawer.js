@@ -163,7 +163,7 @@ function msgHtml(m, c) {
   // narration reads as a novel's prose; speech is set in quotation marks
   const body = bs.map((b) => (b.kind === 'act' ? `<p class="beat act" title="Click to hear it">${esc(b.text)}</p>` : `<p class="beat say" title="Click to hear it">“${esc(b.text.replace(/^[“"]+|[”"]+$/g, ''))}”</p>`)).join('') || esc(m.text);
   const verdict = m.verdict && m.verdict !== 'obey' ? `<span class="verdict v-${m.verdict}">${esc(VERDICT_LABEL[m.verdict] || m.verdict)}</span>` : '';
-  return `<div class="msg npc" data-speaker="${sp?.id || ''}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}${verdict}<button class="speak-all" title="Hear it">🔊</button></div><div class="beats">${body}</div>${m.applied?.length ? `<div class="applied">${m.applied.map(esc).join('<br>')}</div>` : ''}</div>`;
+  return `<div class="msg npc" data-speaker="${sp?.id || ''}" data-mood="${esc(m.mood || '')}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}${verdict}<button class="speak-all" title="Hear it">🔊</button></div><div class="beats">${body}</div>${m.applied?.length ? `<div class="applied">${m.applied.map(esc).join('<br>')}</div>` : ''}</div>`;
 }
 // Voices: click a line to hear it, or the speaker icon to hear the whole reply
 export function wireVoices(root) {
@@ -176,12 +176,12 @@ export function wireVoices(root) {
     if (e.target.closest('.speak-all')) {
       // the whole scene, top to bottom: narration and speech in order
       const ps = [...msg.querySelectorAll('.beat')];
-      await speakBeats(ps.map((p) => ({ kind: p.classList.contains('act') ? 'act' : 'say', text: clean(p), p })), who, (b, on) => b.p.classList.toggle('speaking', on));
+      await speakBeats(ps.map((p) => ({ kind: p.classList.contains('act') ? 'act' : 'say', text: clean(p), p })), who, (b, on) => b.p.classList.toggle('speaking', on), msg.dataset.mood);
       return;
     }
     const line = e.target.closest('.beat'); if (!line) return;
     msg.querySelectorAll('.speaking').forEach((x) => x.classList.remove('speaking'));
-    line.classList.add('speaking'); await speak(clean(line), who, { narrator: line.classList.contains('act') }); line.classList.remove('speaking');
+    line.classList.add('speaking'); await speak(clean(line), who, { narrator: line.classList.contains('act'), mood: msg.dataset.mood }); line.classList.remove('speaking');
   });
 }
 /** Play the newest replies as a scene: each beat appears in turn, and the spoken lines are voiced. */
@@ -195,7 +195,7 @@ export async function playScene(msgs) {
     b.classList.remove('hidden-beat'); b.classList.add('reveal');
     b.closest('.chat-log')?.scrollTo({ top: 1e9, behavior: 'smooth' });
     const narrated = b.classList.contains('act') && voiceSettings().narrate;
-    if (auto && (b.classList.contains('say') || narrated)) { b.classList.add('speaking'); await speak(b.textContent.replace(/^[“"]+|[”"]+$/g, ''), app.state.characters[m.dataset.speaker], { narrator: narrated }); b.classList.remove('speaking'); await wait(200); }
+    if (auto && (b.classList.contains('say') || narrated)) { b.classList.add('speaking'); await speak(b.textContent.replace(/^[“"]+|[”"]+$/g, ''), app.state.characters[m.dataset.speaker], { narrator: narrated, mood: m.dataset.mood }); b.classList.remove('speaking'); await wait(200); }
     else await wait(b.classList.contains('act') ? 700 + Math.min(1600, b.textContent.length * 18) : 400 + Math.min(2500, b.textContent.length * 22));
   }
 }
