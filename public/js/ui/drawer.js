@@ -1,4 +1,5 @@
 // Right drawer: chronicle feed, letters, audiences (one-on-one or council).
+import { eventArt } from './event-art.js';
 import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow } from './common.js';
 import { dateStr } from '../shared/world.js';
 import { briefFor } from '../../data/briefs.js';
@@ -17,7 +18,7 @@ export function renderDrawer() {
 }
 
 export function eventHtml(e) {
-  return `<div class="event imp-${e.importance}" ${e.where ? `data-where="${e.where}"` : ''}><div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div><div class="meta">${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
+  return `<div class="event imp-${e.importance}" ${e.where ? `data-where="${e.where}"` : ''}>${eventArt(e)}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div><div class="meta">${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
 }
 export function decisionsHtml() {
   const s = app.state;

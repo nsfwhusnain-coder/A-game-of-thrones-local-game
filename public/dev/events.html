@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>Event art</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>body{background:#15120f;padding:10px;display:grid;grid-template-columns:repeat(3,380px);gap:10px;height:auto;overflow:auto}</style>
+<body><script type="module">
+import { eventArt } from '../js/ui/event-art.js';
+const E = [['The Blackwater', 'war'], ['The King is dead', 'court', 'dies'], ['Dragons', 'court', 'dragon'], ['The dead come to Castle Black', 'court', 'the wall'], ['A white raven: winter has come', 'court'], ['The King in the North', 'court'], ['The Red Wedding', 'war', 'wedding feast'], ['A knife in the night', 'intrigue', 'dagger'], ['The Ironborn Reaving', 'war', 'longships'], ['Full granaries', 'economy', 'harvest']];
+for (const [title, type, extra] of E) document.body.insertAdjacentHTML('beforeend', `<div class="event imp-5">${eventArt({ title, type, text: extra || '', importance: 5 })}<div class="et">${title}</div><div class="eb">Lorem ipsum of the realm.</div></div>`);
+document.title = 'done';
+</script>
