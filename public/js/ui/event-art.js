@@ -73,7 +73,7 @@ function sceneFor(e) {
   if (/the wall|wildling|free folk|castle black|the others|haunted forest|ranger/.test(t)) return 'wall';
   if (/red wedding|rains of castamere|massacre/.test(t)) return 'battle';
   if (/\bdead\b|\bdies\b|died|death|beheaded|murdered|slain|killed|poisoned|is no more|funeral/.test(t) && !/battle/.test(t)) return /poison/.test(t) ? 'intrigue' : 'death';
-  if (/winter|white raven|snow/.test(t)) return 'winter';
+  if (/\bwinter\b|white raven|\bsnow/.test(t)) return 'winter';
   if (/wedding|feast|betroth|married|weds/.test(t)) return 'wedding';
   if (/fleet|longship|iron fleet|reaving|sail|galleys/.test(t)) return 'sea';
   if (e.type === 'war' || /battle|burn|siege|host|banners|war\b|sack/.test(t)) return 'battle';
