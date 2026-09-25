@@ -274,6 +274,47 @@ These are the session's commits, in order. Run `git log` for the full messages, 
 - **Other fixes**: succession of elected offices (Watch, Free Cities, companies, free folk) no longer passes by blood; spelled-out numbers in orders; infant portraits; toasts no longer stack; title screen card; army plates avoid castle names; events always dated and numbered.
 - **Bench** (`scripts/bench.js`, `npm run bench`): see README. Not yet run against a real model — that is the next step, at the owner's go-ahead.
 
+## 4d. Fourth session (2026-09-25): the model sorted, time day by day, a realm that moves
+
+### The model (measured live on the owner's PC, RTX 5070 12 GB)
+| Model | Turn (a moon) | Audience | JSON | Orders | Keeps to canon/rules |
+|---|---|---|---|---|---|
+| Qwen3.8 27B Flash 64k (effort low) | 150-177 s | 16-32 s | 3/3 | 3/3 | good; prompt cache never reused (hybrid attention) |
+| Occamy 1.0 35B-A3B (thinking off) | 58-93 s | ~34 s | 3/3 | 3/3 | poor: killed Robert early, 'Barbrey hails the Starks', 'I' in narration |
+| **Gemma 4 26B A4B QAT UD-Q4_K_XL** (thinking off) | **~20-40 s a day, ~70-85 s a moon** | ~15 s | 3/3 | 3/3 | good, strong character voice |
+
+**Gemma 4 26B A4B is the game's model** (`config.json` model `gemma4-26b-a4b`, thinking off). llama-swap profile `gemma4-26b-a4b`
+(`C:\models\gemma4\`, backup of the old config at `C:\llamaswap\config.yaml.bak-gemma4`): `-c 65536 -ngl 99 -ncmoe 10 -fa on -ctk q8_0
+-ctv q8_0 -ub 2048 -b 2048 --parallel 2 --kv-unified -cram 6144`, sampling temp 1.0 / top-k 64 / top-p 0.95. Measured: prompt ~1,000 t/s,
+generation ~61 t/s. **-ub is the lever**: 1024 gave 256 t/s prefill; 4096 overflowed the card (6.7 t/s gen). **--swa-full** would let the
+prompt cache survive past ~4.7k tokens (Gemma's sliding window) but overflows 12 GB whatever else is moved off — don't. Two slots keep
+the orders-reading call from evicting the turn prompt. One stuck llama-swap launch was seen ('health check timed out'); a retry worked.
+
+### Time
+Turns are a day by default ('End turn'); 3 days / a week / a fortnight / a moon are options (3m-1y remain only for old saves).
+Decisions carry `day` + `days` and lapse by days (the Hand offer: 10). Petitions, opportunities, happenings (probabilistic count),
+churn and consolidation (every ~44 days of history, keeping the last fortnight) scale with days.
+
+### The turn as it happens
+`getProgress` returns `events` parsed from the model's stream (`streamedEvents`), shown in the live side panel (`busy(..., {live:true})`)
+with the camera following. Then `playback.js` shows a side stack of headlines; hosts scrub along their paths (`reelF`, tied to the
+event index for short turns) and riders ride (`lbl.from/to`). Short turns end on `showChoices()`, longer ones on the full report.
+
+### The realm moves
+`data/agendas.js` (32 great players' aims + moves); `todaysBeats()` puts 2-4 engine-chosen moves at the end of the turn prompt as
+required events; `WHAT IS IN MOTION` and `RECENT HEADLINES` in the dynamic part. Without the beats, Gemma wrote 'the North remains
+quiet' every day.
+
+### Other
+- `server/orders.js resolveEnvoys`: orders addressing another lord are weighed by `weighAudience`; the outcome is binding.
+- Guards: the story can't fight the player's battles where they have no host, nor declare the player's wars.
+- Economy: levies ~0.04/man/moon (bread, not wages); sworn contingents paid by their lords; new works (rookery → `h.intel`, harbour,
+  barracks, armoury, stud farms, inns, almshouse); Economy window: the last moon summed, Trade section.
+- Fog of war v2 (grey plates, commander unknown, news travels, secret marches and feints: `a.secrecy`, `a.feint`,
+  `beliefsAboutPlayer`); treachery (`shared/treachery.js`).
+- 35 more characters; Brave Companions and Stone Crows houses; kin listed under their house; the Hand rides south with the King.
+- `scripts/playtest.js` plays a house turn by turn against the live model (`--turns N --weeks N`), writing `playtest/`.
+
 ## 5. In the middle of (when this was written)
 
 - **Turn playback:** finished and committed (`74380dd`).

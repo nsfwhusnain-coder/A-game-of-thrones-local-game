@@ -8,6 +8,13 @@ The game is inspired by [Pax Historia](https://www.paxhistoria.co/): time pauses
 
 > Fan project for personal, local, non-commercial use. *A Song of Ice and Fire* belongs to George R. R. Martin.
 
+## Which model
+
+Tested on an RTX 5070 (12 GB): **Gemma 4 26B A4B** (Unsloth QAT UD-Q4_K_XL, a mixture-of-experts with 3.8B active) plays best — fast
+(~20-40 s a day's turn, ~15 s an audience), readable JSON, true to the characters. Run it with thinking off, `-ub 2048` (prompt speed
+depends on it when experts sit on the CPU), two slots over one context pool. See `docs/HANDOFF.md` §4d for the numbers and the settings,
+and `npm run bench` / `node scripts/playtest.js` to test another.
+
 ## Quick start
 
 ```bash
