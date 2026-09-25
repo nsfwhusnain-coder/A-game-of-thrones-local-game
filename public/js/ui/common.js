@@ -1,4 +1,5 @@
 // Shared UI state and helpers.
+import { sfx } from './sfx.js';
 import { sigilSrc, bannerURL } from '../sigils.js';
 import { portraitURL } from './portrait.js';
 import { placeName, getRelation, fmt } from '../shared/world.js';
@@ -16,10 +17,13 @@ export { fmt, placeName, getRelation };
 export const REGION_NAMES = { north: 'The North', wall: 'The Wall', beyond: 'Beyond the Wall', iron_islands: 'Iron Islands', riverlands: 'Riverlands', vale: 'The Vale', westerlands: 'Westerlands', crownlands: 'Crownlands', reach: 'The Reach', stormlands: 'Stormlands', dorne: 'Dorne', essos: 'Essos' };
 export const RANK_NAMES = { crown: 'The Crown', paramount: 'Great House', major: 'Major House', minor: 'Minor House', city_state: 'Free City', order: 'Sworn Order', tribe: 'Host', exile: 'Exiles', company: 'Sellswords' };
 
+// each kind of order has its sound: steel for the host, coin for the treasury, wax for decisions
+const ACT_SOUND = { raise: 'steel', call_banners: 'steel', march: 'steel', disband: 'steel', tax: 'coins', dues: 'coins', project: 'coins', cancel_project: 'coins', grant: 'coins', decide: 'seal', appoint: 'seal' };
 export async function api(path, opts = {}) {
   const res = await fetch('/api' + path, { method: opts.method || (opts.body ? 'POST' : 'GET'), headers: { 'Content-Type': 'application/json' }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  if (!res.ok) { if (opts.body) sfx('error'); throw new Error(data.error || `HTTP ${res.status}`); }
+  if (path.endsWith('/act') && ACT_SOUND[opts.body?.kind]) sfx(ACT_SOUND[opts.body.kind]);
   return data;
 }
 export function toast(msg, err = false) {

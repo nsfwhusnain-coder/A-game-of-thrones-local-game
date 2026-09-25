@@ -7,19 +7,20 @@ import { vassalTemper } from '../shared/vassals.js';
 import { disposition } from '../shared/diplomacy.js';
 import { atWar, battleOdds, marchDays, siegeEstimate } from '../shared/warfare.js';
 import { THREADS, THREATS } from '../shared/plots.js';
+import { sfx } from './sfx.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
 
 export function openWindow(name, arg) {
   if (app.win === name && arg === undefined) return closeWindow();
-  app.win = name; app.winArg = arg;
+  app.win = name; app.winArg = arg; sfx('open');
   $('#window').classList.remove('hidden');
   $('#win-title').textContent = TITLES[name] || name;
   $$('#action-ring button').forEach((b) => b.classList.toggle('active', b.dataset.win === name));
   $('#sheet').classList.remove('solo');
   renderWindow();
 }
-export function closeWindow() { app.win = null; $('#window').classList.add('hidden'); $$('#action-ring button').forEach((b) => b.classList.remove('active')); $('#sheet').classList.add('solo'); }
+export function closeWindow() { if (app.win) sfx('close'); app.win = null; $('#window').classList.add('hidden'); $$('#action-ring button').forEach((b) => b.classList.remove('active')); $('#sheet').classList.add('solo'); }
 export function renderWindow() {
   if (!app.win || !app.state) return;
   const body = $('#win-body');

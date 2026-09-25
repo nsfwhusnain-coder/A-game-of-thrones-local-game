@@ -2,6 +2,7 @@ import { HOUSES } from '../data/houses.js';
 import { startIconizer, icon } from './ui/icons.js';
 import { drawTitleMap } from './ui/titlemap.js';
 import { startMusic, setMood, musicSettings, setMusic } from './ui/music.js';
+import { sfx, wireSfx, sfxSettings, setSfx } from './ui/sfx.js';
 import { voiceSettings, setVoiceSetting, speak } from './ui/voice.js';
 import { atWar } from './shared/warfare.js';
 import { CHARACTERS } from '../data/characters.js';
@@ -25,6 +26,7 @@ function moodFor(s) {
   return ['north', 'wall', 'beyond'].includes(region) ? 'north' : 'court';
 }
 async function initTitle() {
+  wireSfx();
   setMood('title');
   $('#title-screen').classList.remove('hidden'); $('#game-screen').classList.add('hidden');
   await loadSigilArt();
@@ -319,8 +321,13 @@ async function advance() {
   const span = $('#span-select').value;
   busy(true, `The world moves forward ${$('#span-select').selectedOptions[0].text}…`);
   try {
+    const unreadBefore = app.state.ravens.filter((x) => !x.read).length;
     const r = await api(`/games/${app.saveId}/advance`, { body: { span, orders: app.state.orders } });
     app.setState(r.state); setDrawer('feed');
+    // the hours pass; then the news: horns for battle, a raven for letters
+    sfx('bell');
+    if (r.turn.events.some((e) => e.type === 'war' && e.importance >= 4)) setTimeout(() => sfx('horn'), 1100);
+    if (r.state.ravens.filter((x) => !x.read).length > unreadBefore) setTimeout(() => sfx('raven'), 2400);
     showTurnReport(r.turn);
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
   } catch (e) { toast(e.message, true); } finally { busy(false); }
@@ -367,6 +374,7 @@ async function showSettings() {
     <div class="grid2">
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-music" ${musicSettings().on ? 'checked' : ''}> Music</label><input type="range" id="snd-mvol" min="0" max="1" step="0.05" value="${musicSettings().volume}" style="width:100%"></div>
       <div><label>Character voices</label><select id="snd-engine"><option value="browser">Your system's voices</option><option value="server">Local voice server (Kokoro, Piper, XTTS…)</option><option value="off">Off</option></select><input type="range" id="snd-vvol" min="0" max="1" step="0.05" value="${voiceSettings().volume}" style="width:100%"></div>
+      <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-sfx" ${sfxSettings().on ? 'checked' : ''}> Sound effects</label><input type="range" id="snd-svol" min="0" max="1" step="0.05" value="${sfxSettings().volume}" style="width:100%"></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-auto" ${voiceSettings().auto ? 'checked' : ''}> Speak replies aloud as they arrive</label></div>
       <div><button class="btn small" id="snd-test">Hear Lord Tywin</button> <button class="btn small" id="snd-test2">Hear Lady Catelyn</button></div>
       <div style="grid-column:1/-1"><label>Voice server URL <span class="muted">(OpenAI-compatible <code>/v1/audio/speech</code>, e.g. Kokoro-FastAPI <code>http://localhost:8880/v1</code>)</span></label><input class="input" id="snd-tts" value="${esc(c.ttsUrl || '')}" placeholder="http://localhost:8880/v1"></div>
@@ -407,6 +415,8 @@ async function showSettings() {
   try { $('#gfx-q').value = localStorage.getItem('gfx-quality') || 'balanced'; } catch { /* */ }
   $('#gfx-q').onchange = (e) => { try { localStorage.setItem('gfx-quality', e.target.value); } catch { /* */ } toast('Graphics quality changes when the map next loads (reload the page).'); };
   $('#snd-music').onchange = (e) => { startMusic(); setMusic('on', e.target.checked); };
+  $('#snd-sfx').onchange = (e) => { setSfx('on', e.target.checked); sfx('bell'); };
+  $('#snd-svol').onchange = (e) => { setSfx('volume', Number(e.target.value)); sfx('seal'); };
   $('#snd-mvol').oninput = (e) => { startMusic(); setMusic('volume', Number(e.target.value)); };
   $('#snd-engine').onchange = (e) => setVoiceSetting('engine', e.target.value);
   $('#snd-vvol').oninput = (e) => setVoiceSetting('volume', Number(e.target.value));
