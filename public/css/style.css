@@ -324,7 +324,7 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .raven { font-size: 3rem; animation: fly 2.4s ease-in-out infinite; }
 @keyframes fly { 0%,100% { transform: translate(-30px, 0) rotate(-6deg); } 50% { transform: translate(30px, -10px) rotate(6deg); } }
 #toasts { position: fixed; top: 5rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 0.4rem; z-index: 80; align-items: center; }
-.toast { background: var(--panel-solid); border: 1px solid var(--gold); padding: 0.5rem 0.9rem; max-width: 34rem; font-size: 0.92rem; box-shadow: 0 6px 20px rgba(0,0,0,0.6); animation: fadein 0.2s; border-radius: 4px; }
+.toast { cursor: pointer; background: var(--panel-solid); border: 1px solid var(--gold); padding: 0.5rem 0.9rem; max-width: 34rem; font-size: 0.92rem; box-shadow: 0 6px 20px rgba(0,0,0,0.6); animation: fadein 0.2s; border-radius: 4px; }
 .toast.err { border-color: var(--red); color: #ffcfc8; }
 @keyframes fadein { from { opacity: 0; transform: translateY(-8px); } }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; }
@@ -561,3 +561,20 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .chron-tabs .btn.active { border-color: var(--gold2); color: var(--gold2); }
 .world-log h3 { font-family: var(--display); color: var(--gold2); font-size: 1rem; margin: 1.2rem 0 0.3rem; border-bottom: 1px solid var(--line); }
 .world-log li { font-size: 0.88rem; margin-bottom: 0.2rem; }
+
+/* ── the temper of the person before you ── */
+.temper { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.25rem; font-size: 0.72rem; }
+.temper .tags { color: var(--muted); font-style: italic; }
+.mood { padding: 0.05rem 0.45rem; border-radius: 0.6rem; border: 1px solid var(--line2); font-family: var(--display); font-size: 0.64rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.mood.m-warm { border-color: #6fae5a; color: #a8e08a; }
+.mood.m-furious, .mood.m-angered, .mood.m-will { border-color: #c0503a; color: #ffb3a0; }
+.mood.m-afraid, .mood.m-uneasy { border-color: #8a7ac0; color: #cfc4ff; }
+.mood.m-distrustful, .mood.m-irritated { border-color: #b08a3a; color: #e8c880; }
+.pips { display: inline-flex; gap: 2px; }
+.pips i { width: 0.45rem; height: 0.45rem; border-radius: 50%; border: 1px solid var(--gold); display: inline-block; }
+.pips i.on { background: var(--gold); }
+.verdict { margin-left: 0.4rem; padding: 0 0.4rem; border-radius: 0.5rem; font-size: 0.6rem; letter-spacing: 0.05em; text-transform: uppercase; background: #6a5a3a; color: #fff5dc; }
+.verdict.v-agree, .verdict.v-yield { background: #4f8f3e; }
+.verdict.v-refuse, .verdict.v-rage, .verdict.v-dismiss { background: #9a3a2a; }
+.verdict.v-bargain { background: #9a7a2a; }
+.chat-closed { margin-top: 0.6rem; padding: 0.7rem; border: 1px dashed #9a3a2a; border-radius: 4px; color: #ffcfc8; font-style: italic; text-align: center; }

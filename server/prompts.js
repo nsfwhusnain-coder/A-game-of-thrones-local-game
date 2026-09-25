@@ -14,6 +14,8 @@ import { briefFor } from '../public/data/briefs.js';
 import { vassalTemper } from '../public/js/shared/vassals.js';
 import { PLACE_NAMES } from '../public/data/geography.js';
 import { dispositionText } from '../public/js/shared/diplomacy.js';
+import { temperament, natureTags } from '../public/js/shared/temperament.js';
+import { DEMEANOURS } from '../public/data/demeanours.js';
 
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
@@ -139,6 +141,18 @@ function rosterLine(c) {
   if (c.secret) out += ` [SECRET${c.secretKnown ? ', known to player' : ''}: ${c.secret}]`;
   return out;
 }
+// One line per ruling lord of a house that matters: temperament tags and what sways them
+function lordNatures(state, houses) {
+  const out = [];
+  for (const h of houses) {
+    if (!['crown', 'paramount', 'major', 'city_state', 'exile', 'tribe', 'order'].includes(h.rank)) continue;
+    const c = state.characters[h.lord]; if (!c?.alive) continue;
+    const { tags, sway } = natureTags(temperament(c));
+    out.push(`${c.id}: ${tags.join(', ') || 'ordinary'}${sway.length ? '; moved by ' + sway.join(', ') : ''}`);
+  }
+  return out.join('\n');
+}
+
 // Houses grouped under their liege: id(seat, lord) — the name only when it is not plain from the id
 function housesByLiege(state, houses) {
   const by = new Map();
@@ -263,6 +277,7 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   }
   const people = ['HOUSES by liege — id(name if not plain from the id, seat, lord)\n' + housesByLiege(state, houses),
     'CHARACTERS by house — id (name if not plain from the id, title, age, spouse) [secret]\n' + rosterByHouse(state, chars)];
+  people.push('HOW THE GREAT LORDS THINK (their nature and what moves them — make them act by it: the craven yield, the proud refuse, the schemers wait and betray, the greedy can be bought)\n' + lordNatures(state, houses));
   if (!lean) people.push('OTHER PLACES armies and people can go (not holdings): ' + Object.keys(PLACE_NAMES).filter((k) => !/_\d/.test(k) && resolvePlaceId(k) === k && !state.holdings[k]).slice(0, 120).join(', '));
   // what moves turn to turn goes in the dynamic part
   const rels = allHouses.filter((h) => h.id !== p && getRelation(state, p, h.id) !== 0).map((h) => `${h.id} ${getRelation(state, p, h.id) > 0 ? '+' : ''}${getRelation(state, p, h.id)}`);
@@ -392,7 +407,7 @@ export function characterKnowledge(state, c) {
   return lines.join('\n');
 }
 
-export function buildChatPrompt(state, charId, message, chronicleMd, cfg) {
+export function buildChatPrompt(state, charId, message, chronicleMd, cfg, stance = null) {
   const c = state.characters[charId];
   const p = state.meta.player;
   const ph = state.houses[p];
@@ -417,6 +432,7 @@ export function buildChatPrompt(state, charId, message, chronicleMd, cfg) {
     sameHouse ? 'If asked for numbers (men, gold, grain, ships), answer with concrete figures appropriate to your role — you may adjust the ledger figures if you have reason to (a fresh count, desertions, a bad harvest). Report them via a "figure" change with source set to your name.' : 'You do not know the player\'s exact strength; do not reveal your own house\'s exact numbers unless it serves you.',
     'Distance matters: if you are not in the same place as the player, this exchange is by raven or envoy — write accordingly.',
     SCENE_STYLE,
+    stance?.directive ? 'THIS EXCHANGE (settled by the game — play it exactly; do not soften it, do not overturn it)\n' + stance.directive : '',
     `Reply ONLY with a JSON object: {"reply":"the scene: *what the player sees you do* and what you say, in first person","changes":[optional change operations caused by this conversation, e.g. figure reports, opinion shifts ("character" op on yourself), pacts you firmly agree to]}.
 Allowed ops: figure, character, relation, pact, raven, army_update, army_move, army_create, liege, obligation, decision, chronicle${sameHouse ? ', travel, recruit, hire' : ''}. Only commit to what your character would genuinely do.`,
     TALK_SCHEMA,
@@ -436,7 +452,8 @@ Allowed ops: figure, character, relation, pact, raven, army_update, army_move, a
   const how = apart
     ? `You are at ${placeName(state, c.loc)} and I am at ${placeName(state, here)}: this came to you by raven. Answer with a LETTER in your own hand (first person, a greeting and your name; one *note* about the letter at most). Put in writing only what you would risk a raven carrying.`
     : `We are face to face at ${placeName(state, c.loc)}: a short scene — *narration between asterisks, third person, past tense (never I/my inside them)*, and your words in the first person to me.`;
-  messages.push({ role: 'user', content: `${message}\n\n[Answer in character as ${c.name}. ${how} Keep your true aims as guarded as ${c.name} would. Reply with JSON only: {"reply":"...","changes":[]}]` });
+  const outcome = stance?.verdict ? { obey: 'You obey.', agree: 'You agree.', bargain: 'You name your price; you do not agree yet.', stall: 'You commit to nothing.', refuse: 'You refuse.', rage: 'You refuse, in anger.', yield: 'You give in, afraid.', dismiss: 'You end the audience.' }[stance.verdict] : '';
+  messages.push({ role: 'user', content: `${message}\n\n[Answer in character as ${c.name}. ${how} ${outcome ? 'OUTCOME: ' + outcome + ' ' : ''}Mood: ${stance?.moodWord || 'composed'}. Keep your true aims as guarded as ${c.name} would. Reply with JSON only: {"reply":"...","changes":[]}]` });
   return messages;
 }
 
@@ -463,7 +480,7 @@ export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {
   const key = 'council:' + [...ids].sort().join(',');
   const log = (state.chats[key] || []).slice(-30);
   const system = [
-    `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${VOICES[c.id] ? '; speaks: ' + VOICES[c.id].voice : ''}; nature: courage ${personaFor(c).courage}, wits ${personaFor(c).wits}, guile ${personaFor(c).guile}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
+    `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${VOICES[c.id] ? '; speaks: ' + VOICES[c.id].voice : ''}; nature: ${natureTags(temperament(c)).tags.join(', ') || 'steady'}${DEMEANOURS[c.id] ? `; manner: ${DEMEANOURS[c.id].reg}; habits: ${DEMEANOURS[c.id].tics}` : ''}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
     'Each counsellor speaks in their own voice, from their own expertise and interests; they may disagree with one another and with the lord. Officers give concrete numbers from the ledger. 1-4 of them speak per round, whoever is most relevant. Never break character.',
     SCENE_STYLE.replace('HOW TO WRITE YOUR REPLY — a short scene of 2 to 5 beats', 'HOW EACH COUNSELLOR SPEAKS — each reply is a short scene of 1 to 3 beats'),
     `Reply ONLY with JSON: {"replies":[{"speaker":CHAR_ID,"text":"*what the player sees them do* and what they say, in first person"}],"changes":[optional change operations the council's reports imply — e.g. a steward's corrected figures]}`,

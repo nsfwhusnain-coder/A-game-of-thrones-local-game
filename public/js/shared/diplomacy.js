@@ -79,5 +79,5 @@ export function dispositionText(state, charId) {
   const d = disposition(state, charId); if (!d) return '';
   const fx = (x) => x.factors.map(([l, v]) => `${l} ${v > 0 ? '+' : ''}${v}`).join(', ');
   const pr = Object.entries(d.proposals).map(([k, v]) => `${k}: ${v.word} (${v.score})`).join('; ');
-  return `YOUR DISPOSITION toward the player (the engine's reckoning; let it guide you, though a good argument, a gift or a threat can move you): ${d.word} (${d.score}) — ${fx(d) || 'no strong feelings'}.\nHow you would weigh proposals: ${pr}. Accept readily when ≥15, bargain hard between -20 and 15, refuse below -20 unless offered something substantial.`;
+  return `YOUR DISPOSITION toward the player (the engine's reckoning; let it guide you, though a good argument, a gift or a threat can move you): ${d.word} (${d.score}) — ${fx(d) || 'no strong feelings'}.\nHow you would weigh proposals: ${pr}. (The game settles the outcome of each request; this is what lies behind it.)`;
 }

@@ -26,9 +26,15 @@ export async function api(path, opts = {}) {
   if (path.endsWith('/act') && ACT_SOUND[opts.body?.kind]) sfx(ACT_SOUND[opts.body.kind]);
   return data;
 }
-export function toast(msg, err = false) {
-  const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
-  $('#toasts').appendChild(t); setTimeout(() => t.remove(), err ? 9000 : 4500);
+// A passing notice. The same message (or the same key, for progress) replaces its predecessor rather than
+// stacking; at most three are shown; a click dismisses one.
+export function toast(msg, err = false, key = '') {
+  const box = $('#toasts'); const id = key || msg;
+  for (const old of box.children) if (old.dataset.key === id) old.remove();
+  while (box.children.length >= 3) box.firstElementChild.remove();
+  const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg; t.dataset.key = id;
+  t.onclick = () => t.remove();
+  box.appendChild(t); setTimeout(() => t.remove(), err ? 8000 : 4000);
 }
 export const relClass = (v) => (v > 10 ? 'pos' : v < -10 ? 'neg' : 'neu');
 export const relHtml = (v) => `<span class="rel ${relClass(v)}">${v > 0 ? '+' : ''}${v}</span>`;

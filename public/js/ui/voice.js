@@ -93,7 +93,7 @@ async function neuralWorker() {
   worker = new Worker('/js/ui/tts-worker.js', { type: 'module' });
   worker.onmessage = (e) => {
     const d = e.data || {};
-    if (d.type === 'progress') { const pct = Math.floor((100 * d.loaded) / d.total); if (pct >= lastPct + 25 || (pct === 100 && lastPct < 100)) { lastPct = pct; toast(`Preparing natural voices… ${pct}% (a one-time download)`); } return; }
+    if (d.type === 'progress') { const pct = Math.floor((100 * d.loaded) / d.total); if (pct >= lastPct + 25 || (pct === 100 && lastPct < 100)) { lastPct = pct; toast(`Preparing natural voices… ${pct}% (a one-time download)`, false, 'voice-download'); } return; }
     if (d.type === 'ready') return;
     const r = reqs.get(d.id); if (!r) return; reqs.delete(d.id);
     d.error ? r.reject(new Error(d.error)) : r.resolve(d);

@@ -4,6 +4,7 @@ import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow 
 import { dateStr } from '../shared/world.js';
 import { briefFor } from '../../data/briefs.js';
 import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices } from './voice.js';
+import { temperament, natureTags, VERDICT_LABEL, moodWord } from '../shared/temperament.js';
 
 export function setDrawer(tab) { app.drawerTab = tab; renderDrawer(); }
 export function renderDrawer() {
@@ -117,14 +118,16 @@ function renderAudience(body) {
   const h = s.houses[c.house]; const log = s.chats[c.id] || [];
   const p = s.meta.player; const me = s.characters[player().lord];
   const together = me && me.loc === c.loc;
-  const quick = c.house === p ? ['How many men can we field?', 'What is in the treasury, and what do we owe?', 'How full are the granaries?', 'Which of my lords can I trust?', 'What news?'] : ['What do you want?', 'I propose an alliance.', 'Will you trade with us?', 'What news from your lands?', 'Where does your house stand?'];
+  const mood = s.moods?.[c.id]; const closed = !!(mood?.closed && mood.turn === s.meta.turn);
+  const quick = c.house === p ? ['How many men can we field?', 'What is in the treasury, and what do we owe?', 'How full are the granaries?', 'Which of my lords can I trust?', 'What news?'] : ['What news from your lands?', 'What do you want?', 'I propose an alliance between our houses.', 'Will you trade with us?', 'I offer you 1,000 gold dragons for your friendship.', 'Swear fealty to me.'];
   body.innerHTML = `<div class="chat">
-    <div class="chat-head"><img src="${por(c, 80)}" alt=""><div style="flex:1;min-width:0"><div class="title" style="font-family:var(--display);color:var(--gold2)" data-char="${c.id}">${esc(c.name)} ${sig(h, 1)}</div><div class="sub muted" style="font-size:0.78rem">${esc(c.title || '')} · ${esc(placeName(s, c.loc))} · ${together ? 'in person' : '<b>by raven</b>'}${c.house !== p ? ' · opinion ' + (c.opinion || 0) : ''}</div></div><button class="btn small" data-action="close-chat">✕</button></div>
+    <div class="chat-head"><img src="${por(c, 80)}" alt=""><div style="flex:1;min-width:0"><div class="title" style="font-family:var(--display);color:var(--gold2)" data-char="${c.id}">${esc(c.name)} ${sig(h, 1)}</div><div class="sub muted" style="font-size:0.78rem">${esc(c.title || '')} · ${esc(placeName(s, c.loc))} · ${together ? 'in person' : '<b>by raven</b>'}${c.house !== p ? ' · opinion ' + (c.opinion || 0) : ''}</div>${temperHtml(c)}</div><button class="btn small" data-action="close-chat">✕</button></div>
     <div class="chat-log" id="chat-log">${log.length ? log.map((m) => msgHtml(m, c)).join('') : `<div class="muted" style="font-style:italic">${esc(c.bio || '')}</div>`}</div>
-    <div class="quick-asks">${quick.map((q) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
-    <div class="chat-input"><textarea id="chat-text" rows="3" placeholder="${together ? 'Speak…' : 'Write your letter…'}">${esc(app.chatPrefill || '')}</textarea><button class="btn primary" id="chat-send">Send</button></div></div>`;
+    ${closed ? '' : `<div class="quick-asks">${quick.map((q) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`}
+    ${closed ? `<div class="chat-closed">${esc(c.name)} will not hear you again this moon.${together ? ' The doors are shut to you.' : ' Your ravens come back unanswered.'}</div>` : `<div class="chat-input"><textarea id="chat-text" rows="3" placeholder="${together ? 'Speak…' : 'Write your letter…'}">${esc(app.chatPrefill || '')}</textarea><button class="btn primary" id="chat-send">Send</button></div>`}</div>`;
   app.chatPrefill = null;
   const logEl = $('#chat-log'); logEl.scrollTop = logEl.scrollHeight;
+  if (closed) return;
   const send = async (text) => {
     text = (text ?? $('#chat-text').value).trim(); if (!text || app.busy) return;
     $('#chat-text').value = '';
@@ -135,7 +138,6 @@ function renderAudience(body) {
       const r = await api(`/games/${app.saveId}/talk`, { body: { character: c.id, message: text } });
       app.setState(r.state, { keepDrawer: true });
       if (app.drawerTab === 'audience') { renderAudience(body); const last = [...body.querySelectorAll('.msg.npc')].at(-1); if (last) playScene([last]); }
-      if (r.applied?.length) toast(r.applied.map((a) => a.text).join(' · '));
     } catch (e) { toast(e.message, true); $('#typing')?.remove(); }
     finally { app.busy = false; }
   };
@@ -144,6 +146,15 @@ function renderAudience(body) {
   $$('.quick-asks button', body).forEach((b) => b.onclick = () => send(b.dataset.q));
   $('#chat-text').focus();
 }
+// Who they are and how they feel right now: nature tags, mood, and the patience left in this audience
+function temperHtml(c) {
+  const s = app.state; if (c.house === s.meta.player) return '';
+  const { tags, sway } = natureTags(temperament(c));
+  const m = s.moods?.[c.id]; const fresh = m && m.turn === s.meta.turn;
+  const mood = fresh ? moodWord(m) : 'composed';
+  const pips = fresh && m.full ? `<span class="pips" title="Patience left">${Array.from({ length: m.full }, (_, i) => `<i class="${i < m.patience ? 'on' : ''}"></i>`).join('')}</span>` : '';
+  return `<div class="temper"><span class="mood m-${mood.replace(/\s.*/, '')}">${esc(mood)}</span>${pips}<span class="tags">${esc(tags.slice(0, 4).join(' · '))}${sway.length ? ` <span class="muted">— moved by ${esc(sway.slice(0, 2).join(', '))}</span>` : ''}</span></div>`;
+}
 function msgHtml(m, c) {
   const s = app.state; const sp = m.speaker ? s.characters[m.speaker] : c;
   if (m.role === 'player') return `<div class="msg player"><div class="who">You · ${esc(m.date || '')}</div>${esc(m.text)}</div>`;
@@ -151,7 +162,8 @@ function msgHtml(m, c) {
   const bs = beats(m.text);
   // narration reads as a novel's prose; speech is set in quotation marks
   const body = bs.map((b) => (b.kind === 'act' ? `<p class="beat act" title="Click to hear it">${esc(b.text)}</p>` : `<p class="beat say" title="Click to hear it">“${esc(b.text.replace(/^[“"]+|[”"]+$/g, ''))}”</p>`)).join('') || esc(m.text);
-  return `<div class="msg npc" data-speaker="${sp?.id || ''}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}<button class="speak-all" title="Hear it">🔊</button></div><div class="beats">${body}</div>${m.applied?.length ? `<div class="applied">${m.applied.map(esc).join('<br>')}</div>` : ''}</div>`;
+  const verdict = m.verdict && m.verdict !== 'obey' ? `<span class="verdict v-${m.verdict}">${esc(VERDICT_LABEL[m.verdict] || m.verdict)}</span>` : '';
+  return `<div class="msg npc" data-speaker="${sp?.id || ''}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}${verdict}<button class="speak-all" title="Hear it">🔊</button></div><div class="beats">${body}</div>${m.applied?.length ? `<div class="applied">${m.applied.map(esc).join('<br>')}</div>` : ''}</div>`;
 }
 // Voices: click a line to hear it, or the speaker icon to hear the whole reply
 export function wireVoices(root) {
@@ -209,7 +221,6 @@ function renderCouncil(body) {
       const before = (app.state.chats['council:' + [...ids].sort().join(',')] || []).length;
       app.setState(r.state, { keepDrawer: true });
       if (app.drawerTab === 'audience') { renderCouncil(body); const fresh = [...body.querySelectorAll('.msg.npc')].slice(-Math.max(1, (r.replies || []).length)); playScene(fresh); }
-      if (r.applied?.length) toast(r.applied.map((a) => a.text).join(' · '));
     } catch (e) { toast(e.message, true); $('#typing')?.remove(); } finally { app.busy = false; }
   };
   $('#chat-send').onclick = () => send();

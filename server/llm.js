@@ -356,10 +356,17 @@ function mockResponse(messages, opts) {
   const kind = opts.kind || 'jump';
   let obj;
   if (kind === 'chat') {
-    obj = {
-      reply: '*(Mock mode — connect a local model in Settings for real replies.)* "My lord, I hear you. It shall be as you say, though the realm will not sit idle while we act."',
-      changes: [],
-    };
+    // play the outcome the engine settled, so the audience can be tried without a model
+    const out = (last.match(/OUTCOME: ([^.]+)\./) || [])[1] || '';
+    const line = /refuse, in anger/.test(out) ? '*His face darkens and he slams a fist on the table.* You dare? The answer is no — and you will remember that you asked.'
+      : /refuse/.test(out) ? '*A long silence. Then a slow shake of the head.* No. I will not.'
+        : /price/.test(out) ? '*He considers you, lips pursed.* Perhaps. But nothing comes for nothing. What will you give me for it?'
+          : /commit to nothing/.test(out) ? '*He spreads his hands.* These are weighty matters. I must think on them, and take counsel.'
+            : /give in/.test(out) ? '*He swallows, and cannot quite meet your eye.* As — as you wish. Only let there be no blood over it.'
+              : /end the audience/.test(out) ? '*He rises so sharply the chair scrapes the stone.* Enough. We are done here. Get out.'
+                : /agree/.test(out) ? '*He nods, slowly.* Very well. You have my word on it.'
+                  : '*He listens.* I hear you, my lord.';
+    obj = { reply: '(Mock mode) ' + line, changes: [] };
   } else if (kind === 'council') {
     const ids = [...String(messages[0]?.content || '').matchAll(/\[([a-z_]+)\]/g)].map((m) => m[1]);
     obj = { replies: ids.slice(0, 2).map((id, i) => ({ speaker: id, text: i ? '*(Mock)* I would counsel caution, my lord.' : '*(Mock)* The ledgers are in order, my lord, though the harvest could be better.' })), changes: [] };

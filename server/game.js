@@ -11,6 +11,7 @@ import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
 import { worldTick } from '../public/js/shared/plots.js';
 import { carryOutOrders, readOrdersByRule, executeActions } from './orders.js';
+import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 export const SAVES = path.join(ROOT, 'saves');
@@ -313,7 +314,10 @@ export async function talk(id, charId, message) {
   const c = state.characters[charId];
   if (!c) throw httpError(404, 'unknown character');
   if (!c.alive) throw httpError(400, `${c.name} is dead.`);
-  const messages = buildChatPrompt(state, charId, message, readChronicle(id), cfg);
+  if (moodOf(state, c).closed) throw httpError(409, `${c.name} will not hear you again this moon.`);
+  // the engine weighs the words first: their nature, their mood, the odds — and settles the outcome
+  const stance = weighAudience(state, c, message);
+  const messages = buildChatPrompt(state, charId, message, readChronicle(id), cfg, stance);
   const onProgress = tracker(id, 'chat');
   let r; try { r = await chat(messages, { json: true, kind: 'chat', onProgress }); } finally { done(id); }
   logLLM(id, 'chat', messages, r.text);
@@ -347,6 +351,7 @@ export async function talk(id, charId, message) {
     ch.house = p; if (['travel', 'ride'].includes(String(ch.op)) && !ch.character) ch.character = c.id;
     return true;
   });
+  changes = holdToVerdict(state, c, stance, changes);
   let { applied, rejected } = applyChanges(state, changes, { source: c.name, protectPlayer: true });
   // the model forgot to act on a plain command to a servant: read it by rule, with the servant as the one addressed
   if (ownMan && c.id !== state.houses[p].lord && !applied.some((a) => ['travel', 'ride', 'recruit', 'hire'].includes(a.op))) {
@@ -354,10 +359,10 @@ export async function talk(id, charId, message) {
     if (plan.actions.length) { const res = executeActions(state, plan.actions); for (const t of res[1] || []) (t.startsWith('could not') ? rejected : applied).push(t.startsWith('could not') ? { change: plan.actions[0], reason: t } : { op: plan.actions[0].op, text: t }); }
   }
   const turn = state.meta.turn;
-  state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn }, { role: 'npc', text: reply, date: dateStr(state.meta.date), turn, applied: applied.map((a) => a.text) }];
+  state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn }, { role: 'npc', text: reply, date: dateStr(state.meta.date), turn, applied: applied.map((a) => a.text), mood: stance.moodWord, ...(stance.verdict ? { verdict: stance.verdict } : {}) }];
   if (state.chronicle.length) { appendChronicle(id, state.chronicle.map((x) => `- ${x.date}: ${x.text}`).join('\n') + '\n'); state.chronicle = []; }
   saveState(id, state);
-  return { reply, applied, rejected, state };
+  return { reply, applied, rejected, state, stance: { verdict: stance.verdict, mood: moodWord(stance.mood), patience: stance.mood.patience, full: stance.mood.full, closed: !!stance.mood.closed } };
 }
 
 export async function suggest(id) {
