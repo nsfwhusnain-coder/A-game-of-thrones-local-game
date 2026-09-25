@@ -49,6 +49,16 @@ export const HOLDING_RESOURCES = {
   mallister: { fish: 0.6 }, nights_watch: { grain: 0.9, trade: 0.4 }, shadow_tower: { grain: 0.3 }, eastwatch: { fish: 1.0, trade: 0.5 }, tully: { grain: 0.6, fish: 0.6 }, rowan: { grain: 1.0 }, oakheart: { timber: 0.8 },
   tarly: { horses: 0.6 }, florent: { grain: 0.6 }, crane: { fish: 0.6 }, caswell: { trade: 0.8 }, footly: { trade: 0.6 },
   baratheon_se: { timber: 0.6 }, tarth: { fish: 0.4 }, connington: { fish: 0.4 }, planky_town: { trade: 1.2 },
+  // specialities the books name
+  ryswell: { horses: 1.2 }, mormont: { timber: 0.6, fish: 0.8 }, reed: { fish: 0.6 }, glover: { timber: 0.8 }, hornwood: { wool: 0.6, timber: 0.4 },
+  umber: { furs: 0.8, timber: 0.4 }, flint: { furs: 0.4 }, dustin: { horses: 0.4, grain: 0.3 }, cerwyn: { timber: 0.4 },
+  gargalen: { salt: 1.2, fish: 0.6 }, dalt: { wine: 0.6, spice: 0.3 }, fowler: { horses: 0.8 }, uller: { salt: 0.4 }, qorgyle: { horses: 0.4 },
+  beesbury: { trade: 0.8, grain: 0.4 }, fossoway: { wine: 0.6, grain: 0.4 }, footly: { trade: 0.8 }, mullendore: { grain: 0.6 },
+  wylde: { fish: 0.8 }, estermont: { fish: 0.6, timber: 0.4 }, swann: { grain: 0.4 }, caron: { horses: 0.3 },
+  royce_gates: { grain: 0.8, horses: 0.4 }, waynwood: { horses: 0.6 }, corbray: { trade: 0.4 }, sunderland: { fish: 0.8 },
+  banefort: { fish: 0.6, trade: 0.4 }, farman: { fish: 0.6, trade: 0.4 }, prester: { grain: 0.6 }, brax: { gold: 0.3, timber: 0.4 },
+  blackwood: { timber: 0.8 }, bracken: { horses: 0.6 }, piper: { grain: 0.6 }, whent: { grain: 0.6, trade: 0.4 },
+  celtigar: { trade: 0.4 }, stokeworth: { grain: 0.6 }, rosby: { grain: 0.4 }, massey: { fish: 0.6 },
 };
 
 // Smallfolk living under each holding (estimates). Type/rank defaults, then overrides.
