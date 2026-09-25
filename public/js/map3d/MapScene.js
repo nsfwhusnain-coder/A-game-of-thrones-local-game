@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { WORLD, WALL, LABELS, RIVERS, ROADS, JUNCTIONS, PLACE_NAMES, PLACE_KIND } from '../../data/geography.js';
 import { realmOf, getRelation, resolvePlaceId, fmt } from '../shared/world.js';
-import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, bannerTexture, tierOf, armyFigureCount, clothUniforms } from './models.js';
+import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, bannerTexture, tierOf, armyFigureCount, clothUniforms, roofTone } from './models.js';
 import { PathGrid, pathLength, pointAlong } from './pathfind.js';
 import { makeNoise } from '../map/noise.js';
 
@@ -342,7 +342,7 @@ export class MapScene {
       }
       if (rec.owner !== hd.owner) {
         rec.owner = hd.owner;
-        rec.materials.roof.color.set(owner?.color || '#777');
+        rec.materials.roof.color.set(roofTone(hd.region ? hd : { ...hd, region: owner?.region }, owner?.color || '#777'));
         if (rec.banner) { rec.group.remove(rec.banner); rec.banner = null; }
         if (owner && (hd.seatOf || rec.tier >= 4)) {
           const bs = 1.2 + rec.tier * 0.25; const lift = bs * 0.5;

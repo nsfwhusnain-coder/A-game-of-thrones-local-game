@@ -11,6 +11,81 @@ export function mat(color, opts = {}) {
   if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0.02, flatShading: true, ...opts }));
   return matCache.get(key);
 }
+// ---------- surfaces: coursed masonry, tiled roofs, half-timbered plaster ----------
+// Shader extensions on the standard material, in the model's own space so the stonework scales with the
+// castle. Block colours vary stone by stone, mortar lines are dark, walls weather towards their feet,
+// moss creeps up in the wet north and snow lies on ledges beyond the Neck.
+const SURF_VERT = ['#include <common>', 'varying vec3 vLP;\nvarying vec3 vLN;\n#include <common>', '#include <begin_vertex>', '#include <begin_vertex>\nvLP = position;\nvLN = normal;'];
+const SURF_HEAD = `
+varying vec3 vLP; varying vec3 vLN;
+uniform float uKind; uniform vec3 uMoss; uniform float uMossAmt; uniform float uSnow;
+float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
+vec3 surfaceTint(vec3 base) {
+  vec3 n = normalize(vLN); vec3 p = vLP;
+  bool top = n.y > 0.7;
+  vec2 uv = top ? p.xz : vec2(abs(n.x) > abs(n.z) ? p.z : p.x, p.y);
+  if (uKind < 0.5) { // masonry
+    float ch = 0.34, bl = 0.62;
+    float row = floor(uv.y / ch); vec2 b = vec2(uv.x / bl + (mod(row, 2.0) * 0.5), uv.y / ch);
+    if (top) b = uv / vec2(bl, bl * 0.8);
+    vec2 cell = floor(b), f = fract(b);
+    float edge = min(min(f.x, 1.0 - f.x) * bl / ch, min(f.y, 1.0 - f.y));
+    float mortar = 1.0 - smoothstep(0.03, 0.09, edge);
+    float v = h21(cell) - 0.5;
+    vec3 c = base * (1.0 + v * 0.22) * mix(vec3(1.0), vec3(1.03, 1.0, 0.95), h21(cell + 7.0));
+    c *= 1.0 - 0.12 * vnoise(p.xz * 3.0 + p.y * 2.0);
+    c = mix(c, base * 0.5, mortar * 0.6);
+    float foot = 1.0 - smoothstep(0.0, 2.2, p.y);
+    c *= 1.0 - 0.28 * foot;
+    float streak = vnoise(vec2(uv.x * 6.0, p.y * 0.4)) * (1.0 - smoothstep(0.0, 5.0, p.y));
+    c = mix(c, uMoss, uMossAmt * clamp(foot * 0.8 + streak * 0.5 - 0.15, 0.0, 1.0));
+    if (top) c = mix(c, vec3(0.93, 0.95, 0.97), uSnow * 0.85);
+    return c;
+  }
+  if (uKind < 1.5) { // roof tiles or slate, laid in rows down the slope
+    float rowH = 0.22; float along = abs(n.x) > abs(n.z) ? p.z : p.x;
+    float row = floor(p.y / rowH); float f = fract(p.y / rowH);
+    float tile = floor(along / 0.3 + mod(row, 2.0) * 0.5);
+    float v = h21(vec2(tile, row)) - 0.5;
+    vec3 c = base * (0.92 + v * 0.2);
+    c *= 0.72 + 0.28 * smoothstep(0.0, 0.35, f); // each course shadows the one below
+    float seam = abs(fract(along / 0.3 + mod(row, 2.0) * 0.5) - 0.5);
+    c *= 0.85 + 0.15 * smoothstep(0.44, 0.5, 0.5 - seam + 0.44);
+    c = mix(c, vec3(0.94, 0.96, 0.98), uSnow * smoothstep(0.1, 0.6, n.y) * 0.9);
+    return c;
+  }
+  // half-timbered plaster: dark beams and posts over lime-washed walls
+  if (top) return base;
+  float post = abs(fract(uv.x / 0.55) - 0.5) * 0.55;
+  float beam = min(abs(p.y - 0.08), min(abs(p.y - 0.45), abs(p.y - 0.78)));
+  float brace = abs(fract((uv.x + p.y) / 1.1) - 0.5) * 1.1;
+  float wood = step(post, 0.045) + step(beam, 0.035) + step(brace, 0.03) * step(0.1, p.y) * step(p.y, 0.44);
+  vec3 plaster = base * (0.94 + 0.08 * vnoise(uv * 9.0));
+  return mix(plaster, vec3(0.24, 0.16, 0.1), clamp(wood, 0.0, 1.0));
+}
+`;
+const surfCache = new Map();
+export function surfaceMaterial(kind, color, { moss = 0, snow = 0, opts = {} } = {}) {
+  const key = `${kind}|${color}|${moss}|${snow}`;
+  if (kind !== 'roof' && surfCache.has(key)) return surfCache.get(key);
+  const m = new THREE.MeshStandardMaterial({ color, roughness: kind === 'roof' ? 0.72 : 0.92, metalness: 0.0, flatShading: true, ...opts });
+  const K = { stone: 0, roof: 1, plaster: 2 }[kind];
+  m.userData.surf = { uKind: { value: K }, uMoss: { value: new THREE.Color('#4f6a36') }, uMossAmt: { value: moss }, uSnow: { value: snow } };
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, m.userData.surf);
+    sh.vertexShader = sh.vertexShader.replace(SURF_VERT[0], SURF_VERT[1]).replace(SURF_VERT[2], SURF_VERT[3]);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + SURF_HEAD)
+      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = surfaceTint(diffuseColor.rgb);');
+  };
+  m.customProgramCacheKey = () => 'surf-v1';
+  if (kind !== 'roof') surfCache.set(key, m);
+  return m;
+}
+const WET = { north: 0.55, riverlands: 0.45, vale: 0.25, stormlands: 0.5, reach: 0.25, crownlands: 0.3, iron_islands: 0.35, westerlands: 0.2, wall: 0.2, beyond: 0.3, dorne: 0, essos: 0.1 };
+const SNOWY = { wall: 1, beyond: 1, north: 0.35 };
+
 const STONE = { north: '#a19f98', wall: '#8f9396', beyond: '#9a8f80', iron_islands: '#6f716e', riverlands: '#b3aa98', vale: '#d9d6cf', westerlands: '#c7a888', crownlands: '#c9b89c', reach: '#e1d7bf', stormlands: '#9f9a90', dorne: '#e3c890', essos: '#dccaa6' };
 
 function seeded(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
@@ -85,15 +160,26 @@ export function tierOf(holding, house) {
 }
 
 /** Build a settlement model. Returns { group, anchorHeight, radius } in local units (origin = ground). */
+// Roofs: towns and cities are roofed as their region builds (terracotta south, slate north); castles fly
+// their lord's colours on their tower roofs, muted as paint and tile would mute them.
+const REGION_ROOF = { north: '#5a5f66', wall: '#4e5358', beyond: '#6a5a48', iron_islands: '#43474b', riverlands: '#6e5442', vale: '#6c7079', westerlands: '#8c3d2c', crownlands: '#9a4a30', reach: '#a4553a', stormlands: '#51565d', dorne: '#b8764a', essos: '#b0683e' };
+export function roofTone(holding, ownerColor) {
+  const reg = REGION_ROOF[holding.region] || '#7a5a44';
+  if (holding.type === 'city' || holding.type === 'town' || holding.type === 'palace') return reg;
+  return '#' + new THREE.Color(ownerColor || reg).lerp(new THREE.Color(reg), 0.45).getHexString();
+}
 export function buildSettlement(holding, house, roofColor) {
   const kit = new Kit();
   const rng = seeded(hashId(holding.id));
   const tier = tierOf(holding, house);
   const stone = STONE[holding.region] || '#b8ae9c';
   const materials = {
-    stone: mat(stone), dark: mat('#4a4744'), black: mat('#2a2826'), roof: new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.7, flatShading: true }),
-    plaster: mat('#d9ccb0'), wood: mat('#6b4a2e'), white: mat('#f0ece2'), gold: mat('#d8b24a', { metalness: 0.5, roughness: 0.4 }),
-    red: mat('#9c4636'), ice: mat('#dff1fb', { roughness: 0.2, metalness: 0.1, emissive: '#2a4a5a', emissiveIntensity: 0.25 }),
+    stone: surfaceMaterial('stone', stone, { moss: WET[holding.region] ?? 0.2, snow: SNOWY[holding.region] || 0 }),
+    dark: surfaceMaterial('stone', '#4a4744', { moss: WET[holding.region] ?? 0.2 }), black: surfaceMaterial('stone', '#2e2c2a'),
+    ruinstone: surfaceMaterial('stone', '#77716a', { moss: 0.7 }),
+    roof: surfaceMaterial('roof', roofColor, { snow: SNOWY[holding.region] || 0 }),
+    plaster: surfaceMaterial('plaster', '#d9ccb0'), wood: mat('#6b4a2e'), white: surfaceMaterial('stone', '#ece6d8'), gold: mat('#d8b24a', { metalness: 0.5, roughness: 0.4 }),
+    red: surfaceMaterial('stone', '#a4503a', { moss: 0.1 }), ice: mat('#dff1fb', { roughness: 0.2, metalness: 0.1, emissive: '#2a4a5a', emissiveIntensity: 0.25 }),
     rock: mat('#7a6a5a'), glass: mat('#a8d8e8', { roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.8 }), water: mat('#3a7a9a', { roughness: 0.1 }),
     canvas: mat('#d8c8a0'), fire: mat('#ffb040', { emissive: '#ff8020', emissiveIntensity: 1.5 }),
   };
@@ -205,7 +291,9 @@ const SPECIALS = {
     for (let i = 0; i < 7; i++) { const a = (i / 7) * 6.28; kit.tower(-6 + Math.cos(a) * 3.6, -7 + Math.sin(a) * 3.6, 0.45, 6.5, { key: 'white', roofH: 1.6 }); }
     kit.add('gold', G.cone(8), -6, 6.2, -7, 0, 0.6, 1.4, 0.6);
     // Dragonpit on Rhaenys's Hill
-    kit.add('dark', G.cyl(16), -3, 1.6, 9, 0, 4, 3.2, 4); kit.dome(-3, 9, 4, 3.2, 'dark');
+    // Dragonpit on Rhaenys's Hill: a great weathered drum of stone, its dome fallen in
+    kit.add('ruinstone', G.cyl(20), -3, 1.6, 9, 0, 4, 3.2, 4); kit.dome(-3, 9, 3.9, 3.0, 'ruinstone');
+    for (let i = 0; i < 9; i++) { const a = rng() * 6.28, d = rng() * 2.2; kit.add('dark', G.box, -3 + Math.cos(a) * d, 6.6 + rng() * 0.4, 9 + Math.sin(a) * d, rng() * 3, 0.7 + rng(), 0.5, 0.5 + rng() * 0.6); }
     return { top: 18, radius: 26 };
   },
   hightower(kit, rng) { // Oldtown + the Hightower
