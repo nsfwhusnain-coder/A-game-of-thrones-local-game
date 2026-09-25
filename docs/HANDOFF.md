@@ -262,6 +262,18 @@ These are the session's commits, in order. Run `git log` for the full messages, 
 - **Tests**: `npm test` (node:test, `tests/engine.test.js`).
 - **Not yet done**: live testing against the owner's llama-swap models (owner asked to finish and polish first); model selection. Known bug, not fixed: the rule-based order reader ignores number words ("ten men" → 50).
 
+## 4c. Third session (2026-09-25): immersion — characters, voices, war, the moves you can make
+
+- **Temperament** (`shared/temperament.js`, `data/demeanours.js`, `data/histories.js` now 120 personas): `weighAudience(state, c, text)` reads intent (`readIntent`), updates `state.moods[id]` (anger/fear/trust/patience, cooling each turn), and returns a verdict (obey/agree/bargain/stall/refuse/rage/yield/dismiss) plus a `directive` (manner + mood + outcome) that `buildChatPrompt` puts in the system prompt and repeats in the last user message. `holdToVerdict` strips binding ops (pact/liege/wed/betroth) unless agreed, and adds the pact if the model forgot. `dismiss` closes the audience for the turn (409 from `talk`). The turn prompt's static part lists `HOW THE GREAT LORDS THINK` (nature tags per ruling lord); councils get each counsellor's manner.
+- **Voices** (`ui/voice.js`, `ui/tts-worker.js`): voice specs are blends (`bm_george*0.7+am_fenrir*0.3`), mixed from style vectors by overriding `generate_from_ids` on the Kokoro instance; generations are serialised. `PROFILES` hand-casts ~60; `POOLS` cast the rest by sex/age/region. `MOOD_PACE` by the reply's mood (stored on chat messages). `SAY` respells names. Character sheet: Nature + voice picker + Hear. Settings: narrator.
+- **Battles and sieges** (`shared/battles.js` `resolveWarfare`): runs in `advance()` after marches; skips houses whose battle the model told itself this turn. Contact 10 units; sieges within 7; storming chance falls steeply with walls. Marching against a host: `march` to `army:<id>` (UI: pick an enemy host in march mode).
+- **Court acts** (`server/court.js`): `act` kinds `gift`, `feast`, `tourney`, `judge`, `declare_war`, `scheme` (spy/secrets; `kind2`). Each returns an order text + a note for the model + a summary toast.
+- **Fog of war** (`shared/intel.js`): `state.intel.armies` reports + `state.intel.spies`; `updateIntel` each turn; `viewOfArmies` for the map (seen / reported / ghost); `report` change op; seeded at game start ('common knowledge'). The server still sends the full state; the client filters.
+- **Roads** (`shared/roads.js`): `roadEncounters` for riders (`c.travel` now has `from`) and companies under 400 men. Riders drawn on the map (`syncRiders`).
+- **Replay**: `MapScene.reelHold/reelF` scrub army marches with the day counter.
+- **Other fixes**: succession of elected offices (Watch, Free Cities, companies, free folk) no longer passes by blood; spelled-out numbers in orders; infant portraits; toasts no longer stack; title screen card; army plates avoid castle names; events always dated and numbered.
+- **Bench** (`scripts/bench.js`, `npm run bench`): see README. Not yet run against a real model — that is the next step, at the owner's go-ahead.
+
 ## 5. In the middle of (when this was written)
 
 - **Turn playback:** finished and committed (`74380dd`).

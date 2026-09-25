@@ -184,3 +184,12 @@ test('a planted report shows a host that does not exist', () => {
   const ghost = [...viewOfArmies(s).values()].find((x) => x.false);
   assert.ok(ghost && ghost.men === 8000);
 });
+
+// ── Succession: elected offices are not inherited ──
+import { heirOf } from '../public/js/shared/people.js';
+test('the Watch chooses a brother, not the Lord Commander\'s exiled son; Braavos elects', () => {
+  const s = fresh();
+  const nw = heirOf(s, 'nights_watch', 'jeor_mormont');
+  assert.ok(nw && s.characters[nw.id].house === 'nights_watch' && nw.id !== 'jorah_mormont');
+  assert.equal(heirOf(s, 'braavos', s.houses.braavos.lord), null);
+});

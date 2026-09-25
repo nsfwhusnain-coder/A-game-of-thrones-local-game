@@ -461,12 +461,15 @@ export function resolveSuccessions(state) {
       if (h.rank === 'crown') heir.title = `${female ? 'Queen' : 'King'} of the Andals and the First Men, ${female ? 'Lady' : 'Lord'} of the Seven Kingdoms`;
       else if (!/king|queen/i.test(heir.title || '')) heir.title = `${female ? 'Lady' : 'Lord'} of ${seat}`;
       heir.roles = [...new Set([...(heir.roles || []).filter((r) => r !== 'heir'), female ? 'lady' : 'lord'])];
-      text = `SUCCESSION: ${heir.name} succeeds ${prev} as head of House ${h.name}${(heir.age ?? 20) < 16 ? ` — a child of ${heir.age}; a regent will rule in all but name` : ''}`;
+      const chosen = { order: `the brothers choose ${heir.name} to succeed ${prev}`, company: `the company names ${heir.name} its captain after ${prev}`, tribe: `the free folk follow ${heir.name} now that ${prev} is gone` }[h.rank];
+      text = chosen ? `SUCCESSION: ${chosen}` : `SUCCESSION: ${heir.name} succeeds ${prev} as head of House ${h.name}${(heir.age ?? 20) < 16 ? ` — a child of ${heir.age}; a regent will rule in all but name` : ''}`;
     } else {
       const c = generateLord(h, state.meta.date.year);
-      c.id = c.id + '_' + state.meta.turn; c.bio = `A cousin who claimed the seat of House ${h.name} when the main line failed.`;
+      c.id = c.id + '_' + state.meta.turn;
+      const elected = h.rank === 'city_state';
+      c.bio = elected ? `Chosen by the magisters of ${h.name} to rule after ${lord?.name || 'the last'}.` : `A cousin who claimed the seat of House ${h.name} when the main line failed.`;
       state.characters[c.id] = c; h.lord = c.id;
-      text = `SUCCESSION: the main line of House ${h.name} has failed; a cousin, ${c.name}, claims the seat`;
+      text = elected ? `SUCCESSION: the magisters of ${h.name} choose ${c.name} to rule after ${lord?.name || 'the last'}` : `SUCCESSION: the main line of House ${h.name} has failed; a cousin, ${c.name}, claims the seat`;
     }
     state.chronicle.push({ date, text });
     out.push({ op: 'succession', text, house: h.id });

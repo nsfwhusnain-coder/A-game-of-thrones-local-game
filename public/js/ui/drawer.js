@@ -85,7 +85,10 @@ function renderFeed(body) {
       • <b>Military</b> (⚔) — call the banners; each lord answers (or doesn't) in his own time. March hosts by clicking the map.<br>
       • <b>Economy</b> (🪙) — taxes, the ledger, and works to fund.<br>
       • <b>Diplomacy</b> (🕊) — treat with any house; proposals open an audience.<br>
-      • Click any castle, army or person. Speak to anyone — distant lords get a raven.<br>
+      • Click any castle, army or person. Speak to anyone — distant lords get a raven. Each answers after their nature and mood: some bargain, some refuse, some throw you out.<br>
+      • <b>Pins</b> on the map mark news you have not read and matters awaiting your word — click one to read it or answer.<br>
+      • <b>Hold court</b> (Realm): feasts and tourneys. Send gifts, judge prisoners, declare war from a person's or house's sheet.<br>
+      • You see only what your house knows: distant hosts are dashed reports, and reports can lie. Plant spies (Intrigue) to follow them.<br>
       • <b>Advance ▶</b> — time passes; the world acts, the map changes.<br>
       • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></details>`);
   wireDecisions(body);

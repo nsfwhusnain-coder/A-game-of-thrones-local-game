@@ -18,8 +18,19 @@ function canInherit(c, houseId) {
 const byAge = (a, b) => (a.born ?? 9999) - (b.born ?? 9999);
 
 /** Westerosi male-preference primogeniture (Dorne: absolute primogeniture). Returns the heir or null. */
+// Offices that are not inherited: the Free Cities elect, the Night's Watch chooses its Lord Commander, a
+// free company its captain, the free folk their king. Blood does not pass them on.
+export const ELECTED = ['city_state', 'order', 'company', 'tribe'];
+function electedHeir(state, h, deceasedId) {
+  if (h.rank === 'city_state') return null; // the magisters choose one of their own: a new name (see world.js)
+  const skill = (c) => (c.skills || []).slice(0, 3).reduce((a, b) => a + b, 0) + ((c.roles || []).includes('commander') ? 6 : 0);
+  const serving = Object.values(state.characters).filter((c) => c.alive && c.id !== deceasedId && c.house === h.id && (c.age ?? 30) >= 20 && !/imprisoned|captive|missing/.test(c.status || '') && !(c.roles || []).includes('ward'));
+  return serving.sort((a, b) => skill(b) - skill(a))[0] || null;
+}
+
 export function heirOf(state, houseId, deceasedId) {
   const h = state.houses[houseId]; if (!h) return null;
+  if (ELECTED.includes(h.rank)) return electedHeir(state, h, deceasedId);
   const chars = Object.values(state.characters);
   const dorne = h.region === 'dorne';
   const order = (list) => {
