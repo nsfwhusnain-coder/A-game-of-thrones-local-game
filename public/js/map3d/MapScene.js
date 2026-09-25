@@ -136,7 +136,11 @@ export class MapScene {
           float pulse = 0.7 + 0.3 * sin(uTime * 2.4);
           diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 1.0, 0.42), clamp(hl.r * pulse, 0.0, 1.0) * 0.85);
           diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.22, 0.12), hl.g * 0.85);
-          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.93, 0.62), hl.b * 0.55);`)
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.93, 0.62), hl.b * 0.55);
+          // the shadows of high clouds drift slowly across the land
+          vec2 cq = vWPos.xz * 0.0035 + vec2(uTime * 0.0045, uTime * 0.002);
+          float cloud = dn(cq) * 0.6 + dn(cq * 2.3 + 7.0) * 0.3 + dn(cq * 5.1 - 3.0) * 0.1;
+          diffuseColor.rgb *= 1.0 - 0.2 * smoothstep(0.52, 0.72, cloud);`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
           totalEmissiveRadiance += vec3(0.35, 0.8, 0.25) * hl.r * pulse * 0.55 + vec3(0.8, 0.12, 0.05) * hl.g * 0.35 + vec3(0.5, 0.45, 0.25) * hl.b * 0.25;`);
     };
@@ -599,7 +603,7 @@ export class MapScene {
     if (this.fitDirty !== this.settlements.size) this.fitSettlements();
     for (const rec of this.settlements.values()) {
       const vis = rec.tier >= 6 ? true : rec.tier >= 5 ? this.dist < 1900 : rec.tier >= 4 ? this.dist < 1100 : this.dist < 700;
-      rec.group.visible = vis; if (vis) rec.group.scale.setScalar((rec.tier >= 5 ? zf : Math.min(zf, 2.4)) * (rec.fit || 1));
+      rec.group.visible = vis; if (vis) rec.group.scale.setScalar(Math.min(zf, rec.tier >= 5 ? 2.9 : 2.4) * (rec.fit || 1));
     }
     for (const pl of this.places || []) pl.group.visible = this.dist < 520;
     const af = clamp(this.dist / 160, 1, 9);
@@ -735,6 +739,9 @@ export class MapScene {
       const y = a.type === 'fleet' ? WATER_LEVEL + Math.sin(time * 1.3 + id.length) * 0.15 : this.groundAt(p[0], p[1]);
       rec.group.position.set(p[0], y, p[1]);
       if (heading !== null) rec.group.rotation.y = -heading + Math.PI / 2;
+      // a marching host strides: the files rise and fall and sway a little; at rest they stand still
+      const marching = !!rec.anim && a.type !== 'fleet';
+      for (const m of rec.group.children) if (m.isInstancedMesh) { m.position.y = marching ? Math.abs(Math.sin(time * 7 + m.id)) * 0.09 : 0; m.rotation.z = marching ? Math.sin(time * 3.5) * 0.02 : 0; }
       rec.label.pos.set(p[0], y + 6 * rec.group.scale.x, p[1]);
     }
     // banners flutter
