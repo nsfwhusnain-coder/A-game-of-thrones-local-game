@@ -124,18 +124,58 @@ function houseLine(state, h, player) {
   return `${h.id} | ${h.name} | seat:${seat} | liege:${h.liege || '—'} | lord:${lord ? lord.id + (lord.alive ? '' : '(dead)') : '—'}${rel}${h.status !== 'active' ? ' | ' + h.status : ''}`;
 }
 
-function figuresLine(h) {
-  return FIGURE_FIELDS.map((f) => `${f}:${fmt(h.figures[f]?.v)}`).join(', ');
+// The roster changes rarely (a death, a new title), so it is written without anything that moves every turn —
+// where people are, their health, relations — and the model server can keep it cached from turn to turn.
+const titleCase = (id) => id.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+function rosterLine(c) {
+  const bits = [];
+  if (c.name !== titleCase(c.id)) bits.push(c.name);
+  const t = c.title && c.title !== 'family' ? c.title : (c.roles || []).filter((r) => r !== 'family').join('/');
+  if (t) bits.push(t);
+  if (c.age != null) bits.push(String(c.age));
+  if (c.spouse) bits.push('m.' + c.spouse);
+  if (!c.alive) bits.push('DEAD');
+  let out = `${c.id}${bits.length ? ' (' + bits.join(', ') + ')' : ''}`;
+  if (c.secret) out += ` [SECRET${c.secretKnown ? ', known to player' : ''}: ${c.secret}]`;
+  return out;
+}
+// Houses grouped under their liege: id(seat, lord) — the name only when it is not plain from the id
+function housesByLiege(state, houses) {
+  const by = new Map();
+  for (const h of houses) { const k = h.liege || '—'; if (!by.has(k)) by.set(k, []); by.get(k).push(h); }
+  const one = (h) => {
+    const lord = h.lord ? state.characters[h.lord] : null;
+    const bits = [];
+    if (h.name.toLowerCase() !== h.id.replace(/_/g, ' ')) bits.push(h.name);
+    bits.push(h.seat ? state.holdings[h.seat]?.name : 'landless');
+    bits.push(lord ? lord.id + (lord.alive ? '' : ' (dead)') : 'no lord');
+    if (h.status && h.status !== 'active') bits.push(h.status);
+    return `${h.id}(${bits.join(', ')})`;
+  };
+  return [...by].map(([l, hs]) => `${l === '—' ? 'sworn to no one' : 'sworn to ' + l}: ${hs.map(one).join('; ')}`).join('\n');
+}
+function rosterByHouse(state, chars) {
+  const by = new Map();
+  for (const c of chars) { if (!by.has(c.house)) by.set(c.house, []); by.get(c.house).push(c); }
+  return [...by].map(([h, cs]) => `${h}: ${cs.map(rosterLine).join('; ')}`).join('\n');
+}
+// Where people are and how they fare — only those away from their house's seat, or not free and well
+function whereabouts(state, chars) {
+  const by = new Map();
+  for (const c of chars) {
+    if (!c.alive) continue;
+    const seat = state.houses[c.house]?.seat;
+    const odd = c.status && c.status !== 'free';
+    if (String(c.loc) === String(seat) && !odd && !c.travel) continue;
+    const where = c.travel ? `on the road to ${placeName(state, c.travel.to)}` : String(c.loc || '').startsWith('army:') ? `with the host ${String(c.loc).slice(5)}` : placeName(state, c.loc);
+    if (!by.has(where)) by.set(where, []);
+    by.get(where).push(c.id + (odd ? ` (${c.status})` : ''));
+  }
+  return [...by].map(([w, ids]) => `${w}: ${ids.join(', ')}`).join('\n');
 }
 
-function charLine(state, c) {
-  const loc = placeName(state, c.loc);
-  const bits = [c.id, c.name, c.house, c.title || c.roles?.join('/'), `age ${c.age}`, `at ${loc}`];
-  if (c.spouse) bits.push('spouse:' + c.spouse);
-  if (!c.alive) bits.push('DEAD');
-  if (c.secret) bits.push(`SECRET${c.secretKnown ? ' (known to player)' : ''}: ${c.secret}`);
-  else if (c.status && c.status !== 'free') bits.push(c.status.toUpperCase());
-  return bits.join(' | ');
+function figuresLine(h) {
+  return FIGURE_FIELDS.map((f) => `${f}:${fmt(h.figures[f]?.v)}`).join(', ');
 }
 
 function armyLine(state, a) {
@@ -205,25 +245,30 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   const founded = Object.values(state.holdings).filter((x) => x.founded || x.formerNames?.length);
   if (founded.length) parts.push('PLACES CHANGED DURING PLAY\n' + founded.map((x) => `${x.id} | ${x.name}${x.formerNames?.length ? ' (formerly ' + x.formerNames.join(', ') + ')' : ''} | ${x.type} | owner:${x.owner}${x.founded ? ' | founded ' + x.founded : ''}`).join('\n'));
   if (state.landmarks?.length) parts.push('LANDMARKS ON THE MAP\n' + state.landmarks.map((l) => `${l.name} (${l.kind}, ${l.date})`).join('\n'));
-  if (!lean) parts.push('OTHER PLACES armies and people can go (not holdings): ' + Object.keys(PLACE_NAMES).filter((k) => !/_\d/.test(k) && resolvePlaceId(k) === k && !state.holdings[k]).slice(0, 120).join(', '));
   if (state.battles?.length) parts.push('RECENT BATTLES\n' + state.battles.slice(-8).map((b) => `${b.date} | ${b.name} | victor:${b.victor || '?'} | ${b.summary || ''}`).join('\n'));
 
   // Houses & characters: include everything if budget allows, else the most relevant
   const allHouses = Object.values(state.houses);
   const allChars = Object.values(state.characters).filter((c) => c.alive || (c.died && c.died >= state.meta.date.year - 1) || !c.died);
-  let houseLines = allHouses.map((h) => houseLine(state, h, p));
-  let charLines = allChars.map((c) => charLine(state, c));
-  const sizeNow = estimateTokens(parts.join('\n') + houseLines.join('\n') + charLines.join('\n'));
+  let houses = allHouses; let chars = allChars;
+  const sizeNow = estimateTokens(parts.join('\n') + housesByLiege(state, allHouses) + rosterByHouse(state, allChars));
   if (lean || sizeNow > budgetTokens) {
     const relevant = new Set([p, ...vassalsOf(state, p, true), ...tops.map((h) => h.id)]);
     for (const w of wars) if (w.attackers.includes(p) || w.defenders.includes(p)) [...w.attackers, ...w.defenders].forEach((x) => relevant.add(x));
     if (state.houses[p]?.liege) relevant.add(state.houses[p].liege);
     // anyone the player has spoken with, and anyone at the player's side
     for (const k of Object.keys(state.chats || {})) if (state.characters[k]) relevant.add(state.characters[k].house);
-    houseLines = allHouses.filter((h) => relevant.has(h.id) || getRelation(state, p, h.id) !== 0).map((h) => houseLine(state, h, p));
-    charLines = allChars.filter((c) => relevant.has(c.house) && (c.house === p || c.roles?.some((r) => ['lord', 'lady', 'ruler', 'heir', 'council', 'commander'].includes(r)))).map((c) => charLine(state, c));
+    houses = allHouses.filter((h) => relevant.has(h.id) || getRelation(state, p, h.id) !== 0);
+    chars = allChars.filter((c) => relevant.has(c.house) && (c.house === p || c.roles?.some((r) => ['lord', 'lady', 'ruler', 'heir', 'council', 'commander'].includes(r))));
   }
-  const people = ['HOUSES (id | name | seat | liege | lord | relation to player)\n' + houseLines.join('\n'), 'CHARACTERS (id | name | house | title | age | location | status)\n' + charLines.join('\n')];
+  const people = ['HOUSES by liege — id(name if not plain from the id, seat, lord)\n' + housesByLiege(state, houses),
+    'CHARACTERS by house — id (name if not plain from the id, title, age, spouse) [secret]\n' + rosterByHouse(state, chars)];
+  if (!lean) people.push('OTHER PLACES armies and people can go (not holdings): ' + Object.keys(PLACE_NAMES).filter((k) => !/_\d/.test(k) && resolvePlaceId(k) === k && !state.holdings[k]).slice(0, 120).join(', '));
+  // what moves turn to turn goes in the dynamic part
+  const rels = allHouses.filter((h) => h.id !== p && getRelation(state, p, h.id) !== 0).map((h) => `${h.id} ${getRelation(state, p, h.id) > 0 ? '+' : ''}${getRelation(state, p, h.id)}`);
+  if (rels.length) parts.push('RELATIONS WITH THE PLAYER (-100 hatred … 100 devotion; unlisted houses 0)\n' + rels.join(', '));
+  const wb = whereabouts(state, chars);
+  if (wb) parts.push('WHERE PEOPLE ARE (everyone not listed is at their house\'s seat, free and well)\n' + wb);
   // houses & characters change little from turn to turn: callers put them first so the model server can reuse its cache
   const threads = threadsDigest(state);
   if (threads) parts.push('THREADS OF THE STORY (the engine brings these beats itself when their time comes; you may foreshadow them, and you must not contradict what has happened)\n' + threads);
@@ -232,15 +277,41 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   return [...parts, ...people].join('\n\n');
 }
 
+// The memory the model is given: the chronicle (long-term, consolidated) and a compact log of recent turns —
+// one line per event, the orders given and decisions made — rather than whole summaries, which repeat the events.
 export function memoryBlock(state, chronicleMd, budgetTokens, keepRecent) {
   const out = [];
-  if (chronicleMd && chronicleMd.trim()) out.push('THE CHRONICLE (long-term memory of the story so far)\n' + trimToTokens(chronicleMd, Math.floor(budgetTokens * 0.5), true));
+  if (chronicleMd && chronicleMd.trim()) out.push('THE CHRONICLE (long-term memory of the story so far)\n' + chronicleWithin(chronicleMd, Math.min(CHRONICLE_CAP, Math.floor(budgetTokens * 0.5))));
   const recent = state.history.filter((t) => t.turn > state.consolidatedThrough).slice(-Math.max(keepRecent, 1));
-  if (recent.length) {
-    const lines = recent.map((t) => `== Turn ${t.turn} (${t.dateFrom} → ${t.date}) ==\nPlayer orders: ${t.orders.map((o) => o.text).join(' | ') || '(none)'}\n${t.summary}\n${t.events.map((e) => `- ${e.title}: ${e.text}`).join('\n')}`);
-    out.push('RECENT TURNS\n' + trimToTokens(lines.join('\n\n'), Math.floor(budgetTokens * 0.5), true));
-  }
+  // the latest turn in full; the ones before it only for what mattered (the chronicle keeps the rest)
+  if (recent.length) out.push('RECENT TURNS (compact log: day of the period, place, what happened)\n' + trimToTokens(recent.map((t, i) => turnLog(state, t, { minImp: i === recent.length - 1 ? 2 : 3 })).join('\n\n'), Math.floor(budgetTokens * 0.5), true));
   return out.join('\n\n');
+}
+
+// One turn as a few dense lines (shared with the save's world-log.md)
+// The chronicle is kept whole up to a cap; past that, its oldest sections go first (cut at section boundaries so
+// that it changes rarely and the model server's cache survives). The engine's own state still holds every fact.
+const CHRONICLE_CAP = 5000;
+function chronicleWithin(md, tokens) {
+  if (estimateTokens(md) <= tokens) return md;
+  const secs = md.split(/\n(?=##+ )/); const head = secs.shift();
+  const keep = []; let used = estimateTokens(head);
+  for (let i = secs.length - 1; i >= 0; i--) { const n = estimateTokens(secs[i]); if (used + n > tokens) break; keep.unshift(secs[i]); used += n; }
+  return head + (keep.length < secs.length ? '\n(… older entries omitted; the facts they record are in the tables above)\n' : '\n') + keep.join('\n');
+}
+
+export function turnLog(state, t, { all = false, minImp = 2 } = {}) {
+  const lines = [`== Turn ${t.turn} (${t.dateFrom} → ${t.date}) ==`];
+  const orders = (t.orders || []).map((o) => o.text).filter((x) => !/^DECISION — /.test(x));
+  lines.push(`Orders: ${orders.join(' | ') || '(none)'}`);
+  const decided = (t.orders || []).map((o) => o.text).filter((x) => /^DECISION — /.test(x)).map((x) => x.replace(/^DECISION — /, ''));
+  if (decided.length) lines.push(`Decisions: ${decided.join(' | ')}`);
+  const place = (w) => (w ? placeName(state, w) : '');
+  const main = (t.events || []).filter((e) => !e.bg && (all || e.importance >= minImp));
+  for (const e of main) lines.push(`- d${e.day || '?'} ${place(e.where) ? place(e.where) + ': ' : ''}${e.title} — ${e.text}`);
+  const bg = (t.events || []).filter((e) => e.bg && (all || e.mine || e.importance >= 2));
+  if (bg.length) lines.push(`Meanwhile: ${bg.map((e) => `${e.title} (${place(e.where)})`).join('; ')}`);
+  return lines.join('\n');
 }
 
 function trimToTokens(s, tokens, keepEnd = false) {
@@ -276,12 +347,14 @@ export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
     CHANGE_SCHEMA,
     JSON_RULES,
     `OUTPUT FORMAT — reply with ONE JSON object and nothing else:
-{
+{${cfg.thinking === 'off' ? `
+  "plan": ["up to 6 very short lines, decided before writing: what each house that matters does this period, and how the player's orders turn out"],` : ''}
   "summary": "2-4 paragraph narrative of this period focused on what the player would know or notice",
   "events": [ {"day":DAY_OF_THE_PERIOD,"title":"a headline, like a herald's cry: 'The King is dead'","text":"ONE sentence: what happened","details":"2-4 sentences: how it happened, who was there and how they reacted, and what it means for the realm and for the player","where":PLACE_ID,"importance":1-5,"type":"war|diplomacy|economy|intrigue|court|disaster|rumor|religion|magic","houses":[HOUSE_IDS]} ],
   "changes": [ ...change operations... ]
 }
-LENGTH: the summary is at most 3 short paragraphs. Each event: a headline, ONE sentence of "text", and "details" of 2-4 sentences. "day" is the day of the period on which it happened (1 = the first day), so events can be told in order; give events in that order. For a week or two: 2-5 events and up to 15 changes; for a moon: 4-8 events and up to 25 changes; for three moons or more (up to a year): 6-12 events and up to 40 changes — summarise, do not narrate every day. Include changes for every consequence that should appear on the map or in the numbers. Rumours may be inaccurate; changes must reflect the TRUE state.
+LENGTH: the summary is 1-2 short paragraphs. Each event: a headline, ONE sentence of "text", and "details" of 1-3 sentences. "day" is the day of the period on which it happened (1 = the first day), so events can be told in order; give events in that order. For a week or two: 2-4 events and up to 12 changes; for a moon: 3-6 events and up to 20 changes; for three moons or more (up to a year): 5-9 events and up to 30 changes — summarise, do not narrate every day.
+THE ENGINE ALREADY WRITES THE SMALL LIFE OF THE REALM — weddings, harvests, blights, outlaws, tourneys, fairs, weather, septons, rumours, the canon story beats in THREADS, vassal musters, the ledger. Do not write those. Your events are the consequential ones: what the great houses decide and do, war, intrigue, diplomacy, and above all how the world answers the player\'s orders and decisions. Include changes for every consequence that should appear on the map or in the numbers. Rumours may be inaccurate; changes must reflect the TRUE state.
 
 A SHORT EXAMPLE of the shape (different world, do not copy its content):
 {"summary":"Rain on the Mander. Lord Tarly's outriders caught raiders at the ford...","events":[{"day":4,"title":"Raiders hanged at the Mander","text":"Lord Tarly caught three hundred Dornish raiders at the ford and hanged their captain.","details":"The raiders crossed at dawn under cover of mist; Tarly's outriders had been waiting two nights. The prisoners were sent to the Wall. Dorne will call it murder; the Marchers call it justice.","where":"tarly","importance":3,"type":"war","houses":["tarly","martell"]},{"day":19,"title":"Honeyholt begs forbearance","text":"Lord Beesbury asks his liege to forgive his late tribute.","details":"Blight took half his fields this summer. His steward says the granaries will not last the winter without relief.","where":"beesbury","importance":2,"type":"court","houses":["beesbury"]}],"changes":[{"op":"army_update","army":"some_army_id","delta":-40,"morale":80},{"op":"relation","a":"tarly","b":"martell","delta":-10,"reason":"hanged raiders"},{"op":"obligation","house":"beesbury","tribute":"late","reason":"blight"},{"op":"decision","title":"Beesbury's plea","from":"some_char_id","text":"...","options":[{"label":"Forgive the debt","hint":"loyalty up, coin down"},{"label":"Demand payment","hint":"coin now, resentment later"}]}]}

@@ -49,6 +49,32 @@ export function readChronicle(id) {
   const f = path.join(dir(id), 'chronicle.md');
   return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
 }
+// The world log: everything that happened, turn by turn, in plain words — for the player to read (the model gets
+// the compact version in its prompt, and the chronicle for older times)
+export function readWorldLog(id) {
+  const f = path.join(dir(id), 'world-log.md');
+  return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+}
+function appendWorldLog(id, state, t) {
+  const f = path.join(dir(id), 'world-log.md');
+  const place = (w) => (w && (state.holdings[w]?.name || placeName(state, w))) || '';
+  const lines = [];
+  if (!fs.existsSync(f)) lines.push(`# World log — House ${state.houses[state.meta.player].name}\n\n_Everything that happened, turn by turn. The newest turn is at the bottom._\n`);
+  lines.push(`\n## Turn ${t.turn} · ${t.dateFrom} → ${t.date}\n`);
+  if (t.summary) lines.push(t.summary.trim() + '\n');
+  const orders = (t.orders || []).map((o) => o.text);
+  lines.push(`**Your orders:** ${orders.length ? '' : '(none)'}`);
+  for (const o of orders) lines.push(`- ${o}`);
+  for (const c of t.carried || []) if (c.result?.length) lines.push(`  - carried out: ${c.result.join('; ')}`);
+  const main = (t.events || []).filter((e) => !e.bg), bg = (t.events || []).filter((e) => e.bg);
+  if (main.length) { lines.push('\n**What happened:**'); for (const e of main) lines.push(`- _day ${e.day}_ · ${place(e.where) ? place(e.where) + ' · ' : ''}**${e.title}** — ${e.text}${e.details ? ' ' + e.details : ''}`); }
+  if (bg.length) { lines.push('\n**Meanwhile, across the realm:**'); for (const e of bg) lines.push(`- _day ${e.day}_ · ${place(e.where)} · **${e.title}** — ${e.text}`); }
+  const decided = (state.decisions || []).filter((d) => d.status !== 'pending' && d.decidedTurn === t.turn - 1);
+  for (const d of decided) lines.push(`- Decision: ${d.title} → ${d.choice || d.status}`);
+  if (t.salvaged) lines.push('\n_(The model\'s reply could not be read this turn; the engine moved the world on alone.)_');
+  fs.appendFileSync(f, lines.join('\n') + '\n');
+}
+
 export function writeChronicle(id, text) { fs.writeFileSync(path.join(dir(id), 'chronicle.md'), text); }
 function appendChronicle(id, text) { fs.appendFileSync(path.join(dir(id), 'chronicle.md'), text); }
 function logLLM(id, kind, messages, response) {
@@ -90,7 +116,10 @@ async function askJsonInner(id, kind, messages, extra) {
   const r1 = await chat(messages, { json: true, kind, ...extra });
   logLLM(id, kind, messages, r1.text);
   try { return { obj: extractJson(r1.text), raw: r1 }; } catch (e1) {
-    const retry = [...messages, { role: 'assistant', content: r1.text.slice(0, 8000) }, { role: 'user', content: 'That reply was not valid JSON. Reply again with ONLY the complete JSON object, no commentary, no code fences.' }];
+    // Ask again without the broken reply: the prompt is unchanged up to the last message, so the server's cache
+    // is reused, and the model writes the object at once instead of deliberating again.
+    const lastMsg = messages.at(-1);
+    const retry = [...messages.slice(0, -1), { ...lastMsg, content: lastMsg.content + '\n\nIMPORTANT: your previous attempt was not readable. Do not think aloud or plan in prose. Start your reply with { and write only the JSON object, shorter rather than longer.' }];
     extra.onProgress?.({ phase: 'retrying', note: 'the reply was not valid JSON; asking again' });
     const r2 = await chat(retry, { json: true, kind, temperature: 0.4, ...extra, thinking: 'off' });
     logLLM(id, kind + '-retry', retry, r2.text);
@@ -154,16 +183,17 @@ export async function advance(id, { span = '1m', orders } = {}) {
   // Marching orders the story didn't resolve: the engine walks the host along at marching pace
   for (const a of Object.values(state.armies)) {
     if (!a.march || a.movedTurn === state.meta.turn) continue;
-    const dest = placePos(a.march.to, state.holdings); if (!dest) { delete a.march; continue; }
+    const to = a.march.to; // read before the move: arriving clears the march order
+    const dest = placePos(to, state.holdings); if (!dest) { delete a.march; continue; }
     const m = marchDays(a, a.pos, dest);
     const f = Math.min(1, spanInfo.days / Math.max(1, m.days));
-    const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to: a.march.to, progress: f, status: f >= 1 ? 'arrived' : 'marching' }]);
+    const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to, progress: f, status: f >= 1 ? 'arrived' : 'marching' }]);
     applied.push(...mv.applied);
     if (f >= 1) {
       // those riding with the host have arrived too
-      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id && c.alive && c.id !== a.commander) c.loc = a.march.to;
-      const cmd = state.characters[a.commander]; if (cmd && cmd.loc === 'army:' + a.id) cmd.loc = a.march.to;
-      if (a.owner === state.meta.player) vt.events.push({ title: `${a.name} reaches ${placeName(state, a.march.to)}`, text: `${a.name} (${a.men.toLocaleString()} men) has arrived at ${placeName(state, a.march.to)}.`, where: a.march.to, importance: 2, type: 'war', houses: [a.owner] });
+      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id && c.alive && c.id !== a.commander) c.loc = to;
+      const cmd = state.characters[a.commander]; if (cmd && cmd.loc === 'army:' + a.id) cmd.loc = to;
+      if (a.owner === state.meta.player) vt.events.push({ title: `${a.name} reaches ${placeName(state, to)}`, text: `${a.name} (${a.men.toLocaleString()} men) has arrived at ${placeName(state, to)}.`, where: to, importance: 2, type: 'war', houses: [a.owner] });
       delete a.march;
     }
   }
@@ -197,6 +227,7 @@ export async function advance(id, { span = '1m', orders } = {}) {
   // every event has its day in the period, so the turn can be told in order
   for (const e of events) if (!e.day) e.day = 1 + Math.floor(Math.random() * spanInfo.days);
   events.sort((a, b) => a.day - b.day);
+  events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; });
   for (const a of applied.filter((x) => x.op === 'succession')) {
     const hh = state.houses[a.house];
     events.unshift({ title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === state.meta.player ? 5 : 4, type: 'court', houses: [a.house] });
@@ -236,6 +267,7 @@ export async function advance(id, { span = '1m', orders } = {}) {
   state.chronicle = [];
 
   saveState(id, state);
+  try { appendWorldLog(id, state, record); } catch (e) { console.warn('world log:', e.message); }
   // Compress old turns into the chronicle without making the player wait
   const job = maybeConsolidate(id, state, cfg).catch((e) => { console.error('consolidation failed:', e.message); return null; }).finally(() => consolidating.delete(id));
   consolidating.set(id, job);
@@ -334,6 +366,15 @@ export async function suggest(id) {
   const { obj, text } = await askJson(id, 'suggest', buildSuggestPrompt(state, readChronicle(id), cfg), cfg);
   const list = obj?.suggestions || String(text || '').split('\n').filter((l) => l.trim()).slice(0, 7);
   return { suggestions: list.map(String) };
+}
+
+// News the player has read on the map: its pin goes away (keys are "turn-index"; old ones are forgotten)
+export function acknowledge(id, keys) {
+  const state = loadState(id);
+  state.acks = Object.fromEntries(Object.entries(state.acks || {}).filter(([, t]) => state.meta.turn - t < 4));
+  for (const k of (Array.isArray(keys) ? keys : []).slice(0, 200)) state.acks[String(k).slice(0, 80)] = state.meta.turn;
+  saveState(id, state);
+  return { ok: true };
 }
 
 export function markRavensRead(id) {

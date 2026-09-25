@@ -73,6 +73,7 @@ export const DEFAULT_CONFIG = {
   stream: true,                       // stream tokens so the game can show progress (thinking / writing)
   thinking: 'auto',                   // 'auto' = the server's default; 'on' / 'off' toggle reasoning (Qwen3-style chat_template_kwargs)
   thinkingBudget: 6000,               // extra tokens allowed for reasoning on top of maxTokens
+  reasoningEffort: 'low',             // for models with effort levels (Qwen3.8: low|medium|xhigh); '' = the server's default
   thinkInAudiences: false,            // let the model think before speaking in audiences and councils (slower)
   ttsUrl: '',                         // optional local text-to-speech server (OpenAI-compatible /v1/audio/speech), e.g. Kokoro-FastAPI http://localhost:8880/v1
   ttsModel: 'kokoro',
@@ -137,6 +138,8 @@ export async function chat(messages, opts = {}) {
 
 function joinContinuation(a, b) {
   b = stripThinking(b).replace(/^```(?:json)?\s*/i, '');
+  // asked to continue, some models start the whole object again: then the new one is the answer
+  if (TOP_KEYS.test(b.trimStart().slice(0, 40))) return b.trimStart();
   // drop any overlap the model repeated
   for (let n = Math.min(200, a.length, b.length); n > 8; n--) if (a.endsWith(b.slice(0, n))) return a + b.slice(n);
   return a + b;
@@ -149,6 +152,14 @@ async function rawChat(messages, cfg, opts, t0) {
     throw e;
   }
 }
+// Thinking on/off (Qwen3-style), and how hard to think when it is on. The world arrives pre-digested (the engine
+// has already settled the ledger, the marches, the small life of the realm), so a low effort is usually enough.
+function templateKwargs(cfg, opts) {
+  const kw = {};
+  if (opts.thinking === 'on' || opts.thinking === 'off') kw.enable_thinking = opts.thinking === 'on';
+  if (opts.thinking !== 'off' && cfg.reasoningEffort) kw.reasoning_effort = cfg.reasoningEffort;
+  return Object.keys(kw).length ? { chat_template_kwargs: kw } : {};
+}
 async function rawChatOnce(messages, cfg, opts, t0) {
   const url = cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
   const body = {
@@ -158,7 +169,7 @@ async function rawChatOnce(messages, cfg, opts, t0) {
     stream: cfg.stream !== false,
     ...(cfg.model ? { model: cfg.model } : { model: 'local-model' }),
     ...(cfg.jsonMode && opts.json ? { response_format: { type: 'json_object' } } : {}),
-    ...(opts.thinking === 'on' || opts.thinking === 'off' ? { chat_template_kwargs: { enable_thinking: opts.thinking === 'on' } } : {}),
+    ...templateKwargs(cfg, opts),
     ...(cfg.stream !== false ? { stream_options: { include_usage: true }, return_progress: true } : {}),
     ...(cfg.extraBody || {}),
   };
@@ -229,38 +240,78 @@ export function extractField(text, field) {
   try { return JSON.parse('"' + m[1] + '"'); } catch { return m[1]; }
 }
 
+// The top-level keys our replies use: a "{" followed by one of these is where an answer begins
+const TOP_KEYS = /^\{\s*"(summary|events|changes|reply|replies|actions|story|suggestions|chronicle|plan)"/;
+
 export function extractJson(text) {
   let s = stripThinking(String(text || '')).trim();
   const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fence) s = fence[1].trim();
+  if (fence && fence[1].includes('{')) s = fence[1].trim();
+  // Reasoning that leaked into the answer, or a continuation that started the object over: try every place an
+  // answer object begins, latest first (the final answer comes after any drafts), before the generic repairs.
+  const starts = [];
+  for (let i = s.indexOf('{'); i >= 0; i = s.indexOf('{', i + 1)) if (TOP_KEYS.test(s.slice(i, i + 40))) starts.push(i);
+  if (starts.length > 1 || (starts.length === 1 && starts[0] > 0)) {
+    for (const i of [...starts].reverse()) { try { const o = parseRepaired(s.slice(i), true); if (o && typeof o === 'object') return o; } catch { /* try the next */ } }
+  }
   const start = s.indexOf('{');
   if (start < 0) throw new Error('No JSON object in response');
+  return parseRepaired(s.slice(start), false);
+}
+
+function parseRepaired(s, strict) {
   // Walk to the matching closing brace (string-aware)
   let depth = 0, inStr = false, esc = false, end = -1;
-  for (let i = start; i < s.length; i++) {
+  for (let i = 0; i < s.length; i++) {
     const c = s[i];
     if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
     if (c === '"') inStr = true;
     else if (c === '{') depth++;
     else if (c === '}') { depth--; if (depth === 0) { end = i; break; } }
   }
-  let body = end > 0 ? s.slice(start, end + 1) : s.slice(start);
-  if (end < 0) { try { return JSON.parse(closeTruncated(escapeInnerQuotes(body))); } catch { /* fall through to the other repairs */ } }
-  try { return JSON.parse(body); } catch { /* try repairs */ }
-  body = escapeInnerQuotes(body.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ' '));
-  try { return JSON.parse(body); } catch { /* more repairs */ }
-  body = body
+  let body = end > 0 ? s.slice(0, end + 1) : s;
+  const attempts = [
+    (b) => b,
+    (b) => escapeInnerQuotes(b.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ' ')),
+    (b) => balance(genericFixes(escapeInnerQuotes(b))),
+    (b) => closeTruncated(balance(genericFixes(escapeInnerQuotes(b)))),
+    (b) => balance(genericFixes(closeTruncated(genericFixes(escapeInnerQuotes(b))))),
+  ];
+  let last;
+  for (const f of attempts) { try { return JSON.parse(f(body)); } catch (e) { last = e; } }
+  // an object that closed too early (a missing bracket) leaves the rest unread: rebalance the whole remainder
+  if (end > 0 && !strict) { try { return JSON.parse(closeTruncated(balance(genericFixes(escapeInnerQuotes(s))))); } catch (e) { last = e; } }
+  if (end > 0) { try { return JSON.parse(closeTruncated(balance(genericFixes(escapeInnerQuotes(s))))); } catch { /* keep the first error */ } }
+  throw last;
+}
+
+function genericFixes(b) {
+  return b
     .replace(/,\s*([}\]])/g, '$1')                 // trailing commas
-    .replace(/[“”]/g, '"')                // smart quotes
+    .replace(/[\u201c\u201d]/g, '"')                // smart quotes
     .replace(/\/\/[^\n"]*$/gm, '')                  // line comments
     .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":') // unquoted keys
     .replace(/:\s*([A-Za-z_][A-Za-z0-9_'-]*)\s*(?=[,}\]])/g, (m, w) => (/^(true|false|null)$/.test(w) ? m : `: "${w}"`)) // unquoted string values
-    .replace(/:\s*(-?\d{1,3}(?:,\d{3})+)(?=\s*[,}\]])/g, (m, n) => ': ' + n.replace(/,/g, '')); // 60,000 -> 60000
-  try { return JSON.parse(body); } catch (e) {
-    // Truncated output: close open arrays/objects
-    const fixed = closeTruncated(body);
-    return JSON.parse(fixed);
+    .replace(/:\s*(-?\d{1,3}(?:,\d{3})+)(?=\s*[,}\]])/g, (m, n) => ': ' + n.replace(/,/g, '')) // 60,000 -> 60000
+    .replace(/:\s*(?=[,}\]])/g, ': null');         // "importance":}  -> null
+}
+
+// Brackets closed in the wrong order ("...text."  ] where an object was still open): insert the missing closer.
+function balance(s) {
+  const stack = []; let inStr = false, esc = false, out = '';
+  for (const c of s) {
+    if (inStr) { out += c; if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') { inStr = true; out += c; continue; }
+    if (c === '{' || c === '[') { stack.push(c); out += c; continue; }
+    if (c === '}' || c === ']') {
+      const want = c === '}' ? '{' : '[';
+      while (stack.length && stack.at(-1) !== want) out += stack.pop() === '{' ? '}' : ']';
+      if (stack.length) { stack.pop(); out += c; }
+      continue; // a stray closer with nothing open is dropped
+    }
+    out += c;
   }
+  return out;
 }
 
 // Models often write dialogue with raw double quotes inside a JSON string ("text":"He said "no" to the king").
