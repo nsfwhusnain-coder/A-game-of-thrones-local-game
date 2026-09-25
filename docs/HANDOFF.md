@@ -251,6 +251,17 @@ These are the session's commits, in order. Run `git log` for the full messages, 
 
 ---
 
+## 4b. Second session (2026-09-25): the living world, map pins, a leaner prompt
+
+- **Happenings** (`public/js/shared/happenings.js` + `public/data/happenings.js`): ~190 book-sourced templates the engine plays out each turn (7 per moon, up to 60 a year), with conditions (war, season, unrest, who is alive, the player's own realm), small effects and cooldowns. Events are marked `bg:true` (and `mine:true` on the player's lands) and shown under *Meanwhile, across the realm*; only `mine` ones of importance 2+ get pins or playback. Churn events are marked `bg` too.
+- **Map pins** (`public/js/shared/pins.js`, `public/js/ui/pins.js`): one pin per place for unread news (last 2 turns, importance 2+, not background unless on your lands), pending decisions (placed at `d.where`, else where the asker is, else their seat, else yours) and recent battles. Clicking opens a modal: news → *Acknowledged* (POST `/api/games/:id/ack`, stored in `state.acks`), decisions → options or *Answer in my own words* (`decide` with `custom`). Events now carry `id = "<turn>-<index>"`. The decision op accepts `where`.
+- **World log**: `saves/<id>/world-log.md`, appended each turn; *Chronicle → World log* in the UI; GET `/api/games/:id/worldlog`.
+- **Prompt**: static part = houses by liege + characters by house (no locations/relations/status) + other places; dynamic part = relations with the player, `WHERE PEOPLE ARE`, armies, threads… Memory = chronicle capped at 5k tokens (cut at section boundaries) + `turnLog()` one-liners (latest turn importance ≥2, earlier ≥3). Output asks for 3-6 events a moon and tells the model the engine writes the small life. Measured on a real save: 35.5k → 25k tokens; cache-reusable prefix after a turn 8.4k → 18.6k.
+- **LLM client**: `reasoningEffort` config (default `low`, sent as `chat_template_kwargs.reasoning_effort` when thinking is not off); retry resends the same prompt with a firm suffix and thinking off (cache-friendly) instead of appending the failed reply; `extractJson` tries every answer-object start latest-first, rebalances brackets, fills `"key":}` with null; a continuation that restarts the object replaces the stub. Replaying the logged real replies: 10/42 failed before, 6/42 after — the remaining 6 are the first session's model reasoning in plain text until the token limit, with no JSON at all.
+- **Fixed crash**: `advance()` threw when a marching host with a commander arrived (the arrival cleared `a.march` before it was read).
+- **Tests**: `npm test` (node:test, `tests/engine.test.js`).
+- **Not yet done**: live testing against the owner's llama-swap models (owner asked to finish and polish first); model selection. Known bug, not fixed: the rule-based order reader ignores number words ("ten men" → 50).
+
 ## 5. In the middle of (when this was written)
 
 - **Turn playback:** finished and committed (`74380dd`).
