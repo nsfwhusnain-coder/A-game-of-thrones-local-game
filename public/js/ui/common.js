@@ -1,7 +1,7 @@
 // Shared UI state and helpers.
 import { sfx } from './sfx.js';
 import { sigilSrc, bannerURL } from '../sigils.js';
-import { portraitURL } from './portrait.js';
+import { portraitLazy } from './portrait.js';
 import { placeName, getRelation, fmt } from '../shared/world.js';
 
 export const app = {
@@ -34,7 +34,7 @@ export const relClass = (v) => (v > 10 ? 'pos' : v < -10 ? 'neg' : 'neu');
 export const relHtml = (v) => `<span class="rel ${relClass(v)}">${v > 0 ? '+' : ''}${v}</span>`;
 export const sig = (house, size = 1.7) => (house ? `<img class="sig" src="${sigilSrc(house, 48)}" style="width:${size}rem" alt="">` : '');
 export const banner = (house, w = 60, h = 90) => (house ? bannerURL(house.sigil, w, h) : '');
-export const por = (c, size = 96) => (c ? portraitURL(c, app.state?.houses[c.house], size) : '');
+export const por = (c, size = 96) => (c ? portraitLazy(c, app.state?.houses[c.house], size) : '');
 export const player = () => app.state.houses[app.state.meta.player];
 export const ruler = () => app.state.characters[player().lord];
 export const meter = (v, color = 'var(--gold)', max = 100) => `<div class="meter"><div style="width:${Math.max(0, Math.min(100, (v / max) * 100))}%;background:${color}"></div></div>`;

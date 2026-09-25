@@ -175,6 +175,8 @@ async function rawChatOnce(messages, cfg, opts, t0) {
       if (d.content) content += d.content;
       if (ch.text) content += ch.text;
       if (ch.finish_reason) finish = ch.finish_reason;
+      // llama.cpp's prompt-progress chunks carry an empty delta: they are not tokens, and the model is still reading
+      if (!d.reasoning_content && !d.content && !ch.text) return;
       n++;
       const now = Date.now();
       if (n === 1) opts.onProgress?.({ firstTokenMs: now - t0 });

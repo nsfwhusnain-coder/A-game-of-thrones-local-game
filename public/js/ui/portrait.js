@@ -137,9 +137,34 @@ function grainPattern(ctx) {
   return ctx.createPattern(grain, 'repeat');
 }
 
+const keyOf = (c, house, size) => `${c.id}|${c.alive}|${c.age}|${house?.id}|${house?.sigil?.f}|${c.title}|${c.status}|${size}|${c.look ? JSON.stringify(c.look) : ''}`;
+
+// Lazy portraits for long lists: a silhouette now, the painting a moment later (painted in idle time,
+// a few at a time, so opening a window of 300 people never stalls the game).
+const pending = new Map(); let pumping = false;
+export function portraitLazy(c, house, size = 128) {
+  if (!c) return '';
+  const key = keyOf(c, house, size);
+  if (cache.has(key)) return cache.get(key);
+  const col = house?.sigil?.f && lum(house.sigil.f) < 0.8 ? house.sigil.f : house?.color || '#5a4a3a';
+  const ph = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 154"><!--${key}--><defs><radialGradient id="g" cx="0.45" cy="0.35" r="0.8"><stop offset="0" stop-color="${mix(col, '#1a1612', 0.45)}"/><stop offset="1" stop-color="#0c0a08"/></radialGradient></defs><rect width="128" height="154" fill="url(#g)"/><ellipse cx="64" cy="60" rx="21" ry="28" fill="#000" opacity="0.35"/><path d="M8 156 C14 118 40 104 64 104 C88 104 114 118 120 156Z" fill="#000" opacity="0.35"/></svg>`)}`;
+  if (!pending.has(ph)) pending.set(ph, [c, house, size]);
+  if (!pumping) { pumping = true; (window.requestIdleCallback || ((f) => setTimeout(() => f({ timeRemaining: () => 12 }), 16)))(pump); }
+  return ph;
+}
+function pump(deadline) {
+  const done = [];
+  for (const [ph, args] of pending) {
+    if (done.length && deadline.timeRemaining() < 4) break;
+    done.push([ph, portraitURL(...args)]); pending.delete(ph);
+  }
+  if (done.length) { const map = new Map(done); for (const img of document.images) { const u = map.get(img.getAttribute('src')); if (u) img.src = u; } }
+  if (pending.size) (window.requestIdleCallback || ((f) => setTimeout(() => f({ timeRemaining: () => 12 }), 16)))(pump, { timeout: 200 }); else pumping = false;
+}
+
 export function portraitURL(c, house, size = 128) {
   if (!c) return '';
-  const key = `${c.id}|${c.alive}|${c.age}|${house?.id}|${house?.sigil?.f}|${c.title}|${c.status}|${size}|${c.look ? JSON.stringify(c.look) : ''}`;
+  const key = keyOf(c, house, size);
   if (cache.has(key)) return cache.get(key);
   const k = Math.max(1, Math.min(3, (size * 2) / 128));
   const W = 128, H = 154;
