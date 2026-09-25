@@ -56,25 +56,28 @@ If a reply is cut off, the game asks the model to finish it. If the model spends
   - Every seat sits where the books put it. The canonical places that are not seats are there too: the ruins of the Nightfort, Oldstones, High Heart and Castamere, the abandoned castles along the Wall, the Crossroads Inn, Mole's Town and Queenscrown. Armies can march to any of them.
   - Structures: the 700-foot Wall, and procedurally built castles, towns, cities and camps whose size reflects their importance.
   - Landmarks: King's Landing (Red Keep, Great Sept, Dragonpit), Casterly Rock on its crag, the Hightower, Storm's End, Harrenhal's five towers, the Eyrie on its spire, Pyke's sea stacks, Winterfell, the Twins, Riverrun, Sunspear, White Harbor, and the Titan of Braavos.
-  - Every seat flies its house banner.
+  - Every seat flies its house banner: real cloth that ripples in the wind and turns to face you. Armies march under their own.
   - Your realm's border glows, and enemies at war are outlined in red.
-  - Armies and fleets are models with men and ships, and march along A* paths over land or sea.
+  - Armies and fleets are models with men and ships (surcoats in house colours, steel helms, spears and shields in the sigil's field, caparisoned horse), and march along A* paths over land or sea. A host resting at a castle camps before its gates.
   - Map modes: realms, holders, diplomacy, wealth, prosperity, unrest, terrain.
 - **A CK3-style HUD** that scales to any screen.
   - Top bar: resources and time controls.
   - Bottom-left: your house banner and your ruler's portrait, with the action ring (Realm · Council · Military · Economy · Diplomacy · Intrigue · People · Chronicle).
   - Bottom: a command bar for free-text orders.
   - Right: a drawer with events, letters and audiences.
-- **Characters with depth:** procedural portraits, six skills (Diplomacy, Martial, Stewardship, Intrigue, Learning, Prowess), traits, loyalty, opinion of you, memories, and family trees (parents, spouses, children, siblings, including the dead ancestors).
+- **Characters with depth:** painted portraits drawn from the books' descriptions (Robert's beard and gut, Tywin's golden whiskers, Tyrion's mismatched eyes, the Hound's burns, Euron's eyepatch, Melisandre's ruby, Mormont's raven), six skills (Diplomacy, Martial, Stewardship, Intrigue, Learning, Prowess), traits, loyalty, opinion of you, memories, and family trees (parents, spouses, children, siblings, including the dead ancestors).
 - **A real economy** (see below): the ledger, taxation, vassal tribute, upkeep, food stores, seasons, and works to fund (warships, granaries, walls, roads, markets, men-at-arms, mines).
 - **Feudal levies:** *Call the banners* sends ravens to the vassals you choose. Each lord answers, delays or refuses based on loyalty and the story, and only the lords who answer add men.
 - **A map the story can change:** the simulator can raise new castles, towns and war camps (which claim their own lands on the map), rename places, burn castles to ruins, and mark battlefields and camps as landmarks.
-- **Councils and audiences:** talk to anyone one-on-one (by raven if they are far away), or convene several advisors who each speak in their own voice.
+- **Councils and audiences:** talk to anyone one-on-one (by raven if they are far away), or convene several advisors who each speak in their own voice. The principal characters have a manner of speech, wants and fears from the books; each great house plays the game its own way.
+- **A world that lives without you.** The great events of 298–300 AC come on their own schedule — the King rides north, a boy falls, the Hand's tourney, the Imp taken, Robert's last hunt, Baelor's Sept, the King in the North, the Blackwater, the Red Wedding, dragons in the Dothraki sea — but only while the world still fits them. Change the story and the world goes its own way. When a beat falls on your house it is your decision (take the Hand's chain or refuse it; proclaim Stannis or bend the knee; pay Walder Frey's price), and silence is an answer too. Threats rise with time and neglect (the free folk, the cold, the Iron Bank, winter); other houses feud, feast, hold tourneys and suffer outlaws; openings arise that you must seize or lose. *Intrigue → Shadows over the realm* shows what is rising and what has come to pass.
+- **Numbers from the books:** the Reach fields ~100,000 swords, the North, Vale, Riverlands and West ~45,000 each, the Iron Fleet 150 sail; seats have the trades the books give them (Arbor gold, Lannisport's trade, the Rills' horses, Salt Shore's salt).
 
 ## Sound, voices and scenes
 
 - **Audiences are scenes.** Characters reply with what you see them do (*Lord Tywin sets down his quill and regards you without warmth.*) and what they say to you, in the first person. New replies unfold beat by beat.
 - **Voices.** Every character has a voice of their own: the main cast are shaped by hand (Tywin deep and slow, Robert booming, Arya quick and young), and everyone else by sex, age and homeland. Click any line to hear it, or the speaker icon for the whole reply. Letters can be read aloud too. By default the game uses your system's voices (on a Mac, install extra English voices in *System Settings → Accessibility → Spoken Content*; British ones suit Westeros). For far better voices, run a local speech server with an OpenAI-compatible `/v1/audio/speech` endpoint, such as [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI), and set its URL in *Settings → Sound & voices*. The game will not clone real actors' voices.
+- **Sound effects,** synthesised in the browser: a bell as time passes, horns for battle, a raven's caw for letters, steel for military orders, coin for the treasury, a wax seal for decisions. They have their own switch and volume.
 - **Music.** An original score is composed live in your browser: a cello theme over harp and drone, with moods for the court, the cold North and war that follow your situation. To use your own music instead, drop audio files (mp3, ogg, m4a, wav, flac) into `public/music/`. The music button in the top bar turns it on and off.
 
 ## Ruling your house
