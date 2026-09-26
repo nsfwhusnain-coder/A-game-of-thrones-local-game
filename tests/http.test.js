@@ -62,3 +62,14 @@ test('a distant audience is a letter: the answer lands days later, in Letters an
   assert.ok(!s.chats.lysa_arryn.at(-1).pending);
   assert.equal(s.post.find((p) => p.to === 'lysa_arryn').status, 'answered');
 });
+
+test('council: a question, then "let them talk" — they go on without the lord speaking', async () => {
+  const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+  const members = ['luwin', 'rodrik_cassel'];
+  const a = await api(`/games/${id}/council`, { members, message: 'Are we ready for winter?' });
+  assert.ok(a.replies.length >= 2);
+  const b = await api(`/games/${id}/council`, { members, message: '' });
+  assert.ok(b.replies.length >= 1);
+  const log = b.state.chats['council:' + [...members].sort().join(',')];
+  assert.equal(log.filter((m) => m.role === 'player').length, 1);
+});

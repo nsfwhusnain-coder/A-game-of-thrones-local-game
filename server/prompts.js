@@ -577,7 +577,7 @@ export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {
   const log = (state.chats[key] || []).slice(-30);
   const system = [
     `You voice a COUNCIL MEETING in the world of A Song of Ice and Fire. ${lord ? lord.name : 'The lord'} of House ${ph.name} (the player) presides. Present: ${people.map((c) => `${c.name} [${c.id}] — ${c.title || c.roles.join(', ')}; traits: ${c.traits}; skills D/M/S/I/L ${c.skills?.slice(0, 5).join('/')}${VOICES[c.id] ? '; speaks: ' + VOICES[c.id].voice : ''}; nature: ${natureTags(temperament(c)).tags.join(', ') || 'steady'}${DEMEANOURS[c.id] ? `; manner: ${DEMEANOURS[c.id].reg}; habits: ${DEMEANOURS[c.id].tics}` : ''}${c.secret ? '; hidden agenda: ' + c.secret : ''}`).join(' | ')}.`,
-    'Each counsellor speaks in their own voice, from their own expertise and interests; they may disagree with one another and with the lord. Officers give concrete numbers from the ledger. EVERY counsellor present answers, one reply each, in the order they are listed — briefly if they have little to add. Never break character.',
+    'Each counsellor speaks in their own voice, from their own expertise and interests; they may disagree with one another and with the lord. Officers give concrete numbers from the ledger. This is a real council: they speak in turn, and each has HEARD those who spoke before — they agree, disagree, correct one another, take sides, address each other by name ("Ser Rodrik is wrong, my lord…"), old rivalries and loyalties showing. Every counsellor present speaks at least once; a sharp exchange may give someone a second word. Keep each reply to a few sentences. Never break character.',
     SCENE_STYLE.replace('HOW TO WRITE YOUR REPLY — a short scene of 2 to 5 beats', 'HOW EACH COUNSELLOR SPEAKS — each reply is a short scene of 1 to 3 beats'),
     `Reply ONLY with JSON: {"replies":[{"speaker":CHAR_ID,"text":"*what the player sees them do* and what they say, in first person"}],"changes":[optional change operations the council's reports imply — e.g. a steward's corrected figures]}`,
     TALK_SCHEMA,
@@ -585,6 +585,9 @@ export function buildCouncilPrompt(state, ids, message, chronicleMd, cfg) {
   const context = [`DATE: ${dateStr(state.meta.date)}`, playerSheet(state), ...people.map((c) => characterKnowledge(state, c)).filter(Boolean).slice(0, 1), memoryBlock(state, chronicleMd, Math.floor(budget * 0.3), 2), worldDigest(state, Math.floor(budget * 0.35), cfg.promptDetail !== 'full')].join('\n\n');
   const messages = [{ role: 'system', content: system + '\n\n' + context }];
   for (const m of log) messages.push(m.role === 'player' ? { role: 'user', content: m.text } : { role: 'assistant', content: JSON.stringify({ replies: [{ speaker: m.speaker, text: m.text }] }) });
-  messages.push({ role: 'user', content: `${message}\n\n[The counsellors answer in their own voices. Reply with JSON only: {"replies":[{"speaker":CHAR_ID,"text":"..."}],"changes":[]}]` });
+  const listening = !String(message || '').trim();
+  messages.push({ role: 'user', content: listening
+    ? `[${lord ? lord.name : 'The lord'} says nothing, and lets them talk. The counsellors go on among themselves from where they left off — answering each other, pressing their points, arguing or coming round — 2 to 5 replies. Reply with JSON only: {"replies":[{"speaker":CHAR_ID,"text":"..."}],"changes":[]}]`
+    : `${message}\n\n[The counsellors answer in turn, each having heard the others. Reply with JSON only: {"replies":[{"speaker":CHAR_ID,"text":"..."}],"changes":[]}]` });
   return messages;
 }

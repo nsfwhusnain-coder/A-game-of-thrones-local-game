@@ -721,3 +721,4 @@ body:has(#window:not(.hidden)) .mapmodes { right: calc(min(30rem, 36vw) + 1.6rem
 .tg-ico { width: 0.85rem; height: 0.85rem; vertical-align: -0.12rem; margin-right: 0.2rem; }
 .errand .ei .ico { width: 1.1rem; height: 1.1rem; color: var(--gold); }
 .story-order { font-size: 0.8rem; font-style: italic; color: var(--gold); margin: -0.1rem 0 0.35rem; border-left: 2px solid var(--gold); padding-left: 0.45rem; }
+.chat-btns { display: flex; flex-direction: column; gap: 0.3rem; }

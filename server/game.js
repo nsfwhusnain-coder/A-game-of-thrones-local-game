@@ -742,12 +742,13 @@ export async function council(id, members, message) {
   } finally { done(id); }
   if (!read.replies.length) throw httpError(502, 'The council could not agree on an answer. Put the question again.');
   // each counsellor seated has a place in the answer: one who did not speak is shown keeping silent, not lost
-  for (const i of ids) if (!read.replies.some((x) => x.speaker === i)) read.replies.push({ speaker: i, text: `*${state.characters[i].name} listened, and said nothing this time.*`, silent: true });
+  const listening = !String(message || '').trim();
+  if (!listening) for (const i of ids) if (!read.replies.some((x) => x.speaker === i)) read.replies.push({ speaker: i, text: `*${state.characters[i].name} listened, and said nothing this time.*`, silent: true });
   const replies = read.replies; const changes = read.changes;
   const { applied, rejected } = applyChanges(state, changes, { source: 'Council', protectPlayer: true });
   const key = 'council:' + ids.sort().join(',');
   const date = dateStr(state.meta.date), turn = state.meta.turn;
-  state.chats[key] = [...(state.chats[key] || []), { role: 'player', text: message, date, turn }, ...replies.map((x) => ({ role: 'npc', speaker: x.speaker, text: x.text, date, turn }))];
+  state.chats[key] = [...(state.chats[key] || []), ...(listening ? [] : [{ role: 'player', text: message, date, turn }]), ...replies.map((x) => ({ role: 'npc', speaker: x.speaker, text: x.text, date, turn }))];
   saveState(id, state);
   return { replies, applied, rejected, state, key };
 }

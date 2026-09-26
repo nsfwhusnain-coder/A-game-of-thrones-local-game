@@ -6,7 +6,7 @@ import { orderOutcome, STATUS_LABEL } from '../shared/errands.js';
 import { icon } from './icons.js';
 import { THREADS } from '../shared/plots.js';
 import { briefFor } from '../../data/briefs.js';
-import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices } from './voice.js';
+import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices, prepareSpeech, beginScene, sceneToken } from './voice.js';
 import { temperament, natureTags, VERDICT_LABEL, moodWord } from '../shared/temperament.js';
 
 export function setDrawer(tab) { app.drawerTab = tab; renderDrawer(); }
@@ -270,13 +270,19 @@ export async function playScene(msgs) {
   const all = msgs.flatMap((m) => [...m.querySelectorAll('.beat')].map((b) => ({ b, m })));
   all.forEach(({ b }) => b.classList.add('hidden-beat'));
   const auto = voiceSettings().auto && voiceSettings().engine !== 'off';
-  for (const { b, m } of all) {
-    if (playScene.token !== token) { all.forEach(({ b: x }) => x.classList.remove('hidden-beat')); return; }
+  // the whole scene is voiced at once, in order; then it is played through without pauses, each line appearing as spoken
+  const voiced = auto ? beginScene() : null;
+  const lines = all.map(({ b, m }) => {
+    const narrated = b.classList.contains('act') && voiceSettings().narrate;
+    return auto && (b.classList.contains('say') || narrated) ? prepareSpeech(b.textContent.replace(/^[“"]+|[”"]+$/g, ''), app.state.characters[m.dataset.speaker], { narrator: narrated, mood: m.dataset.mood }) : null;
+  });
+  for (let i = 0; i < all.length; i++) {
+    const { b } = all[i];
+    if (playScene.token !== token || (voiced !== null && sceneToken() !== voiced)) { all.forEach(({ b: x }) => x.classList.remove('hidden-beat')); return; }
     b.classList.remove('hidden-beat'); b.classList.add('reveal');
     b.closest('.chat-log')?.scrollTo({ top: 1e9, behavior: 'smooth' });
-    const narrated = b.classList.contains('act') && voiceSettings().narrate;
-    if (auto && (b.classList.contains('say') || narrated)) { b.classList.add('speaking'); await speak(b.textContent.replace(/^[“"]+|[”"]+$/g, ''), app.state.characters[m.dataset.speaker], { narrator: narrated, mood: m.dataset.mood }); b.classList.remove('speaking'); await wait(200); }
-    else await wait(b.classList.contains('act') ? 700 + Math.min(1600, b.textContent.length * 18) : 400 + Math.min(2500, b.textContent.length * 22));
+    if (lines[i]) { b.classList.add('speaking'); await lines[i].play(voiced); b.classList.remove('speaking'); }
+    else await wait(b.classList.contains('act') ? 500 + Math.min(1200, b.textContent.length * 14) : 300 + Math.min(1800, b.textContent.length * 16));
   }
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -289,12 +295,12 @@ function renderCouncil(body) {
     <div class="chat-head"><div class="council-faces">${ids.map((i) => `<img src="${por(s.characters[i], 40)}" title="${esc(s.characters[i].name)}">`).join('')}</div><div style="flex:1;margin-left:0.8rem"><div class="title" style="font-family:var(--display);color:var(--gold2)">Council</div><div class="sub muted" style="font-size:0.78rem">${ids.map((i) => esc(s.characters[i].name.split(' ')[0])).join(', ')}</div></div><button class="btn small" data-action="close-chat">✕</button></div>
     <div class="chat-log" id="chat-log">${log.length ? log.map((m) => msgHtml(m, null)).join('') : '<div class="muted" style="font-style:italic">Your counsellors take their seats. What would you put before them?</div>'}</div>
     <div class="quick-asks">${['Give me a full accounting of our strength.', 'What threats face us?', 'What should we do this moon?', 'Can we afford a war?'].map((q) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
-    <div class="chat-input"><textarea id="chat-text" rows="3" placeholder="Put a question to the council…"></textarea><button class="btn primary" id="chat-send">Ask</button></div></div>`;
+    <div class="chat-input"><textarea id="chat-text" rows="3" placeholder="Put a question to the council…"></textarea><div class="chat-btns"><button class="btn primary" id="chat-send">Ask</button>${log.some((m) => m.role === 'npc') ? '<button class="btn ghost" id="chat-listen" title="Say nothing — let them go on among themselves">Let them talk</button>' : ''}</div></div></div>`;
   const logEl = $('#chat-log'); logEl.scrollTop = logEl.scrollHeight;
-  const send = async (text) => {
-    text = (text ?? $('#chat-text').value).trim(); if (!text || app.busy) return;
-    $('#chat-text').value = '';
-    logEl.insertAdjacentHTML('beforeend', `<div id="pending-msg">${msgHtml({ role: 'player', text, date: dateStr(s.meta.date) })}</div><div class="msg npc" id="typing"><i>The council deliberates…</i></div>`); logEl.scrollTop = 1e9;
+  const send = async (text, listen = false) => {
+    text = listen ? '' : (text ?? $('#chat-text').value).trim(); if ((!text && !listen) || app.busy) return;
+    if (!listen) $('#chat-text').value = '';
+    logEl.insertAdjacentHTML('beforeend', `${listen ? '' : `<div id="pending-msg">${msgHtml({ role: 'player', text, date: dateStr(s.meta.date) })}</div>`}<div class="msg npc" id="typing"><i>${listen ? 'You say nothing. They go on among themselves…' : 'The council deliberates…'}</i></div>`); logEl.scrollTop = 1e9;
     const stop = waitStatus('The council', true);
     try {
       app.busy = true;
@@ -302,9 +308,10 @@ function renderCouncil(body) {
       const before = (app.state.chats['council:' + [...ids].sort().join(',')] || []).length;
       app.setState(r.state, { keepDrawer: true });
       if (app.drawerTab === 'audience') { renderCouncil(body); const fresh = [...body.querySelectorAll('.msg.npc')].slice(-Math.max(1, (r.replies || []).length)); playScene(fresh); }
-    } catch (e) { answerFailed(e, () => send(text)); } finally { stop(); app.busy = false; }
+    } catch (e) { answerFailed(e, () => send(text, listen)); } finally { stop(); app.busy = false; }
   };
   $('#chat-send').onclick = () => send();
+  const ls = $('#chat-listen'); if (ls) ls.onclick = () => send('', true);
   $('#chat-text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
   $$('.quick-asks button', body).forEach((b) => b.onclick = () => send(b.dataset.q));
 }

@@ -193,11 +193,10 @@ function playPCM(pcm, rate, playbackRate, volume, token) {
 }
 // long replies are spoken sentence by sentence: the first plays while the rest are still being voiced
 const sentences = (t) => (t.match(/[^.!?…]+[.!?…]+["'”’)]*\s*|[^.!?…]+$/g) || [t]).reduce((acc, x) => { const last = acc.at(-1); if (last && (last.length < 40 || x.length < 12) && last.length + x.length < 220) acc[acc.length - 1] = last + x; else acc.push(x); return acc; }, []).map((x) => x.trim()).filter(Boolean);
+// a slight pitch shift so blends that share a main voice still differ; pace from the person and their mood
+const paceOf = (prof) => { const pr = Math.max(0.94, Math.min(1.08, prof.pitch || 1)); return { pr, speed: Math.max(0.78, Math.min(1.3, (prof.rate || 1) * (MOOD_PACE[prof.mood] || 1) * 1.06)) / pr }; };
 async function speakNeural(text, prof, token) {
-  const cfg = voiceSettings();
-  // a slight pitch shift so blends that share a main voice still differ; pace from the person and their mood
-  const pr = Math.max(0.94, Math.min(1.08, prof.pitch || 1));
-  const speed = Math.max(0.78, Math.min(1.3, (prof.rate || 1) * (MOOD_PACE[prof.mood] || 1) * 1.06)) / pr;
+  const cfg = voiceSettings(); const { pr, speed } = paceOf(prof);
   const jobs = sentences(sayable(text)).map((t) => synth(t, prof.voice || 'bm_george', speed));
   for (const job of jobs) {
     const d = await job; if (token !== speakToken) return;
@@ -241,6 +240,23 @@ export async function speak(text, character, opts = {}) {
     let quiet = 0; const watch = setInterval(() => { if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) { if (++quiet >= 3) finish(); } else quiet = 0; }, 400);
   });
 }
+/**
+ * Voice a line now, to be played later: every sentence is sent to the voice worker at once, so a whole scene (all the
+ * counsellors, one after another) is ready to be heard back to back instead of waiting line by line.
+ * Returns { play(token) } — play resolves when the line has been spoken.
+ */
+export function prepareSpeech(text, character, opts = {}) {
+  const cfg = voiceSettings(); text = String(text || '').replace(/\*[^*]*\*/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!text || cfg.engine === 'off') return { play: async () => {} };
+  const prof = opts.narrator ? { ...narrator(), id: '_narrator' } : { ...profileFor(character), id: character?.id, mood: opts.mood };
+  if (cfg.engine !== 'neural') return { play: (token) => (token === speakToken ? speak(text, character, { ...opts, keep: true }) : undefined) };
+  const { pr, speed } = paceOf(prof);
+  const jobs = sentences(sayable(text)).map((t) => synth(t, prof.voice || 'bm_george', speed).catch(() => null));
+  return { play: async (token) => { for (const j of jobs) { const d = await j; if (token !== speakToken) return; if (d) await playPCM(d.pcm, d.rate, pr, cfg.volume, token); } } };
+}
+/** Silence whatever is playing and start a new scene; its lines play only while this token is current. */
+export function beginScene() { stopSpeaking(); return speakToken; }
+export const sceneToken = () => speakToken;
 /** Speak a whole scene top to bottom: narration in the narrator's voice, speech in the character's. */
 export async function speakBeats(list, character, onBeat, mood) {
   stopSpeaking(); const token = speakToken; const cfg = voiceSettings();
