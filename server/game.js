@@ -417,6 +417,7 @@ export async function talk(id, charId, message) {
     if (rescued) { reply = rescued; changes = []; } else reply = String(r.text).replace(/```[\s\S]*?```/g, '').replace(/\{[\s\S]*\}/g, '').replace(/^\s*"?reply"?\s*:\s*/i, '').trim() || '*They say nothing you can make sense of.*';
     changes = [];
   }
+  reply = reply.replace(/<br\s*\/?>/gi, '\n'); // the model writes HTML line breaks now and then; the scene shows its own
   // Sanity guard: a conversation can refine the ledger, not rewrite it (protects against model hallucinations)
   changes = changes.filter((ch) => {
     if (!ch || String(ch.op) !== 'figure') return true;

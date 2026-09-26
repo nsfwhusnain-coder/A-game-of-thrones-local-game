@@ -451,7 +451,7 @@ export function readReplies(text, people, fallback) {
   const byName = (sp) => { const w = new Set(words(sp)); return Object.keys(people).find((i) => words(people[i]).some((x) => w.has(x)) || words(i).some((x) => w.has(x))); };
   const byProse = (t) => { const head = String(t).slice(0, 160).toLowerCase(); return Object.keys(people).find((i) => words(people[i]).some((x) => new RegExp(`\\b${x}\\b`).test(head))); };
   const idOf = (sp, t) => (people[sp] ? sp : byName(sp || '') || byProse(t) || fallback);
-  const clean = (t) => String(t || '').replace(/```[a-z]*|```/gi, '').replace(/^\s*[{[\]}],?\s*$/gm, '').trim();
+  const clean = (t) => String(t || '').replace(/<br\s*\/?>/gi, '\n').replace(/```[a-z]*|```/gi, '').replace(/^\s*[{[\]}],?\s*$/gm, '').trim();
   const out = [];
   for (const r of replies) {
     const t = clean(r.text); if (!t) continue; const speaker = idOf(r.speaker, t);
