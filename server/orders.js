@@ -196,7 +196,13 @@ export async function planOrders(state, orders, ask) {
   if (ask) { try { plan = await ask(ordersPrompt(state, orders)); } catch { plan = null; } }
   if (!plan || !Array.isArray(plan.actions)) plan = readOrdersByRule(state, orders);
   else if (!plan.actions.length) { const byRule = readOrdersByRule(state, orders); if (byRule.actions.length) plan = byRule; }
-  return plan.actions || [];
+  return (plan.actions || []).map(withOp).filter((a) => a.op);
+}
+// a model that forgets "op" still said what it meant: someone and a place is a journey, a host and a place a march
+function withOp(a) {
+  if (!a || typeof a !== 'object' || a.op) return a;
+  const op = a.character && a.role ? 'appoint' : a.character && a.to ? 'travel' : a.army && a.to ? 'march' : a.template ? 'works' : a.role ? 'hire' : a.at && a.men && /levies/i.test(a.kind || '') ? 'raise' : a.at && a.men ? 'recruit' : null;
+  return op ? { ...a, op } : a;
 }
 const hasPlan = (o) => Array.isArray(o.plan) && o.planFor === o.text;
 
@@ -214,7 +220,7 @@ export async function previewOrders(state, ask) {
   todo.forEach((o, k) => {
     o.plan = actions.filter((a) => Number(a.order) === k + 1).map((a) => ({ ...a, order: 1 })); o.planFor = o.text;
     const lines = [...(res[k + 1] || []), ...(letters[k].result || [])];
-    o.preview = lines.length ? lines : ['The chronicle will tell how it goes — no one rides and no gold is spent by the engine'];
+    o.preview = lines.length ? lines : ['Left to the story: no one moves and no gold is spent'];
   });
   return true;
 }

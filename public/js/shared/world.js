@@ -497,6 +497,8 @@ function applyOne(state, ch, ctx) {
   switch (op) {
     case 'figure': case 'figures': case 'house_figure': {
       const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house ' + ch.house);
+      // the player's gold, men, levies and food are the engine's ledger: every dragon in or out has a line in it
+      if (ctx.protectPlayer && hid === state.meta.player) throw new Error('your ledger is kept by the engine, not the story');
       const fields = ch.field ? { [ch.field]: ch } : ch.values || {};
       const out = [];
       for (const [field, spec] of Object.entries(fields)) {

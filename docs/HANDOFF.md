@@ -334,6 +334,17 @@ quiet' every day.
 - **Chronicle entries:** the dated "What happened" section is the engine's (`prompts.js engineFacts`). The model writes only
   "Still open, as of <date>" and "Said, not confirmed", against a "realm now" block. The prompt is told the present beats the
   chronicle.
+- **Order receipts (second 20-day report):**
+  - An order is read and dry-run on a copy of the world the moment it is written (`orders.js previewOrders`, route
+    `POST /orders/preview`). The plan is stored on the order (`o.plan`, `o.planFor`) and executed as-is at the turn.
+  - A model action without `"op"` gets one inferred (`withOp`).
+  - A letter order is never a journey; `postLetters` and `errands.js postTick` track it as in flight, delivered or answered.
+  - `act 'recall'` calls back a rider (to `travel.fromPlace`) or halts a host.
+- **Story model guards:** it cannot change the player's figures (it once set the treasury to 0), cut the player's hosts
+  without a cause, or re-place a rider.
+- **Dates:** every event carries `e.date` (day d = start + d); the reel used start + d - 1.
+- **Feed:** story cards (plain headline; place, date and house tags; "Your house"; "Rumour"), a "Your orders" block per day
+  and "Threads to follow" (`state.openThreads` from consolidation). The drawer width is `--drawer-w`.
 - **Busy panel:** in-world text. Token and cache numbers appear only when Settings → "Show model diagnostics" is on.
 
 ## 5. In the middle of (when this was written)

@@ -370,6 +370,8 @@ async function maybeConsolidate(id, state, cfg, force = false) {
   appendChronicle(id, `\n## ${from} — ${to}\n${entry}\n`);
   const fresh = loadState(id);
   fresh.consolidatedThrough = batch.at(-1).turn;
+  // the open threads, for the feed's "threads to follow" (dated: true as of the end of this stretch)
+  if (threads) fresh.openThreads = { asOf: to, items: threads.split('\n').map((l) => l.replace(/^[-*]\s*/, '').replace(/^As of [^:]+:\s*/i, '').trim()).filter(Boolean).slice(0, 8) };
   saveState(id, fresh);
   return { through: fresh.consolidatedThrough };
 }

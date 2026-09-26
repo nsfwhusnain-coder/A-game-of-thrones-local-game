@@ -347,3 +347,14 @@ test('an order\'s receipt changes nothing, and the turn does what it said', asyn
   assert.ok(String(s.characters.jory_cassel.loc).startsWith('army:'));
   assert.match(s.orders[0].result[0], /rides for King's Landing/);
 });
+test('an action the model left without its "op" is still carried out', async () => {
+  const { planOrders } = await import('../server/orders.js');
+  const s = fresh();
+  const acts = await planOrders(s, [{ text: 'Send Jory Cassel to Castle Black with fifty men.' }], async () => ({ actions: [{ order: 1, character: 'jory_cassel', to: 'Castle Black', men: 50 }], story: [] }));
+  assert.equal(acts[0].op, 'travel');
+});
+test('the story cannot empty the player\'s treasury', () => {
+  const s = fresh(); const gold = s.houses.stark.figures.treasury.v;
+  const r = applyChanges(s, [{ op: 'figure', house: 'stark', field: 'treasury', value: 0 }, { op: 'figure', house: 'lannister', field: 'treasury', delta: -100 }], { protectPlayer: true });
+  assert.equal(s.houses.stark.figures.treasury.v, gold); assert.equal(r.rejected.length, 1); assert.equal(r.applied.length, 1);
+});

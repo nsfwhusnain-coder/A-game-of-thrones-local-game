@@ -2,6 +2,8 @@
 import { eventArt } from './event-art.js';
 import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal } from './common.js';
 import { dateStr } from '../shared/world.js';
+import { orderOutcome, STATUS_LABEL } from '../shared/errands.js';
+import { THREADS } from '../shared/plots.js';
 import { briefFor } from '../../data/briefs.js';
 import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices } from './voice.js';
 import { temperament, natureTags, VERDICT_LABEL, moodWord } from '../shared/temperament.js';
@@ -83,12 +85,35 @@ function openMeanwhile(turn) {
   const t = app.state.history.find((x) => x.turn === turn); if (!t) return;
   modal(`<h2>Across the realm — ${esc(t.date)}</h2>${meanwhileHtml(t.events, true)}<div class="report-actions"><button class="btn primary" data-action="close-modal">Close</button></div>`);
 }
+// The story's open threads: the great matters under way (engine) and what the chronicle last found unresolved
+function threadsHtml(s) {
+  const great = THREADS.filter((t) => (s.plots?.stages?.[t.id] || 0) > 0 && s.plots.stages[t.id] < t.stages.length).map((t) => { const last = (s.plots.log || []).filter((l) => l.thread === t.id).at(-1); return `<li><b>${esc(t.name)}</b>${last?.title ? ` — last: ${esc(last.title)}` : ''}</li>`; });
+  const open = (s.openThreads?.items || []).map((x) => `<li>${esc(x)}</li>`);
+  if (!great.length && !open.length) return '';
+  return `<details class="threads"${app.threadsOpen ? ' open' : ''}><summary>🧵 Threads to follow <span class="muted">(${great.length + open.length})</span></summary><ul>${great.join('')}</ul>${open.length ? `<div class="muted" style="font-size:0.72rem;margin-top:0.3rem">From the chronicle, as of ${esc(s.openThreads.asOf)}:</div><ul>${open.join('')}</ul>` : ''}</details>`;
+}
+// One event as the story reads it: a plain headline; where, when, who; the whole account inline — no modal needed
+function storyHtml(s, t, e) {
+  const p = s.meta.player; const mine = e.mine || (e.houses || []).includes(p);
+  const rumour = e.type === 'rumor' || /^(rumou?r|it is said|word comes|men say)/i.test(e.text || '');
+  const houses = (e.houses || []).filter((h) => s.houses[h]).slice(0, 3);
+  const date = (e.date || t.date).replace(/, \d+ AC$/, '');
+  return `<div class="story imp-${e.importance}${mine ? ' mine' : ''}" data-news="${t.turn}:${(t.events || []).indexOf(e)}">
+    <div class="story-h">${NEWS_ICON[e.type] ? `${NEWS_ICON[e.type]} ` : ''}${esc(e.title)}</div>
+    <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">📍 ${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${mine ? '<span class="tag you">Your house</span>' : ''}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
+    <div class="story-x">${esc(e.text)}</div>${e.details ? `<div class="story-d">${esc(e.details)}</div>` : ''}</div>`;
+}
+// what the player ordered that day, and what the engine made of it — your hand in the day's story
+function yoursHtml(t) {
+  const rows = (t.orders || []).filter((o) => !o.auto || o.status).map((o) => { const r = orderOutcome(o, app.state); return `<div class="yo">“${esc(o.text.length > 110 ? o.text.slice(0, 110) + '…' : o.text)}”</div>${r.lines.slice(0, 3).map((l) => `<div class="yr${/^could not/i.test(l) ? ' bad' : ''}">→ ${esc(l.replace(/^could not be done: /i, 'Could not: '))}</div>`).join('') || `<div class="yr">→ ${esc(STATUS_LABEL[r.status])}</div>`}`; }).join('');
+  return rows ? `<div class="yours"><div class="yh">Your orders</div>${rows}</div>` : '';
+}
 function renderFeed(body) {
   const s = app.state;
   const turns = [...s.history].reverse().slice(0, 30);
   // the news, as a list: a date, then one row per event (icon, headline, one line); click a row for the whole story
-  body.innerHTML = decisionsHtml() + (turns.length ? turns.map((t) => { const ev = mainEvents(t.events); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
-      ${ev.map((e, i) => `<div class="news-row imp-${e.importance}" data-news="${t.turn}:${(t.events || []).indexOf(e)}"><span class="news-ico">${NEWS_ICON[e.type] || '❖'}</span><div class="news-txt"><div class="news-t">${esc(e.title)}</div><div class="news-x">${esc(e.text)}</div></div></div>`).join('') || '<div class="news-quiet">No news of note.</div>'}
+  body.innerHTML = decisionsHtml() + threadsHtml(s) + (turns.length ? turns.map((t) => { const ev = mainEvents(t.events); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
+      ${yoursHtml(t)}${ev.map((e) => storyHtml(s, t, e)).join('') || '<div class="news-quiet">No news of note.</div>'}
       ${bg ? `<div class="news-more" data-meanwhile="${t.turn}">+ ${bg} small happening${bg > 1 ? 's' : ''} across the realm</div>` : ''}</div>`; }).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>
       ${(() => { const b = briefFor(s.houses[s.meta.player], s); return `<div class="event imp-4"><div class="et">Your situation</div><div class="eb">${esc(b.situation)}</div><div class="eb" style="margin-top:0.4rem"><b>Aims:</b> ${b.goals.map(esc).join(' · ')}</div></div>`; })()}
@@ -105,9 +130,30 @@ function renderFeed(body) {
       • <b>Advance ▶</b> — time passes; the world acts, the map changes.<br>
       • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></details>`);
   wireDecisions(body);
-  $$('[data-news]', body).forEach((el) => el.onclick = () => { const [t, i] = el.dataset.news.split(':').map(Number); openNews(t, i); });
+  // a place tag flies the map there; the card itself focuses its place too — the full account is already here
+  const th = $('.threads', body); if (th) th.ontoggle = () => { app.threadsOpen = th.open; };
+  $$('[data-goto]', body).forEach((el) => el.onclick = (ev) => { ev.stopPropagation(); const h = s.holdings[el.dataset.goto]; if (h) { app.map.flyTo(h.pos, 420); app.map.flash(h.pos); } });
+  $$('[data-news]', body).forEach((el) => el.onclick = () => { const [tn, i] = el.dataset.news.split(':').map(Number); const e = s.history.find((x) => x.turn === tn)?.events?.[i]; const h = e?.where && s.holdings[e.where]; if (h) { app.map.flyTo(h.pos, 420); app.map.flash(h.pos); } else openNews(tn, i); });
   $$('[data-meanwhile]', body).forEach((el) => el.onclick = () => openMeanwhile(Number(el.dataset.meanwhile)));
   $$('.event[data-where], .mw-item[data-where]', body).forEach((el) => el.onclick = () => { const w = el.dataset.where; if (s.holdings[w]) { app.map.flyTo(s.holdings[w].pos); app.map.flash(s.holdings[w].pos); } });
+}
+// While an answer is written: what is happening, in the world's words (a reply that fails says so, with a retry)
+function waitStatus(who, together) {
+  const t0 = Date.now();
+  const iv = setInterval(async () => {
+    const el = $('#typing'); if (!el) return clearInterval(iv);
+    let p = null; try { p = await api(`/games/${app.saveId}/progress`); } catch { /* keep the last words */ }
+    const sec = Math.round((Date.now() - t0) / 1000);
+    const what = p?.phase === 'writing' ? (together ? `${who} speaks…` : `${who} writes the letter…`) : p?.phase === 'thinking' ? `${who} weighs the words…` : together ? `${who} considers…` : `The raven flies to ${who}…`;
+    el.innerHTML = `<i>${esc(what)}</i> <span class="muted" style="font-size:0.75rem">${sec}s</span>`;
+  }, 1000);
+  return () => clearInterval(iv);
+}
+function answerFailed(e, retry) {
+  const el = $('#typing'); if (!el) { toast(e.message, true); return; }
+  el.id = ''; el.classList.add('failed');
+  el.innerHTML = `<i>No answer came${e.message ? ` — ${esc(e.message)}` : ''}.</i> <button class="btn small">Try again</button>`;
+  el.querySelector('button').onclick = () => { el.remove(); $('#pending-msg')?.remove(); retry(); };
 }
 export function ravenHtml(r) {
   return `<div class="raven-card ${r.read ? '' : 'unread'}"><div class="from">From ${esc(r.fromName)} · ${esc(r.date)}</div>${esc(r.text)}<div style="margin-top:0.4rem;display:flex;gap:0.3rem">${r.from ? `<button class="btn small" data-talk="${r.from}">Reply</button>` : ''}<button class="btn small" data-read-aloud="${r.from || ''}" data-text="${esc(r.text)}">🔊 Read aloud</button></div></div>`;
@@ -152,15 +198,16 @@ function renderAudience(body) {
   const send = async (text) => {
     text = (text ?? $('#chat-text').value).trim(); if (!text || app.busy) return;
     $('#chat-text').value = '';
-    logEl.insertAdjacentHTML('beforeend', msgHtml({ role: 'player', text, date: dateStr(s.meta.date) }, c) + `<div class="msg npc" id="typing"><i>${esc(c.name)} ${together ? 'considers…' : 'will reply by raven…'}</i></div>`);
+    logEl.insertAdjacentHTML('beforeend', `<div id="pending-msg">${msgHtml({ role: 'player', text, date: dateStr(s.meta.date) }, c)}</div><div class="msg npc" id="typing"><i>${esc(c.name)} ${together ? 'considers…' : 'will reply by raven…'}</i></div>`);
     logEl.scrollTop = 1e9;
+    const stop = waitStatus(c.name, together);
     try {
       app.busy = true;
       const r = await api(`/games/${app.saveId}/talk`, { body: { character: c.id, message: text } });
       app.setState(r.state, { keepDrawer: true });
       if (app.drawerTab === 'audience') { renderAudience(body); const last = [...body.querySelectorAll('.msg.npc')].at(-1); if (last) playScene([last]); }
-    } catch (e) { toast(e.message, true); $('#typing')?.remove(); }
-    finally { app.busy = false; }
+    } catch (e) { answerFailed(e, () => send(text)); }
+    finally { stop(); app.busy = false; }
   };
   $('#chat-send').onclick = () => send();
   $('#chat-text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
@@ -235,14 +282,15 @@ function renderCouncil(body) {
   const send = async (text) => {
     text = (text ?? $('#chat-text').value).trim(); if (!text || app.busy) return;
     $('#chat-text').value = '';
-    logEl.insertAdjacentHTML('beforeend', msgHtml({ role: 'player', text, date: dateStr(s.meta.date) }) + '<div class="msg npc" id="typing"><i>The council deliberates…</i></div>'); logEl.scrollTop = 1e9;
+    logEl.insertAdjacentHTML('beforeend', `<div id="pending-msg">${msgHtml({ role: 'player', text, date: dateStr(s.meta.date) })}</div><div class="msg npc" id="typing"><i>The council deliberates…</i></div>`); logEl.scrollTop = 1e9;
+    const stop = waitStatus('The council', true);
     try {
       app.busy = true;
       const r = await api(`/games/${app.saveId}/council`, { body: { members: ids, message: text } });
       const before = (app.state.chats['council:' + [...ids].sort().join(',')] || []).length;
       app.setState(r.state, { keepDrawer: true });
       if (app.drawerTab === 'audience') { renderCouncil(body); const fresh = [...body.querySelectorAll('.msg.npc')].slice(-Math.max(1, (r.replies || []).length)); playScene(fresh); }
-    } catch (e) { toast(e.message, true); $('#typing')?.remove(); } finally { app.busy = false; }
+    } catch (e) { answerFailed(e, () => send(text)); } finally { stop(); app.busy = false; }
   };
   $('#chat-send').onclick = () => send();
   $('#chat-text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
