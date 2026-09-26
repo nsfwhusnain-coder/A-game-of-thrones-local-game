@@ -49,3 +49,16 @@ test('works: one path, and a duplicate is refused with its reason', async () => 
   const s = await api(`/games/${id}`);
   assert.equal(s.projects.filter((p) => p.status === 'active').length, 1);
 });
+
+test('a distant audience is a letter: the answer lands days later, in Letters and in the chronicle', async () => {
+  const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+  const r = await api(`/games/${id}/talk`, { character: 'lysa_arryn', message: 'Sister, what did Jon say in his last days?' });
+  assert.equal(r.reply, null); assert.ok(r.raven.days >= 1);
+  assert.ok(r.state.chats.lysa_arryn.at(-1).pending);
+  let s = r.state; let found = null;
+  for (let d = 0; d < r.raven.days * 2 + 1 && !found; d++) { const t = await api(`/games/${id}/advance`, { span: '1d', orders: [] }); s = t.state; found = t.turn.events.find((e) => /Lysa Arryn answers your letter/.test(e.title)); }
+  assert.ok(found, 'the answer arrived as an event');
+  assert.ok(s.ravens.some((x) => x.from === 'lysa_arryn'));
+  assert.ok(!s.chats.lysa_arryn.at(-1).pending);
+  assert.equal(s.post.find((p) => p.to === 'lysa_arryn').status, 'answered');
+});

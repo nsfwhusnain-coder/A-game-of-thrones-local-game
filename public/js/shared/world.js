@@ -384,7 +384,7 @@ function findHouse(state, id) {
   if (head !== s) return findHouse(state, head);
   return null;
 }
-function findChar(state, id) {
+export function findChar(state, id) {
   if (!id) return null;
   const s = slug(id);
   if (state.characters[s]) return s;

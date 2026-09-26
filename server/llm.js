@@ -243,7 +243,7 @@ export function extractField(text, field) {
 }
 
 // The top-level keys our replies use: a "{" followed by one of these is where an answer begins
-const TOP_KEYS = /^\{\s*"(summary|events|changes|reply|replies|actions|story|suggestions|chronicle|plan)"/;
+const TOP_KEYS = /^\{\s*"(summary|events|changes|reply|replies|actions|story|suggestions|chronicle|plan|threads|rumours)"/;
 
 export function extractJson(text) {
   let s = stripThinking(String(text || '')).trim();

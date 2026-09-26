@@ -88,9 +88,9 @@ function openMeanwhile(turn) {
 // The story's open threads: the great matters under way (engine) and what the chronicle last found unresolved
 function threadsHtml(s) {
   const great = THREADS.filter((t) => (s.plots?.stages?.[t.id] || 0) > 0 && s.plots.stages[t.id] < t.stages.length).map((t) => { const last = (s.plots.log || []).filter((l) => l.thread === t.id).at(-1); return `<li><b>${esc(t.name)}</b>${last?.title ? ` — last: ${esc(last.title)}` : ''}</li>`; });
-  const open = (s.openThreads?.items || []).map((x) => `<li>${esc(x)}</li>`);
+  const open = (s.storyThreads || []).map((t) => `<li><b>${esc(t.title)}</b> — ${esc(t.last)} <span class="muted">(${esc(t.date.replace(/, \d+ AC$/, ''))})</span></li>`);
   if (!great.length && !open.length) return '';
-  return `<details class="threads"${app.threadsOpen ? ' open' : ''}><summary>🧵 Threads to follow <span class="muted">(${great.length + open.length})</span></summary><ul>${great.join('')}</ul>${open.length ? `<div class="muted" style="font-size:0.72rem;margin-top:0.3rem">From the chronicle, as of ${esc(s.openThreads.asOf)}:</div><ul>${open.join('')}</ul>` : ''}</details>`;
+  return `<details class="threads"${app.threadsOpen ? ' open' : ''}><summary>🧵 Threads to follow <span class="muted">(${great.length + open.length})</span></summary>${open.length ? '' : ''}<ul>${great.join('')}</ul>${open.length ? `<ul>${open.join('')}</ul>` : ''}</details>`;
 }
 // One event as the story reads it: a plain headline; where, when, who; the whole account inline — no modal needed
 function storyHtml(s, t, e) {
@@ -205,7 +205,8 @@ function renderAudience(body) {
       app.busy = true;
       const r = await api(`/games/${app.saveId}/talk`, { body: { character: c.id, message: text } });
       app.setState(r.state, { keepDrawer: true });
-      if (app.drawerTab === 'audience') { renderAudience(body); const last = [...body.querySelectorAll('.msg.npc')].at(-1); if (last) playScene([last]); }
+      if (r.raven) toast(`Your raven flies to ${c.name} (~${r.raven.days} ${r.raven.days === 1 ? 'day' : 'days'}). An answer may come by ${r.raven.back}.`);
+      if (app.drawerTab === 'audience') { renderAudience(body); const last = [...body.querySelectorAll('.msg.npc:not(.pending)')].at(-1); if (last && !r.raven) playScene([last]); }
     } catch (e) { answerFailed(e, () => send(text)); }
     finally { stop(); app.busy = false; }
   };
@@ -225,7 +226,9 @@ function temperHtml(c) {
 }
 function msgHtml(m, c) {
   const s = app.state; const sp = m.speaker ? s.characters[m.speaker] : c;
-  if (m.role === 'player') return `<div class="msg player"><div class="who">You · ${esc(m.date || '')}</div>${esc(m.text)}</div>`;
+  if (m.role === 'player') return `<div class="msg player"><div class="who">You · ${esc(m.date || '')}${m.via === 'raven' ? ' · sent by raven' : ''}</div>${esc(m.text)}</div>`;
+  // a letter's answer is on the wing: it is read when the raven lands, not before
+  if (m.pending) return `<div class="msg npc pending"><div class="who">🕊 ${esc(sp?.name || '')}</div><i>Your raven is on the wing. An answer may come by ${esc(m.date || 'a few days')} — it will reach your Letters and the chronicle when it lands.</i></div>`;
   // a reply is a small scene: what you see them do, and what they say
   const bs = beats(m.text);
   // narration reads as a novel's prose; speech is set in quotation marks

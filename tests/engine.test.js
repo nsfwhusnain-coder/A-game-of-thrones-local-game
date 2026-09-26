@@ -57,9 +57,9 @@ test('a period brings happenings in proportion to its length, every slot filled'
 });
 test('a happening does not come again before its cooldown', () => {
   const s = fresh(); s.meta.turn = 50;
-  const first = new Set(happenings(s, 360).events.map((e) => e.title));
-  const again = happenings(s, 30).events; // same turn: everything just used is cooling down
-  assert.ok(again.every((e) => !first.has(e.title) || /\|\|/.test(e.title)));
+  const first = new Set(happenings(s, 360).events.map((e) => e.tpl));
+  const again = happenings(s, 30).events; // same turn: every template just used is cooling down
+  assert.ok(again.every((e) => !first.has(e.tpl)));
 });
 test('happenings never touch the Wall or Essos under "any"', () => {
   const s = fresh(); const any = new Set(HAPPENINGS.filter((h) => h.where === 'any').map((h) => h.id));
@@ -357,4 +357,43 @@ test('the story cannot empty the player\'s treasury', () => {
   const s = fresh(); const gold = s.houses.stark.figures.treasury.v;
   const r = applyChanges(s, [{ op: 'figure', house: 'stark', field: 'treasury', value: 0 }, { op: 'figure', house: 'lannister', field: 'treasury', delta: -100 }], { protectPlayer: true });
   assert.equal(s.houses.stark.figures.treasury.v, gold); assert.equal(r.rejected.length, 1); assert.equal(r.applied.length, 1);
+});
+
+// ── One host where the men are ──
+test('raising levies where a host stands joins it; banners and merge from plain orders', async () => {
+  const s = fresh();
+  s.orders = [{ id: 'o1', text: 'Assemble the men of the North at Winterfell as the Northern Host under Robb.' }];
+  const res = executeActions(s, [{ op: 'raise', order: 1, at: 'stark', men: 3000, name: 'The Northern Host', commander: 'robb_stark' }, { op: 'raise', order: 1, at: 'stark', men: 1000 }, { vassals: 'all', order: 1, at: 'Winterfell' }], s.orders);
+  const hosts = Object.values(s.armies).filter((a) => a.owner === 'stark' && a.at === 'stark' && !/garrison/i.test(a.status || ''));
+  assert.equal(hosts.length, 1); assert.equal(hosts[0].men, 4000); assert.equal(hosts[0].name, 'The Northern Host');
+  assert.equal(s.characters.robb_stark.loc, 'army:' + hosts[0].id);
+  assert.equal(s.houses.umber.obligations.levies, 'called');
+  assert.match(res[1].join(' '), /join The Northern Host, now 4,000 men under Robb Stark/);
+});
+test('every order has its event, first, even when the story forgot it', async () => {
+  const { orderEvents } = await import('../server/orders.js');
+  const s = fresh();
+  const orders = [{ id: 'a', text: 'Call the banners.', result: ['The banners are called: 20 sworn houses summoned to muster at Winterfell'] }, { id: 'b', text: 'Buy the Iron Throne for sixty million dragons.', result: ['could not be done: not enough gold'] }, { id: 'c', text: 'Tell Robb he did well.' }];
+  const told = [{ order: 3, title: 'Ned praises his son', text: '…', houses: [] }];
+  const extra = orderEvents(s, orders, told);
+  assert.equal(extra.length, 2); assert.ok(told[0].mine);
+  assert.match(extra[0].title, /The banners are called/); assert.match(extra[1].title, /Your command fails: not enough gold/);
+});
+test('a plain order in lower case still raises the host and calls the banners', async () => {
+  const { planOrders } = await import('../server/orders.js');
+  const s = fresh();
+  const o = [{ id: 'o', text: 'assemeble the men of the north at winterfell and create a great northern host of all able body men and boys' }];
+  const acts = await planOrders(s, o, async () => ({ actions: [], story: [1] }));
+  const res = executeActions(s, acts, o);
+  assert.ok(acts.some((a) => a.op === 'raise'), JSON.stringify(acts));
+  assert.match(res[1].join(' '), /levies muster at Winterfell/);
+});
+test('the Pax order: banners called and the Northern Host raised at Winterfell', async () => {
+  const { planOrders } = await import('../server/orders.js');
+  const s = fresh();
+  const o = [{ id: 'o', text: 'assemeble the men of the north at winterfell and create a great northern host of all able body men and boys' }];
+  const acts = await planOrders(s, o, async () => ({ actions: [], story: [1] }));
+  executeActions(s, acts, o);
+  assert.equal(s.houses.umber.obligations.levies, 'called');
+  assert.ok(Object.values(s.armies).some((a) => a.owner === 'stark' && a.name === 'The Northern Host' && a.men > 10000));
 });
