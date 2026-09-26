@@ -10,7 +10,7 @@ import { postTick } from '../public/js/shared/errands.js';
 import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
-import { worldTick } from '../public/js/shared/plots.js';
+import { worldTick, THREADS } from '../public/js/shared/plots.js';
 import { resolveWarfare } from '../public/js/shared/battles.js';
 import { roadEncounters } from '../public/js/shared/roads.js';
 import { updateIntel } from '../public/js/shared/intel.js';
@@ -310,11 +310,12 @@ export async function advance(id, { span = '1d', orders } = {}) {
   for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house], ...(n.important ? {} : { bg: true, mine: true }) });
   // every event has its day (successions at the start, the steward's accounts at the end) and an id for its pin
   for (const e of events) if (!e.day) e.day = /^A new head/.test(e.title) ? 1 : spanInfo.days;
-  // the story threads the player follows, kept by the story from turn to turn
+  // the story threads the player follows, kept by the story from turn to turn (not the engine's great matters)
   if (Array.isArray(obj.threads)) {
     const now = new Map((state.storyThreads || []).map((t) => [t.title.toLowerCase(), t]));
     for (const t of obj.threads) {
       const title = String(t?.title || '').trim().slice(0, 60); if (!title) continue;
+      if (GREAT_NAMES.some((g) => g === title.toLowerCase() || g.split(' ').filter((w) => w.length > 3 && title.toLowerCase().includes(w)).length >= 2)) continue; // the great matters are tracked apart
       if (/resolved|closed|ended/i.test(String(t.status || ''))) { now.delete(title.toLowerCase()); continue; }
       now.set(title.toLowerCase(), { title, last: String(t.last || '').slice(0, 200), date: dateStr(state.meta.date) });
     }
@@ -369,6 +370,7 @@ export async function advance(id, { span = '1d', orders } = {}) {
 // turn's prompt up to the point where it starts to change (rules, roster, chronicle, the log of past days): the
 // next turn then reads only what is new — about a third of the prompt — and is two or three times faster.
 const warming = new Map(); // save id -> promise
+const GREAT_NAMES = THREADS.map((t) => t.name.toLowerCase());
 export const STABLE_END = 'THE STATE OF THE REALM NOW';
 function warmNext(id) {
   const cfg = loadConfig(); if (cfg.provider === 'mock' || warming.has(id)) return;

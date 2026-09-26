@@ -474,3 +474,9 @@ test('an order that names a leader puts them at the head of the host', () => {
   assert.equal(s.armies.nh.commander, 'robb_stark'); assert.equal(s.characters.robb_stark.loc, 'army:nh');
   assert.match(r[1][0], /16,000 men under Robb Stark\) marches for Moat Cailin/);
 });
+test('an engine-written order headline is one short sentence', async () => {
+  const { orderEvents } = await import('../server/orders.js');
+  const s = fresh();
+  const ev = orderEvents(s, [{ id: 'f', text: 'Hold a great feast.', result: ['The feast is held (4,050 dragons). Your lords are glad of it. At the high table, two lords came to blows.'] }], []);
+  assert.equal(ev[0].title, 'The feast is held');
+});

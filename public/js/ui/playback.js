@@ -14,13 +14,18 @@ document.addEventListener('click', (e) => {
   if (b.dataset.rb === 'skip') rv.ctl.skip = true;
 });
 
+/** Hide the new day's cards before the state that carries them is shown, so none flashes before its turn. */
+export function prepareReveal(turn) {
+  const evs = storyEvents(turn); if (!evs.length) { app.reveal = null; return; }
+  app.reveal = { turn: turn.turn, n: 0, total: evs.length, shown: new Set(), ctl: { paused: false, skip: false, next: false }, date: evs[0].date || turn.date };
+}
 export async function playTurn(turn, { onDone } = {}) {
   const evs = storyEvents(turn);
   const span = SPANS[turn.span]?.days || 30;
   // a quiet day: no news, but the hosts and riders still walk their road before your eyes
-  if (!evs.length) { if (app.map) for (let k = 1; k <= 36; k++) { app.map.reelF = k / 36; await new Promise((r) => setTimeout(r, 40)); } onDone?.(); return; }
-  const ctl = { paused: false, skip: false, next: false };
-  const rv = app.reveal = { turn: turn.turn, n: 0, total: evs.length, shown: new Set(), ctl, date: evs[0].date || turn.date };
+  if (!evs.length) { app.reveal = null; if (app.map) for (let k = 1; k <= 36; k++) { app.map.reelF = k / 36; await new Promise((r) => setTimeout(r, 40)); } onDone?.(); return; }
+  if (app.reveal?.turn !== turn.turn) prepareReveal(turn);
+  const rv = app.reveal; const ctl = rv.ctl;
   setDrawer('feed');
   for (let i = 0; i < evs.length && !ctl.skip; i++) {
     const e = evs[i]; ctl.next = false;

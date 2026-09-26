@@ -3,7 +3,7 @@ import { startIconizer, icon } from './ui/icons.js';
 import { drawTitleMap } from './ui/titlemap.js';
 import { startMusic, setMood, setMusicHouse, musicSettings, setMusic } from './ui/music.js';
 import { sfx, wireSfx, sfxSettings, setSfx } from './ui/sfx.js';
-import { playTurn } from './ui/playback.js';
+import { playTurn, prepareReveal } from './ui/playback.js';
 import { voiceSettings, setVoiceSetting, speak } from './ui/voice.js';
 import { atWar } from './shared/warfare.js';
 import { CHARACTERS } from '../data/characters.js';
@@ -386,7 +386,7 @@ async function advance() {
     const r = await api(`/games/${app.saveId}/advance`, { body: { span, orders: app.state.orders } });
     // the hosts march across the map as the replay's days go by
     if (app.map) { app.map.reelHold = true; app.map.reelF = 0; }
-    app.setState(r.state); setDrawer('feed');
+    prepareReveal(r.turn); app.setState(r.state); setDrawer('feed');
     // the hours pass; then the news is told in order, day by day, before the report
     sfx('bell');
     const newRavens = r.state.ravens.filter((x) => !x.read).length > unreadBefore;
