@@ -467,3 +467,10 @@ test('a refused order is told once, and nothing of it happens elsewhere', async 
   orderEvents(s, [{ id: 'a', text: 'Spend sixty million dragons.', result: ['could not be done: the treasury holds 60,000 dragons, not 60,000,000'] }], told);
   assert.equal(told.length, 1); assert.equal(told[0].title, 'The treasurer laughs');
 });
+test('an order that names a leader puts them at the head of the host', () => {
+  const s = fresh(); apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'The Northern Host', at: 'stark', men: 16000 }]);
+  const o = [{ text: 'Robb is to march the Northern Host to Moat Cailin.' }];
+  const r = executeActions(s, [{ op: 'march', order: 1, army: 'nh', to: 'Moat Cailin' }], o);
+  assert.equal(s.armies.nh.commander, 'robb_stark'); assert.equal(s.characters.robb_stark.loc, 'army:nh');
+  assert.match(r[1][0], /16,000 men under Robb Stark\) marches for Moat Cailin/);
+});

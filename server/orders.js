@@ -169,6 +169,14 @@ export function goldIn(text) {
   let n = Number(m[1]); if (!isFinite(n)) { n = m[1].split(/[\s-]+/).reduce((a, w) => a + (UNITS[w] ?? 0), 0); if (!n) return null; }
   return n * (MAG[m[2]] || 1);
 }
+// Who the order puts at the head of a host: one of the house's people it names ("under Robb", "Robb is to march"),
+// who is with the host or at the place — not the lord himself unless he is named to lead
+function leaderIn(state, text, army, place) {
+  if (!text) return null; const p = state.meta.player;
+  const here = (c) => (army ? c.loc === 'army:' + army.id || (army.at && c.loc === army.at) || (!army.at && c.loc === state.houses[p].seat) : c.loc === place);
+  const cands = Object.values(state.characters).filter((c) => c.alive && c.house === p && c.age >= 14 && !/imprisoned|captive/.test(c.status || '') && here(c) && named(state, c, text));
+  return cands.sort((a, b) => (b.roles?.length || 0) - (a.roles?.length || 0))[0] || null;
+}
 /** Carry out interpreted actions; returns per-order results. `orders` are the orders the actions came from. */
 export function executeActions(state, actions, orders = []) {
   const p = state.meta.player; const me = state.houses[p]; const results = {};
@@ -190,9 +198,11 @@ export function executeActions(state, actions, orders = []) {
         if (!army) throw new Error('you have no host to march — raise your levies or wait for your bannermen');
         if (!to) throw new Error('unknown place ' + a.to);
         army.march = { to, since: state.meta.turn }; army.status = 'marching';
-        note(i, `${army.name} marches for ${placeName(state, to)}`); continue;
+        const lead = leaderIn(state, orders[i - 1]?.text, army);
+        if (lead) { army.commander = lead.id; lead.loc = 'army:' + army.id; delete lead.travel; }
+        note(i, `${army.name} (${army.men.toLocaleString('en-GB')} men${army.commander ? ` under ${state.characters[army.commander]?.name}` : ''}) marches for ${placeName(state, to)}`); continue;
       }
-      if (a.op === 'raise') { for (const l of raiseLevies(state, a)) note(i, l); continue; }
+      if (a.op === 'raise') { const lead = !a.commander && leaderIn(state, orders[i - 1]?.text, null, resolvePlaceId(a.at)); for (const l of raiseLevies(state, lead ? { ...a, commander: lead.id } : a)) note(i, l); continue; }
       if (a.op === 'banners') { for (const l of callBanners(state, a)) note(i, l); continue; }
       if (a.op === 'merge') { for (const l of mergeHosts(state, a)) note(i, l); continue; }
       if (a.op === 'works') { const w = startWorks(state, a.template, a.at); note(i, `Work begins: ${w.name} (${w.cost.toLocaleString('en-GB')} dragons over ${w.months} moons)`); continue; }

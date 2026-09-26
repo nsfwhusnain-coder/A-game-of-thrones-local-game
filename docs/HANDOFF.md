@@ -347,6 +347,33 @@ quiet' every day.
   and "Threads to follow" (`state.openThreads` from consolidation). The drawer width is `--drawer-w`.
 - **Busy panel:** in-world text. Token and cache numbers appear only when Settings → "Show model diagnostics" is on.
 
+### The last rebuild (2026-09-26): your words drive the story, the chronicle on the left, turns in ~20 s
+- **Every order is an event.** `orders.js ordersBlock` gives each order its fate in the turn prompt: done by the engine (with its
+  numbers), refused (told as a failure in the world; nothing of it happens), or the story's to resolve. `orderEvents` adopts an
+  untagged story event that tells an order (by shared key words), keeps one event for a refused order, and writes the engine's own
+  event when the story forgot one. Events carry `orderId`; the card quotes the order.
+- **Order vocabulary.** travel, march, recruit, raise (joins the host already at that place; commander and name), banners, merge,
+  works, feast, tourney, hire, appoint. `withOp` infers a missing op or maps aliases (project → works, call_banners → banners).
+  `readOrdersByRule` backs up the model per order: typo-tolerant and case-insensitive, it reads "assemble the men of the north at
+  winterfell and create a great northern host" as banners plus raise. `goldIn()` refuses spending beyond the treasury before
+  anything else happens.
+- **Hosts:** banners that arrive after the main host has marched follow it (`march: 'army:<id>'`) and join it where they meet
+  (`vassals.js gatherMusters`); same-day "answers the call" events fold into one.
+- **Letters:** a distant audience is a letter. `talk` stores the answer as pending (`state.pendingReplies`, and a chat entry with
+  `pending` and `arrivesDay`); `deliverReplies` lands it after two raven legs, into Letters, the timeline and the chat, and applies
+  its changes then. Every seated counsellor answers.
+- **Speed:** `game.js warmNext` sends the next turn's prompt up to `THE STATE OF THE REALM NOW` with max_tokens 1 after each turn
+  (after consolidation), and `advance` awaits it. llama.cpp resumes only from where a request ended (checkpoints; SWA and hybrid
+  models alike), so without this only ~5.3k of ~23k tokens were reused. With it, 13-17k tokens are reused.
+- **UI v3:** the chronicle panel is on the left, with the composer (orders and receipts) at its foot. `playback.js` reveals the
+  turn's cards there one by one (`app.reveal`, `storyEvents` order) while the camera flies. The live "being written" box sits at
+  the head of the panel. Windows and sheets open on the right; the dock is bottom right; map modes are top right.
+- **Ops:** `npm start` runs `node --watch` and restarts on code changes. `/api/version` plus a reload banner catches a stale page.
+  `tests/http.test.js` drives the real server on the mock model (`WC_PROVIDER=mock`, `WC_SAVES`).
+- **Models:** Gemma 4 26B A4B stays. A `qwen3.6-35b-a3b` profile was added to llama-swap (all experts on CPU, -ncmoe 32) and
+  benched slower. Both models are now in the exclusive `gpu` group, because two of them never fit in 12 GB. Config backup:
+  `C:\llamaswap\config.backup-2026-09-26.yaml`.
+
 ## 5. In the middle of (when this was written)
 
 - **Turn playback:** finished and committed (`74380dd`).

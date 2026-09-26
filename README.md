@@ -10,10 +10,13 @@ The game is inspired by [Pax Historia](https://www.paxhistoria.co/): time pauses
 
 ## Which model
 
-Tested on an RTX 5070 (12 GB): **Gemma 4 26B A4B** (Unsloth QAT UD-Q4_K_XL, a mixture-of-experts with 3.8B active) plays best — fast
-(~20-40 s a day's turn, ~15 s an audience), readable JSON, true to the characters. Run it with thinking off, `-ub 2048` (prompt speed
-depends on it when experts sit on the CPU), two slots over one context pool. See `docs/HANDOFF.md` §4d for the numbers and the settings,
-and `npm run bench` / `node scripts/playtest.js` to test another.
+Tested on an RTX 5070 (12 GB) with 32 GB of RAM: **Gemma 4 26B A4B** (Unsloth QAT UD-Q4_K_XL, a mixture-of-experts with 3.8B
+active) plays best — ~17-25 s a day's turn once warm, ~15-20 s an audience, clean JSON every time, true to the characters. Run it with
+thinking off, `-ub 2048`, two slots over one context pool. Qwen3.6 35B A3B (UD-Q4_K_XL) was benched against it on 2026-09-26: just
+as obedient and readable, but about twice as slow on this card and a little looser with the engine's verdicts. See `docs/HANDOFF.md`
+for the numbers, and `npm run bench` / `node scripts/playtest.js` to test another.
+
+The game reads the next turn's unchanging prompt ahead of time while you watch the day's news, so the model re-reads only what changed.
 
 ## Quick start
 
@@ -21,7 +24,7 @@ and `npm run bench` / `node scripts/playtest.js` to test another.
 git clone -b claude/brave-ramanujan-i8dt0q https://github.com/nsfwhusnain-coder/A-game-of-thrones-local-game.git
 cd A-game-of-thrones-local-game
 
-npm start
+npm start                 # restarts itself when the game's code changes
 ```
 
 Then open http://127.0.0.1:3298. You only need Node 18+; the 3D engine (three.js) is bundled.
