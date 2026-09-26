@@ -3,6 +3,7 @@ import { eventArt } from './event-art.js';
 import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal } from './common.js';
 import { dateStr } from '../shared/world.js';
 import { orderOutcome, STATUS_LABEL } from '../shared/errands.js';
+import { icon } from './icons.js';
 import { THREADS } from '../shared/plots.js';
 import { briefFor } from '../../data/briefs.js';
 import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices } from './voice.js';
@@ -74,7 +75,7 @@ export function wireDecisions(root, { onAllDone, onDecided } = {}) {
     } catch (e) { card.classList.remove('busy'); $$('.dec-opt, .dec-custom', card).forEach((x) => { x.disabled = false; x.classList.remove('chosen'); }); toast(e.message, true); }
   });
 }
-const NEWS_ICON = { war: '⚔', diplomacy: '✉', intrigue: '🗡', economy: '⚖', court: '♛', disaster: '🔥', religion: '✧', magic: '✦', rumor: '❝' };
+const NEWS_ICON = { war: 'swords', diplomacy: 'letter', intrigue: 'dagger', economy: 'scales', court: 'crown', disaster: 'fire', religion: 'candle', magic: 'sparkle', rumor: 'speak' };
 // One event, told in full, in a window over the map
 function openNews(turn, idx) {
   const s = app.state; const t = s.history.find((x) => x.turn === turn); const e = t?.events?.[idx]; if (!e) return;
@@ -92,7 +93,7 @@ function threadsHtml(s) {
   const great = THREADS.filter((t) => (s.plots?.stages?.[t.id] || 0) > 0 && s.plots.stages[t.id] < t.stages.length).map((t) => { const last = (s.plots.log || []).filter((l) => l.thread === t.id).at(-1); return `<li><b>${esc(t.name)}</b>${last?.title ? ` — last: ${esc(last.title)}` : ''}</li>`; });
   const open = (s.storyThreads || []).map((t) => `<li><b>${esc(t.title)}</b> — ${esc(t.last)} <span class="muted">(${esc(t.date.replace(/, \d+ AC$/, ''))})</span></li>`);
   if (!great.length && !open.length) return '';
-  return `<details class="threads"${app.threadsOpen ? ' open' : ''}><summary>🧵 Threads to follow <span class="muted">(${great.length + open.length})</span></summary>${open.length ? '' : ''}<ul>${great.join('')}</ul>${open.length ? `<ul>${open.join('')}</ul>` : ''}</details>`;
+  return `<details class="threads"${app.threadsOpen ? ' open' : ''}><summary>${icon('scroll', 'tg-ico')} Threads to follow <span class="muted">(${great.length + open.length})</span></summary>${open.length ? '' : ''}<ul>${great.join('')}</ul>${open.length ? `<ul>${open.join('')}</ul>` : ''}</details>`;
 }
 // One event as the story reads it: a plain headline; where, when, who; the whole account inline — no modal needed
 function storyHtml(s, t, e) {
@@ -102,8 +103,8 @@ function storyHtml(s, t, e) {
   const date = (e.date || t.date).replace(/, \d+ AC$/, '');
   const hidden = app.reveal && app.reveal.turn === t.turn && !app.reveal.shown.has((t.events || []).indexOf(e));
   return `<div class="story imp-${e.importance}${mine ? ' mine' : ''}${hidden ? ' unrevealed' : ''}" data-news="${t.turn}:${(t.events || []).indexOf(e)}">
-    <div class="story-h">${NEWS_ICON[e.type] ? `${NEWS_ICON[e.type]} ` : ''}${esc(e.title)}</div>
-    <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">📍 ${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${mine ? '<span class="tag you">Your house</span>' : ''}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
+    <div class="story-h">${NEWS_ICON[e.type] ? icon(NEWS_ICON[e.type], 'sh-ico') : ''}${esc(e.title)}</div>
+    <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">${icon('pin', 'tg-ico')}${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${mine ? '<span class="tag you">Your house</span>' : ''}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
     <div class="story-x">${esc(e.text)}</div>${e.details ? `<div class="story-d">${esc(e.details)}</div>` : ''}</div>`;
 }
 // what the player ordered that day, and what the engine made of it — your hand in the day's story
@@ -233,7 +234,7 @@ function msgHtml(m, c) {
   const s = app.state; const sp = m.speaker ? s.characters[m.speaker] : c;
   if (m.role === 'player') return `<div class="msg player"><div class="who">You · ${esc(m.date || '')}${m.via === 'raven' ? ' · sent by raven' : ''}</div>${esc(m.text)}</div>`;
   // a letter's answer is on the wing: it is read when the raven lands, not before
-  if (m.pending) return `<div class="msg npc pending"><div class="who">🕊 ${esc(sp?.name || '')}</div><i>Your raven is on the wing. An answer may come by ${esc(m.date || 'a few days')} — it will reach your Letters and the chronicle when it lands.</i></div>`;
+  if (m.pending) return `<div class="msg npc pending"><div class="who">${icon('raven', 'tg-ico')} ${esc(sp?.name || '')}</div><i>Your raven is on the wing. An answer may come by ${esc(m.date || 'a few days')} — it will reach your Letters and the chronicle when it lands.</i></div>`;
   // a reply is a small scene: what you see them do, and what they say
   const bs = beats(m.text);
   // narration reads as a novel's prose; speech is set in quotation marks

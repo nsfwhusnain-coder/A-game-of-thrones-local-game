@@ -200,7 +200,7 @@ function renderOrders() {
   const s = app.state;
   const moving = underway(s); const last = s.history.at(-1); const lastOut = (last?.orders || []).map((o) => orderOutcome(o, s));
   const failed = lastOut.filter((x) => x.status === 'failed').length;
-  const chip = moving.length || lastOut.length ? `<button class="errands-chip" data-action="errands">⏳ ${moving.length} under way${lastOut.length ? ` · last turn: ${lastOut.length - failed} carried out${failed ? `, <b>${failed} failed</b>` : ''}` : ''}</button>` : '';
+  const chip = moving.length || lastOut.length ? `<button class="errands-chip" data-action="errands">${icon('hourglass', 'tg-ico')} ${moving.length} under way${lastOut.length ? ` · last turn: ${lastOut.length - failed} carried out${failed ? `, <b>${failed} failed</b>` : ''}` : ''}</button>` : '';
   $('#orders').innerHTML = chip + s.orders.map((o, i) => {
     const st = o.status || 'queued'; const done = st !== 'queued';
     const receipt = done || o.auto ? '' : o.planFor === o.text && o.preview ? `<div class="receipt">${o.preview.map((l) => `<div class="${/^could not/i.test(l) ? 'bad' : ''}">→ ${esc(l.replace(/^could not be done: /i, 'Cannot: '))}</div>`).join('')}</div>` : '<div class="receipt muted"><i>Your steward reads the order…</i></div>';
@@ -328,9 +328,9 @@ document.addEventListener('keydown', (e) => {
 // What is under way, and how last turn's orders came out — read from the same state the map and People show
 function showErrands() {
   const s = app.state; const moving = underway(s); const last = s.history.at(-1);
-  const ICON = { ride: '🐎', march: '⚔', banners: '🏳', works: '🔨', raven: '🕊' };
+  const ICON = { ride: 'horse', march: 'swords', banners: 'flag', works: 'hammer', raven: 'raven' };
   const stop = (m) => (m.kind === 'ride' ? `<button class="btn small" data-recall-char="${m.id}" title="Turn back for where they set out">Call back</button>` : m.kind === 'march' ? `<button class="btn small" data-recall-army="${m.id}" title="Stop and hold where it stands">Halt</button>` : '');
-  const rows = moving.map((m) => `<div class="errand"><span class="ei">${ICON[m.kind]}</span><div class="grow"><b>${esc(m.who)}</b> <span class="muted">${esc(m.text)}</span></div><span class="ed">${m.days ? `~${m.days} ${m.days === 1 ? 'day' : 'days'}` : '—'}</span>${stop(m)}</div>`).join('') || '<div class="muted">Nothing of yours is on the road or being built.</div>';
+  const rows = moving.map((m) => `<div class="errand"><span class="ei">${icon(ICON[m.kind])}</span><div class="grow"><b>${esc(m.who)}</b> <span class="muted">${esc(m.text)}</span></div><span class="ed">${m.days ? `~${m.days} ${m.days === 1 ? 'day' : 'days'}` : '—'}</span>${stop(m)}</div>`).join('') || '<div class="muted">Nothing of yours is on the road or being built.</div>';
   const outs = (last?.orders || []).map((o) => { const r = orderOutcome(o, s); return `<div class="errand"><span class="ost ${r.status}">${STATUS_LABEL[r.status]}</span><div class="grow">${esc(o.text)}${r.lines.length ? `<div class="muted" style="font-size:0.8rem">${r.lines.map(esc).join(' · ')}</div>` : ''}</div></div>`; }).join('');
   const recall = async (body) => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'recall', ...body } }); app.setState(r.state); if (r.summary) toast(r.summary); showErrands(); } catch (e) { toast(e.message, true); } };
   setTimeout(() => {

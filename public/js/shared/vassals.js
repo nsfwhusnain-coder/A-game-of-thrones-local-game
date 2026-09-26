@@ -205,10 +205,16 @@ export function answerRebel(state, [vid, how]) {
 export function gatherMusters(state) {
   const events = [];
   for (const a of Object.values(state.armies)) {
-    if (!a.serving || a.march || !a.at) continue;
+    if (!a.serving || a.type === 'fleet') continue;
     const v = state.houses[a.owner]; const liegeId = a.serving; const liege = state.houses[liegeId];
-    if (!v || !liege || (v.obligations?.muster && a.at !== v.obligations.muster)) continue;
-    let host = Object.values(state.armies).find((x) => x.owner === liegeId && x.at === a.at && x.type !== 'fleet' && x.id !== a.id && x.status !== 'garrison');
+    if (!v || !liege) continue;
+    const field = (x) => x.owner === liegeId && x.type !== 'fleet' && x.id !== a.id && !/garrison/i.test(x.status || '');
+    // the liege's great host has marched on from the muster: late banners follow it, and join it where they meet
+    const main = Object.values(state.armies).filter(field).sort((x, y) => y.men - x.men)[0];
+    const near = main && Math.hypot(main.pos[0] - a.pos[0], main.pos[1] - a.pos[1]) < 4;
+    if (main && !near && a.at && !main.at && main.march && (!v.obligations?.muster || a.at === v.obligations.muster)) { a.march = { to: 'army:' + main.id, since: state.meta.turn }; a.status = 'following the host'; a.at = null; continue; }
+    if (!near && (a.march || !a.at || (v.obligations?.muster && a.at !== v.obligations.muster))) continue;
+    let host = near ? main : Object.values(state.armies).find((x) => field(x) && x.at === a.at);
     if (!host) {
       const id = `${liegeId}_banners_${a.at}`.replace(/[^a-z0-9_]/g, '');
       host = state.armies[id] = { id, owner: liegeId, name: `The Banners of ${liege.name}`, commander: a.commander, at: a.at, pos: [...a.pos], dest: null, men: 0, type: 'army', composition: 'Levies and knights of the sworn houses', status: 'mustered', morale: a.morale ?? 70, supply: a.supply ?? 80, asOf: a.asOf };
@@ -222,7 +228,7 @@ export function gatherMusters(state) {
     for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id) c.loc = 'army:' + host.id;
     if (v.obligations) v.obligations.host = host.id;
     delete state.armies[a.id];
-    if (liegeId === state.meta.player) events.push({ title: `House ${v.name} joins your host`, text: `${a.men.toLocaleString()} men under the ${v.name} banner join ${host.name} at ${state.holdings[host.at]?.name || 'the muster'}. The host now numbers ${host.men.toLocaleString()}.`, where: host.at, importance: 2, type: 'war', houses: [v.id] });
+    if (liegeId === state.meta.player) events.push({ title: `House ${v.name} joins your host`, text: `${a.men.toLocaleString()} men under the ${v.name} banner join ${host.name}${host.at ? ` at ${state.holdings[host.at]?.name}` : ' on the march'}. The host now numbers ${host.men.toLocaleString()}.`, where: host.at || null, importance: 2, type: 'war', houses: [v.id] });
   }
   return events;
 }

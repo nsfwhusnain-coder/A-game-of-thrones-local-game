@@ -295,7 +295,7 @@ export async function advance(id, { span = '1d', orders } = {}) {
   }));
   // every order the lord gave has its event, told first on its day
   events.push(...orderEvents(state, state.orders, events));
-  events.push(...deathEvents, ...vt.events);
+  events.push(...deathEvents, ...foldAnswers(vt.events));
   // every event has its day in the period, so the turn can be told in order
   for (const e of events) if (!e.day) e.day = 1 + Math.floor(Math.random() * spanInfo.days);
   events.sort((a, b) => a.day - b.day || (b.orderId ? 1 : 0) - (a.orderId ? 1 : 0));
@@ -483,6 +483,18 @@ export async function talk(id, charId, message) {
   return { reply, applied, rejected, state, stance: { verdict: stance.verdict, mood: moodWord(stance.mood), patience: stance.mood.patience, full: stance.mood.full, closed: !!stance.mood.closed } };
 }
 
+// Sworn lords answering the call on the same day are one piece of news, not a flood of cards
+function foldAnswers(evs) {
+  const out = []; const byDay = new Map();
+  for (const e of evs) { if (/^House .+ answers the call$/.test(e.title || '')) { const k = e.day || 0; byDay.set(k, [...(byDay.get(k) || []), e]); } else out.push(e); }
+  for (const [day, g] of byDay) {
+    if (g.length < 2) { out.push(...g); continue; }
+    const parts = g.map((e) => { const m = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men.*?\(~(\d+) days\)/); return m ? `${m[1]} (${m[2]} men, ~${m[3]} days away)` : e.title.replace(/ answers the call$/, ''); });
+    const men = g.reduce((a, e) => a + (Number(String(e.text).match(/with ([\d,]+) men/)?.[1]?.replace(/,/g, '')) || 0), 0);
+    out.push({ ...g[0], day, title: `${g.length} lords answer the call — ${men.toLocaleString('en-GB')} men on the march`, text: `${parts.join('; ')}.`, houses: [...new Set(g.flatMap((e) => e.houses || []))], importance: 3 });
+  }
+  return out;
+}
 // Answers to letters written from an audience land when their raven does: the letter reaches the inbox, the
 // conversation, and the timeline, and what the writer promised takes effect then — not the day it was asked.
 function deliverReplies(state) {
@@ -496,7 +508,8 @@ function deliverReplies(state) {
     if (entry) { delete entry.pending; entry.date = dateStr(state.meta.date); entry.applied = res.applied.map((a) => a.text); }
     state.ravens.unshift({ id: Date.now() + Math.random(), day: today, from: c.id, fromName: c.name, to: lordId, text: String(r.text).replace(/\*[^*]*\*/g, '').trim(), date: dateStr(state.meta.date), read: false });
     const first = String(r.text).replace(/\*[^*]*\*/g, ' ').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s/)[0] || '';
-    events.push({ title: `${c.name} answers your letter`, text: `A raven from ${placeName(state, c.loc)}: “${first.slice(0, 220)}”${res.applied.length ? ` — ${res.applied.map((a) => a.text).join('; ')}` : ''}`, where: resolvePlaceId(c.loc) || null, importance: 3, type: 'diplomacy', houses: [p, c.house], mine: true, day: 1 });
+    const whence = String(c.loc || '').startsWith('army:') ? `the camp of ${state.armies[c.loc.slice(5)]?.name || 'a host'}` : placeName(state, c.loc);
+    events.push({ title: `${c.name} answers your letter`, text: `A raven from ${whence}: “${first.slice(0, 220)}”${res.applied.length ? ` — ${res.applied.map((a) => a.text).join('; ')}` : ''}`, where: resolvePlaceId(c.loc) || null, importance: 3, type: 'diplomacy', houses: [p, c.house], mine: true, day: 1 });
   }
   state.pendingReplies = keep;
   return events;

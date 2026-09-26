@@ -17,6 +17,7 @@ const game = await import(path.join(work, 'server/game.js'));
 const { whereabouts } = await import(path.join(work, 'public/js/shared/roads.js'));
 const { orderOutcome } = await import(path.join(work, 'public/js/shared/errands.js'));
 const seenRavens = new Set();
+const s2threads = (id) => (game.loadState(id).storyThreads || []).map((t) => `${t.title}: ${t.last}`).join(' | ');
 const house = args.house || 'stark';
 const out = []; const log = (s) => { out.push(s); console.log(s); };
 const { id } = game.newGame('agot_298', house);
@@ -24,21 +25,22 @@ log(`# Playtest — House ${house} — ${JSON.parse(fs.readFileSync('config.json
 
 // the script: what a player might do, turn by turn (orders, audiences, acts)
 const script = {
-  1: { act: [{ kind: 'call_banners', vassals: ['umber', 'karstark', 'manderly', 'glover', 'bolton'] }], orders: ['Send a raven to Walder Frey: I will want the crossing at the Twins open to my men, and I will remember who helped me.'] },
-  2: { talk: [['roose_bolton', 'Lord Bolton. When I call, you come — at once, with every man. Is that understood?']] },
-  3: { orders: ['Have Vayon send a discreet raven to Lady Lysa at the Eyrie asking about Jon Arryn\'s last days.'] },
-  4: { talk: [['greatjon_umber', 'Jon, your men were the first to answer. The North will not forget it.']] },
-  5: { orders: ['Write to Lord Tywin Lannister: if any harm comes to my family on the Kingsroad, the North will march.', 'Fund the expansion of the granaries at Winterfell.'], act: [{ kind: 'project', template: 'granaries' }] },
-  6: { orders: ['Keep the children close to Winterfell while the King is our guest.', 'Send Jon Snow to Castle Black to see the Wall for himself.'], act: [{ kind: 'project', template: 'rookery' }, { kind: 'project', template: 'rookery' }] },
-  7: { act: [{ kind: 'feast' }, { kind: 'scheme', house: 'lannister', kind2: 'secrets' }], orders: ['Jory Cassel is to take two hundred men of the household guard to Castle Black to help the Watch. They are not to cross the Wall.'] },
-  8: { orders: ['Jon is to turn back and return to Winterfell at once.'], council: [['vayon_poole', 'luwin', 'rodrik_cassel', 'jory_cassel'], 'What do we know of the Lannisters\' intentions, and are our stores enough for a winter?'] },
-  9: { orders: ['Order Ser Rodrik to garrison Winterfell, drill the levies and count our stores for winter.'] },
-};
-const turns = Number(args.turns || 10);
+  1: { orders: ['assemeble the men of the north at winterfell and create a great northern host of all able body men and boys'] },
+  2: { talk: [['lysa_arryn', 'Sister, what did Jon say in his last days? I send no rider — only this raven. Robert may foster with us at Winterfell if you wish it.']] },
+  3: { orders: ['Send Jory Cassel to Moat Cailin with fifty men to strengthen the Neck.'], act: [{ kind: 'project', template: 'granaries' }] },
+  4: { orders: ['Fund the expansion of the granaries at Winterfell.', 'Send a raven to Lord Commander Mormont asking what the Watch needs.'] },
+  5: { orders: ['Spend sixty million gold dragons to buy the Iron Throne from King Robert.'] },
+  6: { council: [['vayon_poole', 'luwin', 'rodrik_cassel', 'jory_cassel'], 'What do we know of the Lannisters, and is Winterfell ready to feed a host?'], act: [{ kind: 'recall', army: '@jory' }] },
+  7: { orders: ['Send Jon Snow to Castle Black to see the Wall for himself.'] },
+  9: { act: [{ kind: 'recall', character: 'jon_snow' }] },
+  11: { talk: [['roose_bolton', 'Lord Bolton, your men will march under my son Robb. See it done.']] },
+  13: { orders: ['Robb is to march the Northern Host to Moat Cailin.'] },
+  16: { orders: ['Hold a great feast at Winterfell for the lords of the North.'] },
+};const turns = Number(args.turns || 20);
 for (let t = 1; t <= turns; t++) {
   const step = script[t] || {};
   log(`\n## Turn ${t}`);
-  for (const a of step.act || []) { try { const r = game.act(id, a); log(`- act ${a.kind}: ${r.summary || 'done'}`); } catch (e) { log(`- act ${a.kind} FAILED: ${e.message}`); } }
+  for (const a0 of step.act || []) { const a = a0.army === '@jory' ? { ...a0, army: Object.values(game.loadState(id).armies).find((x) => x.commander === 'jory_cassel')?.id } : a0; try { const r = await game.act(id, a); log(`- act ${a.kind}: ${r.summary || 'done'}`); } catch (e) { log(`- act ${a.kind} FAILED: ${e.message}`); } }
   for (const [who, line] of step.talk || []) {
     const t0 = Date.now();
     try { const r = await game.talk(id, who, line); log(`- **audience ${who}** (${((Date.now() - t0) / 1000).toFixed(0)}s, engine: ${r.stance?.verdict || '—'}, ${r.stance?.mood}) ← "${line}"\n  > ${String(r.reply).replace(/\s+/g, ' ')}${r.applied?.length ? `\n  applied: ${r.applied.map((x) => x.text).join('; ')}` : ''}`); } catch (e) { log(`- audience ${who} FAILED: ${e.message}`); }
@@ -62,7 +64,8 @@ for (let t = 1; t <= turns; t++) {
   log(`- ${tr.dateFrom} → ${tr.date} · ${((Date.now() - t0) / 1000).toFixed(0)}s · prompt ${u.prompt_tokens ?? '?'} (cached ${u.prompt_tokens_details?.cached_tokens ?? '?'}) · reply ${u.completion_tokens ?? '?'}${tr.salvaged ? ' · SALVAGED' : ''}`);
   if (step.orders) for (const c of tr.carried || []) log(`- carried out: ${c.order} → ${c.result.join('; ')}`);
   log(`- summary: ${tr.summary}`);
-  for (const e of tr.events.filter((e) => !e.bg)) log(`- [${e.importance}] d${e.day} **${e.title}** — ${e.text}${e.where ? ` (${e.where})` : ''}`);
+  for (const e of tr.events.filter((e) => !e.bg)) log(`- [${e.importance}]${e.orderId ? ' ORDER' : ''} ${e.date || ''} **${e.title}** — ${e.text}${e.details ? ' ' + e.details : ''}${e.where ? ` (${e.where})` : ''}`);
+  if (s2threads(id)) log(`- threads: ${s2threads(id)}`);
   const bg = tr.events.filter((e) => e.bg); if (bg.length) log(`- meanwhile: ${bg.map((e) => e.title).join('; ')}`);
   if (tr.rejected?.length) log(`- rejected: ${tr.rejected.map((x) => `${x.change?.op} (${x.reason})`).join('; ')}`);
   const s2 = game.loadState(id); const h = s2.houses[house];

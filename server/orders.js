@@ -7,6 +7,7 @@ import { MILES_PER_UNIT } from '../public/data/geography.js';
 import { whereabouts } from '../public/js/shared/roads.js';
 import { commandable } from '../public/js/shared/errands.js';
 import { PROJECT_TEMPLATES } from '../public/js/shared/economy.js';
+import * as court from './court.js';
 export { commandable };
 
 const OFFICES = ['spymaster', 'steward', 'maester', 'captain', 'master_at_arms', 'knight', 'envoy', 'commander'];
@@ -51,6 +52,7 @@ Reply with ONE JSON object: {"actions":[...],"story":[...]}. Only concrete moves
 - {"op":"merge","order":1,"armies":["<host id>",...] or omit for all at one place,"name":"<optional new name>","commander":"<person id, optional>"}   — join hosts that stand in the same place into one
 - {"op":"hire","order":1,"role":"${OFFICES.join('|')}","at":"<place name>"}   — take a new officer into service there
 - {"op":"appoint","order":1,"character":"<person id>","role":"${OFFICES.join('|')}"}   — give one of your people an office
+- {"op":"feast","order":1} / {"op":"tourney","order":1}   — the lord holds a feast or a tourney at his seat (the engine pays and weighs how the lords take it)
 - {"op":"works","order":1,"template":"${PROJECT_TEMPLATES.map((t) => t.key).join('|')}","at":"<holding id>"}   — fund building works (granaries, walls, a rookery…) on the house's own land
 "story" — the numbers of orders that are not actions of these kinds (diplomacy, letters, intrigue, speeches, feasts…): the story will handle them.
 An order to gather "all the men of the North" means banners (sworn lords) AND raise (the house's own levies) at the same place, with the name given. A raven, letter or "send word" is never a travel action: it goes in "story" — only a person told to ride, go or deliver by hand travels. Use only ids from the lists. "to" is always a real place by name (a castle or town): for "attack the Lannisters" use their seat; for "go south" pick the place on the road that way. To fight when you have no host at hand, first "raise" levies (with "to"). Your sworn lords' hosts answering your call are yours to command too.
@@ -111,6 +113,7 @@ export function readOrdersByRule(state, orders, addressee = null) {
       actions.push({ op: 'raise', order: n, at: resolvePlaceId(placeIn(t)) || state.houses[p].seat, men: num(t) || undefined, name: hostName(t) });
       return;
     }
+    if (/\b(hold|throw|host|give|call|proclaim|announce)\b[^.]*\b(feast|tourney|tournament)\b/i.test(t)) { actions.push({ op: /tourney|tournament/i.test(t) ? 'tourney' : 'feast', order: n }); return; }
     const work = /\b(fund|build|expand|raise|found|begin|repair|strengthen|endow|open|dig|fill|deepen|train)\b/i.test(t) && WORKS.find(([, re]) => re.test(t.toLowerCase()));
     if (work) { actions.push({ op: 'works', order: n, template: work[0], at: resolvePlaceId(placeIn(t)) || state.houses[p].seat }); return; }
     if (/\b(recruit|hire|enlist|sign on|raise)\b.*\b(men|swords|soldiers|sellswords|guards?|spears|company)\b/i.test(t) && !/\blevies\b/i.test(t)) {
@@ -157,12 +160,25 @@ export function startWorks(state, key, holding) {
   return { name, cost: t.cost, months: t.months };
 }
 
+// "sixty million gold dragons", "60,000,000 dragons", "two thousand gold": the sum an order means to spend
+const MAG = { thousand: 1e3, million: 1e6, billion: 1e9 };
+export function goldIn(text) {
+  const t = String(text).toLowerCase().replace(/,/g, '');
+  const m = t.match(/\b(\d+(?:\.\d+)?|[a-z]+(?:[\s-][a-z]+)?)\s*(thousand|million|billion)?\s+(?:gold(?:en)?\s+)?(?:dragons|gold|coins|stags)\b/);
+  if (!m) return null;
+  let n = Number(m[1]); if (!isFinite(n)) { n = m[1].split(/[\s-]+/).reduce((a, w) => a + (UNITS[w] ?? 0), 0); if (!n) return null; }
+  return n * (MAG[m[2]] || 1);
+}
 /** Carry out interpreted actions; returns per-order results. `orders` are the orders the actions came from. */
 export function executeActions(state, actions, orders = []) {
   const p = state.meta.player; const me = state.houses[p]; const results = {};
   const note = (i, text) => { (results[i] = results[i] || []).push(text); };
+  // an order to spend what the house does not have is refused before anything else — and the world hears of it
+  const purse = Math.round(Number(me.figures.treasury?.v) || 0);
+  orders.forEach((o, k) => { const g = goldIn(o?.text); if (g && g > purse * 1.02) note(k + 1, `could not be done: the treasury holds ${purse.toLocaleString('en-GB')} dragons, not ${Math.round(g).toLocaleString('en-GB')}`); });
+  const broke = new Set(Object.keys(results).map(Number));
   for (const a0 of actions || []) {
-    const a = withOp(a0); const i = Number(a.order) || 0;
+    const a = withOp(a0); const i = Number(a.order) || 0; if (!a?.op || broke.has(i)) continue;
     // an action with nothing in it (recruit 0 men) is no action: the story tells that order
     if (['recruit', 'hire_men'].includes(a.op) && !(Number(a.men) >= 10)) continue;
     try {
@@ -179,6 +195,7 @@ export function executeActions(state, actions, orders = []) {
       if (a.op === 'raise') { for (const l of raiseLevies(state, a)) note(i, l); continue; }
       if (a.op === 'banners') { for (const l of callBanners(state, a)) note(i, l); continue; }
       if (a.op === 'merge') { for (const l of mergeHosts(state, a)) note(i, l); continue; }
+      if (a.op === 'feast' || a.op === 'tourney') { const r = court[a.op](state); note(i, r.summary || r.text); continue; }
       if (a.op === 'appoint') {
         const c = state.characters[a.character]; if (!c || c.house !== p || !c.alive) throw new Error('no such person of yours');
         if (!OFFICES.includes(a.role)) throw new Error('unknown office');
@@ -220,8 +237,12 @@ export async function planOrders(state, orders, ask) {
   return acts;
 }
 // a model that forgets "op" still said what it meant: someone and a place is a journey, a host and a place a march
-function withOp(a) {
-  if (!a || typeof a !== 'object' || a.op) return a;
+const OP_ALIAS = { project: 'works', fund: 'works', build: 'works', call_banners: 'banners', summon: 'banners', muster: 'raise', raise_army: 'raise', raise_levies: 'raise', army_create: 'raise', march_army: 'march', army_move: 'march', move: 'march', ride: 'travel', send: 'travel', send_character: 'travel', recruit_men: 'recruit', hire_men: 'recruit', join: 'merge', combine: 'merge', merge_armies: 'merge' };
+const KNOWN_OPS = new Set(['travel', 'march', 'recruit', 'raise', 'hire', 'appoint', 'banners', 'merge', 'works', 'feast', 'tourney']);
+function withOp(a0) {
+  let a = a0; if (!a || typeof a !== 'object') return a;
+  if (a.op && OP_ALIAS[String(a.op).toLowerCase()]) a = { ...a, op: OP_ALIAS[String(a.op).toLowerCase()], template: a.template || a.name || a.project };
+  if (a.op) return KNOWN_OPS.has(a.op) ? a : { ...a, op: null };
   const op = a.vassals ? 'banners' : Array.isArray(a.armies) ? 'merge' : a.character && a.role ? 'appoint' : a.character && a.to ? 'travel' : a.army && a.to ? 'march' : a.template ? 'works' : a.role ? 'hire' : a.at && a.men && /levies/i.test(a.kind || '') ? 'raise' : a.at && a.men ? 'recruit' : null;
   return op ? { ...a, op } : a;
 }
@@ -300,6 +321,16 @@ function addressed(state, text) {
       const h = Object.values(state.houses).find((x) => x.name === m[2] && x.id !== p); const lord = h && state.characters[h.lord];
       if (lord?.alive) hit = lord;
       else hit = people.filter((c) => (c.roles || []).some((r) => ['lord', 'lady', 'ruler'].includes(r)) || Object.values(state.houses).some((x) => x.lord === c.id)).find((c) => c.name.split(' ')[0] === m[2] || c.name.split(' ')[1] === m[2]) || null; // "Lord Tywin"
+    }
+  }
+  if (!hit) {
+    // "Lord Commander Mormont", "Maester Aemon", "Ser Barristan": a title and a name; the one whose title fits
+    const m = t.match(/\b(?:Lord Commander|Lord|Lady|Ser|Maester|Septon|Prince|Princess|King|Queen|Commander|Grand Maester)\s+([A-Z][a-z']+)/g) || [];
+    for (const x of m) {
+      const name = x.split(/\s+/).at(-1); const title = x.slice(0, -name.length).trim().toLowerCase();
+      const pool = people.filter((c) => c.name.split(' ').includes(name));
+      hit = pool.find((c) => (c.title || '').toLowerCase().includes(title.replace(/^lord |^lady /, '')) && title.length > 4) || pool.find((c) => Object.values(state.houses).some((h) => h.lord === c.id)) || pool[0] || null;
+      if (hit) break;
     }
   }
   return hit || null;
@@ -383,17 +414,25 @@ export function ordersBlock(state, orders) {
 }
 
 /** Make sure every order has its event: the story's own if it wrote one, else the engine's plain account. */
+const STOP = new Set(['their', 'there', 'which', 'about', 'lord', 'lady', 'house', 'winterfell', 'north', 'stark', 'eddard', 'commanded', 'command', 'order', 'orders', 'would', 'shall', 'these', 'those', 'where', 'while', 'with', 'from', 'into', 'upon', 'dragons', 'gold']);
+const keyWords = (t) => [...new Set(String(t).toLowerCase().match(/[a-z']{4,}/g) || [])].filter((w) => !STOP.has(w));
 export function orderEvents(state, orders, modelEvents) {
   const p = state.meta.player; const lord = state.characters[state.houses[p].lord];
   const out = [];
   orders.forEach((o, i) => {
-    const mine = modelEvents.filter((e) => Number(e.order) === i + 1);
+    let mine = modelEvents.filter((e) => Number(e.order) === i + 1);
+    // the story told it without saying so: the untagged event that names the order's people and deeds is its event
+    if (!mine.length) {
+      const key = keyWords(`${(o.result || []).join(' ')} ${o.text}`);
+      const best = modelEvents.filter((e) => !e.order && !e.orderId).map((e) => [e, keyWords(`${e.title} ${e.text}`).filter((w) => key.includes(w)).length]).sort((a, b) => b[1] - a[1])[0];
+      if (best && best[1] >= 2) { best[0].order = i + 1; mine = [best[0]]; }
+    }
     for (const e of mine) { e.mine = true; e.orderId = o.id; e.importance = Math.max(3, e.importance || 3); e.houses = [...new Set([p, ...(e.houses || [])])]; }
     if (mine.length) return;
     const r = outcomeOf(o); const said = o.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim();
     const place = r.lines.map((l) => l.match(/\b(?:for|to|at) ([A-Z][\w' ]+?)(?: \(|,|$| with)/)?.[1]).map((x) => x && resolvePlaceId(x)).find(Boolean) || resolvePlaceId(lord?.loc) || state.houses[p].seat;
-    const head = (r.kind === 'refused' ? `Your command fails: ${r.lines[0]}` : r.lines[0] || `${lord?.name || 'The lord'} gives his command`).replace(/\s*\([^)]*\)\s*$/, '');
-    out.push({ day: 1, title: head.charAt(0).toUpperCase() + head.slice(1), text: r.kind === 'story' ? `${lord?.name || 'The lord'} commands: “${said}”` : `${lord?.name || 'The lord'} commanded: “${said}” — ${r.lines.join('; ')}.`, where: place, importance: 3, type: r.kind === 'refused' ? 'court' : /march|rides|host|men/i.test(r.lines.join(' ')) ? 'war' : /raven|letter/i.test(r.lines.join(' ')) ? 'diplomacy' : 'court', houses: [p], mine: true, orderId: o.id });
+    const head = (r.kind === 'refused' ? `Your command fails: ${r.lines[0]}` : r.lines[0] || `${lord?.name || 'The lord'} gives his command`).replace(/\s*\([^)]*\)\s*$/, '').replace(/[.!]+$/, '');
+    out.push({ day: 1, title: head.charAt(0).toUpperCase() + head.slice(1), text: r.kind === 'story' ? `${lord?.name || 'The lord'} commands: “${said}”` : `${lord?.name || 'The lord'} commanded: “${said.replace(/[.!]+$/, '')}.” ${r.lines.join('; ').replace(/[.!]+$/, '')}.`, where: place, importance: 3, type: r.kind === 'refused' ? 'court' : /march|rides|host|men/i.test(r.lines.join(' ')) ? 'war' : /raven|letter/i.test(r.lines.join(' ')) ? 'diplomacy' : 'court', houses: [p], mine: true, orderId: o.id });
   });
   return out;
 }

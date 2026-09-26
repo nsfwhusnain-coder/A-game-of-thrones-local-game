@@ -397,3 +397,47 @@ test('the Pax order: banners called and the Northern Host raised at Winterfell',
   assert.equal(s.houses.umber.obligations.levies, 'called');
   assert.ok(Object.values(s.armies).some((a) => a.owner === 'stark' && a.name === 'The Northern Host' && a.men > 10000));
 });
+
+// ── From the 20-day run on the live model ──
+test('gold an order cannot pay is refused before anything is done', async () => {
+  const { goldIn } = await import('../server/orders.js');
+  assert.equal(goldIn('Spend sixty million gold dragons to buy the Iron Throne'), 60e6);
+  assert.equal(goldIn('offer 2,000 dragons'), 2000);
+  const s = fresh(); s.orders = [{ id: 'o', text: 'Spend sixty million gold dragons to buy the Iron Throne from King Robert.' }];
+  const res = executeActions(s, [], s.orders);
+  assert.match(res[1][0], /treasury holds 60,000 dragons, not 60,000,000/);
+});
+test('an untagged story event that tells an order becomes its event (no duplicate)', async () => {
+  const { orderEvents } = await import('../server/orders.js');
+  const s = fresh();
+  const told = [{ title: 'Jory Cassel departs for the Neck', text: 'Fifty of the household guard ride south toward Moat Cailin under Jory Cassel.', houses: [] }];
+  const extra = orderEvents(s, [{ id: 'a', text: 'Send Jory Cassel to Moat Cailin with fifty men.', result: ['Jory Cassel rides for Moat Cailin with 50 men (detached from Winterfell Household)'] }], told);
+  assert.equal(extra.length, 0); assert.equal(told[0].orderId, 'a');
+});
+test('a model action under another name is still done; unknown ones fall to the rules', async () => {
+  const { planOrders } = await import('../server/orders.js');
+  const s = fresh();
+  const acts = await planOrders(s, [{ text: 'Fund the expansion of the granaries at Winterfell.' }], async () => ({ actions: [{ op: 'project', order: 1, name: 'granaries', at: 'stark' }] }));
+  assert.equal(acts[0].op, 'works');
+  const acts2 = await planOrders(s, [{ text: 'Fund the expansion of the granaries at Winterfell.' }], async () => ({ actions: [{ op: 'pray', order: 1 }] }));
+  assert.ok(acts2.some((a) => a.op === 'works'));
+});
+test('a letter to "Lord Commander Mormont" is addressed to Jeor', async () => {
+  const { postLetters } = await import('../server/orders.js');
+  const s = fresh(); s.post = [];
+  postLetters(s, [{ id: 'o', text: 'Send a raven to Lord Commander Mormont asking what the Watch needs.' }]);
+  assert.equal(s.post[0]?.to, 'jeor_mormont');
+});
+test('banners arriving after the host has marched follow it and join it — no second army', async () => {
+  const { gatherMusters } = await import('../public/js/shared/vassals.js');
+  const s = fresh();
+  apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'The Northern Host', at: 'stark', men: 16000 }, { op: 'army_create', id: 'hw', owner: 'hornwood', name: 'Host of House Hornwood', at: 'stark', men: 850 }]);
+  s.armies.hw.serving = 'stark'; s.houses.hornwood.obligations = { levies: 'answered', muster: 'stark' };
+  s.armies.nh.march = { to: 'moat_cailin' }; s.armies.nh.at = null; s.armies.nh.pos = [s.armies.nh.pos[0], s.armies.nh.pos[1] + 30];
+  gatherMusters(s);
+  assert.equal(s.armies.hw.march?.to, 'army:nh');
+  s.armies.hw.pos = [...s.armies.nh.pos];
+  gatherMusters(s);
+  assert.equal(s.armies.hw, undefined); assert.equal(s.armies.nh.men, 16850);
+  assert.equal(Object.values(s.armies).filter((a) => a.owner === 'stark' && /Banners/.test(a.name)).length, 0);
+});
