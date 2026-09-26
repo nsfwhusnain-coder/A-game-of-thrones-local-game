@@ -195,6 +195,7 @@ export function executeActions(state, actions, orders = []) {
       if (a.op === 'raise') { for (const l of raiseLevies(state, a)) note(i, l); continue; }
       if (a.op === 'banners') { for (const l of callBanners(state, a)) note(i, l); continue; }
       if (a.op === 'merge') { for (const l of mergeHosts(state, a)) note(i, l); continue; }
+      if (a.op === 'works') { const w = startWorks(state, a.template, a.at); note(i, `Work begins: ${w.name} (${w.cost.toLocaleString('en-GB')} dragons over ${w.months} moons)`); continue; }
       if (a.op === 'feast' || a.op === 'tourney') { const r = court[a.op](state); note(i, r.summary || r.text); continue; }
       if (a.op === 'appoint') {
         const c = state.characters[a.character]; if (!c || c.house !== p || !c.alive) throw new Error('no such person of yours');
@@ -406,7 +407,7 @@ export function ordersBlock(state, orders) {
   const rows = orders.map((o, i) => {
     const r = outcomeOf(o); const n = i + 1; const said = `"${o.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim()}"`;
     if (r.kind === 'done') return `${n}. ${said}\n   DONE BY THE ENGINE (true, do not repeat as changes): ${r.lines.join('; ')}.\n   → Write how it was done: who carried it out, how many men and who leads them, where they go and how long it takes, how people took it.`;
-    if (r.kind === 'refused') return `${n}. ${said}\n   COULD NOT BE DONE: ${r.lines.join('; ')}.\n   → Write the attempt failing in the world: the steward's answer, the empty coffers, the lord who would not come, the laughter if it was absurd. No changes that pretend it happened.`;
+    if (r.kind === 'refused') return `${n}. ${said}\n   COULD NOT BE DONE: ${r.lines.join('; ')}.\n   → ONE event: the attempt failing in the world — the steward's answer, the empty coffers, the lord who would not come, the laughter if it was absurd. Nothing of it happens: no gold is sent, no one rides, no changes that pretend it did.`;
     if (r.kind === 'answered') return `${n}. ${said}\n   ${(o.note || '').match(/\[The engine has weighed[^\]]*\]/)?.[0] || ''}\n   → Write the message going out and the answer coming back as the engine decided.`;
     return `${n}. ${said}\n   YOURS TO RESOLVE: carry it out as Westeros would — by whom, by what means (a raven takes days, an envoy rides, a lord must be persuaded), with changes for every consequence; partial success and refusal are allowed when the world would refuse. Never move the lord's own people or hosts yourself.`;
   });
@@ -427,6 +428,8 @@ export function orderEvents(state, orders, modelEvents) {
       const best = modelEvents.filter((e) => !e.order && !e.orderId).map((e) => [e, keyWords(`${e.title} ${e.text}`).filter((w) => key.includes(w)).length]).sort((a, b) => b[1] - a[1])[0];
       if (best && best[1] >= 2) { best[0].order = i + 1; mine = [best[0]]; }
     }
+    // a refused order is one event — the failure — and nothing of it happens elsewhere in the story
+    if (mine.length > 1 && outcomeOf(o).kind === 'refused') { for (const extra of mine.slice(1)) { const k = modelEvents.indexOf(extra); if (k >= 0) modelEvents.splice(k, 1); } mine = mine.slice(0, 1); }
     for (const e of mine) { e.mine = true; e.orderId = o.id; e.importance = Math.max(3, e.importance || 3); e.houses = [...new Set([p, ...(e.houses || [])])]; }
     if (mine.length) return;
     const r = outcomeOf(o); const said = o.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim();

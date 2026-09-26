@@ -441,3 +441,29 @@ test('banners arriving after the host has marched follow it and join it — no s
   assert.equal(s.armies.hw, undefined); assert.equal(s.armies.nh.men, 16850);
   assert.equal(Object.values(s.armies).filter((a) => a.owner === 'stark' && /Banners/.test(a.name)).length, 0);
 });
+test('works ordered in words are begun — and a second time refused with the reason', async () => {
+  const { planOrders } = await import('../server/orders.js');
+  const s = fresh(); const o = [{ id: 'a', text: 'Fund the expansion of the granaries at Winterfell.' }];
+  const ask = async () => ({ actions: [{ order: 1, template: 'granaries', at: 'stark' }] });
+  assert.match(executeActions(s, await planOrders(s, o, ask), o)[1][0], /Work begins: Fill and expand the granaries at Winterfell/);
+  assert.match(executeActions(s, await planOrders(s, o, ask), o)[1][0], /could not be done: .*already under way/);
+});
+test('every kind of order action is carried out by the engine', () => {
+  const s = fresh(); apply(s, [{ op: 'army_create', id: 'h1', owner: 'stark', name: 'Host A', at: 'stark', men: 1000 }, { op: 'army_create', id: 'h2', owner: 'stark', name: 'Host B', at: 'stark', men: 500 }]);
+  const kinds = [
+    { op: 'travel', character: 'jon_snow', to: 'Castle Black' }, { op: 'march', army: 'h1', to: 'Moat Cailin' }, { op: 'recruit', at: 'Winterfell', men: 100 },
+    { op: 'hire', role: 'spymaster', at: 'Winterfell' }, { op: 'appoint', character: 'rodrik_cassel', role: 'captain' }, { op: 'banners', vassals: 'all', at: 'Winterfell' },
+    { op: 'works', template: 'rookery', at: 'stark' }, { op: 'feast' }, { op: 'tourney' }, { op: 'raise', at: 'stark', men: 2000 },
+  ];
+  const orders = kinds.map((k, i) => ({ id: 'o' + i, text: 'Send Jon Snow, recruit men, hire, appoint Rodrik, call the banners, feast.' }));
+  const res = executeActions(s, kinds.map((k, i) => ({ ...k, order: i + 1 })), orders);
+  kinds.forEach((k, i) => assert.ok(res[i + 1]?.length && !/^could not/.test(res[i + 1][0]), `${k.op}: ${JSON.stringify(res[i + 1])}`));
+  const m = executeActions(s, [{ op: 'merge', order: 1 }], [{ text: 'Join the hosts at Winterfell into one.' }]);
+  assert.match(m[1][0], /are joined into/);
+});
+test('a refused order is told once, and nothing of it happens elsewhere', async () => {
+  const { orderEvents } = await import('../server/orders.js');
+  const s = fresh(); const told = [{ order: 1, title: 'The treasurer laughs', text: '…' }, { order: 1, title: 'Gold travels south', text: 'A chest of gold is sent to King\'s Landing.' }];
+  orderEvents(s, [{ id: 'a', text: 'Spend sixty million dragons.', result: ['could not be done: the treasury holds 60,000 dragons, not 60,000,000'] }], told);
+  assert.equal(told.length, 1); assert.equal(told[0].title, 'The treasurer laughs');
+});
