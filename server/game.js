@@ -183,7 +183,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   const cfg = loadConfig();
   const state = loadState(id);
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim()); }
-  for (const a of Object.values(state.armies)) delete a.motion;
+  for (const a of Object.values(state.armies)) { delete a.motion; delete a.arriveDay; }
   const chronicle = readChronicle(id);
   // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
   // so they truly happen; the story model is told what was done and narrates what follows.
@@ -191,23 +191,11 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   // a turn runs until the next thing that matters (a host arrives, a foe draws near, an answer lands…), at most a moon
   let turnReason = null;
   if (!span || span === 'auto' || span === 'turn') { const n = nextTurnLength(state); span = `${n.days}d`; turnReason = n.reason; }
-  const messages = buildJumpPrompt(state, state.orders, span, chronicle, cfg, turnReason);
-  let { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: spanOf(span).days, streamText: true });
-  let salvaged = false;
-  if (!obj) {
-    // Unreadable even after repair and a retry: the realm still moves on (the ledger, vassals, seasons and marches
-    // run as always), keeping whatever narrative can be salvaged from the reply.
-    salvaged = true;
-    const sum = extractField(text, 'summary');
-    obj = { summary: sum || 'The ravens bring confused and contradictory reports this season; the maesters could make little sense of them.', events: [], changes: [] };
-    console.warn(`turn ${state.meta.turn + 1}: simulator reply unreadable (${error}); the engine advanced the world alone`);
-  }
-
+  const spanInfo = spanOf(span);
   // Keep an undo point
   fs.writeFileSync(path.join(dir(id), 'prev-state.json'), JSON.stringify(state));
   fs.writeFileSync(path.join(dir(id), 'prev-chronicle.md'), chronicle);
 
-  const spanInfo = spanOf(span);
   const dateFrom = dateStr(state.meta.date);
   const yearBefore = state.meta.date.year;
   state.meta.date = addDays(state.meta.date, spanInfo.days);
@@ -226,10 +214,13 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   const orderText = state.orders.map((o) => o.text).join(' ');
   const playerChoseAllegiance = /fealty|swear|kneel|bend the knee|independen|king in the north|secede|declare (my|our)|crown (me|myself)|renounce/i.test(orderText);
   const playerDeclaredWar = /\b(declare war|make war|attack|march on|invade|assault|lay siege|besiege|ride against|strike at)\b/i.test(orderText);
-  const { applied, rejected } = applyChanges(state, [...(obj.changes || []), ...naturalDeaths], { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days });
+  // ── THE ENGINE'S PART OF THE TURN: what the rules decide, day by day — marches and arrivals, musters, battles,
+  // the great matters of the story, lords on the road, letters landing. The story is then told around these facts.
+  const applied = [], rejected = [];
+  { const r0 = applyChanges(state, naturalDeaths, { source: 'The years', spanDays: spanInfo.days }); applied.push(...r0.applied); }
   const deathEvents = naturalDeaths.map((d) => state.characters[d.id]).filter((c) => c && !c.alive).map((c) => ({ title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, type: 'court', houses: [c.house] }));
   // Vassals whose obligations the story did not settle act on their own temper: dues, and the banners
-  const touched = new Set((obj.changes || []).filter((c) => c && ['obligation', 'vassal'].includes(c.op)).map((c) => String(c.house || '').toLowerCase()));
+  const touched = new Set();
   const vt = vassalTick(state, spanInfo.days, touched);
   applied.push(...vt.applied);
   // Marching orders the story didn't resolve: the engine walks the host along at marching pace
@@ -237,26 +228,28 @@ export async function advance(id, { span = 'auto', orders } = {}) {
     if (!a.march || a.movedTurn === state.meta.turn) continue;
     const to = a.march.to; // read before the move: arriving clears the march order
     // when in the turn this host is on the road (the map replays it in step with the story's days)
-    { const tgt = String(to).startsWith('army:') ? state.armies[String(to).slice(5)]?.pos : placePos(to, state.holdings); const md = tgt ? marchDays(a, a.pos, tgt).days : spanInfo.days; a.motion = { start: 0, end: Math.min(1, md / Math.max(1, spanInfo.days)) }; }
+    // a host raised during the turn (a lord answering on day 9) sets out that day, and marches only the days left
+    const born = Math.min(spanInfo.days - 1, Math.max(0, a.bornDay || 0)); const left = Math.max(1, spanInfo.days - born);
+    { const tgt = String(to).startsWith('army:') ? state.armies[String(to).slice(5)]?.pos : placePos(to, state.holdings); const md = tgt ? marchDays(a, a.pos, tgt).days : left; a.motion = { start: born / spanInfo.days, end: Math.min(1, (born + md) / Math.max(1, spanInfo.days)), from: [...a.pos] }; a.arriveDay = md <= left ? born + md : null; }
     // a host may be ordered against another host: it follows it wherever it goes, and the engine fights them when they meet
     if (String(to).startsWith('army:')) {
       const foe = state.armies[String(to).slice(5)];
       if (!foe) { delete a.march; a.status = 'holding'; continue; }
-      const m = marchDays(a, a.pos, foe.pos); const f = Math.min(1, spanInfo.days / Math.max(1, m.days));
+      const m = marchDays(a, a.pos, foe.pos); const f = Math.min(1, left / Math.max(1, m.days));
       a.pos = [a.pos[0] + (foe.pos[0] - a.pos[0]) * f, a.pos[1] + (foe.pos[1] - a.pos[1]) * f]; a.dest = foe.pos; a.destName = foe.name; a.at = null; a.status = f >= 1 ? 'engaging' : 'pursuing'; a.movedTurn = state.meta.turn;
       if (f >= 1) delete a.march;
       continue;
     }
     const dest = placePos(to, state.holdings); if (!dest) { delete a.march; continue; }
     const m = marchDays(a, a.pos, dest);
-    const f = Math.min(1, spanInfo.days / Math.max(1, m.days));
+    const f = Math.min(1, left / Math.max(1, m.days));
     const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to, progress: f, status: a.party ? (f >= 1 ? (a.party.returning ? 'home again' : `at ${placeName(state, to)}, ${a.party.why.replace(/^to |^for /, '')}`) : a.status) : f >= 1 ? 'arrived' : 'marching' }]);
     applied.push(...mv.applied);
     if (f >= 1) {
       // those riding with the host have arrived too
       for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id && c.alive && c.id !== a.commander) c.loc = to;
       const cmd = state.characters[a.commander]; if (cmd && cmd.loc === 'army:' + a.id) cmd.loc = to;
-      if (a.owner === state.meta.player) vt.events.push({ title: `${a.name} reaches ${placeName(state, to)}`, text: `${a.name} (${a.men.toLocaleString()} men) has arrived at ${placeName(state, to)}.`, where: to, importance: 2, type: 'war', houses: [a.owner] });
+      if (a.owner === state.meta.player) vt.events.push({ day: a.arriveDay || spanInfo.days, title: `${a.name} reaches ${placeName(state, to)}`, text: `${a.name} (${a.men.toLocaleString()} men) has arrived at ${placeName(state, to)}.`, where: to, importance: 2, type: 'war', houses: [a.owner] });
       delete a.march;
     }
   }
@@ -266,19 +259,19 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   // Riders on the road: characters travelling alone arrive when their days are spent
   for (const c of Object.values(state.characters)) {
     if (!c.travel || !c.alive) continue;
-    c.travel.left -= spanInfo.days;
+    const inDays = Math.max(1, Math.ceil(c.travel.left)); c.travel.left -= spanInfo.days;
     if (c.travel.left <= 0) {
       const to = c.travel.to; const already = c.loc === to; delete c.travel; c.loc = to;
       if (already) continue; // a journey to where one already is ends quietly: an arrival is told once
       applied.push({ op: 'character', text: `${c.name} arrives at ${placeName(state, to)}` });
-      if (c.house === state.meta.player) vt.events.push({ title: `${c.name} reaches ${placeName(state, to)}`, text: `${c.name} has arrived at ${placeName(state, to)} on the orders of ${state.characters[state.houses[state.meta.player].lord]?.name || 'the lord'}.`, where: to, importance: 2, type: 'court', houses: [c.house] });
+      if (c.house === state.meta.player) vt.events.push({ day: Math.min(spanInfo.days, inDays), title: `${c.name} reaches ${placeName(state, to)}`, text: `${c.name} has arrived at ${placeName(state, to)} on the orders of ${state.characters[state.houses[state.meta.player].lord]?.name || 'the lord'}.`, where: to, importance: 2, type: 'court', houses: [c.house] });
     }
   }
   // Oaths are weighed: tempted lords treat with the enemy in secret, and the desperate turn their cloaks
   const tr = treacheryTick(state, spanInfo.days);
   vt.events.push(...tr.events); applied.push(...tr.applied);
   // Hosts in contact fight; hosts before enemy walls besiege them (unless the story told that battle itself)
-  const toldBattles = new Set((obj.changes || []).filter((c) => c?.op === 'battle').flatMap((c) => [c.attacker, c.defender]).map((x) => String(x || '').toLowerCase()));
+  const toldBattles = new Set();
   const wf = resolveWarfare(state, spanInfo.days, { skip: toldBattles });
   vt.events.push(...wf.events); applied.push(...wf.applied);
   vt.events.push(...fieldService(state, spanInfo.days), ...gatherMusters(state));
@@ -287,6 +280,24 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   vt.events.push(...wt.events); applied.push(...wt.applied);
   // lords on the road with their households: feasts, weddings, their liege's hall, the market towns
   vt.events.push(...retinueTick(state, spanInfo.days).events);
+  vt.events.push(...deliverReplies(state));
+  const engineEvents = dayEngineEvents(state, [...deathEvents, ...foldAnswers(vt.events)], spanInfo.days);
+  for (const a of Object.values(state.armies)) { delete a.bornDay; }
+  // ── THE STORY'S PART: the model writes the days around the engine's facts, and the rest of the realm's doings
+  const messages = buildJumpPrompt(state, state.orders, span, chronicle, cfg, turnReason, { engineEvents, dateFrom });
+  let { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: spanOf(span).days, streamText: true });
+  let salvaged = false;
+  if (!obj) {
+    // Unreadable even after repair and a retry: the realm still moves on (the ledger, vassals, seasons and marches
+    // run as always), keeping whatever narrative can be salvaged from the reply.
+    salvaged = true;
+    const sum = extractField(text, 'summary');
+    obj = { summary: sum || 'The ravens bring confused and contradictory reports this season; the maesters could make little sense of them.', events: [], changes: [] };
+    console.warn(`turn ${state.meta.turn + 1}: simulator reply unreadable (${error}); the engine advanced the world alone`);
+  }
+
+  const told = applyChanges(state, obj.changes || [], { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days });
+  applied.push(...told.applied); rejected.push(...told.rejected);
   // The seasons turn on their own if the story does not turn them
   if (!applied.some((a) => a.op === 'season')) {
     const turned = seasonTick(state, spanInfo.days);
@@ -294,7 +305,6 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   } else { state.world.seasonDays = 0; }
   // What the player's house has seen of the other hosts this period (fog of war)
   updateIntel(state);
-  vt.events.push(...deliverReplies(state));
   postTick(state);
   // Settle the books for the period (after the story has changed the causes)
   const econNotes = settle(state, spanInfo.days);
@@ -308,7 +318,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   for (let k = events.length - 1; k > 0; k--) if (events.slice(0, k).some((x) => x.title === events[k].title && x.text === events[k].text)) events.splice(k, 1);
   // every order the lord gave has its event, told first on its day
   events.push(...orderEvents(state, state.orders, events));
-  events.push(...deathEvents, ...foldAnswers(vt.events));
+  events.push(...engineEvents);
   // every event has its day in the period, so the turn can be told in order
   for (const e of events) if (!e.day) e.day = 1 + Math.floor(Math.random() * spanInfo.days);
   events.sort((a, b) => a.day - b.day || (b.orderId ? 1 : 0) - (a.orderId ? 1 : 0));
@@ -513,6 +523,16 @@ export async function talk(id, charId, message) {
   return { reply, applied, rejected, state, stance: { verdict: stance.verdict, mood: moodWord(stance.mood), patience: stance.mood.patience, full: stance.mood.full, closed: !!stance.mood.closed } };
 }
 
+// The engine's events keep the day they happened; those it cannot date fall where their place's news fell (a host's
+// arrival), else spread through the days
+function dayEngineEvents(state, evs, days) {
+  const arrived = new Map(Object.values(state.armies).filter((a) => a.arriveDay && a.at).map((a) => [a.at, a.arriveDay]));
+  for (const e of evs) {
+    if (e.day) { e.day = Math.max(1, Math.min(days, Math.round(e.day))); continue; }
+    e.day = (e.where && arrived.get(e.where)) || 1 + Math.floor(Math.random() * days);
+  }
+  return evs.sort((a, b) => a.day - b.day);
+}
 // Sworn lords answering the call on the same day are one piece of news, not a flood of cards
 function foldAnswers(evs) {
   const out = []; const byDay = new Map();

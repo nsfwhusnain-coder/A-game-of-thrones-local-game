@@ -430,7 +430,7 @@ export class MapScene {
         const oldPos = rec?.pos;
         if (rec) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); }
         const group = buildArmy(a, owner); this.scene.add(group);
-        rec = { group, sig, pos: oldPos || [...a.pos], anim: null, route: null, label: this.addLabel('', [0, 0, 0], 'army', { army: a.id }) };
+        rec = { group, sig, pos: oldPos || (a.motion?.from ? [...a.motion.from] : [...a.pos]), anim: null, route: null, label: this.addLabel('', [0, 0, 0], 'army', { army: a.id }) };
         this.armyObjs.set(a.id, rec);
       }
       const mode = a.type === 'fleet' ? 'sea' : 'land';

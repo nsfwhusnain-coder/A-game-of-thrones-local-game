@@ -88,7 +88,7 @@ export function vassalTick(state, days, touched = new Set()) {
           applied.push(...r.applied);
           const a = Object.values(state.armies).find((x) => x.owner === v.id && x.name === name && !x.serving); let riding = [];
           if (a) {
-            a.serving = v.liege; ob.host = a.id;
+            a.serving = v.liege; ob.host = a.id; a.bornDay = Math.floor(Math.random() * Math.max(1, days));
             if (musterPos && ob.muster && ob.muster !== v.seat) { a.march = { to: ob.muster, since: state.meta.turn }; a.dest = musterPos; a.status = 'marching'; }
             // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
             state.characters[v.lord].loc = 'army:' + a.id;
@@ -98,7 +98,7 @@ export function vassalTick(state, days, touched = new Set()) {
           }
           const eta = a && musterPos ? marchDays(a, seatPos, musterPos).days : 0;
           const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with him` : ''}${eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
-          if (mine) events.push({ title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] });
+          if (mine) events.push({ day: (a?.bornDay || 0) + 1, title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] });
         } else {
           ob.levies = 'answered';
           if (mine) events.push({ title: `House ${v.name} answers — with little`, text: `${lordName} sends word that he has no men left to send.`, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
@@ -209,8 +209,9 @@ export function answerRebel(state, [vid, how]) {
 /** Hosts that have reached their muster point join their liege's host there: one army on the map, many banners in it. */
 export function gatherMusters(state) {
   const events = [];
-  for (const a of Object.values(state.armies)) {
-    if (!a.serving || a.type === 'fleet') continue;
+  // in the order they arrived, so the host grows day by day as the news says
+  for (const a of Object.values(state.armies).sort((x, y) => (x.arriveDay || 99) - (y.arriveDay || 99))) {
+    if (!a.serving || a.type === 'fleet' || !state.armies[a.id]) continue;
     const v = state.houses[a.owner]; const liegeId = a.serving; const liege = state.houses[liegeId];
     if (!v || !liege) continue;
     const field = (x) => x.owner === liegeId && x.type !== 'fleet' && x.id !== a.id && !/garrison/i.test(x.status || '');
@@ -234,7 +235,7 @@ export function gatherMusters(state) {
     for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id) c.loc = 'army:' + host.id;
     if (v.obligations) v.obligations.host = host.id;
     delete state.armies[a.id];
-    if (liegeId === state.meta.player) events.push({ title: `House ${v.name} joins ${host.name}`, text: `${a.men.toLocaleString()} men under the ${v.name} banner join ${host.name}${host.at ? ` at ${state.holdings[host.at]?.name}` : ' on the march'}. The host now numbers ${host.men.toLocaleString()}.`, where: host.at || null, importance: 2, type: 'war', houses: [v.id] });
+    if (liegeId === state.meta.player) events.push({ ...(a.arriveDay ? { day: a.arriveDay } : {}), title: `House ${v.name} joins ${host.name}`, text: `${a.men.toLocaleString()} men under the ${v.name} banner join ${host.name}${host.at ? ` at ${state.holdings[host.at]?.name}` : ' on the march'}. The host now numbers ${host.men.toLocaleString()}.`, where: host.at || null, importance: 2, type: 'war', houses: [v.id] });
   }
   return events;
 }

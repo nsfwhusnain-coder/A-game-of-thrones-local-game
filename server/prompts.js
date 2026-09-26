@@ -412,7 +412,7 @@ function greatMatters(state) {
 }
 function nearestPlace(state, pos) { let best = null, d = Infinity; for (const h of Object.values(state.holdings)) { const x = Math.hypot(h.pos[0] - pos[0], h.pos[1] - pos[1]); if (x < d) { d = x; best = h.id; } } return best; }
 
-export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg, until = null) {
+export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg, until = null, { engineEvents = null, dateFrom = null } = {}) {
   const sc = SCENARIOS[state.meta.scenario];
   const span = spanOf(spanKey);
   const budget = Math.max(4000, cfg.contextTokens - cfg.maxTokens - 1500);
@@ -451,7 +451,10 @@ Only use ids that exist in the tables below. Change only what the story justifie
     'THE STATE OF THE REALM NOW\n' + worldDigest(state, digestBudget, lean, 'dynamic'),
     playerSheet(state),
     diplomacySinceLastTurn(state),
-    `CURRENT DATE: ${dateStr(state.meta.date)}. Simulate the next ${span.label} (${span.days} days)${until ? ` — the turn runs until ${until}; end on that moment` : ''}. Spread the events over the days as they would happen.`,
+    dateFrom
+      ? `THESE DAYS: from ${dateFrom} to ${dateStr(state.meta.date)} (${span.days} ${span.days === 1 ? 'day' : 'days'}; day 1 is the first)${until ? ` — the turn runs until ${until}` : ''}. The state of the realm above is as it stands at the END of them: the engine has already marched the hosts and brought the riders in.`
+      : `CURRENT DATE: ${dateStr(state.meta.date)}. Simulate the next ${span.label} (${span.days} days)${until ? ` — the turn runs until ${until}; end on that moment` : ''}. Spread the events over the days as they would happen.`,
+    engineEvents?.length ? `WHAT THE ENGINE HAS ALREADY SET DOWN FOR THESE DAYS — true, and already in the chronicle as written; do NOT write them again. Write around them: what led to them, what people said and did about them, what they set in motion; and the rest of the realm's doings. Never contradict them (who arrived where, and on which day).\n${engineEvents.filter((e) => !e.bg).slice(0, 30).map((e) => `- day ${e.day}: ${e.title} — ${String(e.text || '').slice(0, 180)}`).join('\n')}` : '',
     ordersBlock(state, orders),
     (state.storyThreads || []).length ? 'THREADS THE PLAYER FOLLOWS (update them in "threads")\n' + state.storyThreads.map((t) => `- ${t.title}: ${t.last}`).join('\n') : '',
     greatMatters(state),

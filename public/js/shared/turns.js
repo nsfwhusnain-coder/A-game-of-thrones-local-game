@@ -31,6 +31,11 @@ export function nextTurnLength(state) {
   }
   // the player's riders arrive
   for (const c of Object.values(state.characters)) if (c.alive && c.house === p && c.travel) add(Math.ceil(c.travel.left), `${c.name} reaches ${placeName(state, c.travel.to)}`);
+  // a great bannerman's host reaches the muster (the host grows before the lord's eyes)
+  for (const a of Object.values(state.armies)) {
+    if (!a.serving || a.serving !== p || !a.march || a.men < 2000 || String(a.march.to).startsWith('army:')) continue;
+    const to = state.holdings[a.march.to]; if (to) add(marchDays(a, a.pos, to.pos).days, `${state.characters[a.commander]?.name || a.name}'s host reaches ${to.name}`);
+  }
   // an answer to a letter lands
   for (const r of state.pendingReplies || []) add(r.arrivesDay - today, `a raven from ${state.characters[r.char]?.name || 'afar'}`);
   // hosts and great companies coming to the player's lands; guests arriving at their hall
@@ -64,5 +69,9 @@ export function nextTurnLength(state) {
   if (!cands.length) return { days: TURN_QUIET, reason: 'a quiet week' };
   cands.sort((a, b) => a.days - b.days);
   const first = cands[0];
-  return { days: Math.max(TURN_MIN, Math.min(TURN_MAX, first.days)), reason: first.reason };
+  // a moon-long turn only while the lord's own hosts or riders are on the road; otherwise the realm is looked at again soon
+  const onTheRoad = Object.values(state.armies).some((a) => a.march && commandable(state, a) && !a.serving) || Object.values(state.characters).some((c) => c.alive && c.house === p && c.travel);
+  const cap = onTheRoad ? TURN_MAX : TURN_QUIET + 3;
+  if (first.days > cap) return { days: TURN_QUIET, reason: `a quiet week (next: ${first.reason}, in ${first.days} days)` };
+  return { days: Math.max(TURN_MIN, first.days), reason: first.reason };
 }
