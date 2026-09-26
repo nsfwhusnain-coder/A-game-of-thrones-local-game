@@ -35,6 +35,8 @@ function eyes(state) {
 
 export function isSeen(state, a, E = eyes(state)) {
   if (E.friends.has(a.owner)) return true;
+  // a lord's party under his banners, a king's progress: the whole realm watches them pass
+  if (a.public && a.secrecy !== 'hidden') return true;
   if ((state.intel?.spies || {})[a.owner] != null) return true;
   return E.out.some(([pos, r]) => dist(pos, a.pos) <= r);
 }

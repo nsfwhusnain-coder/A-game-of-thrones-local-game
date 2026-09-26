@@ -11,6 +11,7 @@ import { estimateTokens } from './llm.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom, marchDays } from '../public/js/shared/warfare.js';
 import { unitsText } from '../public/js/shared/units.js';
+import { retinuesDigest } from '../public/js/shared/retinues.js';
 import { briefFor } from '../public/data/briefs.js';
 import { vassalTemper } from '../public/js/shared/vassals.js';
 import { PLACE_NAMES } from '../public/data/geography.js';
@@ -259,7 +260,7 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   parts.push('WARS\n' + (wars.length ? wars.map((w) => `${w.id} | ${w.name} | attackers:${w.attackers.join(',')} | defenders:${w.defenders.join(',')} | since ${w.started}${w.note ? ' | ' + w.note : ''}`).join('\n') : 'none'));
   const pacts = state.pacts.filter((x) => x.status !== 'ended');
   parts.push('PACTS & AGREEMENTS\n' + (pacts.length ? pacts.map((x) => `${x.type} | ${x.a} & ${x.b} | ${x.status} | ${x.terms}`).join('\n') : 'none'));
-  parts.push('ARMIES & FLEETS IN THE FIELD\n' + Object.values(state.armies).map((a) => armyLine(state, a)).join('\n'));
+  parts.push('ARMIES & FLEETS IN THE FIELD\n' + Object.values(state.armies).filter((a) => !a.party).map((a) => armyLine(state, a)).join('\n'));
   // what is in motion: the great players' aims and next moves (rotating, so a different few move each day)
   const live = AGENDAS.filter((a) => { const c = state.characters[a.who]; return c?.alive && !/imprisoned|captive|missing/.test(c.status || '') && (!a.when || a.when(state)); });
   if (live.length) {
@@ -303,6 +304,8 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   // what moves turn to turn goes in the dynamic part
   const rels = allHouses.filter((h) => h.id !== p && getRelation(state, p, h.id) !== 0).map((h) => `${h.id} ${getRelation(state, p, h.id) > 0 ? '+' : ''}${getRelation(state, p, h.id)}`);
   if (rels.length) parts.push('RELATIONS WITH THE PLAYER (-100 hatred … 100 devotion; unlisted houses 0)\n' + rels.join(', '));
+  const road = retinuesDigest(state);
+  if (road) parts.push('LORDS ON THE ROAD with their households (the engine moves them; you may use them — a guest arriving, a meeting on the kingsroad)\n' + road);
   const wb = whereabouts(state, chars);
   if (wb) parts.push('WHERE PEOPLE ARE (everyone not listed is at their house\'s seat, free and well)\n' + wb);
   // houses & characters change little from turn to turn: callers put them first so the model server can reuse its cache

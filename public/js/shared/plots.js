@@ -34,7 +34,7 @@ export const THREADS = [
           // the court has been a moon on the kingsroad already when the tale begins: it is at the Twins, mounted
           changes: [{ op: 'army_create', id: 'royal_progress', owner: 'baratheon', name: 'The King\'s progress', commander: 'robert_baratheon', at: 'frey', men: 1400, composition: 'The royal household: knights and riders of the court, men-at-arms, the Queen\'s wheelhouse', status: 'marching' }],
           // the court rides with the host, and the host walks the kingsroad at a wheelhouse's pace
-          post: (st) => { const a = st.armies.royal_progress; if (!a) return; a.march = { to: 'stark', since: st.meta.turn }; a.at = null; for (const id of ['robert_baratheon', 'cersei_lannister', 'jaime_lannister', 'tyrion_lannister', 'joffrey_baratheon', 'myrcella_baratheon', 'tommen_baratheon', 'sandor_clegane']) if (st.characters[id]?.alive && at(st, id, 'baratheon', 'kings_landing')) st.characters[id].loc = 'army:royal_progress'; },
+          post: (st) => { const a = st.armies.royal_progress; if (!a) return; a.public = true; a.march = { to: 'stark', since: st.meta.turn }; a.at = null; for (const id of ['robert_baratheon', 'cersei_lannister', 'jaime_lannister', 'tyrion_lannister', 'joffrey_baratheon', 'myrcella_baratheon', 'tommen_baratheon', 'sandor_clegane']) if (st.characters[id]?.alive && at(st, id, 'baratheon', 'kings_landing')) st.characters[id].loc = 'army:royal_progress'; },
         }),
       },
       {
@@ -73,7 +73,7 @@ export const THREADS = [
         id: 'southward', at: YM(298, 10), needs: (s) => alive(s, 'robert_baratheon') && at(s, 'robert_baratheon', 'stark'),
         fire: (s) => {
           const ch = [{ op: 'character', id: 'robert_baratheon', loc: 'baratheon' }, { op: 'character', id: 'cersei_lannister', loc: 'baratheon' }, { op: 'character', id: 'jaime_lannister', loc: 'baratheon' }, { op: 'character', id: 'joffrey_baratheon', loc: 'baratheon' }];
-          if (s.armies.royal_progress) { ch.length = 0; const a = s.armies.royal_progress; a.march = { to: 'baratheon', since: s.meta.turn }; a.at = null; a.status = 'marching'; for (const id of ['robert_baratheon', 'cersei_lannister', 'jaime_lannister', 'joffrey_baratheon', 'myrcella_baratheon', 'tommen_baratheon', 'sandor_clegane']) if (alive(s, id) && at(s, id, 'stark')) s.characters[id].loc = 'army:royal_progress'; }
+          if (s.armies.royal_progress) { ch.length = 0; const a = s.armies.royal_progress; a.public = true; a.march = { to: 'baratheon', since: s.meta.turn }; a.at = null; a.status = 'marching'; for (const id of ['robert_baratheon', 'cersei_lannister', 'jaime_lannister', 'joffrey_baratheon', 'myrcella_baratheon', 'tommen_baratheon', 'sandor_clegane']) if (alive(s, id) && at(s, id, 'stark')) s.characters[id].loc = 'army:royal_progress'; }
           if (alive(s, 'tyrion_lannister')) ch.push({ op: 'character', id: 'tyrion_lannister', loc: 'nights_watch' });
           if (alive(s, 'jon_snow') && s.characters.jon_snow.house === 'stark') ch.push({ op: 'character', id: 'jon_snow', house: 'nights_watch', title: 'Recruit of the Night\'s Watch', loc: 'nights_watch' });
           // the new Hand rides south with his King, as in the books — with his daughters if he chose to bring them

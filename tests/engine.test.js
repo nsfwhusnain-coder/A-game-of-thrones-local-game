@@ -503,3 +503,25 @@ test('a mounted company rides at horse pace; a levy walks', () => {
   apply(s, [{ op: 'army_create', id: 'lv', owner: 'stark', name: 'Levies', at: 'stark', men: 5000, composition: 'Levies of House Stark' }]);
   assert.ok(!mounted(s, s.armies.lv));
 });
+
+// ── Lords on the road ──
+import { retinueTick } from '../public/js/shared/retinues.js';
+import { marchDays } from '../public/js/shared/warfare.js';
+test('lords ride out with their households, stay, ride home — and the realm sees them', async () => {
+  const { isSeen } = await import('../public/js/shared/intel.js');
+  const s = fresh(); let seed = 7; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const went = new Set(); let home = 0;
+  for (let day = 0; day < 60; day++) {
+    retinueTick(s, 1, r);
+    for (const a of Object.values(s.armies).filter((x) => x.party)) {
+      went.add(a.id); assert.ok(isSeen(s, a), 'a party under banners is seen');
+      assert.equal(s.characters[a.commander].loc, 'army:' + a.id);
+      // the engine's march step, as advance() does it
+      if (a.march) { const to = s.holdings[a.march.to]; const m = marchDays(a, a.pos, to.pos); const f = Math.min(1, 1 / Math.max(1, m.days)); a.pos = [a.pos[0] + (to.pos[0] - a.pos[0]) * f, a.pos[1] + (to.pos[1] - a.pos[1]) * f]; if (f >= 1) { a.at = a.march.to; delete a.march; } }
+    }
+    for (const id of went) if (!s.armies[id]) home++;
+  }
+  assert.ok(went.size >= 5, `parties sent: ${went.size}`);
+  assert.ok(home > 0, 'some came home and disbanded');
+  assert.ok(Object.values(s.armies).filter((x) => x.party).length <= 14);
+});

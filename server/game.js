@@ -7,6 +7,7 @@ import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidateP
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId, dayNumber, findChar } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { postTick } from '../public/js/shared/errands.js';
+import { retinueTick } from '../public/js/shared/retinues.js';
 import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
@@ -242,7 +243,7 @@ export async function advance(id, { span = '1d', orders } = {}) {
     const dest = placePos(to, state.holdings); if (!dest) { delete a.march; continue; }
     const m = marchDays(a, a.pos, dest);
     const f = Math.min(1, spanInfo.days / Math.max(1, m.days));
-    const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to, progress: f, status: f >= 1 ? 'arrived' : 'marching' }]);
+    const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to, progress: f, status: a.party ? (f >= 1 ? (a.party.returning ? 'home again' : `at ${placeName(state, to)}, ${a.party.why.replace(/^to |^for /, '')}`) : a.status) : f >= 1 ? 'arrived' : 'marching' }]);
     applied.push(...mv.applied);
     if (f >= 1) {
       // those riding with the host have arrived too
@@ -277,6 +278,8 @@ export async function advance(id, { span = '1d', orders } = {}) {
   // The world goes on: the great threads of the story, rising threats, the other houses' lives
   const wt = worldTick(state, spanInfo.days);
   vt.events.push(...wt.events); applied.push(...wt.applied);
+  // lords on the road with their households: feasts, weddings, their liege's hall, the market towns
+  vt.events.push(...retinueTick(state, spanInfo.days).events);
   // The seasons turn on their own if the story does not turn them
   if (!applied.some((a) => a.op === 'season')) {
     const turned = seasonTick(state, spanInfo.days);
