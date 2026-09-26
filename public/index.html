@@ -90,33 +90,32 @@
       </nav>
     </div>
 
-    <!-- left sliding window -->
+    <!-- right sliding window: realm, council, military… -->
     <aside id="window" class="window hidden"><div class="win-head"><h2 id="win-title"></h2><button class="win-close" data-action="close-window">✕</button></div><div class="win-body" id="win-body"></div></aside>
 
     <!-- floating detail sheet (character / holding / army) -->
     <aside id="sheet" class="sheet hidden"><button class="win-close" data-action="close-sheet">✕</button><div id="sheet-body"></div></aside>
 
-    <!-- right drawer: events & letters / audiences -->
+    <!-- the chronicle (left): events, letters, audiences — and your orders beneath -->
     <aside id="drawer" class="drawer">
       <nav class="drawer-tabs" id="drawer-tabs">
-        <button data-tab="feed" class="active">Events</button>
+        <button data-tab="feed" class="active">Chronicle</button>
         <button data-tab="letters">Letters <span id="letters-count"></span></button>
         <button data-tab="audience">Audience</button>
-        <button class="collapse" data-action="toggle-drawer" title="Hide">⟩</button>
+        <button class="collapse" data-action="toggle-drawer" title="Hide">⟨</button>
       </nav>
       <div class="drawer-body" id="drawer-body"></div>
-    </aside>
-    <button id="drawer-open" class="drawer-open hidden" data-action="toggle-drawer">⟨ Events</button>
-
-    <!-- command bar -->
-    <footer id="command">
+      <!-- your orders: written here, read by your steward, carried out when the day ends -->
+    <footer id="command" class="composer">
       <div class="orders" id="orders"></div>
       <div class="cmd-row">
-        <textarea id="order-input" rows="1" placeholder="Command your house…"></textarea>
+        <textarea id="order-input" rows="2" placeholder="Command your house… (Enter to add, Ctrl+Enter to end the day)"></textarea>
         <button class="btn ghost" data-action="suggest" title="Counsel: ask your advisors for ideas">✨</button>
         <button class="btn" data-action="add-order" title="Add the order (Enter)">＋</button>
       </div>
     </footer>
+    </aside>
+    <button id="drawer-open" class="drawer-open hidden" data-action="toggle-drawer">Chronicle ⟩</button>
 
     <div id="mapmodes" class="mapmodes">
       <button data-mode="political" class="active" data-mi="crown" title="Realms map">Realms</button>

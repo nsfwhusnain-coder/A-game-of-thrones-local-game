@@ -263,6 +263,9 @@ const showDiagnostics = () => { try { return localStorage.getItem('model-diagnos
 // live: the turn is being written — the map stays in view, and the news appears as the model writes it
 function busy(on, text, { live = false } = {}) {
   app.busy = on; $('#busy').classList.toggle('hidden', !on); $('#busy').classList.toggle('live', on && live); clearInterval(busyTimer);
+  // the day being written sits at the head of the chronicle; any other wait covers the screen
+  if (on && live && $('#drawer')) { $('#drawer').classList.remove('hidden'); $('#drawer').insertBefore($('#busy'), $('#drawer-body')); }
+  else if ($('#busy').parentElement !== document.body) document.body.appendChild($('#busy'));
   if (on) {
     $('#busy-text').textContent = text; const t0 = Date.now(); $('#busy-feed').innerHTML = ''; let shown = 0;
     const lines = ['Ravens take wing…', 'Lords confer in their solars…', 'Hosts march along the kingsroad…', 'Coin changes hands in the shadows…', 'The maesters scratch at their ledgers…', 'Whispers pass through the Red Keep…', 'The smallfolk bring in the harvest…'];
@@ -290,8 +293,8 @@ function busy(on, text, { live = false } = {}) {
       const evs = live && prog?.events || [];
       for (; shown < evs.length; shown++) {
         const e = evs[shown];
-        $('#busy-feed').insertAdjacentHTML('afterbegin', `<div class="bf-item"><div class="bf-t">${esc(e.title)}</div><div class="bf-x">${esc(e.text)}</div></div>`);
-        const pos = e.where && app.state?.holdings[e.where]?.pos; if (pos && app.map) { app.map.flyTo(pos, 420); app.map.flash?.(pos); }
+        $('#busy-feed').insertAdjacentHTML('beforeend', `<div class="bf-item"><div class="bf-t">${esc(e.title)}</div></div>`);
+        const pos = e.where && app.state?.holdings[e.where]?.pos; if (pos && app.map) app.map.flash?.(pos);
         sfx('open');
       }
     }, 1000);

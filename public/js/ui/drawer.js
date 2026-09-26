@@ -27,6 +27,8 @@ export function eventHtml(e, compact = false) {
 const REGION_ORDER = ['north', 'wall', 'beyond', 'iron_islands', 'riverlands', 'vale', 'westerlands', 'crownlands', 'reach', 'stormlands', 'dorne', 'essos'];
 const REGION_TITLE = { north: 'The North', wall: 'The Wall', beyond: 'Beyond the Wall', iron_islands: 'The Iron Islands', riverlands: 'The Riverlands', vale: 'The Vale', westerlands: 'The Westerlands', crownlands: 'The Crownlands', reach: 'The Reach', stormlands: 'The Stormlands', dorne: 'Dorne', essos: 'Across the Narrow Sea' };
 export const mainEvents = (evs) => (evs || []).filter((e) => !e.bg);
+/** The turn's news in the order it is told: by day; on a day, what the lord ordered first, then the weightiest. */
+export const storyEvents = (t) => mainEvents(t.events).map((e) => [e, (t.events || []).indexOf(e)]).sort(([a, i], [b, j]) => (a.day || 0) - (b.day || 0) || (b.orderId ? 1 : 0) - (a.orderId ? 1 : 0) || (b.importance || 0) - (a.importance || 0) || i - j).map(([e]) => e);
 export function meanwhileHtml(evs, open = false) {
   const bg = (evs || []).filter((e) => e.bg); if (!bg.length) return '';
   const s = app.state; const groups = new Map();
@@ -98,7 +100,8 @@ function storyHtml(s, t, e) {
   const rumour = e.type === 'rumor' || /^(rumou?r|it is said|word comes|men say)/i.test(e.text || '');
   const houses = (e.houses || []).filter((h) => s.houses[h]).slice(0, 3);
   const date = (e.date || t.date).replace(/, \d+ AC$/, '');
-  return `<div class="story imp-${e.importance}${mine ? ' mine' : ''}" data-news="${t.turn}:${(t.events || []).indexOf(e)}">
+  const hidden = app.reveal && app.reveal.turn === t.turn && !app.reveal.shown.has((t.events || []).indexOf(e));
+  return `<div class="story imp-${e.importance}${mine ? ' mine' : ''}${hidden ? ' unrevealed' : ''}" data-news="${t.turn}:${(t.events || []).indexOf(e)}">
     <div class="story-h">${NEWS_ICON[e.type] ? `${NEWS_ICON[e.type]} ` : ''}${esc(e.title)}</div>
     <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">📍 ${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${mine ? '<span class="tag you">Your house</span>' : ''}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
     <div class="story-x">${esc(e.text)}</div>${e.details ? `<div class="story-d">${esc(e.details)}</div>` : ''}</div>`;
@@ -112,7 +115,9 @@ function renderFeed(body) {
   const s = app.state;
   const turns = [...s.history].reverse().slice(0, 30);
   // the news, as a list: a date, then one row per event (icon, headline, one line); click a row for the whole story
-  body.innerHTML = decisionsHtml() + threadsHtml(s) + (turns.length ? turns.map((t) => { const ev = mainEvents(t.events); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
+  const rv = app.reveal;
+  const bar = rv ? `<div class="reveal-bar"><span class="rb-date" id="rb-date">${esc(rv.date || '')}</span><button class="btn small ghost" data-rb="pause">${rv.ctl.paused ? 'Resume' : 'Pause'}</button><button class="btn small ghost" data-rb="next">Next ›</button><button class="btn small ghost" data-rb="skip">Skip ⏭</button><span class="rb-count" id="rb-count">${rv.n} / ${rv.total}</span></div>` : '';
+  body.innerHTML = bar + decisionsHtml() + threadsHtml(s) + (turns.length ? turns.map((t) => { const ev = storyEvents(t); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
       ${yoursHtml(t)}${ev.map((e) => storyHtml(s, t, e)).join('') || '<div class="news-quiet">No news of note.</div>'}
       ${bg ? `<div class="news-more" data-meanwhile="${t.turn}">+ ${bg} small happening${bg > 1 ? 's' : ''} across the realm</div>` : ''}</div>`; }).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>

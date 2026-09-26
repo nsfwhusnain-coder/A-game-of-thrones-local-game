@@ -669,3 +669,51 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .threads ul { margin: 0.3rem 0 0; padding-left: 1.1rem; line-height: 1.45; }
 
 .update-banner { position: fixed; top: 0.6rem; left: 50%; transform: translateX(-50%); z-index: 90; background: var(--panel-solid, #1b140b); border: 1px solid var(--gold); color: var(--gold2); padding: 0.4rem 0.8rem; border-radius: 4px; box-shadow: var(--shadow); font-size: 0.9rem; }
+
+/* ═════════ LAYOUT v3 — the chronicle on the left, the world in the middle, the realm's affairs on the right ═════════ */
+:root { --drawer-w: clamp(22rem, 30vw, 31rem); --dock-h: 4.6rem; }
+/* the chronicle: events, letters, audiences, and your orders beneath them */
+.drawer { left: 0.8rem; right: auto; top: 4.2rem; bottom: 0.8rem; width: var(--drawer-w); }
+.drawer-open { left: 0.8rem; right: auto; }
+.drawer-body { flex: 1; min-height: 0; }
+#drawer #command { position: static; left: auto; right: auto; bottom: auto; max-width: none; min-width: 0; border-top: 1px solid var(--line2); padding: 0.5rem 0.6rem 0.6rem; background: rgba(0,0,0,0.22); gap: 0.4rem; }
+#drawer #command .orders { max-height: 11rem; }
+#drawer #command .cmd-row { display: flex; gap: 0.35rem; align-items: stretch; }
+#drawer #command textarea { flex: 1; min-height: 2.6rem; resize: none; }
+#drawer.hidden ~ .mapmodes, .drawer.hidden ~ .mapmodes { right: 0.8rem; }
+.drawer.hidden ~ #command { right: auto; }
+/* the realm's affairs open on the right, never over the chronicle */
+.window { left: auto; right: 0.8rem; top: 4.2rem; bottom: calc(var(--dock-h) + 1.4rem); width: min(30rem, 36vw); }
+.sheet, .sheet.solo { left: auto; right: calc(min(30rem, 36vw) + 1.6rem); top: 4.2rem; width: min(26rem, 30vw); max-height: calc(100% - var(--dock-h) - 6rem); }
+.sheet.solo { right: 0.8rem; }
+/* map modes: top right, under the date */
+.mapmodes { top: 4.2rem; bottom: auto; right: 0.8rem; }
+body:has(#window:not(.hidden)) .mapmodes { right: calc(min(30rem, 36vw) + 1.6rem); }
+/* the dock: who you are and the eight affairs of your house, bottom right */
+#hud-player { left: auto; right: 0.8rem; bottom: 0.8rem; flex-direction: row-reverse; align-items: center; gap: 0.5rem; }
+#hud-player .player-banner { display: none; }
+#hud-player .player-card { display: flex; align-items: center; gap: 0.5rem; flex-direction: row-reverse; background: var(--panel); border: 1px solid var(--line2); border-radius: 8px; padding: 0.3rem 0.6rem 0.3rem 0.3rem; box-shadow: 0 4px 16px rgba(0,0,0,0.55); }
+#hud-player .player-portrait { width: 3.6rem; height: 3.6rem; }
+#hud-player .player-name { text-align: right; font-size: 0.85rem; }
+#hud-player .action-ring { grid-template-columns: repeat(8, 3.6rem); margin: 0; }
+#hud-player .action-ring button { width: 3.6rem; height: 3.6rem; }
+/* the day being written: inside the chronicle, at its head */
+#drawer .busy.live { position: static; inset: auto; width: auto; margin: 0.6rem 0.7rem 0; border: 1px solid var(--gold); background: rgba(201,164,74,0.07); border-radius: 4px; padding: 0.55rem 0.7rem; box-shadow: none; z-index: auto; display: block; }
+#drawer .busy.live.hidden { display: none; }
+#drawer .busy.live .busy-inner { font-size: 0.95rem; }
+#drawer .busy-feed .bf-item { border-left: 2px solid var(--line2); padding-left: 0.5rem; opacity: 0.75; }
+/* the turn told in the chronicle itself: one event at a time, the map flying to each */
+.reveal-bar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 0.4rem; background: var(--panel-solid, #15100a); border: 1px solid var(--gold); border-radius: 4px; padding: 0.35rem 0.5rem; margin-bottom: 0.6rem; }
+.reveal-bar .rb-date { font-family: var(--display); color: var(--gold2); font-size: 0.85rem; letter-spacing: 0.05em; }
+.reveal-bar .rb-count { color: var(--muted); font-size: 0.75rem; margin-left: auto; }
+.story.unrevealed { display: none; }
+.story.arrive { animation: storyIn .5s ease both; box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(201,164,74,0.25); }
+@keyframes storyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 1100px) {
+  #hud-player .action-ring { grid-template-columns: repeat(4, 3.2rem); }
+  #hud-player .action-ring button { width: 3.2rem; height: 3.2rem; }
+  .window { width: min(28rem, 60vw); }
+}
+
+.news-date { background: var(--panel-solid, #15100a); }
+#drawer #command textarea { min-height: 3.1rem; }
