@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplies } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
-import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId, dayNumber, findChar } from '../public/js/shared/world.js';
+import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
@@ -297,6 +297,8 @@ export async function advance(id, { span = '1d', orders } = {}) {
     importance: Math.max(1, Math.min(5, Number(e.importance) || 2)), type: String(e.type || 'court'), houses: Array.isArray(e.houses) ? e.houses : [],
     ...(Number(e.order) >= 1 ? { order: Number(e.order) } : {}),
   }));
+  // the story sometimes writes the same event twice: tell it once
+  for (let k = events.length - 1; k > 0; k--) if (events.slice(0, k).some((x) => x.title === events[k].title && x.text === events[k].text)) events.splice(k, 1);
   // every order the lord gave has its event, told first on its day
   events.push(...orderEvents(state, state.orders, events));
   events.push(...deathEvents, ...foldAnswers(vt.events));
@@ -686,7 +688,8 @@ export function act(id, body) {
       }
       const a = state.armies[body.army]; if (!a || !commandable(state, a) || !a.march) throw httpError(400, 'that host is not marching');
       delete a.march; a.dest = null; a.destName = null; a.status = 'holding';
-      addOrder(`${a.name} halts and holds where it stands.`, '', 'done'); result.summary = `${a.name} halts.`; break;
+      const near = placeName(state, nearestHolding(state, a.pos));
+      addOrder(`${a.name} halts and holds where it stands, near ${near}.`, '', 'done'); result.summary = `${a.name} halts near ${near}.`; break;
     }
     case 'march': {
       const a = state.armies[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');

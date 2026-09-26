@@ -445,7 +445,7 @@ export function orderEvents(state, orders, modelEvents) {
     if (mine.length) return;
     const r = outcomeOf(o); const said = o.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim();
     const place = r.lines.map((l) => l.match(/\b(?:for|to|at) ([A-Z][\w' ]+?)(?: \(|,|$| with)/)?.[1]).map((x) => x && resolvePlaceId(x)).find(Boolean) || resolvePlaceId(lord?.loc) || state.houses[p].seat;
-    const head = (r.kind === 'refused' ? `${lord?.name || 'The lord'}'s command fails: ${r.lines[0]}` : r.lines[0] || `${lord?.name || 'The lord'} gives his command`).split(/(?<=[.!?])\s/)[0].replace(/\s*\([^)]*\)/g, '').replace(/[.!]+$/, '').slice(0, 90);
+    const head = (r.kind === 'refused' ? `${lord?.name || 'The lord'}'s command comes to nothing` : r.lines[0] || `${lord?.name || 'The lord'} gives his command`).split(/(?<=[.!?])\s/)[0].replace(/\s*\([^)]*\)/g, '').replace(/[.!]+$/, '').slice(0, 90);
     out.push({ day: 1, title: head.charAt(0).toUpperCase() + head.slice(1), text: r.kind === 'story' ? `${lord?.name || 'The lord'} commands: “${said}”` : `${lord?.name || 'The lord'} commanded: “${said.replace(/[.!]+$/, '')}.” ${r.lines.join('; ').replace(/[.!]+$/, '')}.`, where: place, importance: 3, type: r.kind === 'refused' ? 'court' : /march|rides|host|men/i.test(r.lines.join(' ')) ? 'war' : /raven|letter/i.test(r.lines.join(' ')) ? 'diplomacy' : 'court', houses: [p], mine: true, orderId: o.id });
   });
   return out;

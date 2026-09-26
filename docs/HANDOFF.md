@@ -374,6 +374,22 @@ quiet' every day.
   benched slower. Both models are now in the exclusive `gpu` group, because two of them never fit in 12 GB. Config backup:
   `C:\llamaswap\config.backup-2026-09-26.yaml`.
 
+### Film pacing, voices, council debates, hosts, lords on the road (2026-09-26, later)
+- **Chronicle order:** within a day the newest card is on top (`storyEvents(t).reverse()` for display). The reveal pans (~1.1 s),
+  shows, then holds 3-4.8 s by length. The chronicle is third person: no "you" or "your" in events (happenings use `{liege}`).
+- **Voices:** `voice.js prepareSpeech()` voices every line of a scene at once. `drawer.js playScene` plays them back to back
+  (`beginScene` token), each line appearing as it is spoken.
+- **Council:** counsellors speak in turn, hearing each other, and may argue. An empty message means "let them talk": the lord says
+  nothing, no player line is logged, and the "Let them talk" button calls it.
+- **Hosts:** `shared/units.js` gives each host knights, riders, foot and archers by region or kind (`unitsOf` scales with losses;
+  merges add up), and `mounted()` sets horse pace. Vassal lords ride with their host, plus up to two grown sons, brothers or
+  sworn knights (women only if warriors). The army sheet shows the make-up and banners; the model's army lines show the make-up,
+  who rides with it, and "near X, N days from Y".
+- **Lords on the road:** `shared/retinues.js retinueTick`. Up to two lords a day (14 abroad at most) ride out with 20-450 men to
+  their liege, a neighbour's feast or wedding, a market town, a sept or a hunt; they stay 1-6 days, ride home and disband. They
+  are `a.public`, seen by all, like the King's progress. They are listed for the model under LORDS ON THE ROAD, not in the army
+  table.
+
 ## 5. In the middle of (when this was written)
 
 - **Turn playback:** finished and committed (`74380dd`).
