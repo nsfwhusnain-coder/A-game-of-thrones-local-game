@@ -377,7 +377,7 @@ test('every order has its event, first, even when the story forgot it', async ()
   const told = [{ order: 3, title: 'Ned praises his son', text: '…', houses: [] }];
   const extra = orderEvents(s, orders, told);
   assert.equal(extra.length, 2); assert.ok(told[0].mine);
-  assert.match(extra[0].title, /The banners are called/); assert.match(extra[1].title, /Your command fails: not enough gold/);
+  assert.match(extra[0].title, /The banners are called/); assert.match(extra[1].title, /Eddard Stark's command fails: not enough gold/);
 });
 test('a plain order in lower case still raises the host and calls the banners', async () => {
   const { planOrders } = await import('../server/orders.js');

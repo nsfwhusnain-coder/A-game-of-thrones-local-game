@@ -263,7 +263,7 @@ export async function advance(id, { span = '1d', orders } = {}) {
       const to = c.travel.to; const already = c.loc === to; delete c.travel; c.loc = to;
       if (already) continue; // a journey to where one already is ends quietly: an arrival is told once
       applied.push({ op: 'character', text: `${c.name} arrives at ${placeName(state, to)}` });
-      if (c.house === state.meta.player) vt.events.push({ title: `${c.name} reaches ${placeName(state, to)}`, text: `${c.name} has arrived at ${placeName(state, to)}, as you commanded.`, where: to, importance: 2, type: 'court', houses: [c.house] });
+      if (c.house === state.meta.player) vt.events.push({ title: `${c.name} reaches ${placeName(state, to)}`, text: `${c.name} has arrived at ${placeName(state, to)} on the orders of ${state.characters[state.houses[state.meta.player].lord]?.name || 'the lord'}.`, where: to, importance: 2, type: 'court', houses: [c.house] });
     }
   }
   // Oaths are weighed: tempted lords treat with the enemy in secret, and the desperate turn their cloaks
@@ -527,7 +527,7 @@ function deliverReplies(state) {
     state.ravens.unshift({ id: Date.now() + Math.random(), day: today, from: c.id, fromName: c.name, to: lordId, text: String(r.text).replace(/\*[^*]*\*/g, '').trim(), date: dateStr(state.meta.date), read: false });
     const first = String(r.text).replace(/\*[^*]*\*/g, ' ').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s/)[0] || '';
     const whence = String(c.loc || '').startsWith('army:') ? `the camp of ${state.armies[c.loc.slice(5)]?.name || 'a host'}` : placeName(state, c.loc);
-    events.push({ title: `${c.name} answers your letter`, text: `A raven from ${whence}: “${first.slice(0, 220)}”${res.applied.length ? ` — ${res.applied.map((a) => a.text).join('; ')}` : ''}`, where: resolvePlaceId(c.loc) || null, importance: 3, type: 'diplomacy', houses: [p, c.house], mine: true, day: 1 });
+    events.push({ title: `${c.name} answers ${state.characters[lordId]?.name || 'the lord'}`, text: `A raven from ${whence}: “${first.slice(0, 220)}”${res.applied.length ? ` — ${res.applied.map((a) => a.text).join('; ')}` : ''}`, where: resolvePlaceId(c.loc) || null, importance: 3, type: 'diplomacy', houses: [p, c.house], mine: true, day: 1 });
   }
   state.pendingReplies = keep;
   return events;

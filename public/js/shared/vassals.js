@@ -172,7 +172,7 @@ function rebellionTick(state, days) {
       { label: 'Declare them traitors and march', hint: 'War. Every lord will see the price of defiance.', fx: [{ rebel: [v.id, 'war'] }] },
       { label: 'Offer terms', hint: 'Forgive their dues and hear their grievances. Some will call it weakness.', fx: [{ rebel: [v.id, 'terms'] }] },
       { label: 'Release them from their oaths', hint: 'Let them go. Your realm shrinks.', fx: [{ rebel: [v.id, 'release'] }] }] }]);
-    events.push({ title: `House ${v.name} defies you`, text: `${lord.name} refuses your authority.`, where: v.seat, importance: 5, type: 'war', houses: [v.id] });
+    events.push({ title: `House ${v.name} defies House ${state.houses[v.liege]?.name}`, text: `${lord.name} refuses the authority of House ${state.houses[v.liege]?.name}.`, where: v.seat, importance: 5, type: 'war', houses: [v.id] });
   }
   return events;
 }
@@ -228,7 +228,7 @@ export function gatherMusters(state) {
     for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id) c.loc = 'army:' + host.id;
     if (v.obligations) v.obligations.host = host.id;
     delete state.armies[a.id];
-    if (liegeId === state.meta.player) events.push({ title: `House ${v.name} joins your host`, text: `${a.men.toLocaleString()} men under the ${v.name} banner join ${host.name}${host.at ? ` at ${state.holdings[host.at]?.name}` : ' on the march'}. The host now numbers ${host.men.toLocaleString()}.`, where: host.at || null, importance: 2, type: 'war', houses: [v.id] });
+    if (liegeId === state.meta.player) events.push({ title: `House ${v.name} joins ${host.name}`, text: `${a.men.toLocaleString()} men under the ${v.name} banner join ${host.name}${host.at ? ` at ${state.holdings[host.at]?.name}` : ' on the march'}. The host now numbers ${host.men.toLocaleString()}.`, where: host.at || null, importance: 2, type: 'war', houses: [v.id] });
   }
   return events;
 }
@@ -252,7 +252,7 @@ export function fieldService(state, days) {
         lev.v = (Number(lev.v) || 0) + Math.round(leave * 0.9);
         v.obligations = { ...(v.obligations || {}), levies: 'refused' }; delete v.obligations.host;
         for (const c of Object.values(state.characters)) if (c.loc === 'army:' + host.id && c.house === vid) c.loc = v.seat;
-        if (host.owner === state.meta.player) events.push({ title: `House ${v.name} goes home`, text: `Tired of the war and of your command, ${state.characters[v.lord]?.name || 'the lord'} strikes his tents in the night and marches ${leave.toLocaleString()} men home.`, where: v.seat, importance: 4, type: 'war', houses: [vid] });
+        if (host.owner === state.meta.player) events.push({ title: `House ${v.name} goes home`, text: `Tired of the war and of ${state.characters[state.houses[host.owner]?.lord]?.name || 'his liege'}'s command, ${state.characters[v.lord]?.name || 'the lord'} strikes his tents in the night and marches ${leave.toLocaleString()} men home.`, where: v.seat, importance: 4, type: 'war', houses: [vid] });
       }
     }
     if (host.men <= 0) delete state.armies[host.id];

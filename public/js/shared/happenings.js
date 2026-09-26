@@ -137,6 +137,7 @@ export function happenings(state, days, r = Math.random) {
       goods: () => pickR(GOODS[h.region] || GOODS.default, r), sea: SEAS[h.region] || 'the narrow sea',
       rival: rival ? s.houses[rival].name : 'a neighbour', friend: friend ? s.houses[friend].name : 'an old friend',
       season: s.world?.season || 'summer',
+      liege: s.characters[s.houses[s.meta.player]?.lord]?.name || `House ${s.houses[s.meta.player]?.name}`, liegehouse: `House ${s.houses[s.meta.player]?.name}`,
     };
     const title = sentenceCase(fill(variant(tpl.t, r), ctx, r)); const text = sentenceCase(fill(variant(tpl.x, r), ctx, r));
     const mine = inPlayerRealm(s, h);

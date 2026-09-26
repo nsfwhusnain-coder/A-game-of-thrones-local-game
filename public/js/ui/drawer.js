@@ -105,15 +105,15 @@ function storyHtml(s, t, e) {
   const hidden = app.reveal && app.reveal.turn === t.turn && !app.reveal.shown.has((t.events || []).indexOf(e));
   return `<div class="story imp-${e.importance}${mine ? ' mine' : ''}${hidden ? ' unrevealed' : ''}" data-news="${t.turn}:${(t.events || []).indexOf(e)}">
     <div class="story-h">${NEWS_ICON[e.type] ? icon(NEWS_ICON[e.type], 'sh-ico') : ''}${esc(e.title)}</div>
-    <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">${icon('pin', 'tg-ico')}${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${mine ? '<span class="tag you">Your house</span>' : ''}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
-    ${ordered ? `<div class="story-order">You commanded: “${esc(ordered.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim())}”</div>` : ''}
+    <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">${icon('pin', 'tg-ico')}${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
+    ${ordered ? `<div class="story-order">${esc(s.characters[s.houses[s.meta.player].lord]?.name || 'The lord')} commanded: “${esc(ordered.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim())}”</div>` : ''}
     <div class="story-x">${esc(e.text)}</div>${e.details ? `<div class="story-d">${esc(e.details)}</div>` : ''}</div>`;
 }
 // what the player ordered that day, and what the engine made of it — your hand in the day's story
 function yoursHtml(t) {
   const told = new Set((t.events || []).map((e) => e.orderId).filter(Boolean));
   const rows = (t.orders || []).filter((o) => (!o.auto || o.status) && !told.has(o.id)).map((o) => { const r = orderOutcome(o, app.state); return `<div class="yo">“${esc(o.text.length > 110 ? o.text.slice(0, 110) + '…' : o.text)}”</div>${r.lines.slice(0, 3).map((l) => `<div class="yr${/^could not/i.test(l) ? ' bad' : ''}">→ ${esc(l.replace(/^could not be done: /i, 'Could not: '))}</div>`).join('') || `<div class="yr">→ ${esc(STATUS_LABEL[r.status])}</div>`}`; }).join('');
-  return rows ? `<div class="yours"><div class="yh">Your orders</div>${rows}</div>` : '';
+  return rows ? `<div class="yours"><div class="yh">The commands of ${esc(app.state.characters[app.state.houses[app.state.meta.player].lord]?.name || 'the lord')}</div>${rows}</div>` : '';
 }
 function renderFeed(body) {
   const s = app.state;
@@ -121,7 +121,7 @@ function renderFeed(body) {
   // the news, as a list: a date, then one row per event (icon, headline, one line); click a row for the whole story
   const rv = app.reveal;
   const bar = rv ? `<div class="reveal-bar"><span class="rb-date" id="rb-date">${esc(rv.date || '')}</span><button class="btn small ghost" data-rb="pause">${rv.ctl.paused ? 'Resume' : 'Pause'}</button><button class="btn small ghost" data-rb="next">Next ›</button><button class="btn small ghost" data-rb="skip">Skip ⏭</button><span class="rb-count" id="rb-count">${rv.n} / ${rv.total}</span></div>` : '';
-  body.innerHTML = bar + decisionsHtml() + threadsHtml(s) + (turns.length ? turns.map((t) => { const ev = storyEvents(t); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
+  body.innerHTML = bar + decisionsHtml() + threadsHtml(s) + (turns.length ? turns.map((t) => { const ev = storyEvents(t).reverse(); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
       ${yoursHtml(t)}${ev.map((e) => storyHtml(s, t, e)).join('') || '<div class="news-quiet">No news of note.</div>'}
       ${bg ? `<div class="news-more" data-meanwhile="${t.turn}">+ ${bg} small happening${bg > 1 ? 's' : ''} across the realm</div>` : ''}</div>`; }).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>

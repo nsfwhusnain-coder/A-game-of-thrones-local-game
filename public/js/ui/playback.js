@@ -27,21 +27,29 @@ export async function playTurn(turn, { onDone } = {}) {
   if (app.reveal?.turn !== turn.turn) prepareReveal(turn);
   const rv = app.reveal; const ctl = rv.ctl;
   setDrawer('feed');
+  // like a film: the camera travels to the place, the news appears at the head of the chronicle, it holds while it is
+  // read — then on to the next. One steady beat for every event; nothing rushes.
+  const body = document.querySelector('#drawer-body');
   for (let i = 0; i < evs.length && !ctl.skip; i++) {
     const e = evs[i]; ctl.next = false;
     const idx = (turn.events || []).indexOf(e);
+    const pos = e.where && app.state.holdings[e.where]?.pos;
+    if (pos && app.map) { app.map.flyTo(pos, e.importance >= 4 ? 300 : 420); await wait(1100, ctl); }
+    if (ctl.skip) break;
     rv.n = i + 1; rv.date = e.date || turn.date; rv.shown.add(idx);
     const d = $('#rb-date'); if (d) d.textContent = rv.date; const c = $('#rb-count'); if (c) c.textContent = `${rv.n} / ${rv.total}`;
     const card = document.querySelector(`.story[data-news="${turn.turn}:${idx}"]`);
-    if (card) { card.classList.remove('unrevealed'); card.classList.add('arrive'); card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); setTimeout(() => card.classList.remove('arrive'), 2600); }
-    const pos = e.where && app.state.holdings[e.where]?.pos;
-    if (pos && app.map) { app.map.flyTo(pos, e.importance >= 4 ? 300 : 420); app.map.flash?.(pos); }
+    if (card) { card.classList.remove('unrevealed'); card.classList.add('arrive'); setTimeout(() => card.classList.remove('arrive'), 3000); }
+    if (body) body.scrollTo({ top: 0, behavior: 'smooth' }); // the newest is always at the top
+    if (pos && app.map) app.map.flash?.(pos);
     if (app.map) app.map.reelF = span > 3 ? Math.min(1, (e.day || 1) / span) : (i + 1) / (evs.length + 1);
     sfx(e.importance >= 4 && e.type === 'war' ? 'horn' : 'open');
-    await wait(2600 + (e.importance || 2) * 400 + Math.min(3500, ((e.title || '').length + (e.text || '').length) * 18), ctl);
+    const words = (e.title || '').length + (e.text || '').length + (e.details || '').length * 0.5;
+    ctl.next = false;
+    await wait(Math.max(3000, Math.min(4800, 2400 + words * 9)), ctl);
   }
   // the rest of the day's march, so every host finishes its road on screen
   if (!ctl.skip && app.map) { const f0 = app.map.reelF || 0; for (let k = 1; k <= 20; k++) { app.map.reelF = f0 + ((1 - f0) * k) / 20; await wait(40, ctl); } }
-  app.reveal = null; setDrawer('feed'); const body = document.querySelector('#drawer-body'); if (body) body.scrollTop = 0;
+  app.reveal = null; setDrawer('feed'); const top = document.querySelector('#drawer-body'); if (top) top.scrollTop = 0;
   onDone?.();
 }
