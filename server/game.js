@@ -176,6 +176,7 @@ export async function previewOrderPlans(id) {
 
 export async function advance(id, { span = '1d', orders } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
+  if (warming.has(id)) await warming.get(id); // the model is still reading the start of this very prompt
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
@@ -359,7 +360,22 @@ export async function advance(id, { span = '1d', orders } = {}) {
   // Compress old turns into the chronicle without making the player wait
   const job = maybeConsolidate(id, state, cfg).catch((e) => { console.error('consolidation failed:', e.message); return null; }).finally(() => consolidating.delete(id));
   consolidating.set(id, job);
+  // while the player watches the day unfold, the model reads the unchanging part of the next turn's prompt
+  job.then(() => warmNext(id));
   return { state: loadState(id), turn: record, consolidated: 'background' };
+}
+
+// The model server can resume only from where an earlier request ended. So after each turn it is sent the next
+// turn's prompt up to the point where it starts to change (rules, roster, chronicle, the log of past days): the
+// next turn then reads only what is new — about a third of the prompt — and is two or three times faster.
+const warming = new Map(); // save id -> promise
+export const STABLE_END = 'THE STATE OF THE REALM NOW';
+function warmNext(id) {
+  const cfg = loadConfig(); if (cfg.provider === 'mock' || warming.has(id)) return;
+  let msgs; try { const st = loadState(id); msgs = buildJumpPrompt(st, [], '1d', readChronicle(id), cfg); } catch { return; }
+  const cut = msgs[1].content.indexOf(STABLE_END); if (cut < 0) return;
+  const job = chat([msgs[0], { role: 'user', content: msgs[1].content.slice(0, cut) }], { kind: 'warm', maxTokens: 1, thinking: 'off' }).catch(() => null).finally(() => warming.delete(id));
+  warming.set(id, job);
 }
 
 async function maybeConsolidate(id, state, cfg, force = false) {

@@ -83,6 +83,8 @@ if (!args.only || args.only === 'audiences') {
   for (const [who, line, want, shows] of cases) {
     const t0 = Date.now(); let r;
     try { r = await game.talk(id, who, line); } catch (e) { log(`- ${who}: ${e.message}`); add('audience answers', false); continue; }
+    // far away it is a letter: the answer is written now and lands later — score the letter itself
+    if (r.reply == null) { const last = r.state.chats?.[who]?.at(-1); r.reply = last?.pending ? last.text : ''; if (last?.verdict) r.stance = { ...r.stance, verdict: last.verdict }; }
     const ms = Date.now() - t0; const reply = String(r.reply || '');
     const narr = [...reply.matchAll(/\*([^*]+)\*/g)].map((m) => m[1]);
     const letter = !narr.length || /^(my lord|lord|to |from |eddard|ned\b|dear)/i.test(reply.trim()); // by raven: a letter has no narration to judge

@@ -324,7 +324,7 @@ export function memoryBlock(state, chronicleMd, budgetTokens, keepRecent) {
 // One turn as a few dense lines (shared with the save's world-log.md)
 // The chronicle is kept whole up to a cap; past that, its oldest sections go first (cut at section boundaries so
 // that it changes rarely and the model server's cache survives). The engine's own state still holds every fact.
-const CHRONICLE_CAP = 5000;
+const CHRONICLE_CAP = 3000;
 function chronicleWithin(md, tokens) {
   if (estimateTokens(md) <= tokens) return md;
   const secs = md.split(/\n(?=##+ )/); const head = secs.shift();
@@ -528,7 +528,7 @@ export function buildSuggestPrompt(state, chronicleMd, cfg) {
 // journeys begun and ended, deaths, wars, pacts, fealty, lands changing hands, hosts raised and destroyed.
 const FACT_OPS = new Set(['travel', 'ride', 'send_character', 'army_create', 'raise_army', 'army_destroy', 'army_disband', 'war', 'war_join', 'pact', 'treaty', 'alliance', 'marriage', 'liege', 'set_liege', 'fealty', 'battle', 'project', 'wed', 'marriage_characters', 'betroth', 'recruit', 'hire']);
 const FACT_TEXT = /\b(arrives at|reaches|sets out|rides for|turns .+ for|has died|dies\b|answers the call|marches for|declares|swears|passes from|is destroyed|ceased to exist|captured|imprisoned|released|executed|wed to|betrothed|begins:)/i;
-export function engineFacts(turns, max = 40) {
+export function engineFacts(turns, max = 24) {
   const out = [];
   for (const t of turns) {
     const when = t.dateFrom && t.dateFrom !== t.date && (SPANS[t.span]?.days || 1) > 1 ? `${t.dateFrom} – ${t.date}` : t.date;

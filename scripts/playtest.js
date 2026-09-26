@@ -58,6 +58,7 @@ for (let t = 1; t <= turns; t++) {
     game.setOrders(id, [...game.loadState(id).orders, ...step.orders.map((text, k) => ({ id: `t${t}o${k}`, text }))]);
     try { const pv = await game.previewOrderPlans(id); for (const o of pv.orders.filter((x) => x.preview)) log(`- receipt: ${o.text.slice(0, 60)} → ${o.preview.join('; ')}`); } catch (e) { log(`- receipt FAILED: ${e.message}`); }
   }
+  if (args.read) await new Promise((res) => setTimeout(res, Number(args.read) * 1000)); // the player reads the day's news
   const t0 = Date.now();
   let r; try { r = await game.advance(id, { span: t <= Number(args.weeks || 0) ? '1w' : t % 5 === 0 ? '1w' : '1d', orders: game.loadState(id).orders.filter((o) => o.auto || o.planFor || /^t\d+o\d+$/.test(o.id)).concat(step.orders && !game.loadState(id).orders.some((o) => /^t\d+o\d+$/.test(o.id)) ? step.orders.map((text, k) => ({ id: `t${t}o${k}`, text })) : []) }); } catch (e) { log(`- ADVANCE FAILED: ${e.message}`); continue; }
   const tr = r.turn; const u = tr.usage || {};
