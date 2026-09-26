@@ -2,9 +2,11 @@
 // actions — someone rides somewhere (with men), a host marches, men are recruited where the house has people,
 // an officer is hired, a levy is raised — and the engine carries them out. The story model is then told what
 // has already been done, so it narrates the consequences instead of deciding whether to obey.
-import { applyChanges, resolvePlaceId, placeName, slug } from '../public/js/shared/world.js';
+import { applyChanges, resolvePlaceId, placeName, slug, dateStr, dayNumber } from '../public/js/shared/world.js';
+import { MILES_PER_UNIT } from '../public/data/geography.js';
 import { whereabouts } from '../public/js/shared/roads.js';
 import { commandable } from '../public/js/shared/errands.js';
+import { PROJECT_TEMPLATES } from '../public/js/shared/economy.js';
 export { commandable };
 
 const OFFICES = ['spymaster', 'steward', 'maester', 'captain', 'master_at_arms', 'knight', 'envoy', 'commander'];
@@ -47,8 +49,9 @@ Reply with ONE JSON object: {"actions":[...],"story":[...]}. Only concrete moves
 - {"op":"raise","order":1,"at":"<holding id>","men":<number>,"to":"<place name, optional>"}   — call up levies from the house's own lands (with "to", the new levies march there at once)
 - {"op":"hire","order":1,"role":"${OFFICES.join('|')}","at":"<place name>"}   — take a new officer into service there
 - {"op":"appoint","order":1,"character":"<person id>","role":"${OFFICES.join('|')}"}   — give one of your people an office
+- {"op":"works","order":1,"template":"${PROJECT_TEMPLATES.map((t) => t.key).join('|')}","at":"<holding id>"}   — fund building works (granaries, walls, a rookery…) on the house's own land
 "story" — the numbers of orders that are not actions of these kinds (diplomacy, letters, intrigue, speeches, feasts…): the story will handle them.
-Use only ids from the lists. "to" is always a real place by name (a castle or town): for "attack the Lannisters" use their seat; for "go south" pick the place on the road that way. To fight when you have no host at hand, first "raise" levies (with "to"). Your sworn lords' hosts answering your call are yours to command too.
+A raven, letter or "send word" is never a travel action: it goes in "story" — only a person told to ride, go or deliver by hand travels. Use only ids from the lists. "to" is always a real place by name (a castle or town): for "attack the Lannisters" use their seat; for "go south" pick the place on the road that way. To fight when you have no host at hand, first "raise" levies (with "to"). Your sworn lords' hosts answering your call are yours to command too.
 Places by their name as written. If an order names "here", it means where the lord is. JSON only.`;
   const user = `${context(state)}\n\nTHE LORD'S ORDERS:\n${orders.map((o, i) => `${i + 1}. ${o.text}`).join('\n')}`;
   return [{ role: 'system', content: system }, { role: 'user', content: user }];
@@ -113,7 +116,21 @@ export function named(state, c, text) {
   return Object.entries(KIN_WORDS).some(([w, is]) => new RegExp(`\\b${w}\\b`, 'i').test(t) && is(state, c, lord));
 }
 const HIRING = /\b(recruit|hire|enlist|sign(?:s|ing)? on|take on|buy|sellswords?|free company|more men|new men|men-at-arms|raise (?:[\w,]+ ){0,3}(?:men|swords|spears|soldiers|guards))\b/i;
+const LETTER = /\b(raven|letter|write|writes|written|send word|a message|missive|note to)\b/i;
+const IN_PERSON = /\b(ride|rides|go|goes|travel|journey|in person|himself|herself|themselves|escort|carry it|deliver it by hand|by hand)\b/i;
 const MEN_WORDS = /\b(men|riders|swords|guards?|escort|company|spears|knights|soldiers|retinue|household)\b/i;
+
+/** Begin one of the works a house can fund (economy.js PROJECT_TEMPLATES) at one of its holdings — once. */
+export function startWorks(state, key, holding) {
+  const p = state.meta.player; const me = state.houses[p];
+  const t = PROJECT_TEMPLATES.find((x) => x.key === key || slug(x.name) === slug(key || '')); if (!t) throw new Error('no such works');
+  const at = resolvePlaceId(holding); const hold = state.holdings[at]?.owner === p ? at : me.seat;
+  if ((Number(me.figures.treasury?.v) || 0) < t.cost * 0.25) throw new Error(`The treasury cannot even fund the first stage of ${t.name} (needs ~${Math.round(t.cost * 0.25)} gd up front).`);
+  const name = `${t.name} at ${state.holdings[hold].name}`;
+  const r = applyChanges(state, [{ op: 'project', house: p, name, template: t.key, cost: t.cost, months: t.months, holding: hold, effect: t.effect }]);
+  if (r.rejected.length) throw new Error(r.rejected[0].reason.replace(/^./, (x) => x.toUpperCase()) + '.');
+  return { name, cost: t.cost, months: t.months };
+}
 
 /** Carry out interpreted actions; returns per-order results. `orders` are the orders the actions came from. */
 export function executeActions(state, actions, orders = []) {
@@ -146,6 +163,7 @@ export function executeActions(state, actions, orders = []) {
         if (dest && made) { made.march = { to: dest, since: state.meta.turn }; made.status = 'marching'; made.at = null; note(i, `${made.name} marches for ${placeName(state, dest)}`); }
         continue;
       }
+      if (a.op === 'works') { const w = startWorks(state, a.template, a.at); note(i, `Work begins: ${w.name} (${w.cost} dragons over ${w.months} moons)`); continue; }
       if (a.op === 'appoint') {
         const c = state.characters[a.character]; if (!c || c.house !== p || !c.alive) throw new Error('no such person of yours');
         if (!OFFICES.includes(a.role)) throw new Error('unknown office');
@@ -161,6 +179,8 @@ export function executeActions(state, actions, orders = []) {
         const who = state.characters[a.character]; const text = orders[i - 1]?.text;
         if (who && text && !named(state, who, text)) throw new Error(`the order does not name ${who.name}`);
         if (text && !MEN_WORDS.test(text) && !/\d/.test(text)) change.men = 0;
+        // "send a raven", "write to", "send word": a letter flies; no one rides unless the order says so
+        if (text && LETTER.test(text) && !IN_PERSON.test(text)) throw new Error('that is a letter — it goes by raven, and no one rides');
         change.to = destination(state, a.to) || a.to;
       }
       const r = applyChanges(state, [change], { source: 'Your orders' });
@@ -170,15 +190,46 @@ export function executeActions(state, actions, orders = []) {
   return results;
 }
 
+/** Turn written orders into engine actions: the model reads them, the rules catch what it misses. */
+export async function planOrders(state, orders, ask) {
+  let plan = null;
+  if (ask) { try { plan = await ask(ordersPrompt(state, orders)); } catch { plan = null; } }
+  if (!plan || !Array.isArray(plan.actions)) plan = readOrdersByRule(state, orders);
+  else if (!plan.actions.length) { const byRule = readOrdersByRule(state, orders); if (byRule.actions.length) plan = byRule; }
+  return plan.actions || [];
+}
+const hasPlan = (o) => Array.isArray(o.plan) && o.planFor === o.text;
+
+/**
+ * The receipt for orders not yet carried out: each is read now and tried on a copy of the world, so the player
+ * sees exactly what will be done (who, where, how long, how many) before the turn — and the turn then does that.
+ */
+export async function previewOrders(state, ask) {
+  const todo = state.orders.filter((o) => !o.auto && !o.executed && String(o.text || '').trim() && !hasPlan(o));
+  if (!todo.length) return false;
+  const actions = await planOrders(state, todo, ask);
+  const dry = structuredClone(state);
+  const res = executeActions(dry, actions, todo);
+  const letters = todo.map((o) => ({ ...o })); postLetters(dry, letters);
+  todo.forEach((o, k) => {
+    o.plan = actions.filter((a) => Number(a.order) === k + 1).map((a) => ({ ...a, order: 1 })); o.planFor = o.text;
+    const lines = [...(res[k + 1] || []), ...(letters[k].result || [])];
+    o.preview = lines.length ? lines : ['The chronicle will tell how it goes — no one rides and no gold is spent by the engine'];
+  });
+  return true;
+}
+
 /** Interpret and execute the fresh written orders of the turn, marking each with what was done. */
 export async function carryOutOrders(state, ask) {
   const fresh = state.orders.filter((o) => !o.auto && !o.executed && String(o.text || '').trim());
   if (!fresh.length) return [];
-  let plan = null;
-  if (ask) { try { plan = await ask(ordersPrompt(state, fresh)); } catch { plan = null; } }
-  if (!plan || !Array.isArray(plan.actions)) plan = readOrdersByRule(state, fresh);
-  else if (!plan.actions.length) { const byRule = readOrdersByRule(state, fresh); if (byRule.actions.length) plan = byRule; }
-  const results = executeActions(state, plan.actions, fresh);
+  // orders already read for their receipt do exactly what the receipt said; the rest are read now
+  const need = fresh.filter((o) => !hasPlan(o));
+  const planned = need.length ? await planOrders(state, need, ask) : [];
+  const actions = [];
+  fresh.forEach((o, k) => { if (hasPlan(o)) for (const a of o.plan) actions.push({ ...a, order: k + 1 }); });
+  for (const a of planned) { const o = need[(Number(a.order) || 0) - 1]; if (o) actions.push({ ...a, order: fresh.indexOf(o) + 1 }); }
+  const results = executeActions(state, actions, fresh);
   // 'all my men', 'the whole host', 'the banners': every sworn host answering the call goes where the order sends the rest
   fresh.forEach((o, k) => {
     if (!/\b(all|every|everything|whole|entire|all my men|the army|my army|banners|bannermen|our strength)\b/i.test(o.text)) return;
@@ -191,6 +242,7 @@ export async function carryOutOrders(state, ask) {
     }
   });
   const done = resolveEnvoys(state, fresh);
+  postLetters(state, fresh);
   fresh.forEach((o, k) => {
     const r = results[k + 1];
     if (r?.length) {
@@ -240,4 +292,35 @@ export function resolveEnvoys(state, orders) {
     done.push({ order: o.text, result: [`${c.name} ${OUTCOME[stance.verdict] || stance.verdict}`] });
   }
   return done;
+}
+
+// ── Letters the lord sends ──
+// A written order to someone far away is a raven: it is recorded as sent, flies for a few days, is delivered, and
+// is answered when their raven comes back (shared/errands.js postTick). The Letters tab shows it all.
+const RAVEN_MILES_A_DAY = 300;
+function recipient(state, text) {
+  const p = state.meta.player; const lord = state.characters[state.houses[p].lord];
+  const hit = addressed(state, text); if (hit) return hit;
+  // one of your own, away from you ("write to Jory in King's Landing")
+  const mine = Object.values(state.characters).find((c) => c.alive && c.house === p && c.id !== lord?.id && (c.travel || c.loc !== lord?.loc) && named(state, c, text));
+  if (mine) return mine;
+  // a place: its lord ("a raven to the Eyrie")
+  const m = String(text).match(/\bto\s+(?:the\s+)?([A-Z][\w'’]+(?:\s+[A-Z][\w'’]+)*)/g) || [];
+  for (const x of m) { const id = resolvePlaceId(x.replace(/^to\s+(the\s+)?/i, '')); const h = id && state.holdings[id]; const who = h && state.characters[state.houses[h.owner]?.lord]; if (who?.alive && who.house !== p) return who; }
+  return null;
+}
+export function postLetters(state, orders) {
+  const p = state.meta.player; const lord = state.characters[state.houses[p].lord]; state.post = state.post || [];
+  const here = lord && (whereabouts(state, lord).place || lord.loc);
+  for (const o of orders) {
+    if (o.auto || o.post || !LETTER.test(o.text)) continue;
+    const c = recipient(state, o.text); if (!c) continue;
+    const a = state.holdings[resolvePlaceId(here)]?.pos; const b = state.holdings[resolvePlaceId(c.loc)]?.pos || (c.travel && state.holdings[c.travel.to]?.pos);
+    const miles = a && b ? Math.hypot(a[0] - b[0], a[1] - b[1]) * MILES_PER_UNIT : 600;
+    const days = Math.max(1, Math.round(miles / RAVEN_MILES_A_DAY));
+    const id = `post_${state.meta.turn}_${state.post.length}`;
+    state.post.unshift({ id, to: c.id, toName: c.name, text: o.text, sent: dateStr(state.meta.date), sentDay: dayNumber(state.meta.date), arriveDay: dayNumber(state.meta.date) + days, days, status: 'in flight' });
+    state.post = state.post.slice(0, 40);
+    o.post = id; o.result = [...(o.result || []), `A raven flies to ${c.name} (~${days} ${days === 1 ? 'day' : 'days'})`];
+  }
 }

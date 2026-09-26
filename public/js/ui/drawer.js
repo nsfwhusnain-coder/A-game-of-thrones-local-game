@@ -19,7 +19,7 @@ export function renderDrawer() {
 }
 
 export function eventHtml(e, compact = false) {
-  return `<div class="event imp-${e.importance}${compact ? ' compact' : ''}" ${e.where ? `data-where="${e.where}"` : ''}>${!compact || e.importance >= 4 ? eventArt(e) : ''}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<details class="ev-more"><summary>More</summary><div>${esc(e.details)}</div></details>` : ''}<div class="meta">${e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
+  return `<div class="event imp-${e.importance}${compact ? ' compact' : ''}" ${e.where ? `data-where="${e.where}"` : ''}>${!compact || e.importance >= 4 ? eventArt(e) : ''}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<details class="ev-more"><summary>More</summary><div>${esc(e.details)}</div></details>` : ''}<div class="meta">${e.date ? `${esc(e.date.replace(/, \d+ AC$/, ''))} · ` : e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
 }
 // The small life of the realm, told briefly beneath the turn's great events, grouped by where it happened
 const REGION_ORDER = ['north', 'wall', 'beyond', 'iron_islands', 'riverlands', 'vale', 'westerlands', 'crownlands', 'reach', 'stormlands', 'dorne', 'essos'];
@@ -41,7 +41,7 @@ export function decisionsHtml(list) {
     return `<div class="decision" data-dec="${d.id}"><div class="dec-head">${who ? `<img src="${por(who, 64)}" alt="">` : '<span class="dec-icon">⚖</span>'}<div><div class="dec-title">${esc(d.title)}</div><div class="muted" style="font-size:0.75rem">${who ? esc(who.name) + ' · ' : ''}${esc(d.date)}</div></div></div>
       <div class="eb">${esc(d.text)}</div>
       <div class="dec-opts">${d.options.map((o, i) => `<button class="btn dec-opt" data-dec-id="${d.id}" data-opt="${i}" title="${esc(o.hint || '')}">${esc(o.label)}${o.hint ? `<small>${esc(o.hint)}</small>` : ''}</button>`).join('')}</div>
-      <div class="dec-own"><textarea class="input dec-note" rows="2" placeholder="Or answer in your own words — or add conditions to a choice above…"></textarea><button class="btn small dec-custom" data-dec-id="${d.id}" disabled>Answer in my own words</button></div></div>`;
+      <div class="dec-own"><textarea class="input dec-note" rows="2" placeholder="Or write your own answer here (the button wakes when you do) — or add conditions to a choice above…"></textarea><button class="btn small dec-custom" data-dec-id="${d.id}" disabled title="Write your answer in the box first">Answer in my own words</button></div></div>`;
   }).join('');
 }
 export function wireDecisions(root, { onAllDone, onDecided } = {}) {
@@ -114,7 +114,10 @@ export function ravenHtml(r) {
 }
 async function renderLetters(body) {
   const s = app.state;
-  body.innerHTML = s.ravens.map(ravenHtml).join('') || '<p class="muted">No ravens have come.</p>';
+  const LABEL = { 'in flight': ['underway', 'In flight'], delivered: ['done', 'Delivered'], answered: ['answered', 'Answered'] };
+  const today = s.meta.date.year * 360 + (s.meta.date.month - 1) * 30 + (s.meta.date.day - 1);
+  const sent = (s.post || []).slice(0, 12).map((x) => { const [c, l] = LABEL[x.status] || ['', x.status]; return `<div class="errand"><span class="ost ${c}">${l}</span><div class="grow"><b>To ${esc(x.toName)}</b> <span class="muted">· sent ${esc(x.sent.replace(/, \d+ AC$/, ''))}${x.status === 'in flight' ? ` · lands in ~${Math.max(1, x.arriveDay - today)} ${x.arriveDay - today === 1 ? 'day' : 'days'}` : ''}</span><div class="muted" style="font-size:0.8rem">${esc(x.text.slice(0, 140))}${x.text.length > 140 ? '…' : ''}</div></div></div>`; }).join('');
+  body.innerHTML = `<h4>Received</h4>${s.ravens.map(ravenHtml).join('') || '<p class="muted">No ravens have come.</p>'}${sent ? `<h4 style="margin-top:1rem">Sent</h4>${sent}` : ''}`;
   if (s.ravens.some((r) => !r.read)) { try { const r = await api(`/games/${app.saveId}/ravens/read`, { body: {} }); s.ravens = r.ravens; app.renderTop?.(); } catch { /* */ } }
 }
 

@@ -303,6 +303,10 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .ost.failed { color: #e0786a; border-color: #7a3a32; }
 .ost.delayed { color: #e0b46a; border-color: #7a6232; }
 .order.st-done .t, .order.st-underway .t { opacity: 0.8; }
+.order .grow { flex: 1; min-width: 0; }
+.order .t { display: block; }
+.receipt { font-size: 0.78rem; color: var(--gold2); margin-top: 0.15rem; }
+.receipt .bad { color: #e0786a; }
 .errands-chip { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); color: var(--text); font-size: 0.78rem; padding: 0.2rem 0.6rem; border-radius: 999px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
 .errands-chip:hover { border-color: var(--gold); }
 .errand { display: flex; gap: 0.6rem; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }

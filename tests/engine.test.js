@@ -311,3 +311,39 @@ test('an order to garrison and drill hires no one', () => {
   assert.match(res[1][0], /does not ask for men/);
   assert.equal(s.houses.stark.figures.treasury.v, gold - 200 * 9);
 });
+test('council: each answer is bound to the advisor who gave it', () => {
+  const P = { vayon_poole: 'Vayon Poole', luwin: 'Maester Luwin', rodrik_cassel: 'Ser Rodrik Cassel', jory_cassel: 'Jory Cassel' };
+  const r = readReplies('{"replies":[{"speaker":"Vayon","text":"The stores are counted."},{"speaker":"maester_luwin","text":"The letters are read."},{"speaker":"","text":"*Ser Rodrik tugs his whiskers.* The gates are watched."}]}', P, 'vayon_poole');
+  assert.deepEqual(r.replies.map((x) => x.speaker), ['vayon_poole', 'luwin', 'rodrik_cassel']);
+});
+test('a raven order sends a letter, not a rider', () => {
+  const s = fresh();
+  s.orders = [{ id: 'o1', text: 'Have Vayon send a discreet raven to the Eyrie about Jon Arryn\'s last days.' }];
+  const res = executeActions(s, [{ op: 'travel', order: 1, character: 'vayon_poole', to: 'The Eyrie', men: 0 }], s.orders);
+  assert.match(res[1][0], /letter/);
+  assert.equal(s.characters.vayon_poole.travel, undefined);
+});
+test('a letter is tracked: in flight, delivered, answered', async () => {
+  const { postLetters } = await import('../server/orders.js');
+  const { postTick, underway } = await import('../public/js/shared/errands.js');
+  const { addDays } = await import('../public/js/shared/world.js');
+  const s = fresh(); s.post = [];
+  postLetters(s, [{ id: 'o1', text: 'Send a discreet raven to Lady Lysa Arryn at the Eyrie about Jon Arryn\'s last days.' }]);
+  assert.equal(s.post.length, 1); assert.equal(s.post[0].to, 'lysa_arryn'); assert.equal(s.post[0].status, 'in flight');
+  assert.ok(underway(s).some((x) => x.kind === 'raven'));
+  s.meta.date = addDays(s.meta.date, s.post[0].days); postTick(s); assert.equal(s.post[0].status, 'delivered');
+  apply(s, [{ op: 'raven', from: 'lysa_arryn', to: 'eddard_stark', text: 'Dearest brother…' }]); postTick(s);
+  assert.equal(s.post[0].status, 'answered');
+});
+test('an order\'s receipt changes nothing, and the turn does what it said', async () => {
+  const { previewOrders } = await import('../server/orders.js');
+  const s = fresh(); const guard = s.houses.stark.figures.menAtArms.v;
+  s.orders = [{ id: 'o1', text: 'Send Jory Cassel to King\'s Landing with twenty men.' }];
+  const ask = async () => ({ actions: [{ op: 'travel', order: 1, character: 'jory_cassel', to: "King's Landing", men: 20 }], story: [] });
+  await previewOrders(s, ask);
+  assert.match(s.orders[0].preview[0], /Jory Cassel rides for King's Landing with 20 men/);
+  assert.equal(s.characters.jory_cassel.loc, 'stark'); assert.equal(s.houses.stark.figures.menAtArms.v, guard);
+  await carryOutOrders(s, async () => { throw new Error('the model is not asked again'); });
+  assert.ok(String(s.characters.jory_cassel.loc).startsWith('army:'));
+  assert.match(s.orders[0].result[0], /rides for King's Landing/);
+});

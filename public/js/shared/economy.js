@@ -283,6 +283,8 @@ export function settle(state, days) {
     const target = Math.max(0, potential - raised);
     const nv = cur + (target - cur) * clamp(0.12 * months, 0, 1);
     if (Math.abs(nv - cur) >= 1) f.levies = { v: Math.round(nv), asOf: date, src: f.levies?.src || src, confidence: 'estimate' };
+    // why it moves: shown with the figure, so a drift of a few men a day is never a mystery
+    if (f.levies) f.levies.why = { bear: Math.round(potential), raised, condition: Math.round(condition * 100) };
 
     // holdings drift: unrest & prosperity
     const tax = TAX_LEVELS[house.policy?.tax || 'normal'];

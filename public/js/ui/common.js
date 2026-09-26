@@ -83,7 +83,25 @@ export function modal(html) {
 export function closeModal() { $('#modal').classList.add('hidden'); }
 
 let saveTimer = null;
-export function saveOrders() { clearTimeout(saveTimer); saveTimer = setTimeout(() => api(`/games/${app.saveId}/orders`, { body: { orders: app.state.orders } }).catch((e) => toast(e.message, true)), 300); }
+export function saveOrders() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try { await api(`/games/${app.saveId}/orders`, { body: { orders: app.state.orders } }); } catch (e) { toast(e.message, true); return; }
+    readOrders();
+  }, 300);
+}
+// the receipt: each new or edited order is read and tried on a copy of the world, and what will be done is shown under it
+let reading = null;
+async function readOrders() {
+  if (app.busy || !app.state.orders.some((o) => !o.auto && !o.executed && o.planFor !== o.text)) return;
+  const job = reading = api(`/games/${app.saveId}/orders/preview`, { body: {} });
+  try {
+    const r = await job; if (reading !== job) return;
+    const byId = new Map(r.orders.map((o) => [o.id, o]));
+    for (const o of app.state.orders) { const x = byId.get(o.id); if (x?.planFor === o.text) Object.assign(o, { plan: x.plan, planFor: x.planFor, preview: x.preview }); }
+    app.renderOrders?.();
+  } catch { /* the turn will read them itself */ }
+}
 export function addOrder(text) {
   text = String(text || '').trim(); if (!text) return;
   app.state.orders.push({ id: Math.random().toString(36).slice(2, 10), text });

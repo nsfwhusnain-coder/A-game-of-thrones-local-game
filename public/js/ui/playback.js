@@ -12,7 +12,7 @@ export async function playTurn(turn, { onDone } = {}) {
   // a quiet day: no news, but the hosts and riders still walk their road before your eyes
   if (!evs.length) { if (app.map) for (let k = 1; k <= 36; k++) { app.map.reelF = k / 36; await new Promise((r) => setTimeout(r, 40)); } onDone?.(); return; }
   const end = app.state.meta.date;
-  const dayDate = (d) => dateStr(addDays(end, d - 1 - span)); // day 1 is the first day of the period
+  const dayDate = (d) => dateStr(addDays(end, d - span)); // day d ends d days after the period began; the last day is today's date
   document.querySelector('#reel')?.remove();
   const el = document.createElement('div'); el.id = 'reel'; el.className = 'reel';
   el.innerHTML = `<div class="reel-head"><div class="reel-date" id="reel-date">${esc(dayDate(1))}</div><div class="reel-day" id="reel-day">${span > 1 ? `Day 1 of ${span}` : ''}</div>

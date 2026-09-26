@@ -8,6 +8,7 @@ import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.j
 import { initEconomy, TAX_LEVELS, project } from './economy.js';
 import { heirOf } from './people.js';
 import { addReport, updateIntel } from './intel.js';
+import { commandable } from './errands.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -601,7 +602,7 @@ function applyOne(state, ch, ctx) {
       const miles = Math.hypot(to[0] - from[0], to[1] - from[1]) * MILES_PER_UNIT * 1.12;
       const days = Math.max(1, Math.round(miles / 38)); // a rider with a small escort
       const turning = c.travel ? ` (turning back from the road to ${placeName(state, c.travel.to)})` : '';
-      c.travel = { to: dest, days, left: days, since: date, from: [...from] };
+      c.travel = { to: dest, days, left: days, since: date, from: [...from], fromPlace: c.travel?.fromPlace || resolvePlaceId(c.loc) || nearestHolding(state, from) };
       return { op, text: `${c.name} sets out for ${placeName(state, dest)} (~${days} days' ride)${turning}` };
     }
     case 'recruit': case 'hire_men': {
@@ -658,6 +659,8 @@ function applyOne(state, ch, ctx) {
         // Physics of the realm: without a battle, siege, ambush, plague or wreck a host loses men only to
         // desertion, sickness and weather: ~2% a moon in summer, 4% in autumn, 8% in winter.
         const violent = ctx.battleHouses?.has(a.owner) || /battle|siege|storm(ed|ing)|ambush|assault|slaughter|massacre|plague|pox|flux|shipwreck|wreck|drown|sack/i.test(`${ch.cause || ''} ${ch.reason || ''} ${ch.note || ''} ${ch.status || ''}`);
+        // the player's own men are not whittled away by the story: they fall in battle, on the road, or not at all
+        if (nv < old && !violent && ctx.protectPlayer && commandable(state, a)) throw new Error(`${a.name} loses no men without a cause the engine can see`);
         if (nv < old && !violent && a.type !== 'fleet' && ctx.source !== 'Your decision') {
           const season = state.world?.season || 'summer';
           const rate = ({ summer: 0.02, spring: 0.025, autumn: 0.04, winter: 0.08 })[season] ?? 0.03;
@@ -735,9 +738,10 @@ function applyOne(state, ch, ctx) {
         const raw = ch.with || ch.loc || ch.location;
         const army = findArmy(state, String(raw).replace(/^army:/, ''));
         const l = army && !resolvePlaceId(raw) ? 'army:' + army : (resolvePlaceId(raw) || String(raw));
-        const here = charPos(state, c); const there = l.startsWith('army:') ? state.armies[army]?.pos : placePos(l, state.holdings);
+        const here = roadPos(state, c) || charPos(state, c); const there = l.startsWith('army:') ? state.armies[army]?.pos : placePos(l, state.holdings);
         const miles = here && there ? Math.hypot(there[0] - here[0], there[1] - here[1]) * MILES_PER_UNIT * 1.12 : 0;
-        if (ctx.protectPlayer && c.house === state.meta.player && !ctx.mayMove?.includes(c.id) && l !== c.loc) out.push(`stays where you left them (only you send ${c.name} anywhere)`);
+        if (c.travel?.to === l) out.push(`still on the road to ${placeName(state, l)}`); // the engine brings riders in; the story does not
+        else if (ctx.protectPlayer && c.house === state.meta.player && !ctx.mayMove?.includes(c.id) && l !== c.loc) out.push(`stays where you left them (only you send ${c.name} anywhere)`);
         else if (miles > 60 && !l.startsWith('army:') && c.alive && ch.alive !== false && !/imprisoned|captive|dead/.test(ch.status || c.status || '')) {
           // no one crosses the realm in a day: a far move is a journey, taken on the road
           const days = Math.max(2, Math.round(miles / 38));
@@ -856,7 +860,7 @@ function applyOne(state, ch, ctx) {
       // one of the household at the lord's side speaks to him; no raven flies across a hall
       const lc = lord && state.characters[lord];
       if (fc && fc.house === pl && lc && !fc.travel && !lc.travel && fc.loc === lc.loc) throw new Error(`${fc.name} is with you; no raven is needed`);
-      state.ravens.unshift({ id: Date.now() + Math.random(), from: from || null, fromName: from ? state.characters[from].name : (ch.fromName || ch.from || 'Unknown'), text: String(ch.text || ''), date, read: false });
+      state.ravens.unshift({ id: Date.now() + Math.random(), day: dayNumber(state.meta.date), from: from || null, fromName: from ? state.characters[from].name : (ch.fromName || ch.from || 'Unknown'), text: String(ch.text || ''), date, read: false });
       state.ravens = state.ravens.slice(0, 60);
       return { op, text: `A raven arrives from ${state.ravens[0].fromName}` };
     }
@@ -909,9 +913,9 @@ function applyOne(state, ch, ctx) {
       const cost = Math.max(0, num(ch.cost) ?? 1000), months = Math.max(0.25, num(ch.months) ?? 3);
       const hold = resolvePlaceId(ch.holding || ch.at) || state.houses[hid].seat;
       // the same works at the same place are begun once
-      const twin = state.projects.find((x) => x.house === hid && x.status === 'active' && x.holding === hold && slug(x.name) === slug(ch.name || 'Works'));
+      const twin = state.projects.find((x) => x.house === hid && x.status === 'active' && x.holding === hold && ((ch.template && x.template === ch.template) || slug(x.name) === slug(ch.name || 'Works')));
       if (twin) throw new Error(`${twin.name} is already under way`);
-      const p = { id: slug(ch.id || ch.name || 'project') + '_' + Math.random().toString(36).slice(2, 6), house: hid, name: ch.name || 'Works', holding: hold, cost, remaining: cost, perMonth: cost / months, months, monthsLeft: months, effect: ch.effect || {}, status: 'active', started: date };
+      const p = { id: slug(ch.id || ch.name || 'project') + '_' + Math.random().toString(36).slice(2, 6), house: hid, ...(ch.template ? { template: String(ch.template) } : {}), name: ch.name || 'Works', holding: hold, cost, remaining: cost, perMonth: cost / months, months, monthsLeft: months, effect: ch.effect || {}, status: 'active', started: date };
       state.projects.push(p);
       return { op, text: `House ${state.houses[hid].name} begins: ${p.name} (${fmt(cost)} gd over ${months} moons)` };
     }

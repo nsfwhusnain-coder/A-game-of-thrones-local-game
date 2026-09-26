@@ -6,6 +6,7 @@ import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplie
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId, dayNumber } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
+import { postTick } from '../public/js/shared/errands.js';
 import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
@@ -15,7 +16,7 @@ import { roadEncounters } from '../public/js/shared/roads.js';
 import { updateIntel } from '../public/js/shared/intel.js';
 import { treacheryTick } from '../public/js/shared/treachery.js';
 import * as court from './court.js';
-import { carryOutOrders, readOrdersByRule, executeActions, named } from './orders.js';
+import { carryOutOrders, readOrdersByRule, executeActions, named, startWorks, commandable, previewOrders } from './orders.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -156,8 +157,26 @@ async function askJsonInner(id, kind, messages, extra) {
 
 const consolidating = new Map(); // save id -> promise (memory is compressed in the background)
 
+// The receipt for written orders: read and tried on a copy of the world as soon as they are written (orders.js)
+const previewing = new Map(); // save id -> promise
+export async function previewOrderPlans(id) {
+  if (previewing.has(id)) await previewing.get(id).catch(() => {});
+  const job = (async () => {
+    const cfg = loadConfig(); const state = loadState(id);
+    const ask = cfg.provider === 'mock' ? null : async (msgs) => (await askJson(id, 'orders', msgs, cfg, { maxTokens: 900 })).obj;
+    if (!(await previewOrders(state, ask))) return state.orders;
+    // the player may have edited or removed orders meanwhile: a receipt is kept only for the text it was read from
+    const fresh = loadState(id); const read = new Map(state.orders.map((o) => [o.id, o]));
+    for (const o of fresh.orders) { const r = read.get(o.id); if (r?.plan && r.planFor === o.text) Object.assign(o, { plan: r.plan, planFor: r.planFor, preview: r.preview }); }
+    saveState(id, fresh); return fresh.orders;
+  })().finally(() => previewing.delete(id));
+  previewing.set(id, job);
+  return { orders: await job };
+}
+
 export async function advance(id, { span = '1d', orders } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
+  if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim()); }
@@ -240,7 +259,8 @@ export async function advance(id, { span = '1d', orders } = {}) {
     if (!c.travel || !c.alive) continue;
     c.travel.left -= spanInfo.days;
     if (c.travel.left <= 0) {
-      const to = c.travel.to; delete c.travel; c.loc = to;
+      const to = c.travel.to; const already = c.loc === to; delete c.travel; c.loc = to;
+      if (already) continue; // a journey to where one already is ends quietly: an arrival is told once
       applied.push({ op: 'character', text: `${c.name} arrives at ${placeName(state, to)}` });
       if (c.house === state.meta.player) vt.events.push({ title: `${c.name} reaches ${placeName(state, to)}`, text: `${c.name} has arrived at ${placeName(state, to)}, as you commanded.`, where: to, importance: 2, type: 'court', houses: [c.house] });
     }
@@ -263,6 +283,7 @@ export async function advance(id, { span = '1d', orders } = {}) {
   } else { state.world.seasonDays = 0; }
   // What the player's house has seen of the other hosts this period (fog of war)
   updateIntel(state);
+  postTick(state);
   // Settle the books for the period (after the story has changed the causes)
   const econNotes = settle(state, spanInfo.days);
   const events = (Array.isArray(obj.events) ? obj.events : []).map((e, k) => ({
@@ -284,7 +305,8 @@ export async function advance(id, { span = '1d', orders } = {}) {
   for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house], ...(n.important ? {} : { bg: true, mine: true }) });
   // every event has its day (successions at the start, the steward's accounts at the end) and an id for its pin
   for (const e of events) if (!e.day) e.day = /^A new head/.test(e.title) ? 1 : spanInfo.days;
-  events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; });
+  // one date for every view (HUD, feed, reel, pins): day d of the period is the d-th day after it began
+  events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; e.date = dateStr(addDays(state.meta.date, e.day - spanInfo.days)); });
   const record = { carried, turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
   state.history.push(record);
   state.orders = [];
@@ -480,12 +502,8 @@ export function act(id, body) {
       break;
     }
     case 'project': {
-      const t = PROJECT_TEMPLATES.find((x) => x.key === body.template); if (!t) throw httpError(400, 'unknown project');
-      const hold = state.holdings[body.holding] && state.holdings[body.holding].owner === p ? body.holding : me.seat;
-      if ((me.figures.treasury.v || 0) < t.cost * 0.25) throw httpError(400, `The treasury cannot even fund the first stage of ${t.name} (needs ~${Math.round(t.cost * 0.25)} gd up front).`);
-      const pr = applyChanges(state, [{ op: 'project', house: p, name: `${t.name} at ${state.holdings[hold].name}`, cost: t.cost, months: t.months, holding: hold, effect: t.effect }]);
-      if (pr.rejected.length) throw httpError(409, pr.rejected[0].reason.replace(/^./, (x) => x.toUpperCase()) + '.');
-      addOrder(`Fund works: ${t.name} at ${state.holdings[hold].name} (${t.cost} gold dragons over ${t.months} moons).`, '', 'done', `Work begins on ${t.name} at ${state.holdings[hold].name}`);
+      let w; try { w = startWorks(state, body.template, body.holding); } catch (e) { throw httpError(409, e.message); }
+      addOrder(`Fund works: ${w.name} (${w.cost} gold dragons over ${w.months} moons).`, '', 'done', `Work begins: ${w.name}`);
       break;
     }
     case 'dues': {
@@ -574,6 +592,20 @@ export function act(id, body) {
       if (a.owner !== p) { owner.obligations = { ...(owner.obligations || {}), levies: 'not_called' }; delete owner.obligations.host; }
       addOrder(`${a.owner === p ? 'Disbanded' : 'Released from service'} ${a.name}; the men go home to their fields.`, '', 'done');
       break;
+    }
+    // take back what is under way: a rider turns for home, a host halts where it stands
+    case 'recall': {
+      if (body.character) {
+        const c = state.characters[body.character]; if (!c || c.house !== p || !c.travel) throw httpError(400, 'no one of yours is on that road');
+        const home = c.travel.fromPlace || me.seat;
+        const r = applyChanges(state, [{ op: 'travel', character: c.id, to: home }], { source: 'Your orders' });
+        if (!r.applied.length) throw httpError(409, r.rejected[0]?.reason || 'they cannot turn back');
+        addOrder(`Recall ${c.name}: turn back for ${placeName(state, home)}.`, '', 'underway', r.applied[0].text);
+        result.summary = r.applied[0].text; break;
+      }
+      const a = state.armies[body.army]; if (!a || !commandable(state, a) || !a.march) throw httpError(400, 'that host is not marching');
+      delete a.march; a.dest = null; a.destName = null; a.status = 'holding';
+      addOrder(`${a.name} halts and holds where it stands.`, '', 'done'); result.summary = `${a.name} halts.`; break;
     }
     case 'march': {
       const a = state.armies[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');

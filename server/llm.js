@@ -445,11 +445,16 @@ export function readReplies(text, people, fallback) {
       if (hit) { cur = { speaker: hit[0], text: line.trim().replace(/^[^:]+:\**\s*/, '') }; replies.push(cur); } else if (line.trim()) { if (!cur) { cur = { speaker: fallback, text: '' }; replies.push(cur); } cur.text += (cur.text ? '\n' : '') + line.trim(); }
     }
   }
-  const idOf = (sp) => (people[sp] ? sp : Object.keys(people).find((i) => people[i] === sp || people[i].split(' ')[0] === String(sp).split(' ')[0]) || fallback);
+  // who spoke: the id; else any word of a name ("Luwin", "maester_luwin", "Ser Rodrik"); else whom the prose describes
+  const TITLES = /^(ser|maester|lord|lady|septa|old|king|queen|prince|princess|the)$/i;
+  const words = (n) => String(n).toLowerCase().split(/[\s_]+/).filter((w) => w.length > 2 && !TITLES.test(w));
+  const byName = (sp) => { const w = new Set(words(sp)); return Object.keys(people).find((i) => words(people[i]).some((x) => w.has(x)) || words(i).some((x) => w.has(x))); };
+  const byProse = (t) => { const head = String(t).slice(0, 160).toLowerCase(); return Object.keys(people).find((i) => words(people[i]).some((x) => new RegExp(`\\b${x}\\b`).test(head))); };
+  const idOf = (sp, t) => (people[sp] ? sp : byName(sp || '') || byProse(t) || fallback);
   const clean = (t) => String(t || '').replace(/```[a-z]*|```/gi, '').replace(/^\s*[{[\]}],?\s*$/gm, '').trim();
   const out = [];
   for (const r of replies) {
-    const speaker = idOf(r.speaker); const t = clean(r.text); if (!t) continue;
+    const t = clean(r.text); if (!t) continue; const speaker = idOf(r.speaker, t);
     if (out.at(-1)?.speaker === speaker) out.at(-1).text += '\n\n' + t; else out.push({ speaker, text: t });
   }
   // words, not only gestures: an answer that is all *stage direction* says nothing

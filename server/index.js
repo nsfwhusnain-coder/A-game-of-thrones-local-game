@@ -41,6 +41,7 @@ route('GET', '/api/games/:id/progress', (req, p) => game.getProgress(p.id) || { 
 route('GET', '/api/games/:id', (req, p) => game.loadState(p.id));
 route('DELETE', '/api/games/:id', (req, p) => { game.deleteSave(p.id); return { ok: true }; });
 route('POST', '/api/games/:id/orders', async (req, p) => ({ orders: game.setOrders(p.id, (await readBody(req)).orders) }));
+route('POST', '/api/games/:id/orders/preview', async (req, p) => game.previewOrderPlans(p.id));
 route('POST', '/api/games/:id/advance', async (req, p) => game.advance(p.id, await readBody(req)));
 route('POST', '/api/games/:id/undo', (req, p) => game.undo(p.id));
 route('POST', '/api/games/:id/talk', async (req, p) => { const b = await readBody(req); return game.talk(p.id, b.character, String(b.message || '').slice(0, 4000)); });

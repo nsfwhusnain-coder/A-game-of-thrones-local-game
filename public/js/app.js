@@ -165,7 +165,7 @@ function renderTop() {
   const net = (lo, hi) => `${lo >= 0 ? '+' : '−'}${fmt(Math.abs(lo))} … ${hi >= 0 ? '+' : '−'}${fmt(Math.abs(hi))}`;
   const items = [
     { ic: '🪙', k: 'Treasury', v: `${fmt(h.figures.treasury.v)}`, sub: `${net(pr.low, pr.high)} a moon`, cls: pr.high < 0 ? 'bad' : pr.low < 0 ? 'warn' : 'good', win: 'economy', tip: `Gold dragons in your coffers (${h.figures.treasury.src}, ${h.figures.treasury.asOf}).\nSteward's projection per moon: ${net(pr.low, pr.high)} — luck, harvests and loyal (or disloyal) vassals decide the real figure.${h.figures.debt?.v ? '\nDebt: ' + fmt(h.figures.debt.v) : ''}${last ? `\nLast turn: ${last.net >= 0 ? '+' : ''}${fmt(Math.round(last.net))}` : ''}` },
-    { ic: '⚔', k: 'Levies', v: `~${fmt(h.figures.levies.v)}`, sub: `realm ~${fmt(tot.levies)}`, win: 'military', tip: `Your own levies, not yet raised (${h.figures.levies.src}).\nWith every sworn house, if they answer the call: ~${fmt(tot.levies)}` },
+    { ic: '⚔', k: 'Levies', v: `~${fmt(h.figures.levies.v)}`, sub: `realm ~${fmt(tot.levies)}`, win: 'military', tip: `Your own levies, not yet raised (${h.figures.levies.src}).${h.figures.levies.why ? `\nIt drifts, a little each day, toward what your lands can bear (~${fmt(h.figures.levies.why.bear)} at ${h.figures.levies.why.condition}% of their strength, as prosperity and unrest allow) less the ${fmt(h.figures.levies.why.raised)} men already under arms.` : ''}\nWith every sworn house, if they answer the call: ~${fmt(tot.levies)}` },
     { ic: '🛡', k: 'Men-at-arms', v: fmt(h.figures.menAtArms.v), sub: `guard ${fmt(h.figures.guard.v)}`, win: 'military', tip: 'Standing soldiers in your pay, and your household guard.' },
     { ic: '⛵', k: 'Ships', v: fmt(h.figures.ships.v), sub: `realm ~${fmt(tot.ships)}`, win: 'military', tip: 'Your warships, and those of your whole realm.' },
     { ic: '🌾', k: 'Food', v: `${food} <small>moons</small>`, bar: foodPct, cls: food < 4 ? 'bad' : food < 10 ? 'warn' : 'good', win: 'economy', tip: `Moons of stores in your granaries (${h.figures.food.src}). Winter will empty them.` },
@@ -193,15 +193,16 @@ function renderPlayer() {
 // ───── orders ─────
 function renderOrders() {
   const s = app.state;
-  const moving = underway(s); const last = s.history.at(-1); const lastOut = (last?.orders || []).map(orderOutcome);
+  const moving = underway(s); const last = s.history.at(-1); const lastOut = (last?.orders || []).map((o) => orderOutcome(o, s));
   const failed = lastOut.filter((x) => x.status === 'failed').length;
   const chip = moving.length || lastOut.length ? `<button class="errands-chip" data-action="errands">⏳ ${moving.length} under way${lastOut.length ? ` · last turn: ${lastOut.length - failed} carried out${failed ? `, <b>${failed} failed</b>` : ''}` : ''}</button>` : '';
   $('#orders').innerHTML = chip + s.orders.map((o, i) => {
     const st = o.status || 'queued'; const done = st !== 'queued';
-    return `<div class="order ${o.auto ? 'auto' : ''} st-${st}"><span class="n">${i + 1}.</span><span class="t" ${done ? '' : 'contenteditable="true"'} data-oid="${o.id}">${esc(o.text)}</span><span class="ost ${st}" title="${esc((o.result || []).join('; '))}">${STATUS_LABEL[st]}</span>${done ? '' : `<button data-del-order="${o.id}" title="Remove">✕</button>`}</div>`;
+    const receipt = done || o.auto ? '' : o.planFor === o.text && o.preview ? `<div class="receipt">${o.preview.map((l) => `<div class="${/^could not/i.test(l) ? 'bad' : ''}">→ ${esc(l.replace(/^could not be done: /i, 'Cannot: '))}</div>`).join('')}</div>` : '<div class="receipt muted"><i>Your steward reads the order…</i></div>';
+    return `<div class="order ${o.auto ? 'auto' : ''} st-${st}"><span class="n">${i + 1}.</span><div class="grow"><span class="t" ${done ? '' : 'contenteditable="true"'} data-oid="${o.id}">${esc(o.text)}</span>${receipt}</div><span class="ost ${st}" title="${esc((o.result || []).join('; '))}">${STATUS_LABEL[st]}</span>${done ? '' : `<button data-del-order="${o.id}" title="Remove">✕</button>`}</div>`;
   }).join('');
   $$('[data-del-order]').forEach((b) => b.onclick = () => { s.orders = s.orders.filter((o) => o.id !== b.dataset.delOrder); saveOrders(); renderOrders(); });
-  $$('.order .t').forEach((el) => el.onblur = () => { const o = s.orders.find((x) => x.id === el.dataset.oid); if (o) { o.text = el.textContent.trim(); saveOrders(); } });
+  $$('.order .t').forEach((el) => el.onblur = () => { const o = s.orders.find((x) => x.id === el.dataset.oid); if (o && o.text !== el.textContent.trim()) { o.text = el.textContent.trim(); saveOrders(); renderOrders(); } });
 }
 const orderInput = $('#order-input');
 orderInput.addEventListener('input', () => { orderInput.style.height = 'auto'; orderInput.style.height = Math.min(orderInput.scrollHeight, 160) + 'px'; });
@@ -319,9 +320,15 @@ document.addEventListener('keydown', (e) => {
 // What is under way, and how last turn's orders came out — read from the same state the map and People show
 function showErrands() {
   const s = app.state; const moving = underway(s); const last = s.history.at(-1);
-  const ICON = { ride: '🐎', march: '⚔', banners: '🏳', works: '🔨' };
-  const rows = moving.map((m) => `<div class="errand"><span class="ei">${ICON[m.kind]}</span><div class="grow"><b>${esc(m.who)}</b> <span class="muted">${esc(m.text)}</span></div><span class="ed">${m.days ? `~${m.days} ${m.days === 1 ? 'day' : 'days'}` : '—'}</span></div>`).join('') || '<div class="muted">Nothing of yours is on the road or being built.</div>';
-  const outs = (last?.orders || []).map((o) => { const r = orderOutcome(o); return `<div class="errand"><span class="ost ${r.status}">${STATUS_LABEL[r.status]}</span><div class="grow">${esc(o.text)}${r.lines.length ? `<div class="muted" style="font-size:0.8rem">${r.lines.map(esc).join(' · ')}</div>` : ''}</div></div>`; }).join('');
+  const ICON = { ride: '🐎', march: '⚔', banners: '🏳', works: '🔨', raven: '🕊' };
+  const stop = (m) => (m.kind === 'ride' ? `<button class="btn small" data-recall-char="${m.id}" title="Turn back for where they set out">Call back</button>` : m.kind === 'march' ? `<button class="btn small" data-recall-army="${m.id}" title="Stop and hold where it stands">Halt</button>` : '');
+  const rows = moving.map((m) => `<div class="errand"><span class="ei">${ICON[m.kind]}</span><div class="grow"><b>${esc(m.who)}</b> <span class="muted">${esc(m.text)}</span></div><span class="ed">${m.days ? `~${m.days} ${m.days === 1 ? 'day' : 'days'}` : '—'}</span>${stop(m)}</div>`).join('') || '<div class="muted">Nothing of yours is on the road or being built.</div>';
+  const outs = (last?.orders || []).map((o) => { const r = orderOutcome(o, s); return `<div class="errand"><span class="ost ${r.status}">${STATUS_LABEL[r.status]}</span><div class="grow">${esc(o.text)}${r.lines.length ? `<div class="muted" style="font-size:0.8rem">${r.lines.map(esc).join(' · ')}</div>` : ''}</div></div>`; }).join('');
+  const recall = async (body) => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'recall', ...body } }); app.setState(r.state); if (r.summary) toast(r.summary); showErrands(); } catch (e) { toast(e.message, true); } };
+  setTimeout(() => {
+    $$('[data-recall-char]').forEach((b) => b.onclick = () => recall({ character: b.dataset.recallChar }));
+    $$('[data-recall-army]').forEach((b) => b.onclick = () => recall({ army: b.dataset.recallArmy }));
+  });
   modal(`<h2>Under way</h2>${rows}${outs ? `<h4 style="margin-top:1rem">Your orders of ${esc(last.dateFrom || last.date)}</h4>${outs}` : ''}`);
 }
 
