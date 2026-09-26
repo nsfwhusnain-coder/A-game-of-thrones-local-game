@@ -421,7 +421,7 @@ export class MapScene {
       l.el.innerHTML = `<span class="flag"></span><b>~${fmt(v.men)}</b>`;
       l.el.title = `Unconfirmed: a host of ~${fmt(v.men)} reported ${ageText(v.age)} (${v.source})`; this.ghostLabels.push(l);
     }
-    for (const [id, rec] of this.armyObjs) if (!s.armies[id]) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.armyObjs.delete(id); }
+    for (const [id, rec] of this.armyObjs) if (!s.armies[id]) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); if (rec.trail) this.scene.remove(rec.trail); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.armyObjs.delete(id); }
     for (const a of Object.values(s.armies)) {
       const owner = s.houses[a.owner];
       let rec = this.armyObjs.get(a.id);
@@ -437,8 +437,11 @@ export class MapScene {
       if (rec.pos[0] !== a.pos[0] || rec.pos[1] !== a.pos[1]) {
         const path = this.grid.find(rec.pos, a.pos, mode);
         // during the turn's replay the march follows the day counter (reelF), not the clock
-        rec.anim = this.reelHold ? { path, scrub: true } : { path, t0: performance.now(), dur: 1800 + Math.min(2500, pathLength(path) * 4) };
-      }
+        rec.anim = this.reelHold ? { path, scrub: true, start: a.motion?.start ?? 0, end: a.motion?.end ?? 1 } : { path, t0: performance.now(), dur: 1800 + Math.min(2500, pathLength(path) * 4) };
+        // the road it took stays drawn behind it until it moves again: where it went, and where it stopped
+        if (rec.trail) this.scene.remove(rec.trail);
+        if (pathLength(path) > 3 && rec.group.visible !== false) { rec.trail = this.trailMesh(path, a.owner === s.meta.player ? '#f6e27a' : this.atWarWith(a.owner) ? '#ff5a44' : '#d8cfb8'); this.scene.add(rec.trail); rec.trailTurn = s.meta.turn; }
+      } else if (rec.trail && rec.trailTurn !== s.meta.turn) { this.scene.remove(rec.trail); rec.trail = null; }
       rec.pos = [...a.pos];
       if (rec.route) { this.scene.remove(rec.route); rec.route = null; }
       if (a.dest) {
@@ -461,6 +464,15 @@ export class MapScene {
       rec.label.el.classList.toggle('enemy', this.atWarWith(a.owner));
       rec.label.el.classList.toggle('sel', a.id === this.selectedArmy);
     }
+  }
+  // a march already made: a quiet solid line along the road, fading at its start
+  trailMesh(path, color) {
+    const m = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, uniforms: { uColor: { value: new THREE.Color(color) } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: 'uniform vec3 uColor; varying vec2 vUv; void main(){ float edge = smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y); gl_FragColor = vec4(uColor, edge * 0.55); }',
+    });
+    const g = this.ribbon(path, 0.7, m, 0.5); g.renderOrder = 2; return g;
   }
   routeMesh(path, color) {
     const m = new THREE.ShaderMaterial({
@@ -810,7 +822,7 @@ export class MapScene {
       let p = rec.view?.known === 'reported' ? rec.view.pos : a.pos, heading = null;
       if (rec.view?.known === 'reported') rec.anim = null;
       if (rec.anim) {
-        const t = rec.anim.scrub ? clamp(this.reelHold ? this.reelF ?? 0 : 1, 0, 1) : clamp((now - rec.anim.t0) / rec.anim.dur, 0, 1); const e = rec.anim.scrub ? t : t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+        const t = rec.anim.scrub ? clamp(this.reelHold ? ((this.reelF ?? 0) - (rec.anim.start || 0)) / Math.max(0.02, (rec.anim.end ?? 1) - (rec.anim.start || 0)) : 1, 0, 1) : clamp((now - rec.anim.t0) / rec.anim.dur, 0, 1); const e = rec.anim.scrub ? t : t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
         p = pointAlong(rec.anim.path, e); const p2 = pointAlong(rec.anim.path, Math.min(1, e + 0.02)); heading = Math.atan2(p2[1] - p[1], p2[0] - p[0]);
         if (t >= 1) rec.anim = null;
       }

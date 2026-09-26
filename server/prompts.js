@@ -5,7 +5,7 @@ import { VOICES, HOUSE_WAYS } from '../public/data/voices.js';
 import { personaFor } from '../public/data/histories.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
 import {
-  dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS, nearestHolding,
+  dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS, spanOf, nearestHolding, roadPos,
 } from '../public/js/shared/world.js';
 import { estimateTokens } from './llm.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
@@ -28,7 +28,8 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
     treasury/debt/income in gold dragons; levies = men that could still be called; food = months of stores.
 - {"op":"army_create","id":NEW_ID,"owner":HOUSE,"name":"...","commander":CHAR_ID,"at":PLACE,"men":N,"type":"army|fleet","ships":N,"composition":"...","status":"mustering"}
     (raising troops should also reduce that house's levies figure)
-- {"op":"army_move","army":ARMY_ID,"to":PLACE,"progress":0.0-1.0,"status":"marching"}   progress<1 means still en route
+- {"op":"army_march","army":ARMY_ID,"to":PLACE or "army:ARMY_ID"}   A HOST SETS OUT: the engine marches it there at its true pace (days on the map), or after another host. This is how any host that is not the player's moves.
+- {"op":"army_move","army":ARMY_ID,"to":PLACE,"progress":0.0-1.0,"status":"..."}   only to PLACE a host where the story has put it this turn (a retreat after a battle, a camp); prefer army_march
 - {"op":"army_update","army":ARMY_ID,"men":N or "delta":±N,"morale":0-100,"supply":0-100,"status":"...","owner":HOUSE}
 - {"op":"army_destroy","army":ARMY_ID,"reason":"..."}  /  {"op":"army_disband","army":ARMY_ID}
 - {"op":"holding","id":PLACE,"owner":HOUSE,"unrest":0-100,"prosperity":0-100,"garrison":N,"status":"normal|besieged|sacked|burning|occupied","note":"..."}
@@ -189,7 +190,8 @@ function whereabouts(state, chars) {
     const seat = state.houses[c.house]?.seat;
     const odd = c.status && c.status !== 'free';
     if (String(c.loc) === String(seat) && !odd && !c.travel) continue;
-    const where = c.travel ? `on the road to ${placeName(state, c.travel.to)}` : String(c.loc || '').startsWith('army:') ? `with the host ${String(c.loc).slice(5)}` : placeName(state, c.loc);
+    const road = c.travel && roadPos(state, c);
+    const where = c.travel ? `on the road to ${placeName(state, c.travel.to)} (now near ${placeName(state, nearestHolding(state, road || [0, 0]))}, ~${Math.max(1, Math.round(c.travel.left))} days to go)` : String(c.loc || '').startsWith('army:') ? `with the host ${String(c.loc).slice(5)}` : placeName(state, c.loc);
     if (!by.has(where)) by.set(where, []);
     by.get(where).push(c.id + (odd ? ` (${c.status})` : ''));
   }
@@ -410,9 +412,9 @@ function greatMatters(state) {
 }
 function nearestPlace(state, pos) { let best = null, d = Infinity; for (const h of Object.values(state.holdings)) { const x = Math.hypot(h.pos[0] - pos[0], h.pos[1] - pos[1]); if (x < d) { d = x; best = h.id; } } return best; }
 
-export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
+export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg, until = null) {
   const sc = SCENARIOS[state.meta.scenario];
-  const span = SPANS[spanKey] || SPANS['1m'];
+  const span = spanOf(spanKey);
   const budget = Math.max(4000, cfg.contextTokens - cfg.maxTokens - 1500);
   const system = [
     `You are the MAESTER-SIMULATOR: the game engine of a grand strategy role-playing game set in the world of A Song of Ice and Fire. You simulate the whole Known World turn by turn.`,
@@ -431,8 +433,8 @@ export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg) {
   "threads": [ {"title":"a story thread in 3-6 words, e.g. 'The death of Jon Arryn'","status":"open|resolved","last":"its latest development, one line"} ]
 }
 THREADS: keep 2-5 threads that belong to the player — the matters their own orders and letters opened (an inquiry, a quarrel, an alliance sought, a host gathering) — updated when they move; mark one resolved when it ends. Not the great matters of the realm listed elsewhere (the King's progress and the like are tracked already).
-LENGTH: for a single day or a few days — the usual turn — the summary is 1-2 sentences and there are 1-3 events and up to 8 changes. The player\'s own lands may be quiet on a given day; THE REALM IS NEVER QUIET: every day at least one event must be a new step by one of the people in WHAT IS IN MOTION — somewhere else in the realm, done by them, named, concrete (who did what, where, and why it matters) — not weather, not "whispers", not "the North remains quiet". Do not narrate that nothing happened. For a week or two: 2-4 events and up to 12 changes; for a moon: 3-6 events and up to 20 changes. Each event: a headline that states plainly who did what ("Lysa Arryn closes the Bloody Gate to Lannister men" — not a poetic title) and ONE sentence of "text" naming the people involved, why they did it and what it changes; "details" (1-2 sentences) only when there is more worth knowing. "day" is the day of the period on which it happened (1 = the first day); give events in that order. PLACE: people act where WHERE PEOPLE ARE puts them, or on the road they are on. Someone far away takes part only by letter, envoy or rumour — and the event says so ("A raven from…", "It is said in King\'s Landing…"). Anything not witnessed — gossip, a claim, word passed on — is type "rumor" and its text says who says it. No one appears somewhere without a "travel" op, and the journey takes days. The player\'s own people and hosts move only by the player\'s orders: never emit travel, army_move or army_create for them.
-THE CHRONICLE IS WRITTEN IN THE THIRD PERSON, like the books: name the lord of the player's house (Lord Eddard, Ned Stark, House Stark) — never "you", "your house" or "the player". EVENTS ARE ABOUT PEOPLE: name who did it — Lord Varys, Ser Jaime Lannister, Petyr Baelish, the captain of the gold cloaks, a hedge knight called Ser Duncan — not "House Lannister". Headlines are short, like a herald\'s cry.
+LENGTH: for a single day or a few days — the usual turn — the summary is 1-2 sentences and there are 1-3 events and up to 8 changes. The player\'s own lands may be quiet on a given day; THE REALM IS NEVER QUIET: every day at least one event must be a new step by one of the people in WHAT IS IN MOTION — somewhere else in the realm, done by them, named, concrete (who did what, where, and why it matters) — not weather, not "whispers", not "the North remains quiet". Do not narrate that nothing happened. For a week or two: 2-4 events and up to 12 changes; for a moon: 3-6 events and up to 20 changes. Each event: a headline that states plainly who did what ("Lysa Arryn closes the Bloody Gate to Lannister men" — not a poetic title) and ONE sentence of "text" naming the people involved, why they did it and what it changes; "details" (1-2 sentences) only when there is more worth knowing. "day" is the day of the period on which it happened (1 = the first day); give events in that order. PLACE: people act where WHERE PEOPLE ARE puts them, or on the road they are on. Someone far away takes part only by letter, envoy or rumour — and the event says so ("A raven from…", "It is said in King\'s Landing…"). Anything not witnessed — gossip, a claim, word passed on — is type "rumor" and its text says who says it. No one appears somewhere without a "travel" op, and the journey takes days. The player\'s own people and hosts move only by the player\'s orders, and the ENGINE tells when they arrive, stop or turn back: never write one of them arriving, returning, halting or being somewhere they are not in WHERE PEOPLE ARE / the hosts table, and never emit travel, army_move, army_march or army_create for them.
+THE MAP SHOWS WHAT YOU CHANGE: when an event says a host marches, emit army_march; a lord rides somewhere, travel; a host is raised, army_create; a battle, battle; a castle falls, holding with its new owner. An event without its change leaves the map wrong. THE CHRONICLE IS WRITTEN IN THE THIRD PERSON, like the books: name the lord of the player's house (Lord Eddard, Ned Stark, House Stark) — never "you", "your house" or "the player". EVENTS ARE ABOUT PEOPLE: name who did it — Lord Varys, Ser Jaime Lannister, Petyr Baelish, the captain of the gold cloaks, a hedge knight called Ser Duncan — not "House Lannister". Headlines are short, like a herald\'s cry.
 THE ENGINE ALREADY WRITES THE SMALL LIFE OF THE REALM — weddings, harvests, blights, outlaws, tourneys, fairs, weather, septons, rumours, the canon story beats in THREADS, vassal musters, the ledger. Do not write those. Your events are the consequential ones: what the great houses decide and do, war, intrigue, diplomacy, and above all how the world answers the player\'s orders and decisions. Include changes for every consequence that should appear on the map or in the numbers. Rumours may be inaccurate; changes must reflect the TRUE state.
 
 A SHORT EXAMPLE of the shape (different world, do not copy its content):
@@ -449,7 +451,7 @@ Only use ids that exist in the tables below. Change only what the story justifie
     'THE STATE OF THE REALM NOW\n' + worldDigest(state, digestBudget, lean, 'dynamic'),
     playerSheet(state),
     diplomacySinceLastTurn(state),
-    `CURRENT DATE: ${dateStr(state.meta.date)}. Simulate the next ${span.label} (${span.days} days).`,
+    `CURRENT DATE: ${dateStr(state.meta.date)}. Simulate the next ${span.label} (${span.days} days)${until ? ` — the turn runs until ${until}; end on that moment` : ''}. Spread the events over the days as they would happen.`,
     ordersBlock(state, orders),
     (state.storyThreads || []).length ? 'THREADS THE PLAYER FOLLOWS (update them in "threads")\n' + state.storyThreads.map((t) => `- ${t.title}: ${t.last}`).join('\n') : '',
     greatMatters(state),
@@ -537,7 +539,7 @@ const FACT_TEXT = /\b(arrives at|reaches|sets out|rides for|turns .+ for|has die
 export function engineFacts(turns, max = 24) {
   const out = [];
   for (const t of turns) {
-    const when = t.dateFrom && t.dateFrom !== t.date && (SPANS[t.span]?.days || 1) > 1 ? `${t.dateFrom} – ${t.date}` : t.date;
+    const when = t.dateFrom && t.dateFrom !== t.date && spanOf(t.span).days > 1 ? `${t.dateFrom} – ${t.date}` : t.date;
     const lines = [...new Set([
       ...(t.carried || []).flatMap((c) => c.result || []).filter((x) => !/^could not/i.test(x)),
       ...(t.applied || []).filter((a) => a && (FACT_OPS.has(a.op) || FACT_TEXT.test(a.text || ''))).map((a) => a.text),

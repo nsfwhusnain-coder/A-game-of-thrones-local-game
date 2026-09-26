@@ -368,6 +368,13 @@ export const SPANS = {
   '3m': { days: 90, label: 'three moons' }, '6m': { days: 180, label: 'half a year' }, '1y': { days: 360, label: 'one year' },
 };
 
+/** A turn's length from its key: the old fixed spans ('1w'), or a turn of n days ('12d'). */
+export function spanOf(key) {
+  if (SPANS[key]) return SPANS[key];
+  const m = /^(\d+)d$/.exec(String(key || '')); if (!m) return SPANS['1m'];
+  const n = Math.max(1, Number(m[1])); return { days: n, label: n === 1 ? 'one day' : `${n} days` };
+}
+
 // ---------- Applying simulation changes ----------
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const num = (v) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v.replace(/[,_]/g, ''))) ? Number(v.replace(/[,_]/g, '')) : null);
@@ -546,6 +553,18 @@ function applyOne(state, ch, ctx) {
         status: ch.status || 'mustering', morale: num(ch.morale) ?? 70, supply: num(ch.supply) ?? 80, asOf: date,
       };
       return { op, text: `${state.armies[id].name} (${state.houses[owner].name}) ${men ? fmt(men) + ' men' : ''} appears at ${placeName(state, ch.at || ch.location) || 'the field'}` };
+    }
+    case 'army_march': case 'march': case 'fleet_sail': {
+      // the story sends a host on its way; the engine walks it at its true pace, and the map shows the road
+      const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
+      const a = state.armies[id];
+      if (ctx.protectPlayer && (a.owner === state.meta.player || a.serving === state.meta.player)) throw new Error(`only you move ${a.name}`);
+      const foe = String(ch.to || '').replace(/^army:/, ''); const target = state.armies[foe] || state.armies[findArmy(state, foe) || ''];
+      if (target && target.id !== a.id) { a.march = { to: 'army:' + target.id, since: state.meta.turn }; a.at = null; a.status = ch.status || 'marching'; return { op, text: `${a.name} marches against ${target.name}` }; }
+      const dest = resolvePlaceId(ch.to); if (!dest || !placePos(dest, state.holdings)) throw new Error('unknown destination ' + ch.to);
+      if (a.at === dest) throw new Error(`${a.name} is already at ${placeName(state, dest)}`);
+      a.march = { to: dest, since: state.meta.turn }; a.at = null; a.status = ch.status || 'marching';
+      return { op, text: `${a.name} marches for ${placeName(state, dest)}` };
     }
     case 'army_move': case 'fleet_move': case 'move_army': {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));

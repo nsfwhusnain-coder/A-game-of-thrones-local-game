@@ -56,10 +56,8 @@
       <div class="hud-top-right">
         <div class="date-box" id="date-box"></div>
         <div class="time-controls">
-          <select id="span-select" title="How much time passes">
-            <option value="1d" selected>1 day</option><option value="3d">3 days</option><option value="1w">1 week</option><option value="2w">2 weeks</option><option value="1m">1 moon</option>
-          </select>
-          <button class="btn primary advance-btn" data-action="advance" title="End the turn: a day passes (Ctrl+Enter)">End turn ▶</button>
+<div class="turn-until" id="turn-until" title="A turn runs until the next thing that matters — at most a moon"></div>
+          <button class="btn primary advance-btn" data-action="advance" title="End the turn: time runs on until the next thing that matters (Ctrl+Enter)">End turn ▶</button>
         </div>
         <div class="sys-btns">
           <button class="icon-btn" data-action="ravens" title="Letters">🐦<span id="raven-badge" class="badge hidden"></span></button>

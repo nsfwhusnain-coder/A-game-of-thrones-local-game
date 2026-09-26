@@ -26,16 +26,11 @@ log(`# Playtest — House ${house} — ${JSON.parse(fs.readFileSync('config.json
 // the script: what a player might do, turn by turn (orders, audiences, acts)
 const script = {
   1: { orders: ['assemeble the men of the north at winterfell and create a great northern host of all able body men and boys'] },
-  2: { talk: [['lysa_arryn', 'Sister, what did Jon say in his last days? I send no rider — only this raven. Robert may foster with us at Winterfell if you wish it.']] },
-  3: { orders: ['Send Jory Cassel to Moat Cailin with fifty men to strengthen the Neck.'], act: [{ kind: 'project', template: 'granaries' }] },
-  4: { orders: ['Fund the expansion of the granaries at Winterfell.', 'Send a raven to Lord Commander Mormont asking what the Watch needs.'] },
-  5: { orders: ['Spend sixty million gold dragons to buy the Iron Throne from King Robert.'] },
-  6: { council: [['vayon_poole', 'luwin', 'rodrik_cassel', 'jory_cassel'], 'What do we know of the Lannisters, and is Winterfell ready to feed a host?'], act: [{ kind: 'recall', army: '@jory' }] },
-  7: { orders: ['Send Jon Snow to Castle Black to see the Wall for himself.'] },
-  9: { act: [{ kind: 'recall', character: 'jon_snow' }] },
-  11: { talk: [['roose_bolton', 'Lord Bolton, your men will march under my son Robb. See it done.']] },
-  13: { orders: ['Robb is to march the Northern Host to Moat Cailin.'] },
-  16: { orders: ['Hold a great feast at Winterfell for the lords of the North.'] },
+  2: { talk: [['lysa_arryn', 'Sister, what did Jon say in his last days? Robert may foster with us at Winterfell if you wish it.']], orders: ['Send Jory Cassel to Moat Cailin with fifty riders to hold the Neck.'] },
+  3: { council: [['luwin', 'rodrik_cassel', 'catelyn_stark'], 'The King asks me to be his Hand. What say you?'] },
+  4: { orders: ['Robb is to march the Northern Host to Moat Cailin.'] },
+  6: { orders: ['Send Jon Snow to Castle Black to see the Wall for himself.'] },
+  8: { orders: ['Hold a feast at Winterfell for the lords who have come.'] },
 };const turns = Number(args.turns || 20);
 for (let t = 1; t <= turns; t++) {
   const step = script[t] || {};
@@ -60,9 +55,9 @@ for (let t = 1; t <= turns; t++) {
   }
   if (args.read) await new Promise((res) => setTimeout(res, Number(args.read) * 1000)); // the player reads the day's news
   const t0 = Date.now();
-  let r; try { r = await game.advance(id, { span: t <= Number(args.weeks || 0) ? '1w' : t % 5 === 0 ? '1w' : '1d', orders: game.loadState(id).orders.filter((o) => o.auto || o.planFor || /^t\d+o\d+$/.test(o.id)).concat(step.orders && !game.loadState(id).orders.some((o) => /^t\d+o\d+$/.test(o.id)) ? step.orders.map((text, k) => ({ id: `t${t}o${k}`, text })) : []) }); } catch (e) { log(`- ADVANCE FAILED: ${e.message}`); continue; }
+  let r; try { r = await game.advance(id, { span: args.fixed || 'auto', orders: game.loadState(id).orders.filter((o) => o.auto || o.planFor || /^t\d+o\d+$/.test(o.id)).concat(step.orders && !game.loadState(id).orders.some((o) => /^t\d+o\d+$/.test(o.id)) ? step.orders.map((text, k) => ({ id: `t${t}o${k}`, text })) : []) }); } catch (e) { log(`- ADVANCE FAILED: ${e.message}`); continue; }
   const tr = r.turn; const u = tr.usage || {};
-  log(`- ${tr.dateFrom} → ${tr.date} · ${((Date.now() - t0) / 1000).toFixed(0)}s · prompt ${u.prompt_tokens ?? '?'} (cached ${u.prompt_tokens_details?.cached_tokens ?? '?'}) · reply ${u.completion_tokens ?? '?'}${tr.salvaged ? ' · SALVAGED' : ''}`);
+  log(`- ${tr.dateFrom} → ${tr.date}${tr.until ? ` (until ${tr.until})` : ''} · ${((Date.now() - t0) / 1000).toFixed(0)}s · prompt ${u.prompt_tokens ?? '?'} (cached ${u.prompt_tokens_details?.cached_tokens ?? '?'}) · reply ${u.completion_tokens ?? '?'}${tr.salvaged ? ' · SALVAGED' : ''}`);
   if (step.orders) for (const c of tr.carried || []) log(`- carried out: ${c.order} → ${c.result.join('; ')}`);
   log(`- summary: ${tr.summary}`);
   for (const e of tr.events.filter((e) => !e.bg)) log(`- [${e.importance}]${e.orderId ? ' ORDER' : ''} ${e.date || ''} **${e.title}** — ${e.text}${e.details ? ' ' + e.details : ''}${e.where ? ` (${e.where})` : ''}`);

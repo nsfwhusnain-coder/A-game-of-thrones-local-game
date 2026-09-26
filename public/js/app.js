@@ -14,9 +14,10 @@ import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler,
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
-import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName, SPANS } from './shared/world.js';
+import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName, SPANS, spanOf } from './shared/world.js';
 import { project, SEASONS } from './shared/economy.js';
 import { underway, orderOutcome, STATUS_LABEL } from './shared/errands.js';
+import { nextTurnLength } from './shared/turns.js';
 
 app.openChat = openChat; app.openCouncil = openCouncil;
 
@@ -159,6 +160,7 @@ app.renderOrders = renderOrders; app.renderTop = renderTop;
 app.setState = (s, opts = {}) => { app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); if (!opts.keepDrawer) renderDrawer(); };
 
 function renderTop() {
+  { const u = app.state && nextTurnLength(app.state); const el = $('#turn-until'); if (el && u) el.innerHTML = `next turn: <b>${u.days} ${u.days === 1 ? 'day' : 'days'}</b> — ${esc(u.reason)}`; }
   const s = app.state, h = player();
   const pr = project(s, h.id);
   const last = h.ledger?.at(-1);
@@ -379,8 +381,8 @@ async function advance() {
   const undecided = (app.state.decisions || []).filter((d) => d.status === 'pending');
   if (undecided.length && !confirm(`${undecided.length} decision${undecided.length > 1 ? 's await' : ' awaits'} your answer (${undecided.map((d) => d.title).join(', ')}). Silence is also an answer — advance anyway?`)) { setDrawer('feed'); return; }
   const pending = orderInput.value.trim(); if (pending) { addOrder(pending); orderInput.value = ''; }
-  const span = $('#span-select').value;
-  busy(true, `${$('#span-select').value === '1d' ? 'A day passes' : `The world moves forward ${$('#span-select').selectedOptions[0].text}`}…`, { live: true });
+  const span = 'auto'; const until = nextTurnLength(app.state);
+  busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}…`, { live: true });
   try {
     const unreadBefore = app.state.ravens.filter((x) => !x.read).length;
     const r = await api(`/games/${app.saveId}/advance`, { body: { span, orders: app.state.orders } });
@@ -391,11 +393,11 @@ async function advance() {
     sfx('bell');
     const newRavens = r.state.ravens.filter((x) => !x.read).length > unreadBefore;
     busy(false);
-    const short = (SPANS[r.turn.span]?.days || 30) <= 3;
     playTurn(r.turn, { onDone: () => {
       if (app.map) { app.map.reelHold = false; app.map.reelF = 1; }
       // a day's turn ends on your choices, if any wait on you; a longer one with the full report
-      if (!short) showTurnReport(r.turn); else if ((app.state.decisions || []).some((d) => d.status === 'pending' && d.turn === app.state.meta.turn)) showChoices();
+      // the chronicle has told the turn; what waits on the lord's word comes before him
+      if ((app.state.decisions || []).some((d) => d.status === 'pending' && d.turn === app.state.meta.turn)) showChoices();
       if (newRavens) sfx('raven');
     } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
@@ -408,24 +410,6 @@ function showChoices() {
   modal(`<h2>${fresh.length > 1 ? 'Matters await your word' : 'A matter awaits your word'}</h2>${decisionsHtml(fresh)}<div class="report-actions"><button class="btn ghost" data-action="close-modal">Decide later</button></div>`);
   wireDecisions($('#modal-box'), { onAllDone: () => closeModal() });
 }
-function showTurnReport(t) {
-  const L = t.ledger;
-  const decs = decisionsHtml();
-  modal(`<h2>${esc(t.dateFrom)} → ${esc(t.date)}</h2>
-    ${decs ? `<h4>Decisions await you</h4>${decs}<hr>` : ''}
-    <div class="summary">${esc(t.summary)}</div><hr>
-    ${mainEvents(t.events).map(eventHtml).join('')}
-    ${meanwhileHtml(t.events)}
-    ${L ? `<hr><h4>Your accounts</h4><div class="kv"><span class="k">Income</span><span style="color:#a8e08a">+${fmt(L.income)}</span><span class="k">Expenses</span><span style="color:#ec9a8a">−${fmt(L.expense)}</span><span class="k">Treasury</span><span><b>${fmt(L.prevTreasury)} → ${fmt(L.treasury)}</b></span><span class="k">Food stores</span><span>${L.food} moons</span></div>
-      ${L.lines.filter((l) => l.note && /withheld|late|short/.test(l.note)).map((l) => `<div class="muted" style="font-size:0.85rem">⚠ ${esc(l.label)} — ${esc(l.note)}</div>`).join('')}` : ''}
-    ${t.applied?.length ? `<hr><details><summary><h4 style="display:inline">The world changes (${t.applied.length})</h4></summary><ul class="changes">${t.applied.map((a) => `<li>${esc(a.text)}</li>`).join('')}</ul></details>` : ''}
-    ${t.rejected?.length ? `<p class="muted" style="font-size:0.8rem">${t.rejected.length} proposed change(s) referred to unknown people or places and were ignored.</p>` : ''}
-    <div class="report-actions"><button class="btn primary" data-action="close-modal">Continue</button></div>`);
-  // once every decision here is answered, the report steps aside (it stays in the Events feed)
-  wireDecisions($('#modal-box'), { onAllDone: () => { if (!(app.state.decisions || []).some((d) => d.status === 'pending')) closeModal(); } });
-  for (const e of mainEvents(t.events)) if (e.where && app.state.holdings[e.where]) app.map.flash(app.state.holdings[e.where].pos);
-}
-
 async function showChronicle() {
   if (!app.saveId) return;
   const r = await api(`/games/${app.saveId}/chronicle`);

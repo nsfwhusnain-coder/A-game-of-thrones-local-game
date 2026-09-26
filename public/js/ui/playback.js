@@ -1,7 +1,7 @@
 // The turn told in the chronicle itself: the day's news arrives one event at a time in the left panel — its card
 // appears, the map flies to where it happened, the hosts march on — then the next. Pause, step or skip at the top.
 import { app, $ } from './common.js';
-import { SPANS } from '../shared/world.js';
+import { SPANS, spanOf } from '../shared/world.js';
 import { storyEvents, setDrawer } from './drawer.js';
 import { sfx } from './sfx.js';
 
@@ -21,7 +21,7 @@ export function prepareReveal(turn) {
 }
 export async function playTurn(turn, { onDone } = {}) {
   const evs = storyEvents(turn);
-  const span = SPANS[turn.span]?.days || 30;
+  const span = spanOf(turn.span).days;
   // a quiet day: no news, but the hosts and riders still walk their road before your eyes
   if (!evs.length) { app.reveal = null; if (app.map) for (let k = 1; k <= 36; k++) { app.map.reelF = k / 36; await new Promise((r) => setTimeout(r, 40)); } onDone?.(); return; }
   if (app.reveal?.turn !== turn.turn) prepareReveal(turn);

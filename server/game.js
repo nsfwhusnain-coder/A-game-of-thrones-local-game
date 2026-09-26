@@ -4,10 +4,11 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplies } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
-import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
+import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
+import { nextTurnLength } from '../public/js/shared/turns.js';
 import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
@@ -175,19 +176,23 @@ export async function previewOrderPlans(id) {
   return { orders: await job };
 }
 
-export async function advance(id, { span = '1d', orders } = {}) {
+export async function advance(id, { span = 'auto', orders } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   if (warming.has(id)) await warming.get(id); // the model is still reading the start of this very prompt
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim()); }
+  for (const a of Object.values(state.armies)) delete a.motion;
   const chronicle = readChronicle(id);
   // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
   // so they truly happen; the story model is told what was done and narrates what follows.
   const carried = await carryOutOrders(state, cfg.provider === 'mock' ? null : async (msgs) => (await askJson(id, 'orders', msgs, cfg, { maxTokens: 900 })).obj).catch((e) => { console.warn('orders:', e.message); return []; });
-  const messages = buildJumpPrompt(state, state.orders, span, chronicle, cfg);
-  let { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: (SPANS[span] || SPANS['1m']).days, streamText: true });
+  // a turn runs until the next thing that matters (a host arrives, a foe draws near, an answer lands…), at most a moon
+  let turnReason = null;
+  if (!span || span === 'auto' || span === 'turn') { const n = nextTurnLength(state); span = `${n.days}d`; turnReason = n.reason; }
+  const messages = buildJumpPrompt(state, state.orders, span, chronicle, cfg, turnReason);
+  let { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: spanOf(span).days, streamText: true });
   let salvaged = false;
   if (!obj) {
     // Unreadable even after repair and a retry: the realm still moves on (the ledger, vassals, seasons and marches
@@ -202,7 +207,7 @@ export async function advance(id, { span = '1d', orders } = {}) {
   fs.writeFileSync(path.join(dir(id), 'prev-state.json'), JSON.stringify(state));
   fs.writeFileSync(path.join(dir(id), 'prev-chronicle.md'), chronicle);
 
-  const spanInfo = SPANS[span] || SPANS['1m'];
+  const spanInfo = spanOf(span);
   const dateFrom = dateStr(state.meta.date);
   const yearBefore = state.meta.date.year;
   state.meta.date = addDays(state.meta.date, spanInfo.days);
@@ -231,6 +236,8 @@ export async function advance(id, { span = '1d', orders } = {}) {
   for (const a of Object.values(state.armies)) {
     if (!a.march || a.movedTurn === state.meta.turn) continue;
     const to = a.march.to; // read before the move: arriving clears the march order
+    // when in the turn this host is on the road (the map replays it in step with the story's days)
+    { const tgt = String(to).startsWith('army:') ? state.armies[String(to).slice(5)]?.pos : placePos(to, state.holdings); const md = tgt ? marchDays(a, a.pos, tgt).days : spanInfo.days; a.motion = { start: 0, end: Math.min(1, md / Math.max(1, spanInfo.days)) }; }
     // a host may be ordered against another host: it follows it wherever it goes, and the engine fights them when they meet
     if (String(to).startsWith('army:')) {
       const foe = state.armies[String(to).slice(5)];
@@ -328,7 +335,7 @@ export async function advance(id, { span = '1d', orders } = {}) {
   }
   // one date for every view (HUD, feed, reel, pins): day d of the period is the d-th day after it began
   events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; e.date = dateStr(addDays(state.meta.date, e.day - spanInfo.days)); });
-  const record = { carried, turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
+  const record = { carried, turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, ...(turnReason ? { until: turnReason } : {}), orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
   state.history.push(record);
   state.orders = [];
   // If the simulator raised no matter for the player over a moon or more, the realm brings one itself
@@ -390,7 +397,7 @@ async function maybeConsolidate(id, state, cfg, force = false) {
   const pendingTokens = estimateTokens(JSON.stringify(pending.map((t) => [t.summary, t.events])));
   const tooBig = pendingTokens > cfg.contextTokens * 0.2;
   // turns may be a day or a moon: consolidate by the days they cover (about every moon), keeping the last fortnight verbatim
-  const daysOf = (t) => SPANS[t.span]?.days || 30;
+  const daysOf = (t) => spanOf(t.span).days;
   const pendingDays = pending.reduce((n, t) => n + daysOf(t), 0);
   let keep = 0, kept = 0; for (let i = pending.length - 1; i >= 0 && kept < 14; i--) { kept += daysOf(pending[i]); keep++; }
   if (!force && pendingDays < 44 && !tooBig) return null;

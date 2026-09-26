@@ -10,11 +10,11 @@ The game is inspired by [Pax Historia](https://www.paxhistoria.co/): time pauses
 
 ## Which model
 
-Tested on an RTX 5070 (12 GB) with 32 GB of RAM: **Gemma 4 26B A4B** (Unsloth QAT UD-Q4_K_XL, a mixture-of-experts with 3.8B
-active) plays best — ~17-25 s a day's turn once warm, ~15-20 s an audience, clean JSON every time, true to the characters. Run it with
-thinking off, `-ub 2048`, two slots over one context pool. Qwen3.6 35B A3B (UD-Q4_K_XL) was benched against it on 2026-09-26: just
-as obedient and readable, but about twice as slow on this card and a little looser with the engine's verdicts. See `docs/HANDOFF.md`
-for the numbers, and `npm run bench` / `node scripts/playtest.js` to test another.
+Tested on an RTX 5070 (12 GB) with 32 GB of RAM. **Qwen3.6 35B A3B** (Unsloth UD-Q4_K_XL, mixture-of-experts, 3B active; 26 expert
+layers on the CPU) is the default: it follows the rules and the player's orders closely, writes the richest events and debates,
+reads a prompt at ~2,000 tokens/s and writes at ~50/s. Gemma 4 26B A4B (UD-Q4_K_XL) is the faster alternative (~60 tokens/s written)
+with shorter events. Both run with thinking off, two slots over one 64k context pool. See `docs/HANDOFF.md` for the numbers, and
+`npm run bench` / `node scripts/playtest.js` to test another.
 
 The game reads the next turn's unchanging prompt ahead of time while you watch the day's news, so the model re-reads only what changed.
 

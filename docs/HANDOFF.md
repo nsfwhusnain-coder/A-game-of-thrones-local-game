@@ -390,6 +390,26 @@ quiet' every day.
   are `a.public`, seen by all, like the King's progress. They are listed for the model under LORDS ON THE ROAD, not in the army
   table.
 
+### Turns, not days; the map moves with the story; Qwen3.6 (2026-09-26, last)
+- **Turns:** `shared/turns.js nextTurnLength` runs a turn (1-30 days; 7 if nothing is coming) until the first of:
+  - a host or rider of the player's arrives, or reaches the host it pursues;
+  - an answer to a letter lands;
+  - a large or public host, or a lord's party, reaches the player's holding;
+  - an enemy host comes within 14 map units of the player's hosts or lands;
+  - a story thread's next month begins;
+  - works are finished.
+
+  `advance` uses `span: 'auto'` and computes the length after the orders are carried out; the turn record keeps `until`. The top
+  bar shows "next turn: N days — reason". `spanOf('12d')` replaces `SPANS[...]`. The turn-report modal is gone.
+- **Motion:** each engine march sets `a.motion = {start, end}` (the fraction of the turn it is on the road). The map scrubs
+  every host through its window as the reveal's `reelF` follows the event days, and leaves a trail (`trailMesh`) behind it until
+  it moves again.
+- **The story moves hosts:** `army_march` (any host but the player's; the engine walks it at its pace) is the advertised op, with
+  army_move only for placing a host. The prompt says an event without its change leaves the map wrong, and that only the engine
+  reports the player's people arriving or returning. Travellers are given as "near X, ~N days to go".
+- **Model:** Qwen3.6 35B A3B UD-Q4_K_XL is the default in config.json (llama-swap profile `qwen3.6-35b-a3b`, -ncmoe 26, about
+  10.9 GB of VRAM). Measured: prompt ~2,000 tokens/s, writing ~50 tokens/s, warm turns ~30-40 s with longer, richer replies.
+
 ## 5. In the middle of (when this was written)
 
 - **Turn playback:** finished and committed (`74380dd`).

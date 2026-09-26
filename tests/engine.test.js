@@ -525,3 +525,24 @@ test('lords ride out with their households, stay, ride home — and the realm se
   assert.ok(home > 0, 'some came home and disbanded');
   assert.ok(Object.values(s.armies).filter((x) => x.party).length <= 14);
 });
+
+// ── Turns that run until something happens ──
+import { nextTurnLength } from '../public/js/shared/turns.js';
+test('a turn runs until the next thing that matters', () => {
+  const s = fresh();
+  const q = nextTurnLength(s); assert.ok(q.days >= 1 && q.days <= 30, JSON.stringify(q));
+  apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'The Northern Host', at: 'stark', men: 5000 }]);
+  executeActions(s, [{ op: 'march', order: 1, army: 'nh', to: 'Moat Cailin' }], [{ text: 'March to Moat Cailin.' }]);
+  const t = nextTurnLength(s);
+  assert.match(t.reason, /reaches Moat Cailin|The King rides north/);
+  assert.ok(t.days <= marchDays(s.armies.nh, s.armies.nh.pos, s.holdings.moat_cailin.pos).days);
+  s.pendingReplies = [{ char: 'lysa_arryn', arrivesDay: (s.meta.date.year * 360 + (s.meta.date.month - 1) * 30 + s.meta.date.day - 1) + 1, changes: [] }];
+  assert.equal(nextTurnLength(s).days, 1);
+});
+test('the story can march any host but the player\'s, and the engine walks it', () => {
+  const s = fresh();
+  apply(s, [{ op: 'army_create', id: 'lh', owner: 'lannister', name: 'Host of the Rock', at: 'lannister', men: 8000 }, { op: 'army_create', id: 'nh', owner: 'stark', name: 'The Northern Host', at: 'stark', men: 5000 }]);
+  const r = applyChanges(s, [{ op: 'army_march', army: 'lh', to: 'Riverrun' }, { op: 'army_march', army: 'nh', to: 'Riverrun' }], { protectPlayer: true });
+  assert.equal(s.armies.lh.march.to, 'tully'); assert.equal(r.rejected.length, 1);
+  assert.equal(s.armies.nh.march, undefined);
+});
