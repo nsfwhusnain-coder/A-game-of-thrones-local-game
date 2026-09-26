@@ -1,6 +1,7 @@
 // The war room: grounds battles, sieges and marches in numbers so outcomes stay consistent.
 // The simulator still decides what happens — this tells it (and the player) what is *likely*.
 import { realmOf, placeName } from './world.js';
+import { mounted } from './units.js';
 
 import { MILES_PER_UNIT } from "../../data/geography.js"; // ~1.85 miles per game unit on the atlas
 export { MILES_PER_UNIT };
@@ -35,7 +36,7 @@ export function battleOdds(state, att, def, { fort = 0, terrain = 1 } = {}) {
 
 export function marchDays(a, from, to) {
   const d = Math.hypot(to[0] - from[0], to[1] - from[1]) * MILES_PER_UNIT * 1.12;
-  const sp = a.type === 'fleet' ? SPEED.fleet : /horse|cavalry|screamer|rider/i.test(a.composition || '') && a.men < 8000 ? SPEED.horse : SPEED.foot;
+  const sp = a.type === 'fleet' ? SPEED.fleet : (mounted(null, a) || (/horse|cavalry|screamer|rider/i.test(a.composition || '') && !a.units)) && a.men < 8000 ? SPEED.horse : SPEED.foot;
   const slow = (a.men > 15000 ? 0.8 : 1) * (a.secrecy === 'hidden' ? 0.85 : 1); // by night and off the roads is slower
   return { miles: Math.round(d), days: Math.max(1, Math.round(d / (sp * slow))) };
 }

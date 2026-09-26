@@ -1,5 +1,7 @@
 // The temper of the vassals: loyalty and friendship decide whether dues arrive and banners answer.
 // The simulator can override any of this by changing obligations itself; the engine fills in when it doesn't.
+import { unitsOf, addUnits } from './units.js';
+const isWoman = (c) => c.gender === 'f' || /\b(Lady|Queen|Princess|Septa|Daughter|Wife|Mother|Sister|Maid)\b/.test(c.title || '') || (c.roles || []).includes('lady');
 import { applyChanges, placePos, getRelation } from './world.js';
 import { marchDays, atWar } from './warfare.js';
 
@@ -84,15 +86,18 @@ export function vassalTick(state, days, touched = new Set()) {
             { op: 'figure', house: v.id, field: 'menAtArms', delta: -Math.round(maa * 0.6), source: 'Muster rolls' },
           ]);
           applied.push(...r.applied);
-          const a = Object.values(state.armies).find((x) => x.owner === v.id && x.name === name && !x.serving);
+          const a = Object.values(state.armies).find((x) => x.owner === v.id && x.name === name && !x.serving); let riding = [];
           if (a) {
             a.serving = v.liege; ob.host = a.id;
             if (musterPos && ob.muster && ob.muster !== v.seat) { a.march = { to: ob.muster, since: state.meta.turn }; a.dest = musterPos; a.status = 'marching'; }
-            // the lord rides with his men
+            // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
             state.characters[v.lord].loc = 'army:' + a.id;
+            const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && (!isWoman(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !c.travel && [v.seat, 'army:'].some((l) => String(c.loc || '').startsWith(l) || c.loc === v.seat) && !(c.roles || []).includes('maester'));
+            riding = kin.filter(() => Math.random() < 0.55).slice(0, 2);
+            for (const c of riding) { c.loc = 'army:' + a.id; delete c.travel; }
           }
           const eta = a && musterPos ? marchDays(a, seatPos, musterPos).days : 0;
-          const text = `${lordName} answers the call with ${men.toLocaleString()} men${eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
+          const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with him` : ''}${eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
           if (mine) events.push({ title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] });
         } else {
           ob.levies = 'answered';
@@ -219,6 +224,7 @@ export function gatherMusters(state) {
       const id = `${liegeId}_banners_${a.at}`.replace(/[^a-z0-9_]/g, '');
       host = state.armies[id] = { id, owner: liegeId, name: `The Banners of ${liege.name}`, commander: a.commander, at: a.at, pos: [...a.pos], dest: null, men: 0, type: 'army', composition: 'Levies and knights of the sworn houses', status: 'mustered', morale: a.morale ?? 70, supply: a.supply ?? 80, asOf: a.asOf };
     }
+    host.units = addUnits(unitsOf(state, host), unitsOf(state, a));
     const total = host.men + a.men;
     host.morale = Math.round(((host.morale ?? 70) * host.men + (a.morale ?? 70) * a.men) / Math.max(1, total));
     host.supply = Math.round(((host.supply ?? 80) * host.men + (a.supply ?? 80) * a.men) / Math.max(1, total));

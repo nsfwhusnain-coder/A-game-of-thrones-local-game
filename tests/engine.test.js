@@ -480,3 +480,26 @@ test('an engine-written order headline is one short sentence', async () => {
   const ev = orderEvents(s, [{ id: 'f', text: 'Hold a great feast.', result: ['The feast is held (4,050 dragons). Your lords are glad of it. At the high table, two lords came to blows.'] }], []);
   assert.equal(ev[0].title, 'The feast is held');
 });
+
+// ── What hosts are made of ──
+import { unitsOf, unitsText, mounted } from '../public/js/shared/units.js';
+test('a host knows its knights, riders, foot and archers — through merges and losses', () => {
+  const s = fresh();
+  executeActions(s, [{ op: 'raise', order: 1, at: 'stark', men: 2000, name: 'The Northern Host' }], [{ text: 'Raise the Northern Host.' }]);
+  const h = Object.values(s.armies).find((a) => a.name === 'The Northern Host');
+  const u = unitsOf(s, h); assert.equal(u.knights + u.horse + u.foot + u.archers, 2000); assert.ok(u.foot > u.horse);
+  apply(s, [{ op: 'army_create', id: 'mh', owner: 'manderly', name: 'Host of House Manderly', at: 'stark', men: 1000, composition: 'Levies of House Manderly' }]);
+  s.armies.mh.serving = 'stark';
+  executeActions(s, [{ op: 'merge', order: 1 }], [{ text: 'Join the hosts.' }]);
+  assert.equal(Object.values(unitsOf(s, h)).reduce((a, b) => a + b, 0), 3000);
+  h.men = 1500; assert.equal(Object.values(unitsOf(s, h)).reduce((a, b) => a + b, 0), 1500);
+  assert.match(unitsText(s, h), /foot/);
+});
+test('a mounted company rides at horse pace; a levy walks', () => {
+  const s = fresh();
+  apply(s, [{ op: 'travel', character: 'jory_cassel', to: 'kings_landing', men: 100 }]);
+  const co = s.armies[s.characters.jory_cassel.loc.slice(5)];
+  assert.ok(mounted(s, co));
+  apply(s, [{ op: 'army_create', id: 'lv', owner: 'stark', name: 'Levies', at: 'stark', men: 5000, composition: 'Levies of House Stark' }]);
+  assert.ok(!mounted(s, s.armies.lv));
+});

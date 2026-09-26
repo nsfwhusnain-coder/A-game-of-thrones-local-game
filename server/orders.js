@@ -8,6 +8,7 @@ import { whereabouts } from '../public/js/shared/roads.js';
 import { commandable } from '../public/js/shared/errands.js';
 import { PROJECT_TEMPLATES } from '../public/js/shared/economy.js';
 import * as court from './court.js';
+import { unitsOf, unitsFor, addUnits, unitsText } from '../public/js/shared/units.js';
 export { commandable };
 
 const OFFICES = ['spymaster', 'steward', 'maester', 'captain', 'master_at_arms', 'knight', 'envoy', 'commander'];
@@ -454,6 +455,7 @@ export function orderEvents(state, orders, modelEvents) {
 const fieldHostAt = (state, owner, at) => Object.values(state.armies).find((x) => x.owner === owner && x.type !== 'fleet' && x.at === at && !x.march && !/garrison/i.test(x.status || ''));
 /** Fold one host into another: men, morale, supply, the banners in it, and the people riding with it. */
 export function foldInto(state, host, other) {
+  host.units = addUnits(unitsOf(state, host), unitsOf(state, other));
   const total = host.men + other.men;
   host.morale = Math.round(((host.morale ?? 70) * host.men + (other.morale ?? 70) * other.men) / Math.max(1, total));
   host.supply = Math.round(((host.supply ?? 80) * host.men + (other.supply ?? 80) * other.men) / Math.max(1, total));
@@ -475,6 +477,7 @@ export function raiseLevies(state, { at, men, commander, name, to }) {
   const out = []; let host = fieldHostAt(state, p, place);
   applyChanges(state, [{ op: 'figure', house: p, field: 'levies', delta: -n, source: 'Muster rolls' }], { source: 'Muster rolls' });
   if (host) {
+    host.units = addUnits(unitsOf(state, host), unitsFor(state, { owner: p, composition: 'Levies' }, n));
     host.men += n; host.composition = /levies/i.test(host.composition || '') ? host.composition : [host.composition, `Levies of House ${me.name}`].filter(Boolean).join('; ');
     if (name) host.name = String(name).slice(0, 80);
     if (cmd) { host.commander = cmd.id; cmd.loc = 'army:' + host.id; delete cmd.travel; }
@@ -483,7 +486,7 @@ export function raiseLevies(state, { at, men, commander, name, to }) {
     let id = slug(name || `${me.name}_host_${hold.name}`); while (state.armies[id]) id += '_2';
     host = state.armies[id] = { id, owner: p, name: String(name || `The Host of ${hold.name}`).slice(0, 80), commander: cmd?.id || null, at: place, pos: [...hold.pos], dest: null, men: n, type: 'army', composition: `Levies of House ${me.name}${n >= 3000 ? ', with household knights' : ''}`, status: 'mustering', morale: 65, supply: 80, asOf: dateStr(state.meta.date) };
     if (cmd) { cmd.loc = 'army:' + id; delete cmd.travel; }
-    out.push(`${fmtN(n)} levies muster at ${hold.name} as ${host.name}${cmd ? ` under ${cmd.name}` : ''}`);
+    out.push(`${fmtN(n)} levies muster at ${hold.name} as ${host.name}${cmd ? ` under ${cmd.name}` : ''} (${unitsText(state, host)})`);
   }
   if (n < Math.round(Number(men) || 0)) out.push(`only ${fmtN(n)} could be found of the ${fmtN(Math.round(Number(men)))} asked for`);
   const dest = to && destination(state, to);
@@ -503,7 +506,8 @@ export function callBanners(state, { vassals, at }) {
 /** Bring hosts at one place together under one banner. */
 export function mergeHosts(state, { armies, name, commander }) {
   const mine = Object.values(state.armies).filter((a) => commandable(state, a) && a.type !== 'fleet');
-  const picked = Array.isArray(armies) && armies.length ? mine.filter((a) => armies.includes(a.id) || armies.some((x) => slug(x) === slug(a.name))) : mine;
+  // the castle's own garrison stays on its walls unless it is named
+  const picked = Array.isArray(armies) && armies.length ? mine.filter((a) => armies.includes(a.id) || armies.some((x) => slug(x) === slug(a.name))) : mine.filter((a) => !/garrison/i.test(a.status || ''));
   const groups = new Map(); for (const a of picked) { const k = a.at || `${Math.round(a.pos[0] / 6)},${Math.round(a.pos[1] / 6)}`; groups.set(k, [...(groups.get(k) || []), a]); }
   const out = [];
   for (const g of groups.values()) {

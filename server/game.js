@@ -507,7 +507,7 @@ function foldAnswers(evs) {
   for (const e of evs) { if (/^House .+ answers the call$/.test(e.title || '')) { const k = e.day || 0; byDay.set(k, [...(byDay.get(k) || []), e]); } else out.push(e); }
   for (const [day, g] of byDay) {
     if (g.length < 2) { out.push(...g); continue; }
-    const parts = g.map((e) => { const m = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men.*?\(~(\d+) days\)/); return m ? `${m[1]} (${m[2]} men, ~${m[3]} days away)` : e.title.replace(/ answers the call$/, ''); });
+    const parts = g.map((e) => { const m = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men(, .+? riding with him)?.*?\(~(\d+) days\)/); return m ? `${m[1]}${m[3] ? ` with ${m[3].replace(/^, | riding with him$/g, '')}` : ''} (${m[2]} men, ~${m[4]} days away)` : e.title.replace(/ answers the call$/, ''); });
     const men = g.reduce((a, e) => a + (Number(String(e.text).match(/with ([\d,]+) men/)?.[1]?.replace(/,/g, '')) || 0), 0);
     out.push({ ...g[0], day, title: `${g.length} lords answer the call — ${men.toLocaleString('en-GB')} men on the march`, text: `${parts.join('; ')}.`, houses: [...new Set(g.flatMap((e) => e.houses || []))], importance: 3 });
   }

@@ -2,6 +2,7 @@
 import { app, $, $$, esc, fmt, placeName, getRelation, api, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
 import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
+import { unitsText } from '../shared/units.js';
 import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS, tradeModifier } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
 import { vassalTemper } from '../shared/vassals.js';
@@ -501,7 +502,7 @@ function holdingSheet(id) {
 }
 
 function armySheet(id) {
-  const s = app.state; const a = s.armies[id]; if (!a) return '';
+  const s = app.state; const p = s.meta.player; const a = s.armies[id]; if (!a) return '';
   const h = s.houses[a.owner]; const cmd = a.commander ? s.characters[a.commander] : null; const mine = a.owner === s.meta.player || a.serving === s.meta.player;
   // fog of war: a host you only have reports of shows the report, not the truth
   const v = viewOfArmies(s).get(id);
@@ -529,7 +530,10 @@ function armySheet(id) {
       const known = viewOfArmies(s);
       const foes = Object.values(s.armies).filter((b) => atWar(s, a.owner, b.owner) && known.has(b.id)).map((b) => { const k = known.get(b.id); const seen = k.known === 'seen'; const bb = seen ? b : { ...b, pos: k.pos, men: k.men, morale: 70, supply: 80, commander: null }; return { b: bb, seen, m: marchDays(a, a.pos, bb.pos), o: battleOdds(s, a, bb) }; }).sort((x, y) => x.m.days - y.m.days).slice(0, 4);
       const targets = a.type === 'fleet' ? [] : Object.values(s.holdings).filter((h) => atWar(s, a.owner, h.owner)).map((h) => ({ h, m: marchDays(a, a.pos, h.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
-      return (with_.length ? `<h4>Riding with the host</h4>${with_.map((c) => charRow(c)).join('')}` : '')
+      // what it is made of (seen hosts only), and the banners in it
+      const banners = Object.entries(a.contingents || {}).filter(([, n]) => n > 0).map(([h, n]) => `${esc(s.houses[h]?.name || h)} ${n.toLocaleString('en-GB')}`);
+      return (a.owner === p || known.get(a.id)?.known === 'seen' ? `<h4>The host</h4><div class="muted" style="font-size:0.88rem">${esc(unitsText(s, a))}${banners.length ? `<br>Banners: House ${esc(s.houses[a.owner]?.name)}, ${banners.join(', ')}` : ''}</div>` : '')
+        + (with_.length ? `<h4>Riding with the host</h4>${with_.map((c) => charRow(c)).join('')}` : '')
         + (foes.length ? `<h4>War room — enemy hosts</h4>${foes.map(({ b, m, o, seen }) => `<div class="row clickable" data-army="${b.id}">${seen ? sig(s.houses[b.owner]) : '<span class="unknown-dot"></span>'}<div class="grow"><div class="title">${seen ? esc(b.name) : 'An unconfirmed host'} <span class="muted">~${fmt(b.men)}</span></div><div class="sub">${m.days} days' march (${m.miles} mi) · if you attack: <b style="color:${o.attacker >= 60 ? '#a8e08a' : o.attacker >= 40 ? '#ffe0a0' : '#ec9a8a'}">${o.attacker}%</b></div></div></div>`).join('')}` : '')
         + (targets.length ? `<h4>Enemy holdings in reach</h4>${targets.map(({ h, m }) => { const e = siegeEstimate(s, h, [a]); return `<div class="row clickable" data-hold="${h.id}"><div class="grow"><div class="title">${esc(h.name)}</div><div class="sub">${m.days} days · walls ${h.fort}/6 · a siege would take ~${e.months} moons · ${esc(e.storm)}</div></div></div>`; }).join('')}` : '');
     })()}
