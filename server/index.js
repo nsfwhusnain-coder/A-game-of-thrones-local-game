@@ -27,6 +27,14 @@ async function readBody(req) {
 const routes = [];
 const route = (method, pattern, handler) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), handler });
 
+// the newest change to the game's own code: a page loaded before it is out of date and should reload
+function build() {
+  let t = 0; const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const f = path.join(d, e.name); if (e.isDirectory()) walk(f); else if (/\.(js|css|html)$/.test(e.name)) t = Math.max(t, fs.statSync(f).mtimeMs); } };
+  for (const d of ['server', 'public/js', 'public/css']) walk(path.join(ROOT, d));
+  t = Math.max(t, fs.statSync(path.join(PUBLIC, 'index.html')).mtimeMs);
+  return String(Math.round(t));
+}
+route('GET', '/api/version', () => ({ build: build() }));
 route('GET', '/api/config', () => ({ ...loadConfig(), apiKey: loadConfig().apiKey ? '••••' : '' }));
 route('POST', '/api/config', async (req) => { const b = await readBody(req); if (b.apiKey === '••••') delete b.apiKey; const c = saveConfig(b); return { ...c, apiKey: c.apiKey ? '••••' : '' }; });
 route('GET', '/api/models', async () => ({ models: await listModels() }));

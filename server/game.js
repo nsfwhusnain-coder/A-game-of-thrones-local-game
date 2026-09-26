@@ -20,7 +20,7 @@ import { carryOutOrders, readOrdersByRule, executeActions, named, startWorks, co
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-export const SAVES = path.join(ROOT, 'saves');
+export const SAVES = process.env.WC_SAVES || path.join(ROOT, 'saves');
 fs.mkdirSync(SAVES, { recursive: true });
 
 const dir = (id) => {

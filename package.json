@@ -5,15 +5,16 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node server/index.js",
+    "start": "node --watch-path=server --watch-path=public/js/shared --watch-path=public/data server/index.js",
     "check": "node scripts/check-data.js",
     "fetch-sigils": "node scripts/fetch-sigils.js",
     "fetch-voices": "node scripts/fetch-voices.js",
     "test": "node --test tests/*.test.js",
     "bench": "node scripts/bench.js",
-    "fetch-music": "node scripts/fetch-music.js"
+    "fetch-music": "node scripts/fetch-music.js",
+    "serve": "node server/index.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }

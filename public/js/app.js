@@ -151,6 +151,11 @@ async function startGame(id, state) {
 }
 function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); }
 app.renderOrders = renderOrders; app.renderTop = renderTop;
+// the game's code changed on disk (an update): say so, rather than run a page that no longer matches the server
+(async () => {
+  let mine = null; try { mine = (await api('/version')).build; } catch { return; }
+  setInterval(async () => { try { const b = (await api('/version')).build; if (b !== mine && !$('#update-banner')) document.body.insertAdjacentHTML('beforeend', '<div id="update-banner" class="update-banner">The game has been updated. <button class="btn small primary" onclick="location.reload()">Reload</button></div>'); } catch { /* server restarting */ } }, 20000);
+})();
 app.setState = (s, opts = {}) => { app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); if (!opts.keepDrawer) renderDrawer(); };
 
 function renderTop() {

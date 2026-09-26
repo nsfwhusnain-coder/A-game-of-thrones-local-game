@@ -667,3 +667,5 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .threads { border: 1px solid var(--line2); border-radius: 4px; padding: 0.35rem 0.6rem; margin-bottom: 0.8rem; font-size: 0.84rem; }
 .threads summary { cursor: pointer; font-family: var(--display); font-size: 0.78rem; letter-spacing: 0.06em; color: var(--gold2); }
 .threads ul { margin: 0.3rem 0 0; padding-left: 1.1rem; line-height: 1.45; }
+
+.update-banner { position: fixed; top: 0.6rem; left: 50%; transform: translateX(-50%); z-index: 90; background: var(--panel-solid, #1b140b); border: 1px solid var(--gold); color: var(--gold2); padding: 0.4rem 0.8rem; border-radius: 4px; box-shadow: var(--shadow); font-size: 0.9rem; }

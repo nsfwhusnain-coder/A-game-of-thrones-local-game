@@ -81,7 +81,9 @@ export const DEFAULT_CONFIG = {
 };
 
 export function loadConfig() {
-  try { return { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) }; } catch { return { ...DEFAULT_CONFIG }; }
+  let c; try { c = { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) }; } catch { c = { ...DEFAULT_CONFIG }; }
+  if (process.env.WC_PROVIDER) c.provider = process.env.WC_PROVIDER; // tests run the real server on the mock model
+  return c;
 }
 // Accept whatever the player pastes: "localhost:8080", "http://host:8080", ".../v1/chat/completions" all become ".../v1"
 export function normalizeBaseUrl(u) {
