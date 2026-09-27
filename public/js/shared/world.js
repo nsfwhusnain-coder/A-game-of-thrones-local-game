@@ -15,8 +15,10 @@ import { random, seedState, newSeed, withRng } from '../engine/rng.js';
 import { nextId } from '../engine/ids.js';
 import { kindOf, settle, settleAll, isRef, idOf, ref, partyAt, partyOf, setLoc, joinParty, leaveParty, moveMembers, disband, forces, isForce } from '../engine/parties.js';
 import { planRoute, paceOf } from '../engine/movement.js';
+import { bound, DOING } from '../engine/activity.js';
 import { sameLand } from '../engine/geo.js';
 import { toV3 } from '../engine/state/migrate.js';
+import { settleWorld } from '../engine/state/settle.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -116,7 +118,7 @@ function buildInitialState(scenarioId, playerHouse, seed) {
   }
   const characters = {};
   for (const c of [...CHARACTERS, ...ANCESTORS]) {
-    characters[c.id] = { ...c, loc: c.loc ? (resolvePlaceId(c.loc) || c.loc) : null, status: c.alive === false ? 'dead' : 'free', opinion: 0, loyalty: 60, memories: [] };
+    characters[c.id] = { ...c, loc: c.loc ? (isRef(c.loc) ? c.loc : resolvePlaceId(c.loc) || c.loc) : null, status: c.alive === false ? 'dead' : 'free', opinion: 0, loyalty: 60, memories: [] };
     characters[c.id].skills = deriveSkills(c);
     if (!characters[c.id].born && c.age != null) characters[c.id].born = sc.date.year - c.age;
   }
@@ -144,8 +146,8 @@ function buildInitialState(scenarioId, playerHouse, seed) {
   const holdings = buildHoldings();
   const parties = {};
   for (const a of sc.parties) {
-    const at = resolvePlaceId(a.at);
-    parties[a.id] = { ...a, kind: kindOf(a), at, pos: placePos(at, holdings) || [0, 0], members: [], morale: 70, supply: 80, asOf: dateStr(sc.date) };
+    const at = a.at ? resolvePlaceId(a.at) : null; // a party may start at sea (the Silence), where it has only a position
+    parties[a.id] = { ...a, kind: kindOf(a), at, pos: placePos(at, holdings) || a.pos || [0, 0], members: [...(a.members || [])], morale: 70, supply: 80, asOf: dateStr(sc.date) };
   }
   const relations = {};
   for (const [a, b, v] of sc.relations) relations[relKey(a, b)] = { v, note: '' };
@@ -172,7 +174,7 @@ function buildInitialState(scenarioId, playerHouse, seed) {
     const pr = project(state, h.id);
     if (pr) h.figures.income = { ...h.figures.income, v: Math.round((pr.low + pr.high) / 2) };
   }
-  settleAll(state);
+  settleWorld(state);
   seedIntel(state);
   return state;
 }
@@ -610,11 +612,11 @@ function applyOne(state, ch, ctx) {
       if (ctx.protectPlayer && a.canonLock) throw new Error(`${a.name} keeps to its road`);
       const dest = posOf(state, ch.to);
       if (!dest) throw new Error('unknown destination ' + ch.to);
-      // a host goes no faster for being written about: a short step (a camp nearby, a retreat to the next castle) is
-      // taken at once; anything farther is a march the engine walks at its true pace, by the roads (engine/movement.js)
+      // a host goes no faster for being written about: a short step (a camp nearby, a retreat to the next castle, two
+      // days' march at most) is taken at once; anything farther is a march the engine walks at its pace (engine/movement.js)
       const place = resolvePlaceId(ch.to); const foe = !place && state.parties[findArmy(state, idOf(ch.to) ?? String(ch.to)) || ''];
       const miles = Math.hypot(dest[0] - a.pos[0], dest[1] - a.pos[1]) * MILES_PER_UNIT;
-      if (miles <= paceOf(state, a) && (a.kind === 'fleet' || sameLand(a.pos, dest))) {
+      if (miles <= 2 * paceOf(state, a) && (a.kind === 'fleet' || sameLand(a.pos, dest))) {
         a.pos = [...dest]; a.at = place || null; delete a.march; a.route = null; a.asOf = date; settle(state, a);
         return { op, text: `${a.name} ${place ? 'moves to' : 'makes camp near'} ${placeName(state, place || nearestHolding(state, dest))}` };
       }
@@ -812,6 +814,7 @@ function applyOne(state, ch, ctx) {
         if (riding?.march?.to === l) out.push(`still on the road to ${placeName(state, l)}`); // the engine brings riders in; the story does not
         else if (ctx.protectPlayer && c.house === state.meta.player && !ctx.mayMove?.includes(c.id) && l !== c.loc) out.push(`stays where you left them (only you send ${c.name} anywhere)`);
         else if (!there) out.push(`stays where they are (no place called ${String(raw).slice(0, 40)})`); // everyone is somewhere real
+        else if (ctx.protectPlayer && free && !isRef(l) && bound(state, c)) out.push(`stays: ${c.name} is ${DOING[bound(state, c).kind]}`); // one thing at a time (engine/activity.js)
         else if (miles > 60 && free) {
           // no one crosses the realm in a day: a far move is a journey, taken on the road (a far host is ridden to)
           try { const p = startRide(state, c, l); out.push(`sets out for ${placeName(state, l)} (~${Math.max(1, Math.ceil(p.route.days))} days)`); } catch (e) { out.push(`stays: ${e.message}`); }

@@ -6,8 +6,10 @@ import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on
 import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplies } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding, rideOf, sendHome } from '../public/js/shared/world.js';
-import { ref, isRef, partyAt, partyOf, membersOf, disband, together, settle as settleParty } from '../public/js/engine/parties.js';
+import { ref, isRef, partyAt, partyOf, membersOf, disband, together, sworn, settle as settleParty } from '../public/js/engine/parties.js';
 import { planRoute } from '../public/js/engine/movement.js';
+import { settleWorld } from '../public/js/engine/state/settle.js';
+import { validate } from '../public/js/engine/state/validate.js';
 import { marchTick } from '../public/js/shared/marches.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
@@ -61,6 +63,7 @@ export function loadState(id) {
   return st;
 }
 function saveState(id, state) {
+  settleWorld(state); // a save is always settled: every party's state and every person's activity true to the world
   fs.mkdirSync(dir(id), { recursive: true });
   const f = path.join(dir(id), 'state.json');
   fs.writeFileSync(f + '.tmp', JSON.stringify(state));
@@ -452,6 +455,10 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   if (notes.length) appendChronicle(id, `\n### ${record.date} (turn ${record.turn})\n` + notes.map((n) => `- ${n}`).join('\n') + '\n');
   state.chronicle = [];
 
+  // the world holds together (03 §14), checked every turn: a broken invariant is an engine bug, reported, never hidden
+  settleWorld(state);
+  const broken = validate(state);
+  if (broken.length) { record.invariants = broken.slice(0, 20); console.warn(`turn ${record.turn}: ${broken.length} invariant(s) broken — ${broken.slice(0, 3).join('; ')}`); }
   saveState(id, state);
   try { appendWorldLog(id, state, record); } catch (e) { console.warn('world log:', e.message); }
   // Compress old turns into the chronicle without making the player wait
@@ -793,9 +800,9 @@ function actWith(id, state, body) {
       const owner = state.houses[a.owner];
       // the sworn houses take their own men home
       let others = 0;
-      const sworn = Object.values(a.contingents || {}).reduce((x, y) => x + y, 0);
-      const scale = sworn > a.men ? a.men / sworn : 1; // losses fall on every banner alike
-      for (const [vid, men] of Object.entries(a.contingents || {})) {
+      const swornMen = sworn(a).reduce((x, [, y]) => x + y, 0);
+      const scale = swornMen > a.men ? a.men / swornMen : 1; // losses fall on every banner alike
+      for (const [vid, men] of sworn(a)) {
         const v = state.houses[vid]; if (!v) continue; const back = Math.round(men * scale * 0.9); others += men * scale;
         v.figures.levies = { ...(v.figures.levies || {}), v: (Number(v.figures.levies?.v) || 0) + back };
         v.obligations = { ...(v.obligations || {}), levies: 'not_called' }; delete v.obligations.host;

@@ -85,6 +85,8 @@ function standOn(p, comp = null, reach = 8) {
   }
   return best;
 }
+/** The nearest dry ground to a point, within about a day's ride (a party an old save left on the water), or null. */
+export function ashore(p, reach = 12) { const g = standOn(p, null, reach); return g < 0 ? null : round(centre(g)); }
 const cache = new Map();
 /**
  * The way on foot from `from` to `to`: { path: [[x,y]…], eff: [effort-miles to each point], miles } or null when the

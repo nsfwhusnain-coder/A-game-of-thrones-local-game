@@ -40,6 +40,19 @@ const SCENARIOS = {
       await page.evaluate(() => document.querySelector('#cfg-result').scrollIntoView({ block: 'center' }));
     } };
   },
+  // the roads the engine walks (WP B2): the Stark host on the kingsroad to Moat Cailin, the banners converging on it,
+  // and Jon riding for the Wall — every route drawn is the one the engine planned, not a straight line
+  async routes() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+    const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
+    await api(`/games/${id}/act`, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 4000 });
+    const s1 = await api(`/games/${id}`);
+    const host = Object.values(s1.parties).find((a) => a.owner === 'stark' && a.kind === 'host');
+    await api(`/games/${id}/act`, { kind: 'march', army: host.id, to: 'moat_cailin' });
+    const { state: s } = await api(`/games/${id}/advance`, { span: '9d', orders: [{ id: 'r1', text: 'Send Jon Snow to Castle Black.' }] });
+    const at = s.parties[host.id]?.pos || s.holdings.stark.pos;
+    return { id, focus: [at[0] + 20, at[1] - 60], dist: 520 };
+  },
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
@@ -78,7 +91,7 @@ async function main() {
         if (drive) await drive(page);
         await page.waitForTimeout(id ? 4000 : 1500);
         const file = path.join(OUT, `${name}-${w}x${h}.jpg`); // JPEG: small enough to commit beside a pull request
-        await page.screenshot({ path: file, type: 'jpeg', quality: 82 });
+        await page.screenshot({ path: file, type: 'jpeg', quality: 82, timeout: 180000 }); // SwiftShader draws a forest slowly
         console.log(`${file}${errors.length ? `  (page errors: ${errors.join(' | ')})` : ''}`);
         await page.close();
       }

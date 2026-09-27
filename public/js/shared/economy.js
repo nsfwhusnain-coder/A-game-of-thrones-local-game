@@ -5,7 +5,7 @@
 import { evaluateRules } from './rules.js';
 import { RESOURCES, REGION_PROFILE, HOLDING_RESOURCES, POPULATION, POPULATION_DEFAULTS, TRIBUTE_SHARE, TAX_LEVELS, RESOURCE_VALUE } from '../../data/economy.js';
 import { random } from '../engine/rng.js';
-import { forces } from '../engine/parties.js';
+import { forces, sworn as swornOf } from '../engine/parties.js';
 
 const MINES = new Set(['gold', 'silver', 'iron']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -105,7 +105,7 @@ export function armyUpkeep(a) {
   // food stores, and fields left untended) and a little coin for carts, spears and shoes — not wages. Sworn
   // houses feed and arm their own contingents. Men-at-arms are paid; sellswords are paid dearly.
   const sell = /sellsword|company|mercenar/i.test(a.composition || '') || /company/i.test(a.name || '');
-  const sworn = Object.values(a.contingents || {}).reduce((x, y) => x + y, 0);
+  const sworn = swornOf(a).reduce((x, [, y]) => x + y, 0);
   const own = Math.max(0, a.men - Math.min(a.men, sworn));
   const paid = /men-at-arms|household|knights|guard|gold cloak/i.test(a.composition || '') && !/levies/i.test(a.composition || '');
   return own * (sell ? 1.1 : paid ? 0.22 : 0.04) * (a.kind === 'garrison' ? 0.5 : 1);

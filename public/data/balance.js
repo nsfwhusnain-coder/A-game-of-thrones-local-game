@@ -17,7 +17,9 @@ export const difficultyOf = (state) => DIFFICULTY[state?.meta?.settings?.difficu
 export const SPEED = {
   foot: 18, horse: 32, fleet: 60,             // the current engine's classes (shared/warfare.js)
   footHost: 15, mixedHost: 18, horseHost: 30, // the party classes of 03 §5 (WP B2)
-  retinue: 25, rider: 40, envoy: 30, progress: 10, caravan: 12,
+  retinue: 25, rider: 40, envoy: 30, caravan: 12,
+  progress: 30,                               // the King's court keeps the canon timetable: the Twins to Winterfell, ~1,000
+                                              // road miles of the atlas, in about a moon (DECISIONS D-008; 03 §5 said 10)
   forced: 1.3,                                // a forced march's speed, at a price in stragglers and heart (07 §5)
 };
 export const ROAD_FACTOR = 1.12;              // roads wind: a straight line is shorter than the way walked (estimates only)

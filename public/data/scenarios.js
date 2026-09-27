@@ -80,6 +80,8 @@ export const SCENARIOS = {
       { id: 'mountain_riders', owner: 'clegane', name: 'The Mountain\'s Men', commander: 'gregor_clegane', at: 'cleganes_keep', men: 300, kind: 'host', composition: 'Brutal outriders' },
       { id: 'sunspear_guard', owner: 'martell', name: 'Spears of Sunspear', commander: 'areo_hotah', at: 'water_gardens', men: 1500, kind: 'garrison', composition: 'Dornish spearmen and sand-steed riders' },
       { id: 'winterfell_guard', owner: 'stark', name: 'Winterfell Household', commander: 'rodrik_cassel', at: 'winterfell', men: 400, kind: 'garrison', composition: 'Men-at-arms and household guard' },
+      // Euron Crow's Eye, exiled by his brother, sails the Silence far from Pyke: a ship of his own, no house's to command
+      { id: 'the_silence', owner: 'greyjoy', name: 'The Silence', commander: 'euron_greyjoy', pos: [1300, 2250], men: 60, ships: 1, kind: 'fleet', exile: true, members: ['euron_greyjoy'], composition: 'One red-hulled longship, crewed by mutes' },
     ],
     relations: [
       ['baratheon', 'stark', 60], ['baratheon', 'lannister', 30], ['stark', 'lannister', -15], ['tully', 'lannister', -10],

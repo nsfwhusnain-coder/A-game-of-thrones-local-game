@@ -217,7 +217,7 @@ export class MapScene {
       const w = typeof width === 'function' ? width(i, pts.length) : width;
       const [x, z] = pts[i]; const y = (water ? Math.max(WATER_LEVEL + 0.05, this.heightAt(x, z)) : this.groundAt(x, z)) + lift;
       verts.push(x + nx * w, y, z + ny * w, x - nx * w, y, z - ny * w); uvs.push(acc, 0, acc, 1);
-      if (i) { const k = (i - 1) * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+      if (i) { const k = (i - 1) * 2; idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); } // wound to face the sky (the other way, every ribbon was culled)
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); g.computeVertexNormals();
     const m = new THREE.Mesh(g, material); m.receiveShadow = true; return m;
@@ -436,7 +436,7 @@ export class MapScene {
         const oldPos = rec?.pos;
         if (rec) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); }
         const group = buildArmy(atSea ? { ...a, kind: 'fleet', ships: a.sea.ships || 1 } : a, owner); this.scene.add(group);
-        rec = { group, sig, pos: oldPos || (a.motion?.from ? [...a.motion.from] : [...a.pos]), anim: null, route: null, label: this.addLabel('', [0, 0, 0], 'army', { army: a.id }) };
+        rec = { group, sig, pos: oldPos || (a.motion?.path?.length ? [...a.motion.path[0]] : [...a.pos]), anim: null, route: null, label: this.addLabel('', [0, 0, 0], 'army', { army: a.id }) }; // a march this turn replays from where it began
         this.armyObjs.set(a.id, rec);
       }
       const mode = a.kind === 'fleet' || atSea ? 'sea' : 'land';
@@ -492,7 +492,7 @@ export class MapScene {
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: 'uniform vec3 uColor; varying vec2 vUv; void main(){ float edge = smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y); gl_FragColor = vec4(uColor, edge * 0.55); }',
     });
-    const g = this.ribbon(path, 0.7, m, 0.5); g.renderOrder = 2; return g;
+    const g = this.ribbon(catmull(path, 2.5), 0.7, m, 0.5); g.renderOrder = 2; return g; // dense, so it lies on the hills
   }
   // The road still ahead of a party, as the engine planned it: its route from where it stands (engine/movement.js),
   // or — for a host waiting for ships or at sea — the sea lane to its landing (shared/sea.js) and the land beyond.
@@ -513,6 +513,9 @@ export class MapScene {
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: 'uniform float uTime; uniform vec3 uColor; varying vec2 vUv; void main(){ float dash = step(0.45, fract(vUv.x * 0.12 - uTime * 0.6)); float edge = smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.75, vUv.y); gl_FragColor = vec4(uColor, dash * edge * 0.95); }',
     });
+    // the engine's routes turn at a few points: sample them densely (and round the grid's corners) so the ribbon lies on
+    // the ground over the hills between them instead of cutting through them
+    path = catmull(path, 2.5);
     const g = this.ribbon(path, width, m, 0.6);
     const end = path.at(-1), prev = path.at(-2) || path[0];
     const cone = new THREE.Mesh(new THREE.ConeGeometry(2.2, 5, 4), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 }));

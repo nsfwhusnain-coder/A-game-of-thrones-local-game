@@ -8,7 +8,7 @@ import { daysLeft } from '../engine/movement.js';
 
 // the player's own hosts, those serving them, and their sworn lords' hosts answering the call
 export function commandable(state, a) {
-  if (!isForce(a)) return false; // a rider is sent and recalled, not commanded like a host
+  if (!isForce(a) || a.exile) return false; // a rider is sent and recalled, not commanded; an exile answers to no one
   const p = state.meta.player; if (a.owner === p || a.serving === p) return true;
   const v = state.houses[a.owner]; return !!v && v.liege === p && v.obligations?.host === a.id;
 }

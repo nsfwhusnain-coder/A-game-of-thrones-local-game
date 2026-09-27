@@ -2,7 +2,7 @@
 // The simulator can override any of this by changing obligations itself; the engine fills in when it doesn't.
 import { unitsOf, addUnits } from './units.js';
 import { applyChanges, placePos, getRelation, rideOf, sendHome } from './world.js';
-import { ref, isRef, joinParty, moveMembers, membersOf, disband, settle, isForce } from '../engine/parties.js';
+import { ref, isRef, joinParty, moveMembers, membersOf, disband, settle, isForce, sworn } from '../engine/parties.js';
 import { marchDays, atWar } from './warfare.js';
 import { incapacity } from './regency.js';
 import { pronouns, isFemale } from './people.js';
@@ -274,7 +274,7 @@ export function fieldService(state, days) {
   const autumn = state.world?.season === 'autumn';
   for (const host of Object.values(state.parties)) {
     if (!host.contingents) continue;
-    for (const [vid, men] of Object.entries(host.contingents)) {
+    for (const [vid, men] of sworn(host)) {
       const v = state.houses[vid]; if (!v || v.liege !== host.owner) { continue; }
       const k = [vid, host.owner].sort().join('|');
       const drift = (autumn ? 2.5 : 1.2) * months * (['besieging', 'camped', 'mustering'].includes(host.state) || host.kind === 'garrison' ? 1.3 : 0.8);

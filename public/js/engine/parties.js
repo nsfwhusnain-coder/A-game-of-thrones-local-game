@@ -7,6 +7,7 @@
 // Harbor") is derived from it by statusText(), never written by a model (B-20: the story once relabelled a host on
 // the march as "holding").
 import { PLACE_NAMES } from '../../data/geography.js';
+import { atSeaOn } from './movement.js';
 
 export const PREFIX = 'party:';
 export const KINDS = ['host', 'fleet', 'garrison', 'retinue', 'progress', 'envoy', 'rider', 'caravan', 'band'];
@@ -116,7 +117,8 @@ export function settle(state, p) {
   const h = p.besieging && state.holdings?.[p.besieging];
   const besieging = !!(h?.siege && !p.march);
   if (!besieging) delete p.besieging;
-  p.state = p.sea?.phase === 'sailing' ? 'embarked'
+  shares(p);
+  p.state = p.sea?.phase === 'sailing' || (p.route && atSeaOn(p.route, p.route.done)) ? 'embarked'
     : p.march ? (p.purpose?.returning ? 'returning' : 'marching')
       : besieging ? 'besieging'
         : p.muster?.remaining > 0 ? 'mustering'
@@ -125,6 +127,25 @@ export function settle(state, p) {
   return p.state;
 }
 export const settleAll = (state) => { for (const p of Object.values(state.parties || {})) settle(state, p); };
+
+/**
+ * Who owns which men in a host (03 §3.3): the sworn houses' contingents, and the owner's own share — the rest. Losses
+ * fall on every banner alike, so when the host has fewer men than its banners brought, each is cut in proportion.
+ * Afterwards the contingents add up to the host's men (03 §14, invariant 4).
+ */
+export function shares(p) {
+  if (!p.contingents || TRAVELLERS.has(p.kind)) return;
+  const men = Math.max(0, Math.round(p.men || 0));
+  const others = Object.entries(p.contingents).filter(([h, n]) => h !== p.owner && n > 0);
+  const sum = others.reduce((t, [, n]) => t + n, 0);
+  const k = sum > men ? men / sum : 1;
+  const out = {}; let given = 0;
+  for (const [h, n] of others) { const x = Math.floor(n * k); if (x > 0) { out[h] = x; given += x; } }
+  if (men - given > 0) out[p.owner] = men - given;
+  p.contingents = out;
+}
+/** The sworn houses' men in a host (its contingents, the owner's own share left out). */
+export const sworn = (p) => Object.entries(p?.contingents || {}).filter(([h]) => h !== p.owner);
 
 const placeText = (state, id) => state.holdings?.[id]?.name || PLACE_NAMES[id] || (id ? String(id).replace(/_/g, ' ') : 'the field');
 /** What the player reads about a party, derived from its state and orders (never stored, never written by a model). */

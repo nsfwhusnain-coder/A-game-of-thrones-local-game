@@ -4,6 +4,7 @@
 // travel the map (anyone on the road can see a lord's banners), stay some days, and ride home.
 import { placeName, dateStr } from './world.js';
 import { partyOf, joinParty, disband, settle, forces } from '../engine/parties.js';
+import { canAttend } from '../engine/activity.js';
 import { pronouns } from './people.js';
 import { random } from '../engine/rng.js';
 
@@ -62,7 +63,7 @@ export function retinueTick(state, days, r = random) {
 function sendOut(state, r) {
   const p = state.meta.player;
   const home = (h) => h.seat && state.holdings[h.seat];
-  const lords = Object.values(state.houses).filter((h) => h.id !== p && h.lord && home(h) && SIZE[h.rank] && state.characters[h.lord]?.alive && state.characters[h.lord].status === 'free' && state.characters[h.lord].loc === h.seat && home(h).status !== 'besieged' && !dutyBound(state, h));
+  const lords = Object.values(state.houses).filter((h) => h.id !== p && h.lord && home(h) && SIZE[h.rank] && state.characters[h.lord]?.alive && state.characters[h.lord].status === 'free' && state.characters[h.lord].loc === h.seat && home(h).status !== 'besieged' && !dutyBound(state, h) && canAttend(state, state.characters[h.lord], 'attending'));
   if (!lords.length) return null;
   // the player's own region is where the eye rests: its lords go out more often
   const mine = state.holdings[state.houses[p]?.seat]?.region;

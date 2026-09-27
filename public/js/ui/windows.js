@@ -17,7 +17,7 @@ import { temperament, natureTags } from '../shared/temperament.js';
 import { viewOfArmies, ageText } from '../shared/intel.js';
 import { DEMEANOURS } from '../../data/demeanours.js';
 import { profileFor, VOICE_CHOICES, voiceSettings, setVoiceSetting, speak, stopSpeaking } from './voice.js';
-import { forces, partyOf, placeOf, membersOf, together, statusText } from '../engine/parties.js';
+import { forces, partyOf, placeOf, membersOf, together, statusText, sworn } from '../engine/parties.js';
 import { daysLeft } from '../engine/movement.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
@@ -581,7 +581,7 @@ function armySheet(id) {
       const foes = forces(s).filter((b) => atWar(s, a.owner, b.owner) && known.has(b.id)).map((b) => { const k = known.get(b.id); const seen = k.known === 'seen'; const bb = seen ? b : { ...b, pos: k.pos, men: k.men, morale: 70, supply: 80, commander: null }; return { b: bb, seen, m: marchDays(a, a.pos, bb.pos), o: battleOdds(s, a, bb) }; }).sort((x, y) => x.m.days - y.m.days).slice(0, 4);
       const targets = a.kind === 'fleet' ? [] : Object.values(s.holdings).filter((h) => atWar(s, a.owner, h.owner)).map((h) => ({ h, m: marchDays(a, a.pos, h.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
       // what it is made of (seen hosts only), and the banners in it
-      const banners = Object.entries(a.contingents || {}).filter(([, n]) => n > 0).map(([h, n]) => `${esc(s.houses[h]?.name || h)} ${n.toLocaleString('en-GB')}`);
+      const banners = sworn(a).filter(([, n]) => n > 0).map(([h, n]) => `${esc(s.houses[h]?.name || h)} ${n.toLocaleString('en-GB')}`);
       return (a.owner === p || known.get(a.id)?.known === 'seen' ? `<h4>The host</h4><div class="muted" style="font-size:0.88rem">${esc(unitsText(s, a))}${banners.length ? `<br>Banners: House ${esc(s.houses[a.owner]?.name)}, ${banners.join(', ')}` : ''}</div>` : '')
         + (with_.length ? `<h4>Riding with the host</h4>${with_.map((c) => charRow(c)).join('')}` : '')
         + (foes.length ? `<h4>War room — enemy hosts</h4>${foes.map(({ b, m, o, seen }) => `<div class="row clickable" data-army="${b.id}">${seen ? sig(s.houses[b.owner]) : '<span class="unknown-dot"></span>'}<div class="grow"><div class="title">${seen ? esc(b.name) : 'An unconfirmed host'} <span class="muted">~${fmt(b.men)}</span></div><div class="sub">${m.days} days' march (${m.miles} mi) · if you attack: <b style="color:${o.attacker >= 60 ? '#a8e08a' : o.attacker >= 40 ? '#ffe0a0' : '#ec9a8a'}">${o.attacker}%</b></div></div></div>`).join('')}` : '')
