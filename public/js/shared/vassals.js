@@ -1,11 +1,11 @@
 // The temper of the vassals: loyalty and friendship decide whether dues arrive and banners answer.
 // The simulator can override any of this by changing obligations itself; the engine fills in when it doesn't.
 import { unitsOf, addUnits } from './units.js';
-const isWoman = (c) => c.gender === 'f' || /\b(Lady|Queen|Princess|Septa|Daughter|Wife|Mother|Sister|Maid)\b/.test(c.title || '') || (c.roles || []).includes('lady');
 import { applyChanges, placePos, getRelation } from './world.js';
 import { marchDays, atWar } from './warfare.js';
 import { incapacity } from './regency.js';
-import { pronouns } from './people.js';
+import { pronouns, isFemale } from './people.js';
+import { needsShips } from './sea.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -97,12 +97,14 @@ export function vassalTick(state, days, touched = new Set()) {
             if (musterPos && ob.muster && ob.muster !== v.seat) { a.march = { to: ob.muster, since: state.meta.turn }; a.dest = musterPos; a.status = 'marching'; }
             // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
             state.characters[v.lord].loc = 'army:' + a.id;
-            const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && (!isWoman(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !c.travel && [v.seat, 'army:'].some((l) => String(c.loc || '').startsWith(l) || c.loc === v.seat) && !(c.roles || []).includes('maester'));
+            const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && (!isFemale(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !c.travel && [v.seat, 'army:'].some((l) => String(c.loc || '').startsWith(l) || c.loc === v.seat) && !(c.roles || []).includes('maester'));
             riding = kin.filter(() => Math.random() < 0.55).slice(0, 2);
             for (const c of riding) { c.loc = 'army:' + a.id; delete c.travel; }
           }
           const eta = a && musterPos ? marchDays(a, seatPos, musterPos).days : 0;
-          const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with ${pronouns(state.characters[v.lord]).him}` : ''}${eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
+          // an island lord's men cannot march to the mainland: they take ship, or wait for ships (shared/sea.js)
+          const byShip = musterPos && needsShips(seatPos, musterPos);
+          const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with ${pronouns(state.characters[v.lord]).him}` : ''}${byShip ? `; they must cross the sea to reach ${state.holdings[ob.muster]?.name || 'the muster'}` : eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
           if (mine) events.push({ day: (a?.bornDay || 0) + 1, title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] });
         } else {
           ob.levies = 'answered';
@@ -179,7 +181,7 @@ function rebellionTick(state, days) {
     if (t >= 14 || v.obligations?.tribute !== 'withholding' || Math.random() >= 0.2 * months) continue;
     v.rebel = true;
     const lord = state.characters[v.lord];
-    applyChanges(state, [{ op: 'decision', title: `House ${v.name} defies you`, from: v.lord, text: `${lord.name} has closed the gates of ${state.holdings[v.seat]?.name || 'his seat'}, turned away your envoy and declared that House ${v.name} owes you nothing. Other lords are watching to see what you do.`, options: [
+    applyChanges(state, [{ op: 'decision', title: `House ${v.name} defies you`, from: v.lord, text: `${lord.name} has closed the gates of ${state.holdings[v.seat]?.name || `${pronouns(lord).his} seat`}, turned away your envoy and declared that House ${v.name} owes you nothing. Other lords are watching to see what you do.`, options: [
       { label: 'Declare them traitors and march', hint: 'War. Every lord will see the price of defiance.', fx: [{ rebel: [v.id, 'war'] }] },
       { label: 'Offer terms', hint: 'Forgive their dues and hear their grievances. Some will call it weakness.', fx: [{ rebel: [v.id, 'terms'] }] },
       { label: 'Release them from their oaths', hint: 'Let them go. Your realm shrinks.', fx: [{ rebel: [v.id, 'release'] }] }] }]);
@@ -283,7 +285,7 @@ export function fieldService(state, days) {
         lev.v = (Number(lev.v) || 0) + Math.round(leave * 0.9);
         v.obligations = { ...(v.obligations || {}), levies: 'refused' }; delete v.obligations.host;
         for (const c of Object.values(state.characters)) if (c.loc === 'army:' + host.id && c.house === vid) c.loc = v.seat;
-        if (host.owner === state.meta.player) events.push({ title: `House ${v.name} goes home`, text: `Tired of the war and of ${state.characters[state.houses[host.owner]?.lord]?.name || 'his liege'}'s command, ${state.characters[v.lord]?.name || 'the lord'} strikes his tents in the night and marches ${leave.toLocaleString()} men home.`, where: v.seat, importance: 4, type: 'war', houses: [vid] });
+        if (host.owner === state.meta.player) events.push({ title: `House ${v.name} goes home`, text: `Tired of the war and of ${state.characters[state.houses[host.owner]?.lord]?.name || `${pronouns(state.characters[v.lord]).his} liege`}'s command, ${state.characters[v.lord]?.name || 'the lord'} strikes ${pronouns(state.characters[v.lord]).his} tents in the night and marches ${leave.toLocaleString()} men home.`, where: v.seat, importance: 4, type: 'war', houses: [vid] });
       }
     }
     if (host.men <= 0) delete state.armies[host.id];

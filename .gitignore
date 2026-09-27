@@ -28,3 +28,4 @@ public/music/*.flac
 
 # A player may drop a wiki export or their own notes here; the Maester indexes them (server/lore.js)
 lore/
+visual-out/

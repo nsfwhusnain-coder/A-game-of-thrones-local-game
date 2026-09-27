@@ -46,6 +46,11 @@ async function initTitle() {
   // open on the house last played (or the Starks), so the realm is never an empty page
   if (!app.chosenHouse) { let last = null; try { last = localStorage.getItem('wc-last-house'); } catch { /* private window */ } app.chosenHouse = HOUSES.some((h) => h.id === last) ? last : 'stark'; applyHouseTheme(HOUSES.find((h) => h.id === app.chosenHouse)); }
   renderHouseGrid(); renderHouseDetail(); renderSaves(); refreshLLMStatus();
+  // ?game=<save id> opens that game at once (a bookmark to a campaign; the visual tests use it); ?dev lends the page's
+  // state to the console and to scripts/screens.js as window.__wc
+  const qs = new URLSearchParams(location.search);
+  if (qs.has('dev')) window.__wc = app;
+  if (qs.get('game')) startGame(qs.get('game')).catch((e) => toast(e.message, true));
   $('#house-search').placeholder = `Search ${HOUSES.filter((h) => !h.landless || h.rank === 'exile').length} houses…`;
   try { drawTitleMap($('#title-map')); } catch (e) { console.warn('title map', e); }
   if (!app.titleResize) { app.titleResize = true; let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { if (!$('#title-screen').classList.contains('hidden')) drawTitleMap($('#title-map')); }, 250); }); }
