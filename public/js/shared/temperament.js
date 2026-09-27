@@ -88,7 +88,7 @@ export function moodWord(m) {
   return 'composed';
 }
 
-const powerOf = (state, h) => { const t = realmTotals(state, h); const armies = Object.values(state.armies || {}).filter((a) => a.owner === h).reduce((n, a) => n + (a.men || 0), 0); return (Number(t.levies) || 0) + (Number(t.menAtArms) || 0) * 2 + armies; };
+const powerOf = (state, h) => { const t = realmTotals(state, h); const armies = Object.values(state.parties || {}).filter((a) => a.owner === h).reduce((n, a) => n + (a.men || 0), 0); return (Number(t.levies) || 0) + (Number(t.menAtArms) || 0) * 2 + armies; };
 
 /**
  * Weigh what the player just said to character c. Mutates the character's mood in state.

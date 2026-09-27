@@ -13,7 +13,7 @@
 | Contract | `tests/ai-contract.test.js` | CI | every AI call kind: schema builds, mock output validates, prompt within token budget, prompt snapshot, fallback on provider error ([04](04-ai-system.md) §14) |
 | Integration | `tests/turn.test.js`, `tests/http.test.js` (existing, fixed for Windows) | CI | a full jump on the mock provider: facts, events bound to facts, keyframes, invariants ([03](03-architecture.md) §14) |
 | Scenario | `tests/scenarios/*.test.js` | CI | scripted multi-turn stories with assertions (§2) |
-| Soak | `scripts/soak.js` | CI nightly | 200 turns × 6 houses on mock; invariants every turn; save size; time per turn |
+| Soak | `scripts/soak.js` | CI nightly | 200 turns × 6 houses on mock; invariants every turn; save size; time per turn — ✅ WP B2 (`npm run soak`; 2 × 8 turns in every CI run) |
 | Replay | `scripts/replay.js` | CI | determinism: re-run recorded turns from snapshots and diff facts |
 | Visual | Playwright + SwiftShader | CI | the dev pages and the main flow; screenshots attached to PRs; DOM/geometry assertions for 12 §14 |
 | Model bench | `npm run bench` | **Owner** | the live model's accuracy and latency (04 §13) |
@@ -28,8 +28,8 @@ owner's complaints so they can never come back.
 |---|---|---|
 | `muster-one-host` | Stark: call all banners to Winterfell (quick); next turn order the host to Moat Cailin; jump 40 days | exactly **one** Stark host exists (plus garrisons); all answered contingents joined it or are en route to it with `rendezvous`; none sits at Winterfell after the host left (B-02) |
 | `story-matches-map` | Stark, 6 turns as in the audit | every event's named actors are where the facts say on those days; no event claims an arrival without an `arrived` fact (B-03, B-12) |
-| `kings-progress` | any house, 60 days, no orders | the progress moves along the kingsroad day by day; "The King comes to Winterfell" fires on its `arrived` fact, never before; Robert and the progress's members are in the party until then (B-06) |
-| `no-feasts-at-war` | Stark calls banners | no called/answered vassal lord starts a retinue journey until released (B-10) |
+| `kings-progress` | any house, 60 days, no orders | the progress moves along the kingsroad day by day; "The King comes to Winterfell" fires on its `arrived` fact, never before; Robert and the progress's members are in the party until then (B-06) — **`tests/parties.test.js`** (the arrival as the progress reaching Winterfell; the fact comes with B3) |
+| `no-feasts-at-war` | Stark calls banners | no called/answered vassal lord starts a retinue journey until released (B-10) — **`tests/parties.test.js`** |
 | `islands-need-ships` | Stark calls Crowl (Skagos) and Mormont (Bear Island) | their contingents wait at their ports for transport or sail with their own ships; no land path over the sea; no Wall toll (B-11) — **`tests/sea.test.js`** |
 | `natives-pass-free` | Reed contingent marches south through the Neck | no toll, no losses (B-11) — **`tests/sea.test.js`** |
 | `audience-binds` | Stark: audience with Roose Bolton, "bring your men to Moat Cailin within the fortnight" → mock verdict agree | a commitment exists; Bolton's contingent orders change to Moat Cailin the next day; on the due day the commitment is kept or broken with a fact (B-14) |

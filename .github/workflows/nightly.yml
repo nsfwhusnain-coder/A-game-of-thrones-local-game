@@ -1,0 +1,23 @@
+# Every night, and on demand: the long soak of docs/gdd/15-qa-tooling.md §1 — 200 turns of six houses on the mock
+# provider, the invariants of docs/gdd/03-architecture.md §14 checked after every turn, the time a turn takes and the size
+# of the save reported. No model and no GPU are needed. The report is kept as an artifact of the run.
+name: Nightly soak
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/soak.js --turns 200 --report soak-report.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soak-report
+          path: soak-report.md

@@ -18,7 +18,7 @@ test('the banners join the host wherever it has gone: one host, no camp left at 
   const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
   game.act(id, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 4000 });
   let s = game.loadState(id);
-  const host = Object.values(s.armies).find((a) => a.owner === 'stark' && a.at === 'stark' && !/garrison/i.test(a.status || ''));
+  const host = Object.values(s.parties).find((a) => a.owner === 'stark' && a.at === 'stark' && a.kind === 'host');
   assert.ok(host, 'the lord\'s own levies stand at Winterfell');
   assert.ok(vassals.every((v) => s.houses[v].obligations.join === host.id), 'every called lord is told to join that host');
   // the host marches before a single lord has answered
@@ -27,13 +27,13 @@ test('the banners join the host wherever it has gone: one host, no camp left at 
   s = game.loadState(id);
   // no second host left standing at the muster point (the Hand's own household riding south with the King is another
   // matter, and may well be on the road by now)
-  const left = Object.values(s.armies).filter((a) => a.owner === 'stark' && a.id !== host.id && a.type !== 'fleet' && a.at === 'stark' && !/garrison/i.test(a.status || ''));
+  const left = Object.values(s.parties).filter((a) => a.owner === 'stark' && a.id !== host.id && a.kind === 'host' && a.at === 'stark');
   assert.deepEqual(left.map((a) => a.name), [], 'no host left behind at Winterfell');
-  assert.ok(!Object.values(s.armies).some((a) => /^The Banners of/.test(a.name)), 'no orphan "Banners of" host');
-  const joined = Object.keys(s.armies[host.id].contingents || {});
+  assert.ok(!Object.values(s.parties).some((a) => /^The Banners of/.test(a.name)), 'no orphan "Banners of" host');
+  const joined = Object.keys(s.parties[host.id].contingents || {});
   assert.ok(joined.length >= 3, `the lords' men have joined the host (${joined.join(', ')})`);
   // anyone still on the road is making for the host itself, not for the empty muster point
-  for (const a of Object.values(s.armies).filter((x) => x.serving === 'stark')) assert.equal(String(a.march?.to), 'army:' + host.id, `${a.name} follows the host`);
+  for (const a of Object.values(s.parties).filter((x) => x.serving === 'stark')) assert.equal(String(a.march?.to), 'party:' + host.id, `${a.name} follows the host`);
 });
 
 test('the chronicle may not have a lord arrive whom the engine has still on the road, nor retell the engine\'s news', () => {

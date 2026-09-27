@@ -8,8 +8,10 @@ import { VOICES, HOUSE_WAYS } from '../public/data/voices.js';
 import { personaFor } from '../public/data/histories.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
 import {
-  dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS, spanOf, nearestHolding, roadPos,
+  dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS, spanOf, nearestHolding, rideOf,
 } from '../public/js/shared/world.js';
+import { isRef, partyOf, placeOf, membersOf, together, forces, statusText } from '../public/js/engine/parties.js';
+import { daysLeft } from '../public/js/engine/movement.js';
 import { estimateTokens } from './llm.js';
 import { describeRules } from '../public/js/shared/rules.js';
 import { mindsDigest } from '../public/js/shared/psyche.js';
@@ -41,8 +43,8 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
     treasury/debt/income in gold dragons; levies = men that could still be called; food = months of stores.
 - {"op":"army_create","id":NEW_ID,"owner":HOUSE,"name":"...","commander":CHAR_ID,"at":PLACE,"men":N,"type":"army|fleet","ships":N,"composition":"...","status":"mustering"}
     (raising troops should also reduce that house's levies figure)
-- {"op":"army_march","army":ARMY_ID,"to":PLACE or "army:ARMY_ID"}   A HOST SETS OUT: the engine marches it there at its true pace (days on the map), or after another host. This is how any host that is not the player's moves.
-- {"op":"army_move","army":ARMY_ID,"to":PLACE,"progress":0.0-1.0,"status":"..."}   only to PLACE a host where the story has put it this turn (a retreat after a battle, a camp); prefer army_march
+- {"op":"army_march","army":ARMY_ID,"to":PLACE or "party:ARMY_ID"}   A HOST SETS OUT: the engine marches it there at its true pace (days on the map), or after another host. This is how any host that is not the player's moves.
+- {"op":"army_move","army":ARMY_ID,"to":PLACE}   a short step only (a camp nearby, a retreat to the next castle): anything farther than a day's march becomes an army_march the engine walks
 - {"op":"army_update","army":ARMY_ID,"men":N or "delta":±N,"morale":0-100,"supply":0-100,"status":"...","owner":HOUSE}
 - {"op":"army_destroy","army":ARMY_ID,"reason":"..."}  /  {"op":"army_disband","army":ARMY_ID}
 - {"op":"holding","id":PLACE,"owner":HOUSE,"unrest":0-100,"prosperity":0-100,"garrison":N,"status":"normal|besieged|sacked|burning|occupied","note":"..."}
@@ -138,7 +140,7 @@ function personaBlock(state, c, playerHouse) {
   if (c.house !== playerHouse && state.houses[c.house]) {
     const mine = realmTotals(state, c.house), theirs = realmTotals(state, playerHouse);
     const men = (t) => (Number(t.levies) || 0) + (Number(t.menAtArms) || 0);
-    const armies = (h) => Object.values(state.armies).filter((a) => a.owner === h).reduce((n, a) => n + (a.men || 0), 0);
+    const armies = (h) => Object.values(state.parties).filter((a) => a.owner === h).reduce((n, a) => n + (a.men || 0), 0);
     const a = men(mine) + armies(c.house), b = men(theirs) + armies(playerHouse);
     const ratio = b / Math.max(1, a);
     const stance = ratio > 4 ? 'The player\'s power dwarfs yours; resisting them outright would be ruin — a sensible lord bargains or submits, a proud fool may still defy them.' : ratio > 1.8 ? 'The player is much stronger than you; you must weigh that before refusing.' : ratio < 0.3 ? 'You are far stronger than the player; you need not bend to them.' : ratio < 0.6 ? 'You are stronger than the player.' : 'You and the player are roughly matched.';
@@ -210,9 +212,9 @@ function whereabouts(state, chars) {
     if (!c.alive) continue;
     const seat = state.houses[c.house]?.seat;
     const odd = c.status && c.status !== 'free';
-    if (String(c.loc) === String(seat) && !odd && !c.travel) continue;
-    const road = c.travel && roadPos(state, c);
-    const where = c.travel ? `on the road to ${placeName(state, c.travel.to)} (now near ${placeName(state, nearestHolding(state, road || [0, 0]))}, ~${Math.max(1, Math.round(c.travel.left))} days to go)` : String(c.loc || '').startsWith('army:') ? `with the host ${String(c.loc).slice(5)}` : placeName(state, c.loc);
+    const ride = rideOf(state, c); const party = partyOf(state, c);
+    if (String(c.loc) === String(seat) && !odd) continue;
+    const where = ride ? `on the road to ${ride.route?.toName || placeName(state, ride.march?.to)} (now near ${placeName(state, nearestHolding(state, ride.pos))}, ~${Math.max(1, Math.round(daysLeft(ride) ?? 1))} days to go)` : party ? `with the host ${party.id}${party.at ? ` at ${placeName(state, party.at)}` : ''}` : placeName(state, c.loc);
     if (!by.has(where)) by.set(where, []);
     by.get(where).push(c.id + (odd ? ` (${c.status})` : ''));
   }
@@ -225,10 +227,11 @@ function figuresLine(h) {
 
 function armyLine(state, a) {
   const cmd = a.commander ? (state.characters[a.commander]?.name || a.commander) : '—';
-  const near = nearestHolding(state, a.pos); const to = a.march && !String(a.march.to).startsWith('army:') && state.holdings[a.march.to];
-  const where = a.at ? `at ${placeName(state, a.at)}` : `on the road near ${placeName(state, near)}${to ? `, ~${marchDays(a, a.pos, to.pos).days} days from ${to.name}` : a.destName ? ` toward ${a.destName}` : ''}`;
-  const riding = Object.values(state.characters).filter((c) => c.alive && c.loc === 'army:' + a.id && c.id !== a.commander).map((c) => c.id);
-  return `${a.id} | ${a.name} | ${a.owner}${a.serving ? ` (serving ${a.serving})` : ''} | ${a.type}${a.ships ? ` ${a.ships} ships` : ''} | ${fmt(a.men)} men${a.type !== 'fleet' ? ` (${unitsText(state, a)})` : ''} | cmd:${cmd}${riding.length ? ` | with: ${riding.slice(0, 6).join(', ')}` : ''} | ${where} | ${a.status || ''} | morale ${a.morale} supply ${a.supply}${a.march ? ` | ORDERED to march on ${placeName(state, a.march.to)} (the engine moves it at marching pace unless you army_move it yourself, e.g. if intercepted)` : ''}`;
+  const near = nearestHolding(state, a.pos); const to = a.march && !isRef(a.march.to) && state.holdings[a.march.to];
+  const days = to ? Math.max(1, Math.round(daysLeft(a) ?? marchDays(a, a.pos, to.pos, state).days)) : 0;
+  const where = a.at ? `at ${placeName(state, a.at)}` : `on the road near ${placeName(state, near)}${to ? `, ~${days} days from ${to.name}` : a.route?.toName ? ` toward ${a.route.toName}` : ''}`;
+  const riding = membersOf(state, a).filter((c) => c.alive && c.id !== a.commander).map((c) => c.id);
+  return `${a.id} | ${a.name} | ${a.owner}${a.serving ? ` (serving ${a.serving})` : ''} | ${a.kind}${a.ships ? ` ${a.ships} ships` : ''} | ${fmt(a.men)} men${a.kind !== 'fleet' ? ` (${unitsText(state, a)})` : ''} | cmd:${cmd}${riding.length ? ` | with: ${riding.slice(0, 6).join(', ')}` : ''} | ${where} | ${statusText(state, a)} | morale ${a.morale} supply ${a.supply}${a.march ? ` | ORDERED to march on ${placeName(state, a.march.to)} (the engine walks it there at its true pace, by the roads)` : ''}`;
 }
 
 export function playerSheet(state) {
@@ -292,7 +295,7 @@ export function worldDigest(state, budgetTokens, lean = false, part = 'all') {
   parts.push('WARS\n' + (wars.length ? wars.map((w) => `${w.id} | ${w.name} | attackers:${w.attackers.join(',')} | defenders:${w.defenders.join(',')} | since ${w.started}${w.note ? ' | ' + w.note : ''}`).join('\n') : 'none'));
   const pacts = state.pacts.filter((x) => x.status !== 'ended');
   parts.push('PACTS & AGREEMENTS\n' + (pacts.length ? pacts.map((x) => `${x.type} | ${x.a} & ${x.b} | ${x.status} | ${x.terms}`).join('\n') : 'none'));
-  parts.push('ARMIES & FLEETS IN THE FIELD\n' + Object.values(state.armies).filter((a) => !a.party).map((a) => armyLine(state, a)).join('\n'));
+  parts.push('ARMIES & FLEETS IN THE FIELD\n' + forces(state).filter((a) => a.kind !== 'retinue').map((a) => armyLine(state, a)).join('\n'));
   // what is in motion: the great players' aims and next moves (rotating, so a different few move each day)
   const live = AGENDAS.filter((a) => { const c = state.characters[a.who]; return c?.alive && !/imprisoned|captive|missing/.test(c.status || '') && (!a.when || a.when(state)); });
   if (live.length) {
@@ -431,7 +434,7 @@ function todaysBeats(state, days) {
 // The great matters of the day: the main story in motion, so every turn is part of one tale
 function greatMatters(state) {
   const out = [];
-  const rp = state.armies?.royal_progress;
+  const rp = state.parties?.royal_progress;
   if (rp) out.push(rp.march ? `The King's progress — King Robert, the Queen, her brothers, the royal children and three hundred knights — is on the kingsroad near ${placeName(state, nearestPlace(state, rp.pos))}, bound for ${placeName(state, rp.march.to)}. The realm talks of little else: inns lay in stores, lords ride out to meet it.` : `The King's progress is camped at ${placeName(state, rp.at)}.`);
   for (const l of (state.plots?.log || []).slice(-4)) out.push(`Lately: ${l.title}.`);
   const T = state.plots?.stages || {};
@@ -507,7 +510,7 @@ export function characterKnowledge(state, c) {
   const informedRoles = ['steward', 'maester', 'master_at_arms', 'captain', 'commander', 'council', 'lord', 'lady', 'heir', 'spymaster'];
   if (h && c.roles?.some((r) => informedRoles.includes(r))) {
     lines.push(`What ${c.name} knows of House ${h.name}'s strength (current best figures — as an officer you may refine these when you report, e.g. after counting): ${figuresLine(h)}`);
-    const armies = Object.values(state.armies).filter((a) => a.owner === c.house);
+    const armies = Object.values(state.parties).filter((a) => a.owner === c.house);
     if (armies.length) lines.push('Forces of the house: ' + armies.map((a) => armyLine(state, a)).join(' ; '));
     const vas = vassalsOf(state, c.house);
     if (vas.length) lines.push('Sworn vassals: ' + vas.map((v) => `${state.houses[v].name} (${v}) levies~${fmt(state.houses[v].figures.levies.v)}`).join(', '));
@@ -556,7 +559,7 @@ Allowed ops: figure, character, relation, pact, raven, army_update, army_move, a
   const messages = [{ role: 'system', content: system + '\n\n' + context }];
   for (const m of log) messages.push({ role: m.role === 'player' ? 'user' : 'assistant', content: m.role === 'player' ? m.text : JSON.stringify({ reply: m.text, changes: [] }) });
   // Say plainly whether this is a face-to-face audience or a letter; small models miss the general rule
-  const here = playerLord?.loc || ph.seat; const apart = c.loc && here && String(c.loc) !== String(here) && !String(c.loc).startsWith('army:');
+  const here = (playerLord && (placeOf(state, playerLord) || playerLord.loc)) || ph.seat; const apart = playerLord ? !together(state, c, playerLord) : String(c.loc) !== String(here);
   const how = apart
     ? `You are at ${placeName(state, c.loc)} and I am at ${placeName(state, here)}: this came to you by raven. Answer with a LETTER in your own hand (first person, a greeting and your name; one *note* about the letter at most). Put in writing only what you would risk a raven carrying.`
     : `We are face to face at ${placeName(state, c.loc)}: a short scene — *narration between asterisks, third person, past tense (never I/my inside them)*, and your words in the first person to me.`;

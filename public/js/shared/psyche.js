@@ -1,5 +1,6 @@
 import { pronouns } from './people.js';
 import { random } from '../engine/rng.js';
+import { partyOf, isForce, forces, together, placeOf as placeAt } from '../engine/parties.js';
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 // THE TOLL A WAR TAKES ON A MIND
 //
@@ -55,8 +56,8 @@ export function stressors(state, c, days) {
   if (wars.length) add((c.roles?.includes('lord') ? 7 : 4) * wars.length * moons, wars.length > 1 ? 'a war on two fronts' : 'the war');
 
   // in the field: campaigning is cold, wet, and full of other people's dying
-  const withArmy = String(c.loc || '').startsWith('army:') ? state.armies?.[String(c.loc).slice(5)] : null;
-  const commands = Object.values(state.armies || {}).find((a) => a.commander === c.id);
+  const withArmy = isForce(partyOf(state, c)) ? partyOf(state, c) : null;
+  const commands = forces(state).find((a) => a.commander === c.id);
   const army = withArmy || commands;
   if (army) {
     add(5 * moons, 'on campaign');
@@ -97,14 +98,14 @@ function reliefs(state, c, days) {
   // A man in a cell, a hostage in another hall, an exile or a host in the field gets none of the
   // things that mend a mind: his own bed, his wife, his children, his own gods.
   if (['imprisoned', 'hostage', 'missing', 'exiled'].includes(c.status)) return 0.5 * moons;
-  if (String(c.loc || '').startsWith('army:')) return 1 * moons;
+  if (isForce(partyOf(state, c))) return 1 * moons;
   let r = 3 * moons; // time itself, if nothing else happens
   const house = state.houses?.[c.house];
-  const atHome = house?.seat && c.loc === house.seat;
+  const atHome = house?.seat && placeAt(state, c) === house.seat;
   if (atHome && !/besieg/i.test(state.holdings?.[house.seat]?.status || '')) r += 4 * moons;
   const spouse = c.spouse && state.characters?.[c.spouse];
-  if (spouse?.alive && spouse.loc === c.loc) r += 2.5 * moons;
-  const kids = Object.values(state.characters || {}).filter((x) => x.alive && (x.father === c.id || x.mother === c.id) && x.loc === c.loc);
+  if (spouse?.alive && together(state, spouse, c)) r += 2.5 * moons;
+  const kids = Object.values(state.characters || {}).filter((x) => x.alive && (x.father === c.id || x.mother === c.id) && together(state, x, c));
   if (kids.length) r += Math.min(3, kids.length) * moons;
   if (/pious|septon|faith/.test(String(c.traits || '').toLowerCase())) r += 1.5 * moons;
   return r;
@@ -179,7 +180,7 @@ const BAND_TEXT = {
 };
 
 function placeOf(state, c) {
-  if (String(c.loc || '').startsWith('army:')) return null;
+  if (partyOf(state, c)) return null;
   return state.holdings?.[c.loc] ? c.loc : state.houses?.[c.house]?.seat || null;
 }
 function isKnownTo(state, c, player) {

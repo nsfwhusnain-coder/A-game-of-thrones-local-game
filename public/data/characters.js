@@ -189,7 +189,7 @@ export const CHARACTERS = [
   C('asha_greyjoy', 'Asha Greyjoy', 'greyjoy', '', 22, 'pyke', ['family', 'captain'], 'bold, clever, captain of the Black Wind', ''),
   C('victarion_greyjoy', 'Victarion Greyjoy', 'greyjoy', 'Lord Captain of the Iron Fleet', 45, 'pyke', ['commander'], 'loyal, brutal, dull', ''),
   C('aeron_greyjoy', 'Aeron Damphair', 'greyjoy', 'Priest of the Drowned God', 40, 'pyke', ['priest'], 'zealous', ''),
-  C('euron_greyjoy', 'Euron Greyjoy', 'greyjoy', 'Crow\'s Eye (exiled)', 48, 'at_sea', ['captain'], 'mad, cunning, sadistic', 'Exiled; sails the Silence to strange shores.'),
+  C('euron_greyjoy', 'Euron Greyjoy', 'greyjoy', 'Crow\'s Eye (exiled)', 48, 'party:the_silence', ['captain'], 'mad, cunning, sadistic', 'Exiled; sails the Silence to strange shores.'),
   C('rodrik_harlaw', 'Rodrik Harlaw', 'harlaw', 'Lord of Harlaw', 55, 'ten_towers', ['lord'], 'bookish, sensible', 'The Reader.'),
   C('dagmer_cleftjaw', 'Dagmer Cleftjaw', 'greyjoy', '', 50, 'pyke', ['captain'], 'grizzled, loyal', ''),
   C('maester_wendamyr', 'Maester Wendamyr', 'greyjoy', 'Maester of Pyke', 55, 'pyke', ['maester'], 'cautious', ''),

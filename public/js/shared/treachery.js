@@ -11,6 +11,7 @@ import { temperament } from './temperament.js';
 import { isFemale } from './people.js';
 import { atWar } from './warfare.js';
 import { random } from '../engine/rng.js';
+import { sworn } from '../engine/parties.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -75,10 +76,10 @@ function whisper(state, v, lord, rec, days, r) {
 /** In battle: do the plotting lords' men fight? Returns the men withdrawn and who withdrew them. */
 export function contingentsHoldBack(state, army, r = random) {
   const out = []; if (!army?.contingents) return out;
-  for (const [vid, men] of Object.entries(army.contingents)) {
+  for (const [vid, men] of sworn(army)) { // the owner's own men do not betray the owner
     const rec = state.plotting?.[vid]; if (!rec?.with) continue;
     const T = temperament(state.characters[state.houses[vid]?.lord] || {});
-    if (r() < 0.35 + T.guile * 0.35) out.push({ vid, men: Math.round(men * (army.men / Math.max(army.men, Object.values(army.contingents).reduce((a, b) => a + b, 0)))), turn: r() < 0.3 });
+    if (r() < 0.35 + T.guile * 0.35) out.push({ vid, men: Math.round(men * (army.men / Math.max(army.men, sworn(army).reduce((a, [, b]) => a + b, 0)))), turn: r() < 0.3 });
   }
   return out;
 }

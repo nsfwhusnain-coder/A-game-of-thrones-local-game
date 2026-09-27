@@ -60,7 +60,7 @@ test('who carries them: own ships, a few boats making trips, the realm\'s ships 
   assert.equal(bear.kind, 'ferry', 'Bear Island ferries its men over in its own boats');
   assert.equal(transportFor(s, 'dothraki', 40000, s.holdings.dothraki.pos).kind, 'none', 'the khalasar has no ships');
   // a host planned with no ships at all is stranded, and says so
-  const a = { id: 'x', owner: 'dothraki', men: 40000, pos: [...s.holdings.pentos.pos], type: 'army' };
+  const a = { id: 'x', owner: 'dothraki', men: 40000, pos: [...s.holdings.pentos.pos], kind: 'host' };
   const v = planVoyage(s, a, s.holdings.baratheon.pos, 'baratheon', 0);
   assert.equal(v.phase, 'stranded');
 });
@@ -72,7 +72,7 @@ test('islands-need-ships: Crowl and Mormont answer the call — they wait, sail 
   const home = {};
   for (const [h, men] of [['crowl', 600], ['mormont', 900]]) {
     const seat = s0.holdings[h];
-    s0.armies[`host_of_house_${h}`] = { id: `host_of_house_${h}`, owner: h, serving: 'stark', name: `Host of House ${s0.houses[h].name}`, commander: s0.houses[h].lord, at: h, pos: [...seat.pos], dest: [...s0.holdings.stark.pos], men, type: 'army', composition: `Levies of House ${s0.houses[h].name}`, status: 'marching', morale: 70, supply: 80, march: { to: 'stark', since: 0 } };
+    s0.parties[`host_of_house_${h}`] = { id: `host_of_house_${h}`, owner: h, serving: 'stark', name: `Host of House ${s0.houses[h].name}`, commander: s0.houses[h].lord, at: h, pos: [...seat.pos], men, kind: 'host', members: [], composition: `Levies of House ${s0.houses[h].name}`, morale: 70, supply: 80, march: { to: 'stark', since: 0 } };
     home[h] = geo.landmassOf(seat.pos);
   }
   fs.writeFileSync(file, JSON.stringify(s0));
@@ -82,7 +82,7 @@ test('islands-need-ships: Crowl and Mormont answer the call — they wait, sail 
     const { turn } = await game.advance(id, { span: '7d' });
     const s = game.loadState(id);
     for (const h of ['crowl', 'mormont']) {
-      const a = s.armies[`host_of_house_${h}`]; if (!a) continue; // joined the host, or arrived and stood down
+      const a = s.parties[`host_of_house_${h}`]; if (!a) continue; // joined the host, or arrived and stood down
       const where = geo.landmassOf(a.pos, 3);
       if (turn.events.some((e) => new RegExp(`${s.houses[h].name}'s men land`).test(e.title))) landed[h] = true;
       assert.ok(where === home[h] || where === -1 || (where === mainland && landed[h]), `${a.name} stands on ${geo.landmassName(where)} at turn ${t} without having landed`);
@@ -91,24 +91,24 @@ test('islands-need-ships: Crowl and Mormont answer the call — they wait, sail 
     }
     // no toll of the Wall for men who came by sea (the old straight line from Skagos crossed it)
     assert.ok(!turn.applied.some((x) => /(Crowl|Mormont).*(Wall)/.test(x.text || '')), 'no island host at the Wall');
-    if (landed.crowl && landed.mormont && Object.values(s.armies).every((a) => !['crowl', 'mormont'].includes(a.owner) || a.at === 'stark')) break;
+    if (landed.crowl && landed.mormont && Object.values(s.parties).every((a) => !['crowl', 'mormont'].includes(a.owner) || a.at === 'stark')) break;
   }
   assert.ok(seen.crowl.has('waiting'), 'Crowl waited for ships');
   assert.ok(landed.crowl && landed.mormont, 'both came ashore on the mainland');
   const s = game.loadState(id);
   for (const h of ['crowl', 'mormont']) {
-    const a = s.armies[`host_of_house_${h}`];
+    const a = s.parties[`host_of_house_${h}`];
     if (a) assert.equal(geo.landmassOf(a.pos, 3), mainland, `${a.name} is on the mainland now`);
   }
 });
 
 test('natives-pass-free: crannogmen cross the Neck and northmen the North without toll', () => {
   const s = fresh();
-  const reed = { id: 'r', owner: 'reed', name: 'Host of House Reed', men: 700, morale: 70, type: 'army' };
+  const reed = { id: 'r', owner: 'reed', name: 'Host of House Reed', men: 700, morale: 70, kind: 'host' };
   const t = chokepointToll(s, reed, s.holdings.reed.pos, s.holdings.tully.pos, 40);
   const neck = t.met.find((m) => m.id === 'the_neck');
   assert.ok(!neck || (!neck.lost && !neck.days), 'no loss and no delay in their own bogs');
-  const umber = { id: 'u', owner: 'umber', name: 'Host of House Umber', men: 3800, morale: 70, type: 'army' };
+  const umber = { id: 'u', owner: 'umber', name: 'Host of House Umber', men: 3800, morale: 70, kind: 'host' };
   const w = chokepointToll(s, umber, s.holdings.umber.pos, s.holdings.stark.pos, 40);
   assert.ok(!w.met.some((m) => m.id === 'the_wall'), 'a northern lord pays nothing to the Wall');
 });

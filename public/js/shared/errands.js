@@ -3,9 +3,12 @@
 // prompt read — so the orders panel can never tell a different story from the world.
 import { placeName, fmt, dayNumber } from './world.js';
 import { marchDays } from './warfare.js';
+import { isForce, partyAt, membersOf } from '../engine/parties.js';
+import { daysLeft } from '../engine/movement.js';
 
 // the player's own hosts, those serving them, and their sworn lords' hosts answering the call
 export function commandable(state, a) {
+  if (!isForce(a) || a.exile) return false; // a rider is sent and recalled, not commanded; an exile answers to no one
   const p = state.meta.player; if (a.owner === p || a.serving === p) return true;
   const v = state.houses[a.owner]; return !!v && v.liege === p && v.obligations?.host === a.id;
 }
@@ -29,17 +32,17 @@ export function orderOutcome(o, state = null) {
 /** Everything of the player's that is on the move or being built: [{ kind, who, text, days }]. */
 export function underway(state) {
   const p = state.meta.player; const out = [];
-  for (const c of Object.values(state.characters)) {
-    if (!c.alive || c.house !== p || !c.travel) continue;
-    const d = Math.max(1, Math.round(c.travel.left));
-    out.push({ kind: 'ride', id: c.id, who: c.name, text: `riding to ${placeName(state, c.travel.to)}`, days: d });
+  for (const r of Object.values(state.parties)) {
+    const c = state.characters[r.commander];
+    if (r.kind !== 'rider' || !c?.alive || c.house !== p || !r.march) continue;
+    out.push({ kind: 'ride', id: c.id, who: c.name, text: `riding to ${r.route?.toName || placeName(state, r.march.to)}`, days: Math.max(1, Math.round(daysLeft(r) ?? 1)) });
   }
-  for (const a of Object.values(state.armies)) {
+  for (const a of Object.values(state.parties)) {
     if (!a.march || !commandable(state, a)) continue;
-    const foe = String(a.march.to).startsWith('army:') && state.armies[String(a.march.to).slice(5)];
+    const foe = partyAt(state, a.march.to);
     const dest = foe ? foe.pos : state.holdings[a.march.to]?.pos; if (!dest) continue;
-    const party = Object.values(state.characters).filter((c) => c.alive && c.loc === 'army:' + a.id).map((c) => c.name);
-    out.push({ kind: 'march', id: a.id, who: a.name, text: `${fmt(a.men)} men${party.length ? ` with ${party.slice(0, 3).join(', ')}` : ''}, ${foe ? `after ${foe.name}` : `marching to ${placeName(state, a.march.to)}`}`, days: marchDays(a, a.pos, dest).days });
+    const party = membersOf(state, a).filter((c) => c.alive).map((c) => c.name);
+    out.push({ kind: 'march', id: a.id, who: a.name, text: `${fmt(a.men)} men${party.length ? ` with ${party.slice(0, 3).join(', ')}` : ''}, ${foe ? `after ${foe.name}` : `marching to ${placeName(state, a.march.to)}`}`, days: Math.max(1, Math.round(daysLeft(a) ?? marchDays(a, a.pos, dest, state).days)) });
   }
   for (const v of Object.values(state.houses)) {
     if (v.liege !== p || v.obligations?.levies !== 'called') continue;

@@ -11,7 +11,7 @@ import { realmOf } from './world.js';
 import { atWar } from './warfare.js';
 
 const holdingsOf = (s, id) => Object.values(s.holdings).filter((h) => h.owner === id);
-const armiesOf = (s, id) => Object.values(s.armies).filter((a) => a.owner === id && a.men > 0);
+const armiesOf = (s, id) => Object.values(s.parties).filter((a) => a.owner === id && a.men > 0);
 const kinOf = (s, id) => Object.values(s.characters).filter((c) => c.alive && c.house === id && !(c.roles || []).includes('ward'));
 
 /**

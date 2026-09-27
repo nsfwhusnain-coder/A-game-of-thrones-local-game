@@ -13,6 +13,12 @@ import { compileRule } from './rules.js';
 import { MONTHS, dateStr, addDays, dayNumber, SPANS, spanOf } from '../engine/time.js';
 import { random, seedState, newSeed, withRng } from '../engine/rng.js';
 import { nextId } from '../engine/ids.js';
+import { kindOf, settle, settleAll, isRef, idOf, ref, partyAt, partyOf, setLoc, joinParty, leaveParty, moveMembers, disband, forces, isForce } from '../engine/parties.js';
+import { planRoute, paceOf } from '../engine/movement.js';
+import { bound, DOING } from '../engine/activity.js';
+import { sameLand } from '../engine/geo.js';
+import { toV3 } from '../engine/state/migrate.js';
+import { settleWorld } from '../engine/state/settle.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -112,7 +118,7 @@ function buildInitialState(scenarioId, playerHouse, seed) {
   }
   const characters = {};
   for (const c of [...CHARACTERS, ...ANCESTORS]) {
-    characters[c.id] = { ...c, loc: c.loc ? (resolvePlaceId(c.loc) || c.loc) : null, status: c.alive === false ? 'dead' : 'free', opinion: 0, loyalty: 60, memories: [] };
+    characters[c.id] = { ...c, loc: c.loc ? (isRef(c.loc) ? c.loc : resolvePlaceId(c.loc) || c.loc) : null, status: c.alive === false ? 'dead' : 'free', opinion: 0, loyalty: 60, memories: [] };
     characters[c.id].skills = deriveSkills(c);
     if (!characters[c.id].born && c.age != null) characters[c.id].born = sc.date.year - c.age;
   }
@@ -138,22 +144,22 @@ function buildInitialState(scenarioId, playerHouse, seed) {
   houses.arryn.regent = 'lysa_arryn';
 
   const holdings = buildHoldings();
-  const armies = {};
-  for (const a of sc.armies) {
-    const at = resolvePlaceId(a.at);
-    armies[a.id] = { ...a, at, pos: placePos(at, holdings) || [0, 0], dest: null, morale: 70, supply: 80, asOf: dateStr(sc.date) };
+  const parties = {};
+  for (const a of sc.parties) {
+    const at = a.at ? resolvePlaceId(a.at) : null; // a party may start at sea (the Silence), where it has only a position
+    parties[a.id] = { ...a, kind: kindOf(a), at, pos: placePos(at, holdings) || a.pos || [0, 0], members: [...(a.members || [])], morale: 70, supply: 80, asOf: dateStr(sc.date) };
   }
   const relations = {};
   for (const [a, b, v] of sc.relations) relations[relKey(a, b)] = { v, note: '' };
 
   const state = {
-    version: 2,
+    version: 3,
     meta: {
       scenario: sc.id, scenarioName: sc.name, player: playerHouse, date: { ...sc.date }, turn: 0, mapVersion: MAP_VERSION,
       created: new Date().toISOString(), // lint-allow: when the chronicle was begun, not a roll of the dice
       seed, rngState: seedState(seed), seq: 0, // the save's own dice (engine/rng.js) and id counter (engine/ids.js)
     },
-    houses, characters, holdings, armies, relations,
+    houses, characters, holdings, parties, relations,
     wars: structuredClone(sc.wars), pacts: structuredClone(sc.pacts),
     ravens: [],       // incoming letters for the player
     orders: [],       // pending player orders (free-text)
@@ -168,33 +174,35 @@ function buildInitialState(scenarioId, playerHouse, seed) {
     const pr = project(state, h.id);
     if (pr) h.figures.income = { ...h.figures.income, v: Math.round((pr.low + pr.high) / 2) };
   }
+  settleWorld(state);
   seedIntel(state);
   return state;
 }
 
 // What every lord knows at the start: where the great hosts and fleets of the realm were last heard of
 function seedIntel(state) {
-  state.intel = { armies: {}, spies: {} };
-  for (const a of Object.values(state.armies)) state.intel.armies[a.id] = { pos: [...a.pos], men: a.men, turn: state.meta.turn, source: 'common knowledge', owner: a.owner, name: a.name };
+  state.intel = { parties: {}, spies: {} };
+  for (const a of Object.values(state.parties)) state.intel.parties[a.id] = { pos: [...a.pos], men: a.men, turn: state.meta.turn, source: 'common knowledge', owner: a.owner, name: a.name };
   updateIntel(state);
 }
 
 /** Bring older saves up to date with new world features. */
 export function migrateState(state) {
+  toV3(state); // armies → parties, with kinds, members and engine states (engine/state/migrate.js)
   // saves from before the dice were the save's own: a seed from the save's own name for the game, so it stays fixed
   if (!Array.isArray(state.meta.rngState)) { let h = 2166136261; for (const ch of `${state.meta.created}|${state.meta.player}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } state.meta.seed = h >>> 0; state.meta.rngState = seedState(state.meta.seed); }
   if (state.meta.seq == null) state.meta.seq = 0;
   // every character has a sex (older saves had `gender`, or nothing): the data knows the canon ones
   for (const c of Object.values(state.characters || {})) if (!c.sex) c.sex = SEX_OF.get(c.id) || sexOf(c);
   // the King's progress keeps to its road in older saves too (the story may not redirect it)
-  if (state.armies?.royal_progress && !state.armies.royal_progress.canonLock) state.armies.royal_progress.canonLock = 'kings_ride';
+  if (state.parties?.royal_progress && !state.parties.royal_progress.canonLock) state.parties.royal_progress.canonLock = 'kings_ride';
   // Saves from the first, hand-drawn map: carry every position onto the atlas
   if ((state.meta.mapVersion || 1) < MAP_VERSION) {
     const canon = new Map([...HOUSES.filter((h) => h.seat && !h.landless).map((h) => [h.id, h.pos]), ...EXTRA_HOLDINGS.map((e) => [e[0], [e[2], e[3]]])]);
     for (const h of Object.values(state.holdings)) h.pos = canon.has(h.id) ? [...canon.get(h.id)] : warpOld(h.pos);
     for (const h of Object.values(state.holdings)) h.coastal = isCoastal(h.pos);
     for (const h of Object.values(state.houses)) if (canon.has(h.id)) h.pos = [...canon.get(h.id)]; else if (h.pos) h.pos = warpOld(h.pos);
-    for (const a of Object.values(state.armies)) {
+    for (const a of Object.values(state.parties)) {
       a.pos = a.at && state.holdings[a.at] ? [...state.holdings[a.at].pos] : warpOld(a.pos);
       if (a.dest) a.dest = a.march && state.holdings[a.march.to] ? [...state.holdings[a.march.to].pos] : warpOld(a.dest);
     }
@@ -397,26 +405,54 @@ export function findChar(state, id) {
 }
 function findArmy(state, id) {
   if (!id) return null;
-  if (state.armies[id]) return id;
+  if (state.parties[id]) return id;
   const s = slug(id);
-  if (state.armies[s]) return s;
-  for (const a of Object.values(state.armies)) if (slug(a.name) === s) return a.id;
+  if (state.parties[s]) return s;
+  for (const a of Object.values(state.parties)) if (slug(a.name) === s) return a.id;
   // A house named as the army: fine when that house fields exactly one host
   const hid = findHouse(state, s);
-  if (hid) { const own = Object.values(state.armies).filter((a) => a.owner === hid); if (own.length === 1) return own[0].id; }
+  if (hid) { const own = Object.values(state.parties).filter((a) => a.owner === hid); if (own.length === 1) return own[0].id; }
   return null;
 }
-/** Where a rider is now, between where they set out and where they are going. */
-export function roadPos(state, c) {
-  const t = c?.travel; if (!t) return null;
-  const to = placePos(t.to, state.holdings); const from = t.from;
-  if (!to || !from) return to || null;
-  const f = Math.max(0, Math.min(1, 1 - t.left / Math.max(1, t.days)));
-  return [from[0] + (to[0] - from[0]) * f, from[1] + (to[1] - from[1]) * f];
+/**
+ * A person goes back to `place` (home, a seat): set down at once when it is near, or when they are dead; otherwise
+ * they ride, as a rider party. No one crosses the realm in a day.
+ */
+export function sendHome(state, c, place) {
+  const here = charPos(state, c), there = placePos(place, state.holdings);
+  if (!c.alive || !here || !there || Math.hypot(there[0] - here[0], there[1] - here[1]) * MILES_PER_UNIT < 30) { setLoc(state, c, place); return; }
+  try { startRide(state, c, place); } catch { setLoc(state, c, place); } // no way at all: they find one
+}
+/** The ride a person makes on their own (a rider party they lead), if they are on the road. */
+export const rideOf = (state, c) => { const p = partyOf(state, c); return p?.kind === 'rider' ? p : null; };
+/** Where a rider is now: their party's place on its road. */
+export const roadPos = (state, c) => rideOf(state, c)?.pos || null;
+/**
+ * Send a person riding to `dest` (a place, or `party:<id>` to join a host wherever it is) on their own: a rider party
+ * led by them, turned round if they are already on the road, on a route planned now over land and, where the sea is in
+ * the way, by ship (engine/movement.js). Throws, and leaves them where they were, when there is no way at all.
+ */
+export function startRide(state, c, dest) {
+  const target = isRef(dest) ? partyAt(state, dest) : null;
+  const to = target ? target.pos : placePos(dest, state.holdings); if (!to) throw new Error('unknown destination ' + dest);
+  let p = rideOf(state, c); const fresh = !p; const was = c.loc;
+  if (fresh) {
+    const from = charPos(state, c); if (!from) throw new Error(`${c.name}'s whereabouts are unknown`);
+    let id = `rider_${c.id}`; while (state.parties[id]) id += '_2';
+    p = state.parties[id] = { id, kind: 'rider', owner: c.house, name: c.name, commander: c.id, men: 0, at: null, pos: [...from], members: [], morale: 75, supply: 85, from: resolvePlaceId(c.loc) || (partyOf(state, c)?.at) || nearestHolding(state, from), asOf: dateStr(state.meta.date) };
+    joinParty(state, c, p);
+  }
+  p.march = { to: target ? ref(target.id) : dest, since: state.meta.turn }; p.at = null;
+  if (!planRoute(state, p, to, p.march.to, { toName: target ? target.name : placeName(state, dest) })) {
+    if (fresh) { setLoc(state, c, was); delete state.parties[p.id]; }
+    throw new Error(`no road or sea lane leads there from where ${c.name} is`);
+  }
+  settle(state, p);
+  return p;
 }
 export function charPos(state, c) {
   if (!c) return null;
-  if (String(c.loc || '').startsWith('army:')) return state.armies[c.loc.slice(5)]?.pos || null;
+  if (isRef(c.loc)) return partyAt(state, c.loc)?.pos || null;
   const pid = resolvePlaceId(c.loc); return pid ? placePos(pid, state.holdings) : null;
 }
 function posOf(state, place) {
@@ -426,7 +462,7 @@ function posOf(state, place) {
   const c = findChar(state, place);
   if (c) return posOf(state, state.characters[c].loc);
   const a = findArmy(state, place);
-  if (a) return [...state.armies[a].pos];
+  if (a) return [...state.parties[a].pos];
   return null;
 }
 
@@ -544,45 +580,49 @@ function applyOne(state, ch, ctx) {
       const pos = posOf(state, ch.at || ch.location) || placePos(owner, state.holdings) || placePos(state.houses[owner].seat, state.holdings);
       if (!pos) throw new Error('no position');
       let id = slug(ch.id || ch.name || `${owner}_host`);
-      while (state.armies[id]) id += '_2';
+      while (state.parties[id]) id += '_2';
       const men = Math.max(0, Math.round(num(ch.men) ?? 0));
-      state.armies[id] = {
+      state.parties[id] = {
         id, owner, name: ch.name || `Host of ${state.houses[owner].name}`, commander: findChar(state, ch.commander) || ch.commander || null,
-        at: resolvePlaceId(ch.at || ch.location), pos, dest: null, men, ships: num(ch.ships) ?? undefined,
-        type: op === 'fleet_create' || ch.type === 'fleet' ? 'fleet' : 'army', composition: ch.composition || '',
-        status: ch.status || 'mustering', morale: num(ch.morale) ?? 70, supply: num(ch.supply) ?? 80, asOf: date,
+        at: resolvePlaceId(ch.at || ch.location), pos, men, ships: num(ch.ships) ?? undefined,
+        kind: op === 'fleet_create' || ch.type === 'fleet' || ch.kind === 'fleet' ? 'fleet' : 'host', composition: ch.composition || '',
+        members: [], morale: num(ch.morale) ?? 70, supply: num(ch.supply) ?? 80, asOf: date,
       };
-      return { op, text: `${state.armies[id].name} (${state.houses[owner].name}) ${men ? fmt(men) + ' men' : ''} appears at ${placeName(state, ch.at || ch.location) || 'the field'}` };
+      settle(state, state.parties[id]);
+      return { op, text: `${state.parties[id].name} (${state.houses[owner].name}) ${men ? fmt(men) + ' men' : ''} appears at ${placeName(state, ch.at || ch.location) || 'the field'}` };
     }
     case 'army_march': case 'march': case 'fleet_sail': {
       // the story sends a host on its way; the engine walks it at its true pace, and the map shows the road
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
-      const a = state.armies[id];
+      const a = state.parties[id];
       if (ctx.protectPlayer && (a.owner === state.meta.player || a.serving === state.meta.player)) throw new Error(`only you move ${a.name}`);
       // a party the great story depends on (the King's progress) keeps to its road; only the engine's beats turn it
       if (ctx.protectPlayer && a.canonLock) throw new Error(`${a.name} keeps to its road`);
-      const foe = String(ch.to || '').replace(/^army:/, ''); const target = state.armies[foe] || state.armies[findArmy(state, foe) || ''];
-      if (target && target.id !== a.id) { a.march = { to: 'army:' + target.id, since: state.meta.turn }; a.at = null; a.status = ch.status || 'marching'; return { op, text: `${a.name} marches against ${target.name}` }; }
+      const foe = idOf(ch.to) ?? String(ch.to || ''); const target = state.parties[foe] || state.parties[findArmy(state, foe) || ''];
+      if (target && target.id !== a.id) { a.march = { to: ref(target.id), since: state.meta.turn }; a.at = null; settle(state, a); return { op, text: `${a.name} marches against ${target.name}` }; }
       const dest = resolvePlaceId(ch.to); if (!dest || !placePos(dest, state.holdings)) throw new Error('unknown destination ' + ch.to);
       if (a.at === dest) throw new Error(`${a.name} is already at ${placeName(state, dest)}`);
-      a.march = { to: dest, since: state.meta.turn }; a.at = null; a.status = ch.status || 'marching';
+      a.march = { to: dest, since: state.meta.turn }; a.at = null; settle(state, a);
       return { op, text: `${a.name} marches for ${placeName(state, dest)}` };
     }
     case 'army_move': case 'fleet_move': case 'move_army': {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
-      const a = state.armies[id];
+      const a = state.parties[id];
       if (ctx.protectPlayer && (a.owner === state.meta.player || a.serving === state.meta.player) && !ctx.mayMove?.includes(a.commander)) throw new Error(`only you move ${a.name}`);
       if (ctx.protectPlayer && a.canonLock) throw new Error(`${a.name} keeps to its road`);
       const dest = posOf(state, ch.to);
       if (!dest) throw new Error('unknown destination ' + ch.to);
-      const p = clamp(num(ch.progress) ?? 1, 0, 1);
-      const from = a.pos;
-      a.pos = [from[0] + (dest[0] - from[0]) * p, from[1] + (dest[1] - from[1]) * p];
-      if (p >= 1) { a.at = resolvePlaceId(ch.to); a.dest = null; a.destName = null; } else { a.at = null; a.dest = dest; a.destName = placeName(state, ch.to); }
-      if (ch.status) a.status = ch.status;
-      a.asOf = date; a.movedTurn = state.meta.turn;
-      if (a.march && p >= 1 && resolvePlaceId(ch.to) === resolvePlaceId(a.march.to)) delete a.march;
-      return { op, text: `${a.name} ${p >= 1 ? 'arrives at' : 'marches toward'} ${placeName(state, ch.to)}` };
+      // a host goes no faster for being written about: a short step (a camp nearby, a retreat to the next castle, two
+      // days' march at most) is taken at once; anything farther is a march the engine walks at its pace (engine/movement.js)
+      const place = resolvePlaceId(ch.to); const foe = !place && state.parties[findArmy(state, idOf(ch.to) ?? String(ch.to)) || ''];
+      const miles = Math.hypot(dest[0] - a.pos[0], dest[1] - a.pos[1]) * MILES_PER_UNIT;
+      if (miles <= 2 * paceOf(state, a) && (a.kind === 'fleet' || sameLand(a.pos, dest))) {
+        a.pos = [...dest]; a.at = place || null; delete a.march; a.route = null; a.asOf = date; settle(state, a);
+        return { op, text: `${a.name} ${place ? 'moves to' : 'makes camp near'} ${placeName(state, place || nearestHolding(state, dest))}` };
+      }
+      if (!place && !foe) throw new Error('a host marches to a named place');
+      a.march = { to: place || ref(foe.id), since: state.meta.turn }; a.at = null; a.asOf = date; settle(state, a);
+      return { op, text: `${a.name} marches for ${place ? placeName(state, place) : foe.name}` };
     }
     // ── orders the engine carries out itself (so the player's commands really happen) ──
     case 'travel': case 'ride': case 'send_character': {
@@ -593,49 +633,52 @@ function applyOne(state, ch, ctx) {
       if (ctx.protectPlayer && c.house === state.meta.player && !ctx.mayMove?.includes(c.id)) throw new Error(`only you send ${c.name} anywhere`);
       const dest = resolvePlaceId(ch.to || ch.destination); const to = dest && placePos(dest, state.holdings);
       if (!to) throw new Error('unknown destination ' + (ch.to || ch.destination));
-      if (c.travel?.to === dest) throw new Error(`${c.name} is already on the road to ${placeName(state, dest)}`);
+      const riding = rideOf(state, c);
+      if (riding?.march?.to === dest) throw new Error(`${c.name} is already on the road to ${placeName(state, dest)}`);
       // one who leads a small company turns the whole company, rather than riding off and leaving it on the road
-      const led = String(c.loc || '').startsWith('army:') && state.armies[c.loc.slice(5)];
-      if (led && led.commander === c.id && led.men < 400) {
+      const led = partyOf(state, c);
+      if (led && !riding && led.commander === c.id && led.men < 400) {
         if (led.march?.to === dest || led.at === dest) throw new Error(`${c.name} is already bound for ${placeName(state, dest)}`);
-        led.march = { to: dest, since: state.meta.turn }; led.status = 'marching'; led.at = null;
+        led.march = { to: dest, since: state.meta.turn }; led.at = null; settle(state, led);
         return { op, text: `${c.name} turns ${led.name} (${fmt(led.men)} men) for ${placeName(state, dest)}` };
       }
-      if (!c.travel && resolvePlaceId(c.loc) === dest) throw new Error(`${c.name} is already at ${placeName(state, dest)}`);
+      if (!riding && resolvePlaceId(c.loc) === dest) throw new Error(`${c.name} is already at ${placeName(state, dest)}`);
       // one already on the road turns back from where they are now, not from where they set out
-      const from = c.travel ? roadPos(state, c) : charPos(state, c); if (!from) throw new Error(`${c.name}'s whereabouts are unknown`);
+      const from = charPos(state, c); if (!from) throw new Error(`${c.name}'s whereabouts are unknown`);
       const men = Math.max(0, Math.round(num(ch.men) ?? 0));
       if (men >= 20) {
         // a party of men: taken from a host of the house where the character is, else from the household guard
-        const here = c.loc?.startsWith('army:') ? state.armies[c.loc.slice(5)] : Object.values(state.armies).find((a) => a.owner === c.house && a.type !== 'fleet' && (a.at === c.loc || Math.hypot(a.pos[0] - from[0], a.pos[1] - from[1]) < 6));
+        const here = (led && isForce(led) ? led : null) || forces(state).find((a) => a.owner === c.house && a.kind !== 'fleet' && (a.at === c.loc || Math.hypot(a.pos[0] - from[0], a.pos[1] - from[1]) < 6));
         const guard = state.houses[c.house]?.figures?.menAtArms;
         let taken = 0, src = '';
         if (here && here.men > men + 20) { here.men -= men; taken = men; src = `detached from ${here.name}`; }
-        else if (here && here.men <= men + 20 && here.men > 0) { taken = here.men; src = `the whole of ${here.name}`; here.men = 0; delete state.armies[here.id]; }
+        else if (here && here.men <= men + 20 && here.men > 0) { taken = here.men; src = `the whole of ${here.name}`; here.men = 0; }
         else if (guard && Number(guard.v) >= men) { guard.v = Number(guard.v) - men; taken = men; src = 'from the household guard'; }
         else if (guard && Number(guard.v) > 20) { taken = Number(guard.v); guard.v = 0; src = 'every man of the household guard'; }
         if (!taken) throw new Error(`no men to spare where ${c.name} is`);
-        let id = slug(`${c.name.split(' ')[0]}_riders`); while (state.armies[id]) id += '_2';
-        state.armies[id] = { id, owner: c.house, name: ch.name || `${c.name.replace(/^Ser /, '')}'s company`, commander: c.id, at: null, pos: [...from], dest: null, men: taken, type: 'army', composition: ch.composition || 'Household men-at-arms, mounted', status: 'marching', morale: 75, supply: 85, asOf: date, march: { to: dest, since: state.meta.turn } };
-        const origin = c.loc; c.loc = 'army:' + id; delete c.travel;
+        let id = slug(`${c.name.split(' ')[0]}_riders`); while (state.parties[id]) id += '_2';
+        const origin = riding ? null : c.loc;
+        const co = state.parties[id] = { id, kind: 'host', owner: c.house, name: ch.name || `${c.name.replace(/^Ser /, '')}'s company`, commander: c.id, at: null, pos: [...from], men: taken, composition: ch.composition || 'Household men-at-arms, mounted', members: [], morale: 75, supply: 85, asOf: date, march: { to: dest, since: state.meta.turn } };
+        joinParty(state, c, co);
         // companions ride with the party: those at the same place (family, officers, wards)
-        const comp = (Array.isArray(ch.companions) ? ch.companions : []).map((x) => state.characters[findChar(state, x)]).filter((x) => x && x.alive && x.id !== c.id && !/imprisoned|captive/.test(x.status || '') && x.loc === origin);
-        for (const x of comp) { x.loc = 'army:' + id; delete x.travel; }
+        const comp = (Array.isArray(ch.companions) ? ch.companions : []).map((x) => state.characters[findChar(state, x)]).filter((x) => x && x.alive && x.id !== c.id && !/imprisoned|captive/.test(x.status || '') && origin && x.loc === origin);
+        for (const x of comp) joinParty(state, x, co);
+        // a host emptied to make the company is no more: its people go with the company
+        if (here && here.men <= 0) { moveMembers(state, here, co); delete state.parties[here.id]; }
+        planRoute(state, co, to, dest, { toName: placeName(state, dest) }); settle(state, co);
         return { op, text: `${c.name} rides for ${placeName(state, dest)} with ${fmt(taken)} men (${src})${comp.length ? `, with ${comp.map((x) => x.name).join(', ')}` : ''}` };
       }
-      const miles = Math.hypot(to[0] - from[0], to[1] - from[1]) * MILES_PER_UNIT * 1.12;
-      const days = Math.max(1, Math.round(miles / 38)); // a rider with a small escort
-      const turning = c.travel ? ` (turning back from the road to ${placeName(state, c.travel.to)})` : '';
-      c.travel = { to: dest, days, left: days, since: date, from: [...from], fromPlace: c.travel?.fromPlace || resolvePlaceId(c.loc) || nearestHolding(state, from) };
-      return { op, text: `${c.name} sets out for ${placeName(state, dest)} (~${days} days' ride)${turning}` };
+      const turning = riding ? ` (turning back from the road to ${placeName(state, riding.march?.to)})` : '';
+      const p = startRide(state, c, dest);
+      return { op, text: `${c.name} sets out for ${placeName(state, dest)} (~${Math.max(1, Math.ceil(p.route.days))} days${p.route.sea ? ', part of it by ship' : '\' ride'})${turning}` };
     }
     case 'recruit': case 'hire_men': {
       const hid = findHouse(state, ch.house || ch.owner); if (!hid) throw new Error('unknown house');
       const place = resolvePlaceId(ch.at || ch.location) || state.houses[hid].seat; const pos = placePos(place, state.holdings);
       if (!pos) throw new Error('unknown place ' + (ch.at || ch.location));
       // one may hire only where one's people are: one's own lands, a host there, or someone of the house present
-      const present = state.holdings[place]?.owner === hid || Object.values(state.armies).some((a) => a.owner === hid && (a.at === place || Math.hypot(a.pos[0] - pos[0], a.pos[1] - pos[1]) < 8))
-        || Object.values(state.characters).some((c) => c.alive && c.house === hid && (c.loc === place || (c.loc?.startsWith('army:') && state.armies[c.loc.slice(5)]?.at === place)));
+      const present = state.holdings[place]?.owner === hid || Object.values(state.parties).some((a) => a.owner === hid && (a.at === place || Math.hypot(a.pos[0] - pos[0], a.pos[1] - pos[1]) < 8))
+        || Object.values(state.characters).some((c) => c.alive && c.house === hid && (c.loc === place || partyOf(state, c)?.at === place));
       if (!present) throw new Error(`House ${state.houses[hid].name} has no one at ${placeName(state, place)} to do the hiring`);
       const kind = /sell|free ?company|merc/i.test(ch.kind || '') ? 'sellswords' : 'men-at-arms';
       const price = kind === 'sellswords' ? 14 : 9; // dragons a head to arm and sign on
@@ -645,12 +688,12 @@ function applyOne(state, ch, ctx) {
       let men = Math.min(Math.round(num(ch.men) ?? 200), cap, Math.floor((Number(t.v) || 0) / price));
       if (men < 10) throw new Error(`not enough gold to hire men (${price} dragons a head)`);
       t.v = Math.round(Number(t.v) - men * price);
-      let host = Object.values(state.armies).find((a) => a.owner === hid && a.type !== 'fleet' && (a.at === place || Math.hypot(a.pos[0] - pos[0], a.pos[1] - pos[1]) < 8));
+      let host = forces(state).find((a) => a.owner === hid && a.kind !== 'fleet' && (a.at === place || Math.hypot(a.pos[0] - pos[0], a.pos[1] - pos[1]) < 8));
       if (host) { host.men += men; host.composition = [host.composition, `${kind} hired at ${placeName(state, place)}`].filter(Boolean).join('; '); }
       else {
-        let id = slug(`${state.houses[hid].name}_${placeName(state, place)}_company`); while (state.armies[id]) id += '_2';
+        let id = slug(`${state.houses[hid].name}_${placeName(state, place)}_company`); while (state.parties[id]) id += '_2';
         const lord = Object.values(state.characters).find((c) => c.alive && c.house === hid && (c.loc === place));
-        host = state.armies[id] = { id, owner: hid, name: `The ${state.houses[hid].name} company at ${placeName(state, place)}`, commander: lord?.id || null, at: place, pos: [...pos], dest: null, men, type: 'army', composition: `${kind} hired at ${placeName(state, place)}`, status: 'garrison', morale: 65, supply: 80, asOf: date };
+        host = state.parties[id] = { id, owner: hid, name: `The ${state.houses[hid].name} company at ${placeName(state, place)}`, commander: lord?.id || null, at: place, pos: [...pos], men, kind: 'garrison', members: [], composition: `${kind} hired at ${placeName(state, place)}`, morale: 65, supply: 80, asOf: date };
       }
       return { op, text: `${fmt(men)} ${kind} hired at ${placeName(state, place)} for ${fmt(men * price)} dragons${men < (num(ch.men) ?? 200) ? ' (all that could be found or paid for)' : ''}; ${host.name} now ${fmt(host.men)}` };
     }
@@ -676,7 +719,7 @@ function applyOne(state, ch, ctx) {
     }
     case 'army_update': case 'fleet_update': {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
-      const a = state.armies[id]; const out = [];
+      const a = state.parties[id]; const out = [];
       // the player's hosts are the player's and the engine's: the story may not count, move or re-label them
       if (ctx.protectPlayer && commandable(state, a)) throw new Error(`only you and the engine change ${a.name}`);
       if (ctx.protectPlayer && a.canonLock) throw new Error(`${a.name} is the engine's to move and count`);
@@ -688,34 +731,31 @@ function applyOne(state, ch, ctx) {
         const violent = ctx.battleHouses?.has(a.owner) || /battle|siege|storm(ed|ing)|ambush|assault|slaughter|massacre|plague|pox|flux|shipwreck|wreck|drown|sack/i.test(`${ch.cause || ''} ${ch.reason || ''} ${ch.note || ''} ${ch.status || ''}`);
         // the player's own men are not whittled away by the story: they fall in battle, on the road, or not at all
         if (nv < old && !violent && ctx.protectPlayer && commandable(state, a)) throw new Error(`${a.name} loses no men without a cause the engine can see`);
-        if (nv < old && !violent && a.type !== 'fleet' && ctx.source !== 'Your decision') {
+        if (nv < old && !violent && a.kind !== 'fleet' && ctx.source !== 'Your decision') {
           const season = state.world?.season || 'summer';
           const rate = ({ summer: 0.02, spring: 0.025, autumn: 0.04, winter: 0.08 })[season] ?? 0.03;
           const months = Math.max(1, (ctx.spanDays || 30) / 30);
-          const floor = Math.round(old * (1 - Math.min(0.5, rate * months * (/march/.test(a.status || '') ? 1.5 : 1))));
+          const floor = Math.round(old * (1 - Math.min(0.5, rate * months * (a.state === 'marching' ? 1.5 : 1))));
           if (nv < floor) { nv = floor; out.push(`(losses limited: no battle, ${season})`); }
         }
         a.men = nv; out.push(`men ${fmt(old)} → ${fmt(a.men)}`);
       }
       if (num(ch.ships) !== null) { a.ships = num(ch.ships); out.push(`ships ${a.ships}`); }
       for (const k of ['morale', 'supply']) if (num(ch[k]) !== null) { a[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${a[k]}`); }
-      // a host on the march is marching: the story may not relabel what the engine is doing with it
-      if (ch.status && !(ctx.protectPlayer && a.march)) { a.status = String(ch.status).slice(0, 60); out.push(a.status); }
+      // what a host is doing is the engine's to say (engine/parties.js settle): the story's status words are not kept (B-20)
       // a host is never handed to a name the world does not know: an unresolvable commander is refused, not stored
       if (ch.commander) { const cm = findChar(state, ch.commander); if (!cm) throw new Error('unknown commander ' + ch.commander); if (!state.characters[cm].alive) throw new Error(`${state.characters[cm].name} is dead and cannot command`); a.commander = cm; out.push(`${state.characters[cm].name} takes command`); }
       if (ch.owner) { const o = findHouse(state, ch.owner); if (o) { a.owner = o; out.push('changes allegiance to ' + state.houses[o].name); } }
       if (ch.name) a.name = ch.name;
       if (ch.composition) a.composition = ch.composition;
       a.asOf = date;
-      if (a.men <= 0 && a.type !== 'fleet') { delete state.armies[id]; return { op, text: `${a.name} has ceased to exist` }; }
+      if (a.men <= 0 && a.kind !== 'fleet') { disband(state, a, a.at || nearestHolding(state, a.pos)); return { op, text: `${a.name} has ceased to exist` }; }
       return { op, text: `${a.name}: ${out.join(', ')}` };
     }
     case 'army_destroy': case 'army_disband': case 'fleet_destroy': {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army');
-      const gone = state.armies[id]; const n = gone.name;
-      const home = gone.at || nearestHolding(state, gone.pos);
-      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + id) c.loc = home;
-      delete state.armies[id];
+      const gone = state.parties[id]; const n = gone.name;
+      disband(state, gone, gone.at || nearestHolding(state, gone.pos));
       return { op, text: `${n} ${op === 'army_disband' ? 'disbands' : 'is destroyed'}${ch.reason ? ' — ' + ch.reason : ''}` };
     }
     case 'holding': case 'holding_update': case 'province': {
@@ -762,23 +802,26 @@ function applyOne(state, ch, ctx) {
     case 'character': case 'character_update': {
       const cid = findChar(state, ch.id || ch.character); if (!cid) throw new Error('unknown character ' + (ch.id || ch.character));
       const c = state.characters[cid]; const out = [];
-      if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; c.diedTurn = state.meta?.turn ?? 0; c.cause = ch.cause || c.cause || null; out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
+      if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; c.diedTurn = state.meta?.turn ?? 0; c.cause = ch.cause || c.cause || null; leaveParty(state, c); out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
       if (ch.loc || ch.location || ch.with) {
         const raw = ch.with || ch.loc || ch.location;
-        const army = findArmy(state, String(raw).replace(/^army:/, ''));
-        const l = army && !resolvePlaceId(raw) ? 'army:' + army : (resolvePlaceId(raw) || String(raw));
-        const here = roadPos(state, c) || charPos(state, c); const there = l.startsWith('army:') ? state.armies[army]?.pos : placePos(l, state.holdings);
+        const army = findArmy(state, idOf(raw) ?? String(raw));
+        const l = army && !resolvePlaceId(raw) ? ref(army) : (resolvePlaceId(raw) || String(raw));
+        const riding = rideOf(state, c);
+        const here = charPos(state, c); const there = isRef(l) ? state.parties[army]?.pos : placePos(l, state.holdings);
         const miles = here && there ? Math.hypot(there[0] - here[0], there[1] - here[1]) * MILES_PER_UNIT * 1.12 : 0;
-        if (c.travel?.to === l) out.push(`still on the road to ${placeName(state, l)}`); // the engine brings riders in; the story does not
+        const free = c.alive && ch.alive !== false && !/imprisoned|captive|dead/.test(ch.status || c.status || '');
+        if (riding?.march?.to === l) out.push(`still on the road to ${placeName(state, l)}`); // the engine brings riders in; the story does not
         else if (ctx.protectPlayer && c.house === state.meta.player && !ctx.mayMove?.includes(c.id) && l !== c.loc) out.push(`stays where you left them (only you send ${c.name} anywhere)`);
-        else if (miles > 60 && !l.startsWith('army:') && c.alive && ch.alive !== false && !/imprisoned|captive|dead/.test(ch.status || c.status || '')) {
-          // no one crosses the realm in a day: a far move is a journey, taken on the road
-          const days = Math.max(2, Math.round(miles / 38));
-          if (c.travel?.to !== l) { c.travel = { to: l, days, left: days, since: date, from: [...(roadPos(state, c) || here)] }; out.push(`sets out for ${placeName(state, l)} (~${days} days)`); }
+        else if (!there) out.push(`stays where they are (no place called ${String(raw).slice(0, 40)})`); // everyone is somewhere real
+        else if (ctx.protectPlayer && free && !isRef(l) && bound(state, c)) out.push(`stays: ${c.name} is ${DOING[bound(state, c).kind]}`); // one thing at a time (engine/activity.js)
+        else if (miles > 60 && free) {
+          // no one crosses the realm in a day: a far move is a journey, taken on the road (a far host is ridden to)
+          try { const p = startRide(state, c, l); out.push(`sets out for ${placeName(state, l)} (~${Math.max(1, Math.ceil(p.route.days))} days)`); } catch (e) { out.push(`stays: ${e.message}`); }
         } else {
-          c.loc = l; delete c.travel;
+          setLoc(state, c, l);
           // placeName already says "with The King's progress" for a host, so do not say "with" twice
-          out.push(l.startsWith('army:') ? `travels ${placeName(state, l)}` : `now at ${placeName(state, l)}`);
+          out.push(isRef(l) ? `travels ${placeName(state, l)}` : `now at ${placeName(state, l)}`);
         }
       }
       if (ch.title) { c.title = ch.title; out.push('now ' + ch.title); }
@@ -885,7 +928,7 @@ function applyOne(state, ch, ctx) {
       const pos = posOf(state, ch.at || ch.location);
       // the player's house fights only where the player has a host
       const pl = state.meta.player;
-      if (ctx.protectPlayer && [findHouse(state, ch.attacker), findHouse(state, ch.defender)].includes(pl) && !Object.values(state.armies).some((a) => a.owner === pl && pos && Math.hypot(a.pos[0] - pos[0], a.pos[1] - pos[1]) < 45) && !Object.values(state.holdings).some((h) => h.owner === pl && pos && Math.hypot(h.pos[0] - pos[0], h.pos[1] - pos[1]) < 12)) throw new Error('the player has no host there');
+      if (ctx.protectPlayer && [findHouse(state, ch.attacker), findHouse(state, ch.defender)].includes(pl) && !Object.values(state.parties).some((a) => a.owner === pl && pos && Math.hypot(a.pos[0] - pos[0], a.pos[1] - pos[1]) < 45) && !Object.values(state.holdings).some((h) => h.owner === pl && pos && Math.hypot(h.pos[0] - pos[0], h.pos[1] - pos[1]) < 12)) throw new Error('the player has no host there');
       state.battles = state.battles || [];
       state.battles.push({ name: ch.name || `Battle at ${placeName(state, ch.at)}`, pos, date, turn: state.meta.turn, attacker: findHouse(state, ch.attacker), defender: findHouse(state, ch.defender), victor: findHouse(state, ch.victor), losses: ch.losses || {}, summary: ch.summary || '' });
       state.battles = state.battles.slice(-40);
@@ -902,7 +945,7 @@ function applyOne(state, ch, ctx) {
       }
       // one of the household at the lord's side speaks to him; no raven flies across a hall
       const lc = lord && state.characters[lord];
-      if (fc && fc.house === pl && lc && !fc.travel && !lc.travel && fc.loc === lc.loc) throw new Error(`${fc.name} is with you; no raven is needed`);
+      if (fc && fc.house === pl && lc && !rideOf(state, fc) && !rideOf(state, lc) && fc.loc === lc.loc) throw new Error(`${fc.name} is with you; no raven is needed`);
       state.ravens.unshift({ id: nextId(state, 'r'), day: dayNumber(state.meta.date), from: from || null, fromName: from ? state.characters[from].name : (ch.fromName || ch.from || 'Unknown'), text: String(ch.text || ''), date, read: false });
       state.ravens = state.ravens.slice(0, 60);
       return { op, text: `A raven arrives from ${state.ravens[0].fromName}` };
@@ -920,7 +963,7 @@ function applyOne(state, ch, ctx) {
       const aid = findArmy(state, ch.army || ch.id);
       const pos = ch.at ? posOf(state, ch.at) : null;
       if (!aid && !ch.false && !ch.lie) throw new Error('unknown army ' + (ch.army || ch.id));
-      const r = addReport(state, { army: aid || null, pos: pos || (aid ? state.armies[aid].pos : null), men: num(ch.men), source: ch.source || 'a raven', false: !!(ch.false || ch.lie), owner: findHouse(state, ch.owner) || (aid && state.armies[aid].owner), name: ch.name });
+      const r = addReport(state, { army: aid || null, pos: pos || (aid ? state.parties[aid].pos : null), men: num(ch.men), source: ch.source || 'a raven', false: !!(ch.false || ch.lie), owner: findHouse(state, ch.owner) || (aid && state.parties[aid].owner), name: ch.name });
       return { op, text: `A report reaches you: ${r.name} (~${fmt(r.men)} men) near ${ch.at ? placeName(state, ch.at) : 'where it was last seen'} — ${r.source}` };
     }
     // ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -1031,7 +1074,7 @@ export function nearestHolding(state, pos) {
 
 export function placeName(state, place) {
   if (Array.isArray(place)) return 'the field';
-  if (typeof place === 'string' && place.startsWith('army:')) { const a = state.armies?.[place.slice(5)]; return a ? `with ${a.name}` : 'in the field'; }
+  if (isRef(place)) { const a = partyAt(state, place); return a ? `with ${a.name}` : 'in the field'; }
   const pid = resolvePlaceId(place);
   if (pid && state.holdings[pid]) return state.holdings[pid].name;
   if (pid && JUNCTIONS[pid]) return PLACE_NAMES[pid] || pid.replace(/_/g, ' ');

@@ -2,6 +2,7 @@
 // Grounds conversations (and the player's expectations) in the state of the world, CK3-style.
 import { getRelation, realmTotals, realmOf, vassalsOf } from './world.js';
 import { atWar } from './warfare.js';
+import { forces } from '../engine/parties.js';
 
 const RANK = { crown: 5, paramount: 4, city_state: 3, major: 3, company: 2, minor: 1, tribe: 1, exile: 1 };
 const power = (state, id) => { const t = realmTotals(state, id); return (t.levies || 0) + (t.menAtArms || 0) * 2.5 + (t.ships || 0) * 40; };
@@ -58,7 +59,7 @@ export function disposition(state, charId) {
     ['A great house bows to no one', h.rank === 'paramount' || h.rank === 'crown' ? -40 : 0],
     ['Ambitious or proud', has(c, 'ambitious') || has(c, 'proud') ? -15 : 0],
     ['Craven', has(c, 'craven') ? 15 : 0],
-    ['Your host is near', Object.values(state.armies).some((a) => a.owner === p && a.type !== 'fleet' && holdingNear(state, a, c.house)) ? 20 : 0],
+    ['Your host is near', forces(state).some((a) => a.owner === p && a.kind !== 'fleet' && holdingNear(state, a, c.house)) ? 20 : 0],
     ['Pride of an old house', -15],
     ['Already your sworn vassal', h.liege === p ? 60 : 0],
   ]);

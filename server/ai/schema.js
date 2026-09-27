@@ -61,8 +61,8 @@ export function enumFor(state, kind, { ids = null } = {}) {
 }
 function partyAliases(state) {
   const map = new Map();
-  for (const a of Object.values(state.armies || state.parties || {})) map.set(a.id, a.id);
-  for (const a of Object.values(state.armies || state.parties || {})) { const n = slug(a.name); if (n && !map.has(n)) map.set(n, a.id); }
+  for (const a of Object.values(state.parties || {})) map.set(a.id, a.id);
+  for (const a of Object.values(state.parties || {})) { const n = slug(a.name); if (n && !map.has(n)) map.set(n, a.id); }
   return map;
 }
 

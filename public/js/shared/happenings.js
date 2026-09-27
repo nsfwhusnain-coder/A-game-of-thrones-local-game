@@ -6,6 +6,7 @@
 import { HAPPENINGS, NAMES, GOODS, SEAS, REGION_LABEL } from '../../data/happenings.js';
 import { getRelation, realmOf } from './world.js';
 import { random } from '../engine/rng.js';
+import { placeOf } from '../engine/parties.js';
 
 const pickR = (a, r) => a[Math.floor(r() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -61,7 +62,7 @@ function placesFor(s, tpl) {
   if (w.startsWith('h:')) { const ids = w.slice(2).split('|'); return all.filter((h) => ids.includes(h.id)); }
   if (w.startsWith('c:')) {
     const c = s.characters[w.slice(2)]; if (!c?.alive || /imprisoned|captive/.test(c.status || '')) return [];
-    const h = s.holdings[c.loc]; return h ? [h] : [];
+    const h = s.holdings[placeOf(s, c)]; return h ? [h] : [];
   }
   return [];
 }

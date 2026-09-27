@@ -3,6 +3,30 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B2: everything that moves is a party, and walks real roads (WP B2)
+
+- **Hosts march along the roads, not in straight lines.** A march is planned once, over the same map you see: by the
+  kingsroad where there is one, slower through forest, bog and mountain, around lakes, through the Wall only at Castle
+  Black, the Shadow Tower or Eastwatch. The map now draws the road a host will take (dashed) and the ground it covered
+  this turn (solid), and the host walks exactly that road day by day. (Route lines were never visible before: a map
+  bug that hid every route, trail and road ribbon is fixed.)
+- **Riders are on the map too.** Someone you send alone (Jon to the Wall, Luwin to Oldtown) travels as a rider party
+  with a real route; your own riders' roads are drawn. Where the sea is in the way — or a ship is much quicker — they
+  ride to a port and take ship (Luwin sails from Seagard); a raven finds them where they are on the road.
+- **People stay with their party.** Robb stays with his host when it reaches Moat Cailin, and marches on with it; the
+  King's court rides in the King's progress and is at Winterfell when the progress is. What a host is doing ("marching
+  for Moat Cailin, ~18 days", "awaiting ships at White Harbor", "besieging Riverrun") is the engine's word, never the
+  story's.
+- **One thing at a time.** Everyone is ruling, commanding, answering the banners, travelling, visiting or a prisoner —
+  and a lord called to your banners does not ride off to a feast; a lord leading a host is not sent visiting by the story.
+- The world is checked after every turn (everyone in one place, doing one thing; no host standing on the sea; a host's
+  banners adding up to its men; letters landing after they are sent). A 480-turn soak held every check every turn.
+- Older saves load: armies become parties, riders on the road become rider parties, and anything the old straight-line
+  marches left on the water is put back ashore.
+- Owner to verify: load an existing save; call the banners and march your host — its dashed route follows the
+  kingsroad, and it arrives when the route says; send someone to Castle Black and watch the 🐎 rider on its road; hover a
+  host for what it is doing. `npm run soak -- --turns 40 --houses stark` should end "every invariant held every turn".
+
 ## 2026-09-27 — B5: every model call constrained, checked and never fatal (WP B5)
 
 - **Settings → Test connection** now tells you what matters about your model server: whether it enforces a JSON schema

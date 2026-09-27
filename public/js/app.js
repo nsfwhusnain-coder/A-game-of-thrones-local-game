@@ -6,6 +6,7 @@ import { sfx, wireSfx, sfxSettings, setSfx } from './ui/sfx.js';
 import { playTurn, prepareReveal } from './ui/playback.js';
 import { voiceSettings, setVoiceSetting, speak } from './ui/voice.js';
 import { atWar } from './shared/warfare.js';
+import { statusText, ref } from './engine/parties.js';
 import { CHARACTERS } from '../data/characters.js';
 import { briefFor } from '../data/briefs.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
@@ -271,14 +272,14 @@ orderInput.onkeydown = (e) => {
 
 // ───── map picking (march orders by clicking) ─────
 app.startPick = (kind, id) => {
-  const a = app.state.armies[id];
+  const a = app.state.parties[id];
   app.picking = { kind, id };
   $('#pick-hint').textContent = `Click a destination for ${a.name} — or an enemy host to attack it (Esc to cancel)`; $('#pick-hint').classList.remove('hidden');
 };
 function finishPick(hid) {
   const pk = app.picking; app.picking = null; $('#pick-hint').classList.add('hidden');
   if (!hid) return;
-  const a = app.state.armies[pk.id]; const hd = app.state.holdings[hid];
+  const a = app.state.parties[pk.id]; const hd = app.state.holdings[hid];
   const hostile = hd.owner !== app.state.meta.player && app.map.atWarWith(hd.owner);
   api(`/games/${app.saveId}/act`, { body: { kind: 'march', army: a.id, to: hid, intent: hostile ? 'lay siege and take it' : '' } })
     .then((r) => { app.setState(r.state); toast(`${a.name} marches on ${hd.name}. The route is on the map.`); app.map.flash(hd.pos); })
@@ -288,10 +289,10 @@ function finishPick(hid) {
 // march against another host: the engine fights the battle when they meet
 function finishPickArmy(aid) {
   const pk = app.picking; app.picking = null; $('#pick-hint').classList.add('hidden');
-  const a = app.state.armies[pk.id]; const foe = app.state.armies[aid];
+  const a = app.state.parties[pk.id]; const foe = app.state.parties[aid];
   if (!a || !foe || foe.id === a.id) return;
   if (foe.owner === app.state.meta.player || !app.map.atWarWith(foe.owner)) { toast(`You are not at war with House ${app.state.houses[foe.owner]?.name}. Declare it first, or march to a place.`, true); return; }
-  api(`/games/${app.saveId}/act`, { body: { kind: 'march', army: a.id, to: 'army:' + foe.id, intent: 'bring them to battle' } })
+  api(`/games/${app.saveId}/act`, { body: { kind: 'march', army: a.id, to: ref(foe.id), intent: 'bring them to battle' } })
     .then((r) => { app.setState(r.state); toast(`${a.name} marches to attack ${foe.name}.`); app.map.flash(foe.pos); })
     .catch((e) => toast(e.message, true));
 }
@@ -301,7 +302,7 @@ function showTooltip(hit, e) {
   const tt = $('#tooltip'); const s = app.state;
   if (!hit || !s) { tt.classList.add('hidden'); return; }
   let html = '';
-  if (hit.type === 'army') { const a = s.armies[hit.id]; if (!a) return; html = `<div class="tt-row">${sig(s.houses[a.owner], 1.4)}<div><b>${esc(a.name)}</b><br>${a.owner === s.meta.player ? '' : '~'}${fmt(a.men)} men${a.ships ? ' · ' + a.ships + ' ships' : ''}<br><span class="muted">${esc(a.status || '')}</span></div></div>`; }
+  if (hit.type === 'army') { const a = s.parties[hit.id]; if (!a) return; html = `<div class="tt-row">${sig(s.houses[a.owner], 1.4)}<div><b>${esc(a.name)}</b><br>${a.owner === s.meta.player ? '' : '~'}${fmt(a.men)} men${a.ships ? ' · ' + a.ships + ' ships' : ''}<br><span class="muted">${esc(statusText(s, a))}</span></div></div>`; }
   else {
     const hd = s.holdings[hit.id]; if (!hd) return; const o = s.houses[hd.owner]; const realm = s.houses[realmOf(s, hd.owner)];
     html = `<div class="tt-row">${sig(o, 1.4)}<div><b>${esc(hd.name)}</b><br>House ${esc(o?.name)}${realm && realm.id !== o.id ? ` <span class="muted">· ${esc(realm.realmName || realm.name)}</span>` : ''}<br><span class="muted">~${fmt(hd.population)} souls · prosperity ${Math.round(hd.prosperity)}</span>${hd.status !== 'normal' ? `<br>⚠ ${esc(hd.status)}` : ''}${app.picking ? '<br><b>Click to march here</b>' : ''}</div></div>`;
@@ -364,7 +365,7 @@ document.addEventListener('click', (e) => {
   if (!app.state) { const a = t.closest('[data-action]'); if (a) handleAction(a.dataset.action, a); return; }
   const hold = t.closest('[data-hold]'); if (hold && !t.closest('.lbl')) { e.preventDefault(); app.map.select(hold.dataset.hold, { fly: true }); openSheet('holding', hold.dataset.hold); return; }
   const house = t.closest('[data-house]'); if (house) { e.preventDefault(); openSheet('house', house.dataset.house); const hh = app.state.houses[house.dataset.house]; if (hh?.seat) app.map.select(hh.seat, { fly: true }); return; }
-  const army = t.closest('[data-army]'); if (army && !t.closest('.lbl')) { const a = app.state.armies[army.dataset.army]; if (a) { app.map.selectedArmy = a.id; app.map.flyTo(a.pos); openSheet('army', a.id); } return; }
+  const army = t.closest('[data-army]'); if (army && !t.closest('.lbl')) { const a = app.state.parties[army.dataset.army]; if (a) { app.map.selectedArmy = a.id; app.map.flyTo(a.pos); openSheet('army', a.id); } return; }
   const ch = t.closest('[data-char]'); if (ch && !t.closest('button')) { openSheet('char', ch.dataset.char); return; }
   const act = t.closest('[data-action]'); if (act) handleAction(act.dataset.action, act);
 });

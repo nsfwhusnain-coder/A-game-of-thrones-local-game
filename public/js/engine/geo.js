@@ -53,6 +53,9 @@ function fill(grid, pts, value) {
   return cells;
 }
 
+/** The cells whose centres lie inside a polygon (terrain painted onto the raster: forests, bogs, mountains). */
+export const polyCells = (pts) => fill(new Uint8Array(GW * GH), pts, 1);
+
 let G = null; // { kind: Uint8Array, comp: Int32Array, polyComp: Int32Array, compName: [] }
 function build() {
   const kind = new Uint8Array(GW * GH); // SEA everywhere to begin with
@@ -108,12 +111,14 @@ function build() {
   G = { kind, comp, polyComp, compName };
 }
 const grid = () => (G || build(), G);
+/** The raster itself, for the land router (engine/movement.js): cell size, width, height, kind per cell, landmasses. */
+export const raster = () => ({ CELL, GW, GH, kind: grid().kind, comp: grid().comp, SEA, LAND: LANDC, LAKE });
 
 export function cellOf([x, y]) {
   const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
   return cx < 0 || cy < 0 || cx >= GW || cy >= GH ? -1 : cy * GW + cx;
 }
-const centre = (g) => [((g % GW) + 0.5) * CELL, (Math.floor(g / GW) + 0.5) * CELL];
+export const centre = (g) => [((g % GW) + 0.5) * CELL, (Math.floor(g / GW) + 0.5) * CELL];
 
 /**
  * The landmass a point stands on: an integer id shared by every point of the same island or continent, or -1 at sea.
@@ -191,7 +196,11 @@ function seaField(start) {
  * way by sea (an inland point, or a lake). The path starts at `from` and ends at `to`.
  */
 export function seaRoute(from, to) {
-  const s = shoreCell(from), t = shoreCell(to); if (s < 0 || t < 0) return null;
+  return seaRouteFrom(from, to, shoreCell(from));
+}
+/** The same, from a given shore cell (a port the caller has already found). */
+export function seaRouteFrom(from, to, s) {
+  const t = shoreCell(to); if (s < 0 || t < 0) return null;
   const f = seaField(s); if (!isFinite(f.dist[t])) return null;
   const cells = []; for (let g = t; g >= 0; g = f.prev[g]) cells.push(g);
   cells.reverse();

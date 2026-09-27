@@ -127,3 +127,77 @@ explicitly where that reads better — `random()` and `ctx.rng` draw from the sa
 
 **Why.** Everything a call needs, tested and reviewed in one file, is what keeps a dozen calls honest as the pipeline
 grows (B6–B13); the runner's guarantees are what let a turn survive any model misbehaving.
+
+## D-007 · 2026-09-27 · The party model as built (WP B2)
+
+**What.** `state.parties` replaces `state.armies`; hosts, fleets, garrisons, lords' households, the King's progress and
+lone riders are all parties (`engine/parties.js`). Where this differs from the letter of 03 §3.2–§3.3:
+- **A person's place is one string**, `c.loc`: a holding or place id, or `party:<id>` (was `army:<id>`). The GDD's
+  `location: { at, party, pos }` is derived (`placeOf`, `partyOf`, `charPos`): one string cannot say two places, so
+  invariant 1's "exactly one" holds by construction and 105 reads of `c.loc` kept their meaning. `setLoc` is the one
+  way to change it; it keeps the party's `members` in step (and a rider's party ends when its last rider leaves it).
+- **Field names kept from the old engine**: `commander` is the GDD's `leader` (the word the player reads), `march:
+  { to, since }` is the GDD's `orders` for the kinds this engine has (march, follow — `to: 'party:<id>'`), `men` and
+  `composition`/`units` stand for `troops` until the military rework (C1–C3). `a.party` (a household's errand) is now
+  `purpose`, as the GDD has it.
+- **`state` is an engine enum, `status` is gone.** `settle()` derives the state from what the party is doing (a voyage,
+  a march, a siege, a levy still gathering, a household at its hosts'); battles set `engaged`/`routed` for the turn.
+  What the player reads comes from `statusText()`; the story model's status words are not stored (B-20).
+- **Members stay with their party at rest.** A host that reaches Moat Cailin still has Robb in it: people travelling
+  with a party are with it, halted or not, and `placeOf()` says where they are. (The old engine set everyone down at
+  the destination, so a host marched on without its commander.) A rider's party ends at its destination, and the
+  rider gets down there.
+- **Contingents include the owner's own share.** `shares()` keeps `contingents` adding up to the host's `men`
+  (invariant 4): the sworn houses' men, cut in proportion when the host is smaller than its banners brought, and the
+  owner's share is the rest. `sworn(p)` lists the banners without the owner's share.
+- **Euron sails the Silence**: the one character the data had "at sea" is a member of a one-ship fleet party at sea that
+  no player commands (`exile: true`), so everyone is somewhere real from turn 0.
+
+**Why.** Everything that moves being one thing is what lets the map, the numbers and the chronicle agree about where
+anyone is; the smaller departures keep the diff reviewable and the old saves loading, without weakening an invariant.
+
+## D-008 · 2026-09-27 · Routes over the atlas, and the pace of the King's progress (WP B2)
+
+**What.** `engine/movement.js` plans a route once, when the order is given, on the engine's raster of the atlas
+(`engine/geo.js`, 4-unit cells): A* over land with 07 §5's terrain multipliers as time costs (road 1, open 0.85, forest
+0.7, hills 0.75, mountains 0.5, the high peaks 0.35, marsh 0.4 — `data/balance.js TERRAIN`), the Wall's line shut
+except at Castle Black, the Shadow Tower and Eastwatch, lakes and the sea impassable. The route (`route.path` with the
+day each point is reached) is walked day by day (`advance`), so a host is always on its road, and the map draws that
+road (`MapScene.roadAhead`) and animates along the ground the engine covered (`motion.path`). Where the sea is in the
+way a traveller (a rider, an envoy) rides to the best port, waits a day for a ship and sails; on a long overland
+journey it takes ship if that is clearly quicker (Winterfell to Oldtown by Seagard and the sea). A host never books a
+passage: it needs ships of its own or its realm's (`shared/sea.js`, D-001). The march loop moved from `server/game.js`
+to `shared/marches.js`. The story's `army_move` no longer teleports: a step of two days' march at most is taken at
+once, anything farther becomes a march the engine walks.
+
+**The progress.** 03 §5 gave the royal progress 10 miles a day (a wheelhouse). The canon timetable (A11) has the court
+at the Twins at the start of the 8th moon and at Winterfell in the 9th; on this atlas — a Westeros of about 3,000 miles
+from the Wall to Sunspear, as the books have it — that is ~1,000 road miles, about 30 miles a day. Books first: the
+progress rides at 30 (`SPEED.progress`); the GDD is corrected.
+
+**Why.** "Hosts glide straight" and "Skagos marches over the sea" (B-11) end only when the engine and the map walk the
+same road; planning once and walking it keeps a turn fast (A* results are cached; a soak turn takes ~0.8 s).
+
+## D-009 · 2026-09-27 · Activities, stored compactly and derived where they can be (WP B2)
+
+**What.** `engine/activity.js` implements 03 §4's table (priorities; what each yields to) with `claim`, `release`,
+`busyUntil`, `canAttend` and `bound`. An activity is stored as `{ kind, since, party?, until?, source? }`: its priority
+and whether it may be interrupted are its kind's, so they are not repeated in every save. Activities that circumstances
+decide (a head of house at the seat rules; a lord called to the banners musters; the leader of a host commands it; a
+rider travels; a prisoner is captive) are re-derived whenever the state is settled (`engine/state/settle.js`, on every
+create, load and save), and only a claim (it has a `source`) outlives them. The retinue scheduler sends out only lords
+who are ruling or idle (`canAttend(…, 'attending')`, 03 §4, B-10); the story model may not move anyone held by a
+binding duty (commanding, mustering, an embassy, a siege, a cell). The player's own orders are a liege's command and
+are never refused for it.
+
+**Why.** Invariant 2 — everyone does exactly one thing — holds by construction after every settle, and the few places
+that must ask ("is Robb free to go to a feast?") ask one function.
+
+## D-010 · 2026-09-27 · The map's ribbons face the sky
+
+**What.** `MapScene.ribbon()` wound its triangles facing down, so every ribbon drawn with a one-sided material — the
+dashed route ahead of a host, the trail behind it, the dusty road tracks — was culled and never seen (the roads showed
+only because they are also painted into the terrain). The winding is fixed; routes are resampled densely before they
+are drawn so they lie on the hills between the engine's few waypoints.
+
+**Why.** Found while taking the B2 screenshots: the engine's routes were right and invisible.

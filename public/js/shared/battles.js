@@ -7,6 +7,7 @@ import { applyChanges } from './world.js';
 import { atWar, battleOdds, siegeEstimate } from './warfare.js';
 import { contingentsHoldBack } from './treachery.js';
 import { random } from '../engine/rng.js';
+import { settle } from '../engine/parties.js';
 
 const CONTACT = 10;      // map units (~18 miles): hosts this close will meet
 const SIEGE_REACH = 7;   // a host this close to an enemy castle sits before its walls
@@ -50,8 +51,10 @@ function fight(state, att, def, days, r) {
   if (wiped) changes.push({ op: 'army_destroy', army: lose.id, reason: 'destroyed in battle' });
   else {
     changes.push({ op: 'army_update', army: lose.id, delta: -loseLoss, morale: Math.max(5, (lose.morale ?? 70) - 25 - Math.round(margin * 15)), status: 'retreating', cause: 'battle' });
-    const home = homeOf(state, lose); if (home) { lose.march = { to: home, since: state.meta.turn }; lose.dest = state.holdings[home].pos; lose.destName = state.holdings[home].name; lose.at = null; }
+    const home = homeOf(state, lose); if (home) { lose.march = { to: home, since: state.meta.turn }; lose.route = null; lose.at = null; }
   }
+  // what the hosts are doing this turn is the engine's word: the loser routed, the victor still in the field
+  win.fought = lose.fought = state.meta.turn; win.state = 'engaged'; lose.state = 'routed';
   // the fate of the commanders
   const fates = [];
   const lc = lose.commander && state.characters[lose.commander];
@@ -100,6 +103,7 @@ function besiege(state, h, besiegers, days, r) {
   if (h.siege.stores == null) h.siege.stores = est.months; // old saves
   h.siege.days += days;
   const men = besiegers.reduce((n, a) => n + a.men, 0);
+  for (const a of besiegers) { a.besieging = h.id; settle(state, a); }
   // ── the castle eats. A crowded castle eats faster; a well-provisioned one (granaries) holds far longer.
   const mouths = 1 + Math.min(1.2, (est.garrison + (h.population || 1500) * 0.15) / 2500);
   h.siege.stores = Math.max(0, h.siege.stores - (days / 30) * mouths);
@@ -141,7 +145,7 @@ function besiege(state, h, besiegers, days, r) {
   else if (r() < stormChance) fall('stormed', Math.round(men * rnd(0.08, 0.16, r) * (1 + fort * 0.15)));
   else if (spent && h.siege.days > 30) {
     // the siege lines melt away
-    for (const a of besiegers) { const home = homeOf(state, a); if (home) { a.march = { to: home, since: state.meta.turn }; a.dest = state.holdings[home].pos; a.destName = state.holdings[home].name; a.at = null; a.status = 'withdrawing'; } }
+    for (const a of besiegers) { const home = homeOf(state, a); delete a.besieging; if (home) { a.march = { to: home, since: state.meta.turn }; a.route = null; a.at = null; } settle(state, a); }
     changes.push({ op: 'holding', id: h.id, status: 'normal', note: 'The siege is raised' });
     events.push({ title: `The siege of ${h.name} is raised`, text: `${lead.name} has broken camp and marched away from ${h.name}. Sickness, hunger and idleness did what the walls could not.`, details: `After ${Math.round(h.siege.days / 30 * 10) / 10} moons before the gates, the host was too wasted to hold the lines.`, where: h.id, importance: [lead.owner, h.owner].includes(state.meta.player) ? 4 : 3, type: 'war', houses: [lead.owner, h.owner], day: days });
     delete h.siege;
@@ -161,19 +165,19 @@ function besiege(state, h, besiegers, days, r) {
  */
 export function resolveWarfare(state, days, { skip = new Set(), r = random } = {}) {
   const events = []; const applied = []; const fought = new Set();
-  const armies = () => Object.values(state.armies).filter((a) => a.men > 0);
+  const armies = () => Object.values(state.parties).filter((a) => a.men > 0);
   // battles: the closest pairs first
   const pairs = [];
   const all = armies();
   for (const a of all) for (const b of all) {
     if (a.id >= b.id || !atWar(state, a.owner, b.owner)) continue;
-    if ((a.type === 'fleet') !== (b.type === 'fleet')) continue;
+    if ((a.kind === 'fleet') !== (b.kind === 'fleet')) continue;
     if (skip.has(a.owner) && skip.has(b.owner)) continue;
-    const d = dist(a.pos, b.pos); if (d <= CONTACT * (a.type === 'fleet' ? 1.6 : 1)) pairs.push([d, a, b]);
+    const d = dist(a.pos, b.pos); if (d <= CONTACT * (a.kind === 'fleet' ? 1.6 : 1)) pairs.push([d, a, b]);
   }
   pairs.sort((x, y) => x[0] - y[0]);
   for (const [, a, b] of pairs) {
-    if (fought.has(a.id) || fought.has(b.id) || !state.armies[a.id] || !state.armies[b.id]) continue;
+    if (fought.has(a.id) || fought.has(b.id) || !state.parties[a.id] || !state.parties[b.id]) continue;
     // the side that marched into the other attacks; else the stronger one does
     const aMoving = a.march && !b.march, bMoving = b.march && !a.march;
     const [att, def] = aMoving ? [a, b] : bMoving ? [b, a] : a.men >= b.men ? [a, b] : [b, a];
@@ -184,7 +188,7 @@ export function resolveWarfare(state, days, { skip = new Set(), r = random } = {
   // sieges: hosts that sit before an enemy castle, and did not just fight
   const byHold = new Map();
   for (const a of armies()) {
-    if (a.type === 'fleet' || fought.has(a.id) || a.march) continue;
+    if (a.kind === 'fleet' || fought.has(a.id) || a.march) continue;
     for (const h of Object.values(state.holdings)) {
       if (!atWar(state, a.owner, h.owner) || dist(a.pos, h.pos) > SIEGE_REACH) continue;
       if (!byHold.has(h.id)) byHold.set(h.id, []); byHold.get(h.id).push(a); break;
@@ -200,7 +204,7 @@ export function resolveWarfare(state, days, { skip = new Set(), r = random } = {
   // sieges with no one left outside the walls are lifted
   for (const h of Object.values(state.holdings)) {
     if (h.status !== 'besieged' || byHold.has(h.id)) continue;
-    const near = armies().some((a) => a.type !== 'fleet' && atWar(state, a.owner, h.owner) && dist(a.pos, h.pos) <= SIEGE_REACH);
+    const near = armies().some((a) => a.kind !== 'fleet' && atWar(state, a.owner, h.owner) && dist(a.pos, h.pos) <= SIEGE_REACH);
     if (!near) { const out = applyChanges(state, [{ op: 'holding', id: h.id, status: 'normal', note: 'The siege is lifted' }]); applied.push(...out.applied); delete h.siege; }
   }
   return { events, applied };

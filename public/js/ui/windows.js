@@ -17,6 +17,8 @@ import { temperament, natureTags } from '../shared/temperament.js';
 import { viewOfArmies, ageText } from '../shared/intel.js';
 import { DEMEANOURS } from '../../data/demeanours.js';
 import { profileFor, VOICE_CHOICES, voiceSettings, setVoiceSetting, speak, stopSpeaking } from './voice.js';
+import { forces, partyOf, placeOf, membersOf, together, statusText, sworn } from '../engine/parties.js';
+import { daysLeft } from '../engine/movement.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
 
@@ -114,7 +116,7 @@ const SEATS = [
 function councilMembers() {
   const s = app.state, p = s.meta.player;
   const mine = Object.values(s.characters).filter((c) => c.alive && c.house === p && c.id !== player().lord);
-  const onCouncil = Object.values(s.characters).filter((c) => c.alive && c.roles.includes('council') && s.houses[c.house] && (c.house === p || realmOf(s, c.house) === p || (p === 'baratheon' && c.loc === 'baratheon')));
+  const onCouncil = Object.values(s.characters).filter((c) => c.alive && c.roles.includes('council') && s.houses[c.house] && (c.house === p || realmOf(s, c.house) === p || (p === 'baratheon' && placeOf(s, c) === 'baratheon')));
   const seats = SEATS.map(([role, label, desc]) => ({ role, label, desc, c: mine.find((c) => c.roles.includes(role)) || (role === 'spymaster' ? onCouncil.find((c) => c.roles.includes('spymaster')) : null) }));
   const family = mine.filter((c) => c.roles.some((r) => ['heir', 'lady', 'family'].includes(r)) && c.age >= 12).slice(0, 4);
   return { seats, family, small: p === 'baratheon' ? onCouncil : [] };
@@ -134,8 +136,8 @@ function council() {
 function military() {
   const s = app.state, p = s.meta.player, h = player();
   const vas = vassalsOf(s, p).map((v) => s.houses[v]);
-  const mine = Object.values(s.armies).filter((a) => a.owner === p || s.houses[a.owner]?.liege === p);
-  const others = Object.values(s.armies).filter((a) => !mine.includes(a)).sort((a, b) => (app.map?.atWarWith(b.owner) ? 1 : 0) - (app.map?.atWarWith(a.owner) ? 1 : 0));
+  const mine = forces(s).filter((a) => a.owner === p || s.houses[a.owner]?.liege === p);
+  const others = forces(s).filter((a) => !mine.includes(a)).sort((a, b) => (app.map?.atWarWith(b.owner) ? 1 : 0) - (app.map?.atWarWith(a.owner) ? 1 : 0));
   const answered = vas.filter((v) => v.obligations?.levies === 'answered').length, refused = vas.filter((v) => v.obligations?.levies === 'refused').length, called = vas.filter((v) => ['called', 'delayed'].includes(v.obligations?.levies)).length;
   return `
     <div class="stat-grid">
@@ -262,7 +264,7 @@ function diplomacy() {
 // ───────────── Intrigue ─────────────
 function intrigue() {
   const s = app.state, p = s.meta.player;
-  const spy = Object.values(s.characters).find((c) => c.alive && c.roles.includes('spymaster') && (c.house === p || (p === 'baratheon' && c.loc === 'baratheon')));
+  const spy = Object.values(s.characters).find((c) => c.alive && c.roles.includes('spymaster') && (c.house === p || (p === 'baratheon' && placeOf(s, c) === 'baratheon')));
   const recent = s.history.slice(-6).flatMap((t) => t.events.filter((e) => e.type === 'intrigue' || e.type === 'rumor').map((e) => ({ ...e, date: t.date }))).reverse();
   const houses = Object.values(s.houses).filter((h) => h.id !== p).sort((a, b) => a.name.localeCompare(b.name));
   const PLOTS = [['spy', 'Plant spies in the household of'], ['secrets', 'Uncover the secrets of'], ['rumour', 'Spread rumours to discredit'], ['bribe', 'Bribe the servants and knights of'], ['sabotage', 'Sabotage the stores and ships of'], ['assassinate', 'Arrange the quiet death of the lord of'], ['turn', 'Turn a vassal of']];
@@ -333,7 +335,7 @@ const wire = {
     $('#raise-levies', body).onclick = () => {
       const s = app.state, p = s.meta.player, h = player();
       const holds = Object.values(s.holdings).filter((x) => x.owner === p);
-      const cmds = Object.values(s.characters).filter((c) => c.alive && c.house === p && c.age >= 14 && c.status === 'free' && !String(c.loc).startsWith('army:'));
+      const cmds = Object.values(s.characters).filter((c) => c.alive && c.house === p && c.age >= 14 && c.status === 'free' && !partyOf(s, c));
       const max = Number(h.figures.levies.v) || 0;
       modal(`<h2>Raise your levies</h2><p class="muted">Your own smallfolk answer you directly — your vassals must be called separately. Men in the field cost coin every moon and leave the fields untended.</p>
         <label>Men: <b id="rl-n">${Math.round(max / 2)}</b> of ~${fmt(max)}</label><input type="range" id="rl-men" min="50" max="${max}" step="50" value="${Math.round(max / 2)}" style="width:100%">
@@ -383,7 +385,7 @@ document.addEventListener('click', (e) => {
   if (ap) {
     const role = ap.dataset.appoint; const label = SEATS.find((x) => x[0] === role)?.[1] || role;
     const s = app.state, p = s.meta.player, seat = player().seat;
-    const cands = Object.values(s.characters).filter((c) => c.alive && c.id !== player().lord && (c.house === p || c.loc === seat) && c.age >= 14 && c.status === 'free');
+    const cands = Object.values(s.characters).filter((c) => c.alive && c.id !== player().lord && (c.house === p || placeOf(s, c) === seat) && c.age >= 14 && c.status === 'free');
     modal(`<h2>Appoint a ${esc(label)}</h2><p class="muted">Choose from your household, wards and guests. Or describe whom you seek and the realm will find someone.</p>
       ${cands.map((c) => `<div class="row clickable" data-appoint-pick="${c.id}"><img class="por" src="${por(c, 64)}"><div class="grow"><div class="title">${esc(c.name)}</div><div class="sub">${esc(c.title || c.roles.join(', '))} · ${SKILL_NAMES.map((n, i) => `${SKILL_ICONS[i]}${c.skills?.[i] ?? '?'}`).join(' ')}</div></div></div>`).join('') || '<p class="muted">No one suitable at your seat.</p>'}
       <hr><label>Or seek someone new</label><input class="input" id="seek-text" placeholder="e.g. a hard old knight from the mountain clans who knows siegecraft"><div class="row-actions"><button class="btn" id="seek-go">Send word</button></div>`);
@@ -460,13 +462,13 @@ function characterSheet(id) {
     <div class="family">${famMember(father, 'Father')}${famMember(mother, 'Mother')}${famMember(spouse, 'Spouse')}${famMember(betrothed, 'Betrothed')}${kids.map((k) => famMember(k, 'Child')).join('')}${sibs.slice(0, 8).map((k) => famMember(k, 'Sibling')).join('')}</div>
     ${c.memories?.length ? `<h4>Remembers</h4>${c.memories.slice(-5).map((m) => `<div class="muted" style="font-size:0.82rem">• ${esc(m)}</div>`).join('')}` : ''}
     ${c.alive && !isRuler ? `<hr><div class="row-actions">
-      <button class="btn primary" data-talk="${c.id}">${s.characters[player().lord]?.loc === c.loc ? '🗣 Speak' : '✉ Send a raven'}</button>
+      <button class="btn primary" data-talk="${c.id}">${together(s, s.characters[player().lord], c) ? '🗣 Speak' : '✉ Send a raven'}</button>
       <button class="btn" data-order-tpl="Summon ${esc(c.name)} to ${esc(s.holdings[player().seat]?.name || 'my court')}. ">Summon</button>
       ${!mine ? `<button class="btn" data-gift="${c.id}">🎁 Send a gift</button>` : ''}
       ${!c.spouse && c.age >= 10 ? `<button class="btn" data-order-tpl="Propose a match for ${esc(c.name)} with ">Propose match</button>` : ''}
       ${mine ? `<button class="btn" data-order-tpl="Grant ${esc(c.name)} ">Grant…</button>` : ''}
       ${/imprisoned|captive|hostage/.test(c.status || '') && !mine ? `<span class="judge-row"><b>Judge:</b> <button class="btn small" data-judge="release" data-who="${c.id}">Release</button><button class="btn small" data-judge="ransom" data-who="${c.id}">Ransom</button><button class="btn small" data-judge="wall" data-who="${c.id}">Send to the Wall</button><button class="btn small danger" data-judge="execute" data-who="${c.id}">Execute</button></span>` : ''}
-      ${s.holdings[c.loc] ? `<button class="btn ghost" data-hold="${c.loc}">Show on map</button>` : ''}</div>` : ''}`;
+      ${s.holdings[placeOf(s, c)] ? `<button class="btn ghost" data-hold="${placeOf(s, c)}">Show on map</button>` : ''}</div>` : ''}`;
 }
 
 // Their nature as the engine reads it (what decides how they answer you), and the voice they speak with
@@ -519,10 +521,10 @@ function holdingSheet(id) {
   const s = app.state; const hd = s.holdings[id]; if (!hd) return '';
   const owner = s.houses[hd.owner]; const lord = owner?.lord ? s.characters[owner.lord] : null; const p = s.meta.player;
   const chain = []; let cur = owner, g = 0; while (cur?.liege && g++ < 6) { cur = s.houses[cur.liege]; if (cur) chain.push(cur); }
-  const here = Object.values(s.characters).filter((c) => c.loc === id && c.alive);
-  const armies = Object.values(s.armies).filter((a) => a.at === id);
+  const here = Object.values(s.characters).filter((c) => placeOf(s, c) === id && c.alive); // those in a party camped here too
+  const armies = forces(s).filter((a) => a.at === id);
   const mine = hd.owner === p;
-  const myArmies = Object.values(s.armies).filter((a) => a.owner === p);
+  const myArmies = forces(s).filter((a) => a.owner === p);
   const fig = (f) => `${mine ? '' : '~'}${fmt(owner.figures[f].v)}`;
   return `
     <div class="detail-hero"><img class="banner" src="${banner(owner, 60, 90)}" style="width:4rem" alt=""><div><h2>${esc(hd.name)}</h2>
@@ -550,42 +552,42 @@ function holdingSheet(id) {
 }
 
 function armySheet(id) {
-  const s = app.state; const p = s.meta.player; const a = s.armies[id]; if (!a) return '';
+  const s = app.state; const p = s.meta.player; const a = s.parties[id]; if (!a) return '';
   const h = s.houses[a.owner]; const cmd = a.commander ? s.characters[a.commander] : null; const mine = a.owner === s.meta.player || a.serving === s.meta.player;
   // fog of war: a host you only have reports of shows the report, not the truth
   const v = viewOfArmies(s).get(id);
   if (!mine && v?.known === 'reported') {
     const near = Object.values(s.holdings).sort((x, y) => Math.hypot(x.pos[0] - v.pos[0], x.pos[1] - v.pos[1]) - Math.hypot(y.pos[0] - v.pos[0], y.pos[1] - v.pos[1]))[0];
-    return `<div class="detail-hero"><div class="unknown-banner"></div><div><h2>${a.type === 'fleet' ? '⛵ A fleet' : '⚔ A host'}, unconfirmed</h2><div class="muted">Said to fly the banners of <a href="#" data-house="${h.id}">House ${esc(h.name)}</a></div></div></div>
+    return `<div class="detail-hero"><div class="unknown-banner"></div><div><h2>${a.kind === 'fleet' ? '⛵ A fleet' : '⚔ A host'}, unconfirmed</h2><div class="muted">Said to fly the banners of <a href="#" data-house="${h.id}">House ${esc(h.name)}</a></div></div></div>
       <div class="kv"><span class="k">Men</span><span>~${fmt(v.men)}, by report</span><span class="k">Commander</span><span><i>unknown</i></span><span class="k">Riding with it</span><span><i>unknown</i></span>
       <span class="k">Last heard of</span><span>near ${esc(near?.name || '?')}, ${ageText(v.age)}</span><span class="k">Word came by</span><span>${esc(v.source)}</span></div>
       <p class="muted" style="font-size:0.85rem">No eyes of yours are on this host: it may have moved, grown or dwindled since — or the word may be a lie. Hosts near your lands, your hosts and your allies' are seen as they are. Plant spies in House ${esc(h.name)} (Intrigue) to follow theirs.</p>`;
   }
   return `
-    <div class="detail-hero"><img class="banner" src="${banner(h, 60, 90)}" style="width:4rem" alt=""><div><h2>${a.type === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</h2><div class="muted"><a href="#" data-house="${h.id}">House ${esc(h.name)}</a> · ${esc(a.status || '')}</div></div></div>
+    <div class="detail-hero"><img class="banner" src="${banner(h, 60, 90)}" style="width:4rem" alt=""><div><h2>${a.kind === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</h2><div class="muted"><a href="#" data-house="${h.id}">House ${esc(h.name)}</a> · ${esc(statusText(s, a))}</div></div></div>
     <div class="stat-grid">
-      <div class="s"><div class="k">${a.type === 'fleet' ? 'Crews' : 'Men'}</div><div class="v">${mine ? '' : '~'}${fmt(a.men)}</div></div>
+      <div class="s"><div class="k">${a.kind === 'fleet' ? 'Crews' : 'Men'}</div><div class="v">${mine ? '' : '~'}${fmt(a.men)}</div></div>
       ${a.ships ? `<div class="s"><div class="k">Ships</div><div class="v">${fmt(a.ships)}</div></div>` : ''}
       <div class="s"><div class="k">Morale</div><div class="v">${a.morale}</div>${meter(a.morale, '#c9a44a')}</div>
       <div class="s"><div class="k">Supply</div><div class="v">${a.supply}</div>${meter(a.supply, '#7fb85a')}</div>
     </div>
-    <div class="kv"><span class="k">Position</span><span>${a.march ? `marching to ${esc(placeName(s, a.march.to))}${(() => { const d = s.holdings[a.march.to]?.pos; return d ? ` · ~${marchDays(a, a.pos, d).days} days away` : ''; })()}` : a.at ? esc(placeName(s, a.at)) : 'in the field'}</span>
+    <div class="kv"><span class="k">Position</span><span>${a.march ? `bound for ${esc(a.route?.toName || placeName(s, a.march.to))}${(() => { const d = daysLeft(a) ?? (s.holdings[a.march.to]?.pos && marchDays(a, a.pos, s.holdings[a.march.to].pos, s).days); return d ? ` · ~${Math.max(1, Math.round(d))} days away${a.route ? ` (${fmt(a.route.miles)} miles by the road it takes)` : ''}` : ''; })()}` : a.at ? esc(placeName(s, a.at)) : 'in the field'}</span>
     <span class="k">Composition</span><span>${esc(a.composition || '—')}</span><span class="k">Reported</span><span>${esc(a.asOf || '')}</span></div>
     ${cmd ? `<h4>Commander</h4>${charRow(cmd)}` : ''}
     ${(() => {
-      const with_ = Object.values(s.characters).filter((c) => c.loc === 'army:' + a.id && c.alive && c.id !== a.commander);
+      const with_ = membersOf(s, a).filter((c) => c.alive && c.id !== a.commander);
       // only what the house knows: seen hosts as they are, reported ones where the word put them
       const known = viewOfArmies(s);
-      const foes = Object.values(s.armies).filter((b) => atWar(s, a.owner, b.owner) && known.has(b.id)).map((b) => { const k = known.get(b.id); const seen = k.known === 'seen'; const bb = seen ? b : { ...b, pos: k.pos, men: k.men, morale: 70, supply: 80, commander: null }; return { b: bb, seen, m: marchDays(a, a.pos, bb.pos), o: battleOdds(s, a, bb) }; }).sort((x, y) => x.m.days - y.m.days).slice(0, 4);
-      const targets = a.type === 'fleet' ? [] : Object.values(s.holdings).filter((h) => atWar(s, a.owner, h.owner)).map((h) => ({ h, m: marchDays(a, a.pos, h.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
+      const foes = forces(s).filter((b) => atWar(s, a.owner, b.owner) && known.has(b.id)).map((b) => { const k = known.get(b.id); const seen = k.known === 'seen'; const bb = seen ? b : { ...b, pos: k.pos, men: k.men, morale: 70, supply: 80, commander: null }; return { b: bb, seen, m: marchDays(a, a.pos, bb.pos), o: battleOdds(s, a, bb) }; }).sort((x, y) => x.m.days - y.m.days).slice(0, 4);
+      const targets = a.kind === 'fleet' ? [] : Object.values(s.holdings).filter((h) => atWar(s, a.owner, h.owner)).map((h) => ({ h, m: marchDays(a, a.pos, h.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
       // what it is made of (seen hosts only), and the banners in it
-      const banners = Object.entries(a.contingents || {}).filter(([, n]) => n > 0).map(([h, n]) => `${esc(s.houses[h]?.name || h)} ${n.toLocaleString('en-GB')}`);
+      const banners = sworn(a).filter(([, n]) => n > 0).map(([h, n]) => `${esc(s.houses[h]?.name || h)} ${n.toLocaleString('en-GB')}`);
       return (a.owner === p || known.get(a.id)?.known === 'seen' ? `<h4>The host</h4><div class="muted" style="font-size:0.88rem">${esc(unitsText(s, a))}${banners.length ? `<br>Banners: House ${esc(s.houses[a.owner]?.name)}, ${banners.join(', ')}` : ''}</div>` : '')
         + (with_.length ? `<h4>Riding with the host</h4>${with_.map((c) => charRow(c)).join('')}` : '')
         + (foes.length ? `<h4>War room — enemy hosts</h4>${foes.map(({ b, m, o, seen }) => `<div class="row clickable" data-army="${b.id}">${seen ? sig(s.houses[b.owner]) : '<span class="unknown-dot"></span>'}<div class="grow"><div class="title">${seen ? esc(b.name) : 'An unconfirmed host'} <span class="muted">~${fmt(b.men)}</span></div><div class="sub">${m.days} days' march (${m.miles} mi) · if you attack: <b style="color:${o.attacker >= 60 ? '#a8e08a' : o.attacker >= 40 ? '#ffe0a0' : '#ec9a8a'}">${o.attacker}%</b></div></div></div>`).join('')}` : '')
         + (targets.length ? `<h4>Enemy holdings in reach</h4>${targets.map(({ h, m }) => { const e = siegeEstimate(s, h, [a]); return `<div class="row clickable" data-hold="${h.id}"><div class="grow"><div class="title">${esc(h.name)}</div><div class="sub">${m.days} days · walls ${h.fort}/6 · a siege would take ~${e.months} moons · ${esc(e.storm)}</div></div></div>`; }).join('')}` : '');
     })()}
-    ${mine && a.type !== 'fleet' ? `<h4>How it marches</h4><div class="row-actions secrecy"><button class="btn small${(a.secrecy || 'open') === 'open' && !a.feint ? ' on' : ''}" data-secrecy="open" data-army-id="${a.id}" title="On the roads, banners flying: the realm hears of it">Openly</button><button class="btn small${a.secrecy === 'hidden' ? ' on' : ''}" data-secrecy="hidden" data-army-id="${a.id}" title="By night and off the roads, a little slower: the realm loses track of it">In secret</button><button class="btn small${a.feint ? ' on' : ''}" data-feint="${a.id}" title="Spread word that it marches somewhere else">${a.feint ? `Feint: ${esc(s.holdings[a.feint]?.name || '')}` : 'Feint…'}</button></div>` : ''}
+    ${mine && a.kind !== 'fleet' ? `<h4>How it marches</h4><div class="row-actions secrecy"><button class="btn small${(a.secrecy || 'open') === 'open' && !a.feint ? ' on' : ''}" data-secrecy="open" data-army-id="${a.id}" title="On the roads, banners flying: the realm hears of it">Openly</button><button class="btn small${a.secrecy === 'hidden' ? ' on' : ''}" data-secrecy="hidden" data-army-id="${a.id}" title="By night and off the roads, a little slower: the realm loses track of it">In secret</button><button class="btn small${a.feint ? ' on' : ''}" data-feint="${a.id}" title="Spread word that it marches somewhere else">${a.feint ? `Feint: ${esc(s.holdings[a.feint]?.name || '')}` : 'Feint…'}</button></div>` : ''}
     ${mine ? `<hr><div class="row-actions"><button class="btn primary" data-march="${a.id}">⤳ March to…</button><button class="btn" data-order-tpl="${esc(a.name)} is to ">Give orders…</button><button class="btn danger" data-order-tpl="Disband ${esc(a.name)} and send the men home to their fields.">Disband</button></div>` : ''}`;
 }
 
@@ -663,7 +665,7 @@ document.addEventListener('click', async (e) => {
   if (sc) courtAct({ kind: 'secrecy', army: sc.dataset.armyId, mode: sc.dataset.secrecy });
   const fe = e.target.closest('[data-feint]');
   if (fe) {
-    const s = app.state; const a = s.armies[fe.dataset.feint];
+    const s = app.state; const a = s.parties[fe.dataset.feint];
     const opts = Object.values(s.holdings).filter((h) => h.region !== 'essos' && h.region !== 'beyond').sort((x, y) => x.name.localeCompare(y.name));
     modal(`<h2>A feint</h2><p>Let the realm believe that ${esc(a.name)} marches somewhere it does not. Heralds, loose tongues in the taverns, a letter left to be found. Those who see the host with their own eyes will not be fooled.</p>
       <label>Spread word that it marches on</label><select class="input" id="feint-to">${opts.map((h) => `<option value="${h.id}"${a.feint === h.id ? ' selected' : ''}>${esc(h.name)}</option>`).join('')}</select>

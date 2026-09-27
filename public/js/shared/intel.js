@@ -7,9 +7,10 @@
 //  • Deception: a host can march in secret (the realm loses track of it) or feint (word is spread that it
 //    marches elsewhere). The player's hosts' secrecy is told to the story model as what the other houses
 //    believe; the story may likewise plant false reports on the player (the 'report' op).
-// The true state stays in state.armies (the engine and the story model use it); state.intel holds reports.
+// The true state stays in state.parties (the engine and the story model use it); state.intel holds reports.
 
 import { random } from '../engine/rng.js';
+import { placeOf, forces, TRAVELLERS } from '../engine/parties.js';
 const SIGHT = { holding: 55, vassal: 45, army: 75, ally: 45, person: 30 };
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
@@ -28,9 +29,9 @@ function eyes(state) {
     else if (state.houses[h.owner]?.liege === p) out.push([h.pos, SIGHT.vassal]);
     else if (fr.has(h.owner)) out.push([h.pos, SIGHT.ally]);
   }
-  for (const a of Object.values(state.armies)) if (fr.has(a.owner)) out.push([a.pos, SIGHT.army]);
+  for (const a of Object.values(state.parties)) if (fr.has(a.owner)) out.push([a.pos, TRAVELLERS.has(a.kind) ? SIGHT.person : SIGHT.army]);
   // the player's people abroad see what is around them (an envoy at King's Landing sees the city's hosts)
-  for (const c of Object.values(state.characters)) if (c.alive && c.house === p && state.holdings[c.loc] && state.holdings[c.loc].owner !== p) out.push([state.holdings[c.loc].pos, SIGHT.person]);
+  for (const c of Object.values(state.characters)) if (c.alive && c.house === p && state.holdings[placeOf(state, c)] && state.holdings[placeOf(state, c)].owner !== p) out.push([state.holdings[placeOf(state, c)].pos, SIGHT.person]);
   return { out, friends: fr };
 }
 
@@ -44,7 +45,7 @@ export function isSeen(state, a, E = eyes(state)) {
 
 // How surely word of a host reaches the player in a turn: great hosts are the talk of the realm
 function newsChance(a) {
-  let c = a.type === 'fleet' ? 0.5 : a.men >= 5000 ? 0.92 : a.men >= 2000 ? 0.7 : a.men >= 500 ? 0.45 : 0.2;
+  let c = a.kind === 'fleet' ? 0.5 : a.men >= 5000 ? 0.92 : a.men >= 2000 ? 0.7 : a.men >= 500 ? 0.45 : 0.2;
   if (a.secrecy === 'hidden') c *= 0.12;
   return c;
 }
@@ -56,24 +57,24 @@ function nearestName(state, pos) {
 
 /** After a turn: record what the house has seen or heard, and let old reports age. */
 export function updateIntel(state, r = random) {
-  state.intel = state.intel || { armies: {}, spies: {} };
+  state.intel = state.intel || { parties: {}, spies: {} };
   const E = eyes(state); const t = state.meta.turn;
-  for (const a of Object.values(state.armies)) {
-    if (E.friends.has(a.owner)) { delete state.intel.armies[a.id]; continue; }
-    if (isSeen(state, a, E)) { state.intel.armies[a.id] = { pos: [...a.pos], men: a.men, turn: t, source: 'seen', owner: a.owner, name: a.name, confirmed: true }; continue; }
+  for (const a of forces(state)) { // hosts are reported; a lone rider is not news
+    if (E.friends.has(a.owner)) { delete state.intel.parties[a.id]; continue; }
+    if (isSeen(state, a, E)) { state.intel.parties[a.id] = { pos: [...a.pos], men: a.men, turn: t, source: 'seen', owner: a.owner, name: a.name, confirmed: true }; continue; }
     // word travels: ravens, merchants, septons — a feint sends the word the wrong way
     const rooks = state.houses[state.meta.player]?.intel || 0; // rookeries: word comes surer
     if (r() < Math.min(0.98, newsChance(a) * (1 + rooks * 0.25))) {
       const feint = a.feint && state.holdings[a.feint];
       const pos = feint ? [...feint.pos] : [...a.pos];
       const rounded = Math.max(100, Math.round(a.men * (0.75 + r() * 0.5) / 100) * 100); // reports are never exact
-      state.intel.armies[a.id] = { pos, men: rounded, turn: t, source: `word from near ${nearestName(state, pos)}`, owner: a.owner, name: a.name };
+      state.intel.parties[a.id] = { pos, men: rounded, turn: t, source: `word from near ${nearestName(state, pos)}`, owner: a.owner, name: a.name };
     }
   }
   // reports of hosts that no longer exist linger until someone sees the empty field, or they are forgotten
-  for (const [id, rep] of Object.entries(state.intel.armies)) {
-    if (state.armies[id] && !rep.false) continue;
-    if (E.out.some(([pos, rad]) => dist(pos, rep.pos) <= rad) || t - rep.turn > 6) delete state.intel.armies[id];
+  for (const [id, rep] of Object.entries(state.intel.parties)) {
+    if (state.parties[id] && !rep.false) continue;
+    if (E.out.some(([pos, rad]) => dist(pos, rep.pos) <= rad) || t - rep.turn > 6) delete state.intel.parties[id];
   }
 }
 
@@ -83,29 +84,29 @@ export function updateIntel(state, r = random) {
  */
 export function viewOfArmies(state) {
   const E = eyes(state); const out = new Map(); const t = state.meta.turn;
-  for (const a of Object.values(state.armies)) {
+  for (const a of forces(state)) {
     if (isSeen(state, a, E)) { out.set(a.id, { pos: a.pos, men: a.men, known: 'seen', age: 0, source: 'seen', owner: a.owner }); continue; }
-    const rep = state.intel?.armies?.[a.id];
+    const rep = state.intel?.parties?.[a.id];
     if (rep && t - rep.turn <= 4) out.set(a.id, { pos: rep.pos, men: rep.men, known: 'reported', age: t - rep.turn, source: rep.source, owner: rep.owner || a.owner, false: !!rep.false });
   }
   // false reports of hosts that do not exist at all
-  for (const [id, rep] of Object.entries(state.intel?.armies || {})) if (!state.armies[id] && rep.false && t - rep.turn <= 4) out.set(id, { pos: rep.pos, men: rep.men, known: 'reported', age: t - rep.turn, source: rep.source, owner: rep.owner, false: true, ghost: rep });
+  for (const [id, rep] of Object.entries(state.intel?.parties || {})) if (!state.parties[id] && rep.false && t - rep.turn <= 4) out.set(id, { pos: rep.pos, men: rep.men, known: 'reported', age: t - rep.turn, source: rep.source, owner: rep.owner, false: true, ghost: rep });
   return out;
 }
 
 /** A report delivered by the story (a raven, a spy, a merchant — or a lie). Used by the 'report' change op. */
 export function addReport(state, { army, pos, men, source, false: lie, owner, name }) {
-  state.intel = state.intel || { armies: {}, spies: {} };
-  const id = army || `rumour_${state.meta.turn}_${Object.keys(state.intel.armies).length + 1}`;
-  const real = state.armies[id];
-  state.intel.armies[id] = { pos: pos || real?.pos || [0, 0], men: Math.round(Number(men) || real?.men || 0), turn: state.meta.turn, source: String(source || 'a raven'), ...(lie ? { false: true } : {}), owner: owner || real?.owner, name: name || real?.name || 'A host' };
-  return state.intel.armies[id];
+  state.intel = state.intel || { parties: {}, spies: {} };
+  const id = army || `rumour_${state.meta.turn}_${Object.keys(state.intel.parties).length + 1}`;
+  const real = state.parties[id];
+  state.intel.parties[id] = { pos: pos || real?.pos || [0, 0], men: Math.round(Number(men) || real?.men || 0), turn: state.meta.turn, source: String(source || 'a raven'), ...(lie ? { false: true } : {}), owner: owner || real?.owner, name: name || real?.name || 'A host' };
+  return state.intel.parties[id];
 }
 
 /** For the story model: what the other houses believe about the player's hosts (secret marches, feints). */
 export function beliefsAboutPlayer(state, placeName) {
   const p = state.meta.player; const out = [];
-  for (const a of Object.values(state.armies)) {
+  for (const a of forces(state)) {
     if (a.owner !== p) continue;
     if (a.secrecy === 'hidden') out.push(`${a.name} (${a.men} men) MARCHES IN SECRET — by night, off the roads: other houses do not know where it is unless it comes within a day's ride of their lands or hosts; they may be surprised by it.`);
     if (a.feint && state.holdings[a.feint]) out.push(`${a.name}: the player has spread word that it marches on ${placeName(state, a.feint)}. Other houses who have not seen it with their own eyes BELIEVE that, and act on it.`);

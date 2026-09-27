@@ -140,14 +140,14 @@ test('hosts at war in contact fight: losses, a rout, a battlefield on the map', 
   apply(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['stark'] }, { op: 'army_create', id: 'n1', owner: 'stark', name: 'N', at: 'tully', men: 10000 }, { op: 'army_create', id: 'l1', owner: 'lannister', name: 'L', at: 'tully', men: 10000 }]);
   const r = resolveWarfare(s, 30, { r: () => 0.3 });
   assert.equal(r.events.length, 1);
-  const total = (s.armies.n1?.men || 0) + (s.armies.l1?.men || 0);
+  const total = (s.parties.n1?.men || 0) + (s.parties.l1?.men || 0);
   assert.ok(total < 20000 && total > 10000);
   assert.ok(s.battles.length === 1 && s.landmarks.some((l) => l.kind === 'battle'));
 });
 test('a great castle is not stormed in a moon; a siege starves it in time', () => {
   const s = fresh();
   apply(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['tully'] }, { op: 'army_create', id: 's1', owner: 'lannister', name: 'S', at: 'tully', men: 9000 }]);
-  for (const a of Object.values(s.armies)) if (a.id !== 's1' && ['tully', 'stark'].includes(a.owner)) delete s.armies[a.id];
+  for (const a of Object.values(s.parties)) if (a.id !== 's1' && ['tully', 'stark'].includes(a.owner)) delete s.parties[a.id];
   resolveWarfare(s, 30, { r: () => 0.99 });
   assert.equal(s.holdings.tully.status, 'besieged'); assert.equal(s.holdings.tully.owner, 'tully');
   for (let i = 0; i < 40 && s.holdings.tully.owner === 'tully'; i++) resolveWarfare(s, 30, { r: () => 0.99 });
@@ -172,9 +172,9 @@ test('the player sees hosts near their lands; distant ones by word of mouth, whi
   assert.equal(viewOfArmies(s).get('near')?.known, 'seen');
   updateIntel(s, () => 0); // word travels: a great host is heard of
   let v = viewOfArmies(s).get('far'); assert.equal(v.known, 'reported'); assert.ok(Math.abs(v.men - 6000) <= 1600);
-  s.armies.far.feint = 'tyrell'; s.meta.turn++; updateIntel(s, () => 0); // a feint sends word the wrong way
+  s.parties.far.feint = 'tyrell'; s.meta.turn++; updateIntel(s, () => 0); // a feint sends word the wrong way
   assert.deepEqual(viewOfArmies(s).get('far').pos, s.holdings.tyrell.pos);
-  delete s.armies.far.feint; s.armies.far.secrecy = 'hidden'; s.armies.far.pos = [...s.holdings.yronwood.pos];
+  delete s.parties.far.feint; s.parties.far.secrecy = 'hidden'; s.parties.far.pos = [...s.holdings.yronwood.pos];
   for (let i = 0; i < 5; i++) { s.meta.turn++; updateIntel(s, () => 0.5); } // in secret: the realm loses track of it
   assert.equal(viewOfArmies(s).get('far'), undefined);
 });
@@ -210,20 +210,23 @@ test('"march the whole host to Moat Cailin" sends the sworn hosts on the road th
   const s = fresh();
   apply(s, [{ op: 'army_create', id: 'hb', owner: 'bolton', name: 'Host of House Bolton', at: 'bolton', men: 4000 }]);
   s.houses.bolton.obligations = { levies: 'answered', host: 'hb', muster: 'stark' };
-  assert.ok(commandable(s, s.armies.hb));
+  assert.ok(commandable(s, s.parties.hb));
   s.orders = [{ id: 'o1', text: 'Raise the whole host and march to Moat Cailin.' }];
   await carryOutOrders(s, async () => ({ actions: [{ op: 'raise', order: 1, at: 'stark', men: 3000, to: 'Moat Cailin' }], story: [] }));
-  assert.equal(s.armies.hb.march?.to, 'moat_cailin');
-  assert.ok(Object.values(s.armies).some((a) => a.owner === 'stark' && a.march?.to === 'moat_cailin'));
+  assert.equal(s.parties.hb.march?.to, 'moat_cailin');
+  assert.ok(Object.values(s.parties).some((a) => a.owner === 'stark' && a.march?.to === 'moat_cailin'));
 });
 test('an order against a house marches on its seat', () => {
   const s = fresh(); apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'Host', at: 'stark', men: 5000 }]);
   executeActions(s, [{ op: 'march', order: 1, army: 'the army', to: 'the Lannisters' }]);
-  assert.equal(s.armies.nh.march?.to, 'lannister');
+  assert.equal(s.parties.nh.march?.to, 'lannister');
 });
 
 // ── Orders, whereabouts and force counts agree ──
-import { applyChanges, roadPos } from '../public/js/shared/world.js';
+import { applyChanges, roadPos, rideOf } from '../public/js/shared/world.js';
+import { partyOf } from '../public/js/engine/parties.js';
+import { advance as walk } from '../public/js/engine/movement.js';
+const rideTo = (s, id) => rideOf(s, s.characters[id])?.march?.to; // where someone riding alone is bound
 import { whereabouts } from '../public/js/shared/roads.js';
 import { named } from '../server/orders.js';
 test('the story model cannot send the player\'s people or move the player\'s hosts', () => {
@@ -231,43 +234,44 @@ test('the story model cannot send the player\'s people or move the player\'s hos
   const guard = s.houses.stark.figures.menAtArms.v;
   const r = applyChanges(s, [{ op: 'travel', character: 'jon_snow', to: 'kings_landing', men: 400 }, { op: 'army_move', army: 'nh', to: 'lannister' }, { op: 'character', id: 'sansa_stark', loc: 'kings_landing' }], { protectPlayer: true });
   assert.equal(r.rejected.length, 2);
-  assert.equal(s.characters.jon_snow.travel, undefined);
+  assert.equal(rideOf(s, s.characters.jon_snow), null);
   assert.equal(s.characters.sansa_stark.loc, 'stark');
-  assert.equal(s.armies.nh.at, 'stark');
+  assert.equal(s.parties.nh.at, 'stark');
   assert.equal(s.houses.stark.figures.menAtArms.v, guard);
 });
 test('a journey is not begun twice, and a rider turned back starts from the road', () => {
   const s = fresh();
   apply(s, [{ op: 'travel', character: 'jon_snow', to: 'kings_landing' }]);
   assert.equal(apply(s, [{ op: 'travel', character: 'jon_snow', to: 'kings_landing' }]).rejected.length, 1);
-  s.characters.jon_snow.travel.left = Math.round(s.characters.jon_snow.travel.days / 2);
+  const ride = rideOf(s, s.characters.jon_snow);
+  walk(ride, ride.route.days / 2); // halfway down the kingsroad
   const mid = roadPos(s, s.characters.jon_snow);
   apply(s, [{ op: 'travel', character: 'jon_snow', to: 'stark' }]);
-  assert.equal(s.characters.jon_snow.travel.to, 'stark');
-  assert.deepEqual(s.characters.jon_snow.travel.from, mid);
+  assert.equal(rideTo(s, 'jon_snow'), 'stark');
+  assert.deepEqual(rideOf(s, s.characters.jon_snow).route.path[0], mid, 'the road home starts where he turned');
   assert.match(whereabouts(s, s.characters.jon_snow).text, /on the road to Winterfell/);
 });
 test('someone the story moves far away rides there instead of appearing', () => {
   const s = fresh();
   apply(s, [{ op: 'character', id: 'tyrion_lannister', loc: 'castle_black' }]);
   const t = s.characters.tyrion_lannister;
-  assert.notEqual(t.loc, 'nights_watch'); assert.equal(t.travel?.to, 'nights_watch');
+  assert.notEqual(t.loc, 'nights_watch'); assert.equal(rideTo(s, 'tyrion_lannister'), 'nights_watch');
 });
 test('an order sends only the one it names, and only with men if it asks for them', () => {
   const s = fresh(); const guard = s.houses.stark.figures.menAtArms.v;
   s.orders = [{ id: 'o1', text: 'Ser Rodrik is to garrison Winterfell and drill the levies.' }, { id: 'o2', text: 'Send Jon north to the Wall.' }];
   const res = executeActions(s, [{ op: 'travel', order: 1, character: 'robb_stark', to: 'Winterfell', men: 400 }, { op: 'travel', order: 2, character: 'jon_snow', to: 'the wall', men: 50 }], s.orders);
   assert.match(res[1][0], /does not name Robb/);
-  assert.equal(s.characters.robb_stark.travel, undefined);
+  assert.equal(rideOf(s, s.characters.robb_stark), null);
   assert.equal(s.houses.stark.figures.menAtArms.v, guard);
-  assert.equal(s.characters.jon_snow.travel?.to, 'nights_watch');
+  assert.equal(rideTo(s, 'jon_snow'), 'nights_watch');
   assert.ok(named(s, s.characters.catelyn_stark, 'Send my wife to Riverrun'));
   assert.ok(!named(s, s.characters.arya_stark, 'Send Jon to the Wall'));
 });
 test('a lord leading a small company turns the company', () => {
   const s = fresh();
   apply(s, [{ op: 'travel', character: 'jory_cassel', to: 'kings_landing', men: 50 }]);
-  const co = s.armies[s.characters.jory_cassel.loc.slice(5)];
+  const co = partyOf(s, s.characters.jory_cassel);
   assert.equal(co.march.to, 'baratheon'); // King's Landing
   apply(s, [{ op: 'travel', character: 'jory_cassel', to: 'stark' }]);
   assert.equal(co.march.to, 'stark');
@@ -321,7 +325,7 @@ test('a raven order sends a letter, not a rider', () => {
   s.orders = [{ id: 'o1', text: 'Have Vayon send a discreet raven to the Eyrie about Jon Arryn\'s last days.' }];
   const res = executeActions(s, [{ op: 'travel', order: 1, character: 'vayon_poole', to: 'The Eyrie', men: 0 }], s.orders);
   assert.match(res[1][0], /letter/);
-  assert.equal(s.characters.vayon_poole.travel, undefined);
+  assert.equal(rideOf(s, s.characters.vayon_poole), null);
 });
 test('a letter is tracked: in flight, delivered, answered', async () => {
   const { postLetters } = await import('../server/orders.js');
@@ -344,7 +348,7 @@ test('an order\'s receipt changes nothing, and the turn does what it said', asyn
   assert.match(s.orders[0].preview[0], /Jory Cassel rides for King's Landing with 20 men/);
   assert.equal(s.characters.jory_cassel.loc, 'stark'); assert.equal(s.houses.stark.figures.menAtArms.v, guard);
   await carryOutOrders(s, async () => { throw new Error('the model is not asked again'); });
-  assert.ok(String(s.characters.jory_cassel.loc).startsWith('army:'));
+  assert.ok(String(s.characters.jory_cassel.loc).startsWith('party:'));
   assert.match(s.orders[0].result[0], /rides for King's Landing/);
 });
 test('an action the model left without its "op" is still carried out', async () => {
@@ -364,9 +368,9 @@ test('raising levies where a host stands joins it; banners and merge from plain 
   const s = fresh();
   s.orders = [{ id: 'o1', text: 'Assemble the men of the North at Winterfell as the Northern Host under Robb.' }];
   const res = executeActions(s, [{ op: 'raise', order: 1, at: 'stark', men: 3000, name: 'The Northern Host', commander: 'robb_stark' }, { op: 'raise', order: 1, at: 'stark', men: 1000 }, { vassals: 'all', order: 1, at: 'Winterfell' }], s.orders);
-  const hosts = Object.values(s.armies).filter((a) => a.owner === 'stark' && a.at === 'stark' && !/garrison/i.test(a.status || ''));
+  const hosts = Object.values(s.parties).filter((a) => a.owner === 'stark' && a.at === 'stark' && a.kind === 'host');
   assert.equal(hosts.length, 1); assert.equal(hosts[0].men, 4000); assert.equal(hosts[0].name, 'The Northern Host');
-  assert.equal(s.characters.robb_stark.loc, 'army:' + hosts[0].id);
+  assert.equal(s.characters.robb_stark.loc, 'party:' + hosts[0].id);
   assert.equal(s.houses.umber.obligations.levies, 'called');
   assert.match(res[1].join(' '), /join The Northern Host, now 4,000 men under Robb Stark/);
 });
@@ -395,7 +399,7 @@ test('the Pax order: banners called and the Northern Host raised at Winterfell',
   const acts = await planOrders(s, o, async () => ({ actions: [], story: [1] }));
   executeActions(s, acts, o);
   assert.equal(s.houses.umber.obligations.levies, 'called');
-  assert.ok(Object.values(s.armies).some((a) => a.owner === 'stark' && a.name === 'The Northern Host' && a.men > 10000));
+  assert.ok(Object.values(s.parties).some((a) => a.owner === 'stark' && a.name === 'The Northern Host' && a.men > 10000));
 });
 
 // ── From the 20-day run on the live model ──
@@ -432,14 +436,14 @@ test('banners arriving after the host has marched follow it and join it — no s
   const { gatherMusters } = await import('../public/js/shared/vassals.js');
   const s = fresh();
   apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'The Northern Host', at: 'stark', men: 16000 }, { op: 'army_create', id: 'hw', owner: 'hornwood', name: 'Host of House Hornwood', at: 'stark', men: 850 }]);
-  s.armies.hw.serving = 'stark'; s.houses.hornwood.obligations = { levies: 'answered', muster: 'stark' };
-  s.armies.nh.march = { to: 'moat_cailin' }; s.armies.nh.at = null; s.armies.nh.pos = [s.armies.nh.pos[0], s.armies.nh.pos[1] + 30];
+  s.parties.hw.serving = 'stark'; s.houses.hornwood.obligations = { levies: 'answered', muster: 'stark' };
+  s.parties.nh.march = { to: 'moat_cailin' }; s.parties.nh.at = null; s.parties.nh.pos = [s.parties.nh.pos[0], s.parties.nh.pos[1] + 30];
   gatherMusters(s);
-  assert.equal(s.armies.hw.march?.to, 'army:nh');
-  s.armies.hw.pos = [...s.armies.nh.pos];
+  assert.equal(s.parties.hw.march?.to, 'party:nh');
+  s.parties.hw.pos = [...s.parties.nh.pos];
   gatherMusters(s);
-  assert.equal(s.armies.hw, undefined); assert.equal(s.armies.nh.men, 16850);
-  assert.equal(Object.values(s.armies).filter((a) => a.owner === 'stark' && /Banners/.test(a.name)).length, 0);
+  assert.equal(s.parties.hw, undefined); assert.equal(s.parties.nh.men, 16850);
+  assert.equal(Object.values(s.parties).filter((a) => a.owner === 'stark' && /Banners/.test(a.name)).length, 0);
 });
 test('works ordered in words are begun — and a second time refused with the reason', async () => {
   const { planOrders } = await import('../server/orders.js');
@@ -471,7 +475,7 @@ test('an order that names a leader puts them at the head of the host', () => {
   const s = fresh(); apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'The Northern Host', at: 'stark', men: 16000 }]);
   const o = [{ text: 'Robb is to march the Northern Host to Moat Cailin.' }];
   const r = executeActions(s, [{ op: 'march', order: 1, army: 'nh', to: 'Moat Cailin' }], o);
-  assert.equal(s.armies.nh.commander, 'robb_stark'); assert.equal(s.characters.robb_stark.loc, 'army:nh');
+  assert.equal(s.parties.nh.commander, 'robb_stark'); assert.equal(s.characters.robb_stark.loc, 'party:nh');
   assert.match(r[1][0], /16,000 men under Robb Stark\) marches for Moat Cailin/);
 });
 test('an engine-written order headline is one short sentence', async () => {
@@ -486,10 +490,10 @@ import { unitsOf, unitsText, mounted } from '../public/js/shared/units.js';
 test('a host knows its knights, riders, foot and archers — through merges and losses', () => {
   const s = fresh();
   executeActions(s, [{ op: 'raise', order: 1, at: 'stark', men: 2000, name: 'The Northern Host' }], [{ text: 'Raise the Northern Host.' }]);
-  const h = Object.values(s.armies).find((a) => a.name === 'The Northern Host');
+  const h = Object.values(s.parties).find((a) => a.name === 'The Northern Host');
   const u = unitsOf(s, h); assert.equal(u.knights + u.horse + u.foot + u.archers, 2000); assert.ok(u.foot > u.horse);
   apply(s, [{ op: 'army_create', id: 'mh', owner: 'manderly', name: 'Host of House Manderly', at: 'stark', men: 1000, composition: 'Levies of House Manderly' }]);
-  s.armies.mh.serving = 'stark';
+  s.parties.mh.serving = 'stark';
   executeActions(s, [{ op: 'merge', order: 1 }], [{ text: 'Join the hosts.' }]);
   assert.equal(Object.values(unitsOf(s, h)).reduce((a, b) => a + b, 0), 3000);
   h.men = 1500; assert.equal(Object.values(unitsOf(s, h)).reduce((a, b) => a + b, 0), 1500);
@@ -498,32 +502,33 @@ test('a host knows its knights, riders, foot and archers — through merges and 
 test('a mounted company rides at horse pace; a levy walks', () => {
   const s = fresh();
   apply(s, [{ op: 'travel', character: 'jory_cassel', to: 'kings_landing', men: 100 }]);
-  const co = s.armies[s.characters.jory_cassel.loc.slice(5)];
+  const co = partyOf(s, s.characters.jory_cassel);
   assert.ok(mounted(s, co));
   apply(s, [{ op: 'army_create', id: 'lv', owner: 'stark', name: 'Levies', at: 'stark', men: 5000, composition: 'Levies of House Stark' }]);
-  assert.ok(!mounted(s, s.armies.lv));
+  assert.ok(!mounted(s, s.parties.lv));
 });
 
 // ── Lords on the road ──
 import { retinueTick } from '../public/js/shared/retinues.js';
 import { marchDays } from '../public/js/shared/warfare.js';
+import { marchTick } from '../public/js/shared/marches.js';
 test('lords ride out with their households, stay, ride home — and the realm sees them', async () => {
   const { isSeen } = await import('../public/js/shared/intel.js');
   const s = fresh(); let seed = 7; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const went = new Set(); let home = 0;
   for (let day = 0; day < 60; day++) {
     retinueTick(s, 1, r);
-    for (const a of Object.values(s.armies).filter((x) => x.party)) {
+    for (const a of Object.values(s.parties).filter((x) => x.kind === 'retinue')) {
       went.add(a.id); assert.ok(isSeen(s, a), 'a party under banners is seen');
-      assert.equal(s.characters[a.commander].loc, 'army:' + a.id);
-      // the engine's march step, as advance() does it
-      if (a.march) { const to = s.holdings[a.march.to]; const m = marchDays(a, a.pos, to.pos); const f = Math.min(1, 1 / Math.max(1, m.days)); a.pos = [a.pos[0] + (to.pos[0] - a.pos[0]) * f, a.pos[1] + (to.pos[1] - a.pos[1]) * f]; if (f >= 1) { a.at = a.march.to; delete a.march; } }
+      assert.equal(s.characters[a.commander].loc, 'party:' + a.id);
+      assert.deepEqual(a.members, [a.commander], 'the lord rides in it, and the party knows it');
     }
-    for (const id of went) if (!s.armies[id]) home++;
+    marchTick(s, { span: 1, turnStart: day }); // the engine's march step, as advance() does it
+    for (const id of went) if (!s.parties[id]) home++;
   }
   assert.ok(went.size >= 5, `parties sent: ${went.size}`);
   assert.ok(home > 0, 'some came home and disbanded');
-  assert.ok(Object.values(s.armies).filter((x) => x.party).length <= 14);
+  assert.ok(Object.values(s.parties).filter((x) => x.kind === 'retinue').length <= 14);
 });
 
 // ── Turns that run until something happens ──
@@ -535,7 +540,7 @@ test('a turn runs until the next thing that matters', () => {
   executeActions(s, [{ op: 'march', order: 1, army: 'nh', to: 'Moat Cailin' }], [{ text: 'March to Moat Cailin.' }]);
   const t = nextTurnLength(s);
   assert.match(t.reason, /reaches Moat Cailin|The King rides north/);
-  assert.ok(t.days <= marchDays(s.armies.nh, s.armies.nh.pos, s.holdings.moat_cailin.pos).days);
+  assert.ok(t.days <= marchDays(s.parties.nh, s.parties.nh.pos, s.holdings.moat_cailin.pos).days);
   s.pendingReplies = [{ char: 'lysa_arryn', arrivesDay: (s.meta.date.year * 360 + (s.meta.date.month - 1) * 30 + s.meta.date.day - 1) + 1, changes: [] }];
   assert.equal(nextTurnLength(s).days, 1);
 });
@@ -543,8 +548,8 @@ test('the story can march any host but the player\'s, and the engine walks it', 
   const s = fresh();
   apply(s, [{ op: 'army_create', id: 'lh', owner: 'lannister', name: 'Host of the Rock', at: 'lannister', men: 8000 }, { op: 'army_create', id: 'nh', owner: 'stark', name: 'The Northern Host', at: 'stark', men: 5000 }]);
   const r = applyChanges(s, [{ op: 'army_march', army: 'lh', to: 'Riverrun' }, { op: 'army_march', army: 'nh', to: 'Riverrun' }], { protectPlayer: true });
-  assert.equal(s.armies.lh.march.to, 'tully'); assert.equal(r.rejected.length, 1);
-  assert.equal(s.armies.nh.march, undefined);
+  assert.equal(s.parties.lh.march.to, 'tully'); assert.equal(r.rejected.length, 1);
+  assert.equal(s.parties.nh.march, undefined);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -596,7 +601,7 @@ test('the standing of a house is measured, and a great house outranks a small on
 test('a house stripped of everything is broken — but not on the first bad turn', () => {
   const s = fresh('mormont');
   for (const h of Object.values(s.holdings)) if (h.owner === 'mormont') h.owner = 'bolton';
-  for (const a of Object.values(s.armies)) if (a.owner === 'mormont') delete s.armies[a.id];
+  for (const a of Object.values(s.parties)) if (a.owner === 'mormont') delete s.parties[a.id];
   s.houses.mormont.figures.treasury.v = 0;
   assert.equal(outcomeFor(s, 'mormont'), null, 'one turn of ruin is not the end');
   const o = outcomeFor(s, 'mormont');
@@ -642,22 +647,22 @@ test('a host is never given to a commander the world does not know', () => {
   apply2(s, [{ op: 'army_create', id: 'h1', owner: 'stark', name: 'A host', at: 'stark', men: 1000 }]);
   const r = apply2(s, [{ op: 'army_update', army: 'h1', commander: 'ser_nobody_of_nowhere' }]);
   assert.match(r.rejected[0]?.reason || '', /unknown commander/);
-  assert.ok(!s.armies.h1.commander);
+  assert.ok(!s.parties.h1.commander);
 });
 
 test('a siege costs the besieger: the camp sickens, and the castle eats its stores', () => {
   const s = fresh('lannister');
   apply2(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['tully'] },
     { op: 'army_create', id: 'sg', owner: 'lannister', name: 'The siege host', at: 'tully', men: 12000 }]);
-  for (const a of Object.values(s.armies)) if (a.id !== 'sg' && ['tully', 'stark'].includes(a.owner)) delete s.armies[a.id];
-  const men0 = s.armies.sg.men;
+  for (const a of Object.values(s.parties)) if (a.id !== 'sg' && ['tully', 'stark'].includes(a.owner)) delete s.parties[a.id];
+  const men0 = s.parties.sg.men;
   resolveWarfare(s, 30, { r: () => 0.99 });
   assert.equal(s.holdings.tully.status, 'besieged');
   const stores0 = s.holdings.tully.siege.stores;
   resolveWarfare(s, 30, { r: () => 0.99 });
-  assert.ok(s.armies.sg.men < men0, 'the camp loses men to the flux and desertion');
+  assert.ok(s.parties.sg.men < men0, 'the camp loses men to the flux and desertion');
   assert.ok(s.holdings.tully.siege.stores < stores0, 'the castle eats');
-  assert.ok((s.armies.sg.supply ?? 80) >= 20, 'a foraging host does not starve to nothing');
+  assert.ok((s.parties.sg.supply ?? 80) >= 20, 'a foraging host does not starve to nothing');
 });
 
 // ── The rule sandbox: the model designs a mechanic, the engine runs it ──
@@ -748,7 +753,7 @@ test('a rule that runs away is stopped, not allowed to hang the turn', () => {
 // ── Geography that bites: the hard places of Westeros ──
 import { crossings, chokepointToll, roadWarnings, hasLeave, roadCongestion, CHOKEPOINTS } from '../public/js/shared/chokepoints.js';
 
-const host = (owner, men = 12000) => ({ id: 'h', owner, name: 'A host', men, morale: 70, type: 'army' });
+const host = (owner, men = 12000) => ({ id: 'h', owner, name: 'A host', men, morale: 70, kind: 'host' });
 
 test('the roads of Westeros cross the places they should, and no others', () => {
   const s = fresh();
@@ -801,7 +806,7 @@ test('winter doubles what a mountain costs', () => {
 
 test('a fleet does not care about mountain passes', () => {
   const s = fresh();
-  const t = chokepointToll(s, { ...host('greyjoy'), type: 'fleet' }, s.holdings.stark.pos, s.holdings.tully.pos, 40);
+  const t = chokepointToll(s, { ...host('greyjoy'), kind: 'fleet' }, s.holdings.stark.pos, s.holdings.tully.pos, 40);
   assert.equal(t.met.length, 0);
 });
 
@@ -891,17 +896,17 @@ test('an empty question returns nothing rather than noise', () => {
 
 test('north of the Wall resolves beyond the Wall, never Winterfell or Casterly Rock', () => {
   const s = fresh();
-  const army = Object.values(s.armies).find((a) => a.owner === 'stark' && a.type === 'army');
+  const army = Object.values(s.parties).find((a) => a.owner === 'stark' && a.kind !== 'fleet'); // Winterfell's own garrison
   const result = executeActions(s, [{ op: 'march', order: 1, army: army.id, to: 'north of the Wall' }], [{ text: 'March north of the Wall.' }]);
   assert.match(result[1][0], /Hardhome/);
-  assert.equal(s.armies[army.id].march.to, 'hardhome');
+  assert.equal(s.parties[army.id].march.to, 'hardhome');
 });
 
 test('a large levy call starts a camp and the men arrive over days', () => {
   const s = fresh();
   const before = s.houses.stark.figures.levies.v;
   const lines = raiseLevies(s, { at: 'stark', men: 20000, name: 'The Northern Host', immediate: false });
-  const host = Object.values(s.armies).find((a) => a.name === 'The Northern Host');
+  const host = Object.values(s.parties).find((a) => a.name === 'The Northern Host');
   assert.ok(host.muster.remaining > 0, lines.join(' '));
   assert.ok(host.men < 20000);
   assert.equal(s.houses.stark.figures.levies.v, before - Math.min(before, 20000));

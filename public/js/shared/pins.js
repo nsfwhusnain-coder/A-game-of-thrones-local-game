@@ -2,6 +2,8 @@
 // A pin stays until the player opens it and acknowledges the news (or answers the matter); then it goes.
 // Shared by the map (where to draw pins) and the pin window (what to show when one is clicked).
 
+import { placeOf } from '../engine/parties.js';
+
 // how long an unread piece of news keeps its pin, in turns
 const NEWS_TURNS = 2;
 
@@ -11,7 +13,7 @@ export const eventKey = (turn, e, i) => e.id || `${turn}-${i}`;
 export function decisionPlace(s, d) {
   if (d.where && s.holdings[d.where]) return d.where;
   const c = d.from && s.characters[d.from];
-  if (c && s.holdings[c.loc]) return c.loc;
+  if (c && s.holdings[placeOf(s, c)]) return placeOf(s, c);
   if (c && s.houses[c.house]?.seat) return s.houses[c.house].seat;
   return s.houses[s.meta.player]?.seat || null;
 }

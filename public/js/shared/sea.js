@@ -3,7 +3,7 @@
 // to the mainland: a host on one of them takes ship — its own house's, or ships its liege's realm sends to fetch it —
 // or it waits on the shore and says why. A host never walks over water, and never pays a toll on a road it sailed past.
 // These are the current engine's rules; the naval work of WP C6 (engine/military/naval.js) grows from them.
-import { landmassOf, sameLand, bestLanding, shoreCell, seaMilesTo, alongPath } from '../engine/geo.js';
+import { landmassOf, sameLand, bestLanding, shoreCell, seaMilesTo, alongPath, pathUnits } from '../engine/geo.js';
 import { placeName, nearestHolding } from './world.js';
 
 import { SEA } from '../../data/balance.js';
@@ -14,6 +14,13 @@ const ironborn = (state, hid) => state.houses[hid]?.region === 'iron_islands';
 export const sailSpeed = (state, hid) => (ironborn(state, hid) ? SAIL.longship : SAIL.cog);
 export const shipsOf = (state, hid) => Math.max(0, Math.round(Number(state.houses[hid]?.figures?.ships?.v) || 0));
 
+// the part of a lane between two fractions of its length, ends included
+function lanePart(path, f0, f1) {
+  const total = pathUnits(path); const out = [alongPath(path, f0)]; let acc = 0;
+  for (let i = 1; i < path.length; i++) { acc += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]); if (acc > f0 * total && acc < f1 * total) out.push([...path[i]]); }
+  out.push(alongPath(path, f1));
+  return out;
+}
 /** True when a host at `from` cannot walk to `to`: they are on different islands or continents. */
 export function needsShips(from, to) {
   if (!from || !to) return false;
@@ -118,7 +125,7 @@ export function sail(state, a, { turnStart, span, from = 0, mine = false }) {
   const end = turnStart + span; let day = turnStart + from;
   if (v.phase === 'stranded') {
     if (!v.told && mine) events.push({ day: from + 1, title: `${who} cannot cross the sea`, text: `${a.name} (${a.men.toLocaleString()} men) waits at ${shore}: ${v.why === 'no ships' ? 'there are no ships to carry them, and none in the realm to spare' : 'there is no way to them by sea'}.`, where: a.at || null, importance: 3, type: 'war', houses: [a.owner] });
-    v.told = true; a.status = 'awaiting ships';
+    v.told = true;
     return { done: false, used: span, events, lines };
   }
   if (v.phase === 'waiting') {
@@ -127,7 +134,6 @@ export function sail(state, a, { turnStart, span, from = 0, mine = false }) {
       events.push({ day: from + 1, title: `${who} wait for ships`, text: lender ? `${a.name} (${a.men.toLocaleString()} men) waits at ${shore} while House ${lender.name} sends ${v.ships} ships from ${placeName(state, v.lender)} to carry them over (~${v.wait} days).` : `${a.name} has only ${v.ships} ${v.ships === 1 ? 'ship' : 'ships'}; the men cross in ${Math.ceil(a.men / (v.ships * SHIP_CARRIES))} trips (~${v.wait} days before the last are over).`, where: a.at || null, importance: 2, type: 'war', houses: [a.owner] });
       v.told = true;
     }
-    a.status = 'awaiting ships';
     if (v.ready >= end) return { done: false, used: span, events, lines };
     day = Math.max(day, v.ready); v.phase = 'sailing'; v.start = day; delete v.told;
   }
@@ -136,16 +142,17 @@ export function sail(state, a, { turnStart, span, from = 0, mine = false }) {
     if (!v.toldSail && mine) events.push({ day: Math.max(1, v.start - turnStart + 1), title: `${who} take ship`, text: `${a.name} (${a.men.toLocaleString()} men) sails from ${shore} ${v.landingName.replace(/^at /, 'for ').replace(/^on the coast near /, 'for the coast near ')} (~${v.days} days at sea).`, where: a.at || null, importance: 2, type: 'war', houses: [a.owner] });
     v.toldSail = true;
     const f = Math.min(1, (end - v.start) / v.days);
-    const wasAt = [...a.pos];
-    a.pos = alongPath(v.path, f); a.at = null; a.status = 'at sea';
+    a.pos = alongPath(v.path, f); a.at = null;
     const lo = Math.max(0, v.start - turnStart), hi = Math.min(span, v.start + v.days - turnStart);
-    a.motion = { start: lo / span, end: hi / span, from: wasAt, sea: v.path.slice() };
+    // the map sails it along the lane the engine planned, as far as it got this turn
+    const f0 = Math.max(0, Math.min(1, (turnStart + lo - v.start) / v.days));
+    a.motion = { start: lo / span, end: hi / span, path: lanePart(v.path, f0, f), at: 'sea' };
     lines.push({ op: 'voyage', text: `${a.name} ${f >= 1 ? 'lands' : 'at sea'} (${Math.round(f * 100)}% of ${v.seaMiles} sea miles)` });
     if (f < 1) return { done: false, used: span, events, lines };
     // landed: the land march goes on from the beach with whatever days are left
     a.pos = [...v.landing];
     if (mine) events.push({ day: Math.max(1, Math.min(span, hi)), title: `${who} land ${v.landingName}`, text: `${a.name} (${a.men.toLocaleString()} men) comes ashore ${v.landingName} and marches on.`, where: nearestHolding(state, a.pos), importance: 2, type: 'war', houses: [a.owner] });
-    a.landed = { path: v.path.slice(), from: lo / span, to: hi / span, start: wasAt };
+    a.landed = { path: a.motion.path, from: lo / span, to: hi / span };
     delete a.sea;
     return { done: true, used: hi, events, lines };
   }
