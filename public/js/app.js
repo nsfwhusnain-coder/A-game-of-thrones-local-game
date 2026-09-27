@@ -10,7 +10,7 @@ import { CHARACTERS } from '../data/characters.js';
 import { briefFor } from '../data/briefs.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
-import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
+import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
@@ -18,6 +18,8 @@ import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName, SPANS, spanOf 
 import { project, SEASONS } from './shared/economy.js';
 import { underway, orderOutcome, STATUS_LABEL } from './shared/errands.js';
 import { nextTurnLength } from './shared/turns.js';
+import { regencyLine, speakerFor, incapacity } from './shared/regency.js';
+import { standing, standingWord, epitaph } from './shared/standing.js';
 
 app.openChat = openChat; app.openCouncil = openCouncil;
 
@@ -83,7 +85,7 @@ async function renderSaves() {
   }).join('') : '<div class="muted">No saved games yet.</div>';
   $('#save-list').onclick = async (e) => {
     const del = e.target.closest('[data-del]')?.dataset.del;
-    if (del) { e.stopPropagation(); if (confirm('Delete this save permanently?')) { await api('/games/' + del, { method: 'DELETE' }); renderSaves(); } return; }
+    if (del) { e.stopPropagation(); if (await confirmModal('Burn this chronicle?', 'The save and everything written in it will be gone for good. There is no undoing this.', { yes: 'Burn it', no: 'Keep it', danger: true })) { await api('/games/' + del, { method: 'DELETE' }); renderSaves(); } return; }
     const s = e.target.closest('.save'); if (s) startGame(s.dataset.id);
   };
 }
@@ -150,7 +152,7 @@ async function startGame(id, state) {
   closeWindow(); closeSheet(); app.chatWith = null; app.council = null;
   renderAll();
 }
-function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); }
+function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); maybeShowOutcome(); }
 app.renderOrders = renderOrders; app.renderTop = renderTop;
 // the game's code changed on disk (an update): say so, rather than run a page that no longer matches the server
 (async () => {
@@ -191,10 +193,54 @@ function renderTop() {
   $('#raven-badge').textContent = unread; $('#raven-badge').classList.toggle('hidden', !unread);
 }
 function renderPlayer() {
-  const h = player(); const r = ruler();
+  const s = app.state; const h = player(); const r = ruler();
+  // Who actually holds the seal: a child lord or a captive one is ruled for, and the card says so plainly
+  const speaker = speakerFor(s, h.id); const why = incapacity(s, h.id);
+  const isRegent = why && speaker && speaker.id !== h.lord;
+  const face = isRegent ? speaker : r;
   $('#player-banner').innerHTML = `<img src="${bannerURL(h.sigil, 80, 120)}" alt="House ${esc(h.name)}" title="House ${esc(h.name)} — ${esc(h.words)}">`;
-  $('#player-portrait').innerHTML = r ? `<img src="${por(r, 160)}" alt="">` : '';
-  $('#player-name').innerHTML = `${esc(r?.name || 'House ' + h.name)}<small>${esc(h.title || RANK_NAMES[h.rank])}</small>`;
+  $('#player-portrait').innerHTML = face ? `<img src="${por(face, 160)}" alt="Portrait of ${esc(face.name)}">` : '';
+  $('#player-portrait').setAttribute('aria-label', face ? `${face.name} — open the character sheet` : 'Your ruler');
+  const line = regencyLine(s, h.id);
+  $('#player-name').innerHTML = `${esc(face?.name || 'House ' + h.name)}<small>${esc(isRegent ? `Regent · ${h.title || RANK_NAMES[h.rank]}` : (h.title || RANK_NAMES[h.rank]))}</small>`
+    + (line ? `<div class="regency-note" title="${esc(line)}">⚖ ${esc(line)}</div>` : '')
+    + (why && !isRegent ? `<div class="regency-note warn">⚠ ${esc(why.text)} — and no one of the house is fit to rule for ${esc(r && /lady|queen|princess/i.test(r.title || '') ? 'her' : 'him')}.</div>` : '');
+}
+app.openRuler = () => { const sp = speakerFor(app.state, player().id); if (sp) openSheet('char', sp.id); };
+
+// ───── the end of the story ─────
+// A campaign can now be lost and won. When the engine settles on an outcome the game says so, once, plainly,
+// with the ledger of what the house was at the end.
+let outcomeShown = null;
+function maybeShowOutcome() {
+  const o = app.state?.outcome; if (!o || outcomeShown === o.turn) return;
+  outcomeShown = o.turn;
+  const e = epitaph(app.state);
+  const h = player();
+  const row = (k, v) => `<div class="k">${k}</div><div>${v}</div>`;
+  const st = e.standing;
+  modal(`<div class="outcome ${o.victory ? 'win' : 'loss'}">
+    <img class="outcome-banner" src="${bannerURL(h.sigil, 90, 135)}" alt="">
+    <h2>${esc(o.title)}</h2>
+    <p class="outcome-text">${esc(o.text)}</p>
+    <div class="kv outcome-ledger">
+      ${row('Ended', esc(o.date))}
+      ${row('Turns played', e.turns)}
+      ${row('Last of the line', esc(e.lord || '—'))}
+      ${row('Holdings', e.holdings)}
+      ${row('Sworn houses', e.vassals)}
+      ${row('Living kin', e.kin)}
+      ${row('Wars', `${e.wars} · ${e.battlesWon} of ${e.battles} battles won`)}
+      ${row('Standing', `<b>${st.score}</b> / 100 — ${esc(standingWord(st))}`)}
+    </div>
+    <p class="muted" style="font-size:0.85rem">The world does not stop. You may play on, undo the turn, or begin again with another house.</p>
+    <div class="report-actions">
+      <button class="btn ghost" data-action="close-modal">Play on</button>
+      <button class="btn" id="oc-undo">Undo the turn</button>
+      <button class="btn primary" id="oc-menu">A new house</button>
+    </div></div>`);
+  $('#oc-undo').onclick = async () => { try { const st2 = await api(`/games/${app.saveId}/undo`, { body: {} }); app.setState(st2); outcomeShown = null; closeModal(); toast('The last turn has been undone.'); } catch (err) { toast(err.message, true); } };
+  $('#oc-menu').onclick = () => { closeModal(); handleAction('menu'); };
 }
 
 // ───── orders ─────
@@ -281,9 +327,11 @@ function busy(on, text, { live = false } = {}) {
       if (prog && prog.phase && prog.phase !== 'idle') {
         // in the world's words; the numbers only for those who ask for them (Settings → model diagnostics)
         const pct = prog.phase === 'reading' ? Math.round((100 * (prog.promptDone || 0)) / Math.max(1, prog.promptTotal || 1)) : null;
-        what = prog.phase === 'waiting' || prog.phase === 'reading' ? `The maesters read the letters of the realm…${pct !== null ? ` ${pct}%` : ''}`
-          : prog.phase === 'thinking' ? 'The maesters deliberate…'
-          : prog.phase === 'writing' ? (live && prog.events?.length ? `The news comes in… (${prog.events.length} so far)` : 'The chronicle is written…')
+        // the council of five names whoever is speaking, so the wait is part of the world
+        const who = prog.agentLabel ? `${prog.agentLabel}…${prog.agentTotal > 1 ? ` (${prog.agentStep}/${prog.agentTotal})` : ''}` : null;
+        what = prog.phase === 'waiting' || prog.phase === 'reading' ? (who || `The maesters read the letters of the realm…${pct !== null ? ` ${pct}%` : ''}`)
+          : prog.phase === 'thinking' ? (who || 'The maesters deliberate…')
+          : prog.phase === 'writing' ? (live && prog.events?.length ? `The news comes in… (${prog.events.length} so far)` : (who || 'The chronicle is written…'))
           : prog.note ? prog.note.charAt(0).toUpperCase() + prog.note.slice(1) + '…' : what;
         if (showDiagnostics()) {
           const tps = prog.tokens && prog.ms ? (prog.tokens / Math.max(1, (prog.ms - (prog.firstTokenMs || 0)) / 1000)).toFixed(0) : null;
@@ -321,8 +369,10 @@ $('#modal').onclick = (e) => { if (e.target.id === 'modal') closeModal(); };
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (!$('#modal').classList.contains('hidden')) return closeModal(); if (app.picking) { app.picking = null; $('#pick-hint').classList.add('hidden'); return; } if (app.sheet) return closeSheet(); if (app.win) return closeWindow(); }
   if (!app.state || /input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;
-  const map = { r: 'realm', c: 'council', m: 'military', e: 'economy', i: 'intrigue', p: 'people', f: 'diplomacy' };
+  // the letters shown on the dock buttons; f stays as an old alias for diplomacy
+  const map = { r: 'realm', c: 'council', m: 'military', e: 'economy', i: 'intrigue', p: 'people', d: 'diplomacy', f: 'diplomacy' };
   if (e.key === 'h') return showChronicle();
+  if (e.key === '?') return showHelp();
   if (map[e.key] && !e.ctrlKey && !e.metaKey) openWindow(map[e.key]);
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) advance();
 });
@@ -359,11 +409,12 @@ async function handleAction(action, el) {
     }
     case 'ravens': setDrawer('letters'); $('#drawer').classList.remove('hidden'); $('#drawer-open').classList.add('hidden'); break;
     case 'undo': {
-      if (!confirm('Undo the last turn? The world returns to how it was before you advanced.')) return;
+      if (!await confirmModal('Unmake the last turn?', 'The world returns to how it stood before you advanced, and everything that happened since is unwritten. Only the most recent turn can be recalled.', { yes: 'Turn back the glass', no: 'Let it stand' })) return;
       try { const st = await api(`/games/${app.saveId}/undo`, { body: {} }); app.setState(st); toast('The last turn has been undone.'); } catch (e) { toast(e.message, true); }
       break;
     }
     case 'settings': return showSettings();
+    case 'help': return showHelp();
     case 'music': { startMusic(); const on = !musicSettings().on; setMusic('on', on); toast(on ? 'Music on' : 'Music off'); return; }
     case 'menu': app.state = null; if (app.map) app.map.state = null; closeWindow(); closeSheet(); initTitle(); break;
     case 'close-window': closeWindow(); break;
@@ -372,14 +423,17 @@ async function handleAction(action, el) {
     case 'close-modal': closeModal(); break;
     case 'toggle-drawer': $('#drawer').classList.toggle('hidden'); $('#drawer-open').classList.toggle('hidden', !$('#drawer').classList.contains('hidden')); break;
     case 'open-realm': openWindow('realm'); break;
-    case 'open-ruler': if (ruler()) openSheet('char', ruler().id); break;
+    case 'open-ruler': app.openRuler(); break;
   }
 }
 
 async function advance() {
   if (app.busy || !app.state) return;
   const undecided = (app.state.decisions || []).filter((d) => d.status === 'pending');
-  if (undecided.length && !confirm(`${undecided.length} decision${undecided.length > 1 ? 's await' : ' awaits'} your answer (${undecided.map((d) => d.title).join(', ')}). Silence is also an answer — advance anyway?`)) { setDrawer('feed'); return; }
+  if (undecided.length && !await confirmModal(
+    undecided.length > 1 ? 'Matters still await your word' : 'A matter still awaits your word',
+    `${undecided.map((d) => d.title).join('; ')}. Silence is an answer too — the world will decide without you.`,
+    { yes: 'Let the days pass', no: 'Hear them first' })) { setDrawer('feed'); return; }
   const pending = orderInput.value.trim(); if (pending) { addOrder(pending); orderInput.value = ''; }
   const span = 'auto'; const until = nextTurnLength(app.state);
   busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}…`, { live: true });
@@ -397,7 +451,9 @@ async function advance() {
       if (app.map) { app.map.reelHold = false; app.map.reelF = 1; }
       // a day's turn ends on your choices, if any wait on you; a longer one with the full report
       // the chronicle has told the turn; what waits on the lord's word comes before him
-      if ((app.state.decisions || []).some((d) => d.status === 'pending' && d.turn === app.state.meta.turn)) showChoices();
+      // an ending trumps everything else waiting on the lord's word
+      if (app.state.outcome && app.state.outcome.turn === app.state.meta.turn) maybeShowOutcome();
+      else if ((app.state.decisions || []).some((d) => d.status === 'pending' && d.turn === app.state.meta.turn)) showChoices();
       if (newRavens) sfx('raven');
     } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
@@ -431,12 +487,59 @@ async function showWorldLog() {
   $('#chron-tab-c').onclick = showChronicle;
 }
 
+// ───── how to play ─────
+// There was no in-game guidance of any kind: every control had to be discovered by clicking. This is the
+// one page that explains the loop, the keys, and what the engine decides versus what the story decides.
+const HELP_KEYS = [
+  ['Ctrl / ⌘ + Enter', 'End the turn — time runs on until the next thing that matters'],
+  ['Enter', 'Add what you have written as an order'],
+  ['R', 'Realm'], ['C', 'Council'], ['M', 'Military'], ['E', 'Economy'],
+  ['D', 'Diplomacy'], ['I', 'Intrigue'], ['P', 'People'], ['H', 'Chronicle'],
+  ['?', 'This page'],
+  ['Esc', 'Close whatever is open; cancel a march you are aiming'],
+];
+function showHelp() {
+  modal(`<h2>How the game is played</h2>
+    <div class="help-cols">
+      <div>
+        <h4>The loop</h4>
+        <p>Time is stopped until you end the turn. Write orders in plain words at the foot of the chronicle —
+        <i>“Send Jory to Moat Cailin with fifty men”</i>, <i>“Call the banners of the North to Winterfell”</i> —
+        and your steward reads each one back to you before it happens. Then end the turn. The engine carries out
+        your orders, marches the hosts, fights the battles and settles the books; the model tells the story that
+        grows around them.</p>
+        <h4>A turn is not a fixed length</h4>
+        <p>It runs until the next thing that matters to you: a host arrives, an answer lands, an enemy draws near,
+        works are finished. At most a moon. The bar by <b>End turn</b> says what it is waiting for.</p>
+        <h4>Who decides what</h4>
+        <p>The <b>engine</b> owns the numbers and the physics — gold, food, distances, battle odds, sieges,
+        succession, regency. The <b>story model</b> owns what people say and do. It cannot empty your treasury,
+        move your people, or declare your wars. If something must truly happen, it happens in the engine.</p>
+      </div>
+      <div>
+        <h4>Things new players miss</h4>
+        <ul style="line-height:1.5">
+          <li>Click a host, then <b>March</b>, then click anywhere on the map — including an enemy host.</li>
+          <li>You can speak with <i>anyone</i> alive, anywhere. If they are far away it becomes a letter, and the answer takes days to come back.</li>
+          <li>Silence is an answer. A decision left unanswered lapses, and the world chooses for you.</li>
+          <li>The <b>Chronicle</b> file is the game's long memory. You may edit it by hand to correct or steer the tale.</li>
+          <li>The <b>standing of your house</b> (Realm window) is what the campaign is finally scored on.</li>
+          <li>Sieges cost the besieger. Camps sicken; a long siege can break the host outside the walls.</li>
+        </ul>
+        <h4>Keys</h4>
+        <div class="kv help-keys">${HELP_KEYS.map(([k, v]) => `<span class="k"><kbd>${esc(k)}</kbd></span><span>${esc(v)}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="settings-actions"><button class="btn primary" data-action="close-modal">Back to the realm</button></div>`);
+}
+
 async function showSettings() {
   const c = await api('/config');
   const presets = [['llama.cpp', 'http://localhost:8080/v1'], ['LM Studio', 'http://localhost:1234/v1'], ['Ollama', 'http://localhost:11434/v1'], ['KoboldCpp', 'http://localhost:5001/v1'], ['text-gen-webui', 'http://localhost:5000/v1'], ['vLLM', 'http://localhost:8000/v1']];
   modal(`<h2>Settings</h2>
     <h4>Display</h4>
     <div class="scale-row"><label style="margin:0;white-space:nowrap">Interface size</label><input type="range" id="ui-scale" min="0.6" max="1.8" step="0.05" value="${uiScale()}"><span id="ui-scale-v" style="width:3.5rem;text-align:right">${Math.round(uiScale() * 100)}%</span><button class="btn small" id="ui-scale-reset">Reset</button></div>
+    <div class="scale-row"><label style="margin:0;white-space:nowrap" title="Refugees leaving a sacked town, carts between prosperous holdings, outriders ahead of a host, deserters slipping away, ravens carrying the letters that were really sent"><input type="checkbox" id="gfx-life"> A living map</label></div>
     <div class="scale-row"><label style="margin:0;white-space:nowrap">Graphics</label><select id="gfx-q" style="flex:1"><option value="high">High — sharpest relief, full resolution</option><option value="balanced">Balanced (recommended for laptops)</option><option value="fast">Fast — for older machines</option></select></div>
     <label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="house-theme" ${houseTheming() ? 'checked' : ''}> Colour the interface in my house's colours</label>
     <div class="settings-section"></div>
@@ -468,6 +571,7 @@ async function showSettings() {
       <div><label>Recent turns kept verbatim</label><input class="input" id="cfg-keep" type="number" value="${c.keepRecentTurns}"></div>
       <div><label>Request timeout (seconds)</label><input class="input" id="cfg-timeout" type="number" value="${c.timeoutSec}"></div>
       <div><label>World detail per turn</label><select id="cfg-detail"><option value="full">Full — every house & person (best with big context & fast GPU)</option><option value="lean">Lean — only what matters to you (much faster on laptops)</option></select></div>
+      <div><label>Who writes the turn</label><select id="cfg-swarm"><option value="full">The council of five — maester, Hand, weaver, whisperer, bard (richest; five short questions instead of one long one)</option><option value="lean">The Hand and the bard — the realm still moves, and is still well written (faster)</option><option value="off">One voice — the old single prompt (fastest, blandest)</option></select><small class="muted">The council shares one prompt prefix, so a local server reuses its cache between them.</small></div>
       <div><label>Thinking (reasoning models such as Qwen3)</label><select id="cfg-think"><option value="auto">Server default</option><option value="on">On — deeper, slower turns</option><option value="off">Off — fast turns</option></select></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-thinkchat" ${c.thinkInAudiences ? 'checked' : ''}> Also think in audiences &amp; councils (slower replies)</label></div>
       <div><label>Thinking budget (extra tokens)</label><input class="input" id="cfg-tbudget" type="number" value="${c.thinkingBudget ?? 6000}"></div>
@@ -479,7 +583,7 @@ async function showSettings() {
     </div>
     <div class="settings-actions"><button class="btn primary" id="cfg-save">Save</button><button class="btn" id="cfg-test">Test connection</button><button class="btn ghost" id="cfg-models">Fetch models</button></div>
     <div id="cfg-result" class="muted" style="margin-top:0.6rem;white-space:pre-wrap;font-size:0.85rem"></div>`);
-  $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full'; $('#cfg-think').value = c.thinking || 'auto'; $('#cfg-effort').value = c.reasoningEffort ?? 'low';
+  $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full'; $('#cfg-swarm').value = c.swarm || 'full'; $('#cfg-think').value = c.thinking || 'auto'; $('#cfg-effort').value = c.reasoningEffort ?? 'low';
   const showScale = (v) => { setUiScale(v); $('#ui-scale-v').textContent = Math.round(v * 100) + '%'; };
   $('#ui-scale').oninput = (e) => showScale(Number(e.target.value));
   $('#ui-scale-reset').onclick = () => { $('#ui-scale').value = 1; showScale(1); };
@@ -488,6 +592,8 @@ async function showSettings() {
   $('#snd-engine').value = voiceSettings().engine; $('#snd-narrator').value = voiceSettings().narrator;
   try { $('#gfx-q').value = localStorage.getItem('gfx-quality') || 'balanced'; } catch { /* */ }
   $('#cfg-diag').onchange = (e) => { try { localStorage.setItem('model-diagnostics', e.target.checked ? '1' : '0'); } catch { /* */ } };
+  try { $('#gfx-life').checked = (localStorage.getItem('map-life') ?? (localStorage.getItem('gfx-quality') === 'fast' ? '0' : '1')) === '1'; } catch { /* */ }
+  $('#gfx-life').onchange = (e) => { app.map?.setLife(e.target.checked); };
   $('#gfx-q').onchange = (e) => { try { localStorage.setItem('gfx-quality', e.target.value); } catch { /* */ } toast('Graphics quality changes when the map next loads (reload the page).'); };
   $('#snd-music').onchange = (e) => { startMusic(); setMusic('on', e.target.checked); };
   $('#snd-sfx').onchange = (e) => { setSfx('on', e.target.checked); sfx('bell'); };
@@ -504,7 +610,7 @@ async function showSettings() {
   $$('[data-url]').forEach((b) => b.onclick = () => { $('#cfg-url').value = b.dataset.url; });
   const collect = () => {
     let extra = {}; try { extra = JSON.parse($('#cfg-extra').value || '{}'); } catch { toast('Extra parameters are not valid JSON', true); }
-    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, thinking: $('#cfg-think').value, thinkInAudiences: $('#cfg-thinkchat').checked, thinkingBudget: Number($('#cfg-tbudget').value) || 0, reasoningEffort: $('#cfg-effort').value, stream: $('#cfg-stream').checked, extraBody: extra };
+    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, swarm: $('#cfg-swarm').value, thinking: $('#cfg-think').value, thinkInAudiences: $('#cfg-thinkchat').checked, thinkingBudget: Number($('#cfg-tbudget').value) || 0, reasoningEffort: $('#cfg-effort').value, stream: $('#cfg-stream').checked, extraBody: extra };
   };
   $('#cfg-save').onclick = async () => { const r = await api('/config', { body: collect() }); $('#cfg-url').value = r.baseUrl; toast('Settings saved.'); refreshLLMStatus(); };
   $('#cfg-test').onclick = async () => { await api('/config', { body: collect() }); $('#cfg-result').textContent = 'Testing…'; try { const r = await api('/llm/test', { body: {} }); $('#cfg-result').textContent = `✔ Connected (${r.ms} ms, ${r.model || 'model'})\n${r.text}`; } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } refreshLLMStatus(); };

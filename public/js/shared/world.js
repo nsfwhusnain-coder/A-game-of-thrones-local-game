@@ -9,6 +9,7 @@ import { initEconomy, TAX_LEVELS, project } from './economy.js';
 import { heirOf } from './people.js';
 import { addReport, updateIntel } from './intel.js';
 import { commandable } from './errands.js';
+import { compileRule } from './rules.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -694,7 +695,8 @@ function applyOne(state, ch, ctx) {
       if (num(ch.ships) !== null) { a.ships = num(ch.ships); out.push(`ships ${a.ships}`); }
       for (const k of ['morale', 'supply']) if (num(ch[k]) !== null) { a[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${a[k]}`); }
       if (ch.status) { a.status = ch.status; out.push(ch.status); }
-      if (ch.commander) { a.commander = findChar(state, ch.commander) || ch.commander; out.push('new commander'); }
+      // a host is never handed to a name the world does not know: an unresolvable commander is refused, not stored
+      if (ch.commander) { const cm = findChar(state, ch.commander); if (!cm) throw new Error('unknown commander ' + ch.commander); if (!state.characters[cm].alive) throw new Error(`${state.characters[cm].name} is dead and cannot command`); a.commander = cm; out.push(`${state.characters[cm].name} takes command`); }
       if (ch.owner) { const o = findHouse(state, ch.owner); if (o) { a.owner = o; out.push('changes allegiance to ' + state.houses[o].name); } }
       if (ch.name) a.name = ch.name;
       if (ch.composition) a.composition = ch.composition;
@@ -719,7 +721,7 @@ function applyOne(state, ch, ctx) {
       if (num(ch.population) !== null) { h.population = Math.max(0, Math.round(num(ch.population))); out.push(`population ~${fmt(h.population)}`); }
       if (num(ch.fort) !== null) { h.fort = Math.max(0, Math.min(6, num(ch.fort))); out.push(`fortifications ${h.fort}`); }
       if (ch.building) { h.buildings = [...new Set([...(h.buildings || []), String(ch.building)])]; out.push('builds ' + ch.building); }
-      if (ch.resource && typeof ch.resource === 'object') { const t = String(ch.resource.type); h.resources[t] = Math.max(0, (h.resources[t] || 0) + (num(ch.resource.delta) ?? 0)); out.push(`${t} ${num(ch.resource.delta) > 0 ? 'up' : 'down'}`); }
+      if (ch.resource && typeof ch.resource === 'object') { const t = String(ch.resource.type); h.resources = h.resources || {}; h.resources[t] = Math.max(0, (h.resources[t] || 0) + (num(ch.resource.delta) ?? 0)); out.push(`${t} ${num(ch.resource.delta) > 0 ? 'up' : 'down'}`); }
       if (ch.status) { h.status = ch.status; out.push(ch.status); }
       if (ch.name && String(ch.name).trim() && ch.name !== h.name) { out.push(`renamed from ${h.name}`); h.formerNames = [...(h.formerNames || []), h.name]; h.name = String(ch.name).trim().slice(0, 60); registerPlaces(state); }
       if (ch.type && HOLDING_TYPES.includes(ch.type)) { h.type = ch.type; out.push(ch.type); }
@@ -754,7 +756,7 @@ function applyOne(state, ch, ctx) {
     case 'character': case 'character_update': {
       const cid = findChar(state, ch.id || ch.character); if (!cid) throw new Error('unknown character ' + (ch.id || ch.character));
       const c = state.characters[cid]; const out = [];
-      if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
+      if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; c.diedTurn = state.meta?.turn ?? 0; c.cause = ch.cause || c.cause || null; out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
       if (ch.loc || ch.location || ch.with) {
         const raw = ch.with || ch.loc || ch.location;
         const army = findArmy(state, String(raw).replace(/^army:/, ''));
@@ -767,7 +769,11 @@ function applyOne(state, ch, ctx) {
           // no one crosses the realm in a day: a far move is a journey, taken on the road
           const days = Math.max(2, Math.round(miles / 38));
           if (c.travel?.to !== l) { c.travel = { to: l, days, left: days, since: date, from: [...(roadPos(state, c) || here)] }; out.push(`sets out for ${placeName(state, l)} (~${days} days)`); }
-        } else { c.loc = l; delete c.travel; out.push((army ? 'travels with ' : 'now at ') + placeName(state, l)); }
+        } else {
+          c.loc = l; delete c.travel;
+          // placeName already says "with The King's progress" for a host, so do not say "with" twice
+          out.push(l.startsWith('army:') ? `travels ${placeName(state, l)}` : `now at ${placeName(state, l)}`);
+        }
       }
       if (ch.title) { c.title = ch.title; out.push('now ' + ch.title); }
       if (ch.status && ch.alive !== false) { c.status = ch.status; out.push(ch.status); }
@@ -821,14 +827,19 @@ function applyOne(state, ch, ctx) {
     case 'war': {
       const status = String(ch.status || 'start').toLowerCase();
       if (status === 'start' || status === 'declare' || status === 'ongoing') {
-        const att = (Array.isArray(ch.attackers) ? ch.attackers : [ch.attacker]).map((x) => findHouse(state, x)).filter(Boolean);
-        const def = (Array.isArray(ch.defenders) ? ch.defenders : [ch.defender]).map((x) => findHouse(state, x)).filter(Boolean);
+        const att = [...new Set((Array.isArray(ch.attackers) ? ch.attackers : [ch.attacker]).map((x) => findHouse(state, x)).filter(Boolean))];
+        // no house fights on both sides of the same war: the first side it was named on is the one it is on
+        const def = [...new Set((Array.isArray(ch.defenders) ? ch.defenders : [ch.defender]).map((x) => findHouse(state, x)).filter(Boolean))].filter((x) => !att.includes(x));
         // the story may bring war to the player, but only the player declares it
         if (ctx.protectPlayer && !ctx.playerDeclaredWar && att.includes(state.meta.player)) throw new Error('only the player can declare the player\'s wars');
         if (!att.length || !def.length) throw new Error('war needs sides');
         const id = slug(ch.id || ch.name || `${att[0]}_vs_${def[0]}`);
         const existing = state.wars.find((w) => w.id === id);
-        if (existing) { existing.attackers = [...new Set([...existing.attackers, ...att])]; existing.defenders = [...new Set([...existing.defenders, ...def])]; return { op, text: `${existing.name} widens` }; }
+        if (existing) {
+          existing.attackers = [...new Set([...existing.attackers, ...att])];
+          existing.defenders = [...new Set([...existing.defenders, ...def])].filter((x) => !existing.attackers.includes(x));
+          return { op, text: `${existing.name} widens` };
+        }
         state.wars.push({ id, name: ch.name || `War of ${state.houses[att[0]].name} against ${state.houses[def[0]].name}`, attackers: att, defenders: def, started: date, status: 'ongoing', note: ch.reason || ch.note || '' });
         return { op, text: `WAR: ${state.wars.at(-1).name}` };
       }
@@ -840,6 +851,10 @@ function applyOne(state, ch, ctx) {
     case 'war_join': {
       const w = state.wars.find((x) => x.id === slug(ch.war || ch.id) || slug(x.name) === slug(ch.war || ''));
       const hid = findHouse(state, ch.house); if (!w || !hid) throw new Error('bad war_join');
+      if (w.status === 'ended') throw new Error('that war is over');
+      // war_join is the same power as declaring a war: the story may not march the player into one either
+      if (ctx.protectPlayer && !ctx.playerDeclaredWar && hid === state.meta.player && ch.side !== 'defender') throw new Error('only the player can declare the player\'s wars');
+      if (w.attackers.includes(hid) || w.defenders.includes(hid)) throw new Error(`${state.houses[hid].name} is already in ${w.name}`);
       (ch.side === 'defender' ? w.defenders : w.attackers).push(hid);
       return { op, text: `${state.houses[hid].name} joins ${w.name}` };
     }
@@ -900,6 +915,45 @@ function applyOne(state, ch, ctx) {
       if (!aid && !ch.false && !ch.lie) throw new Error('unknown army ' + (ch.army || ch.id));
       const r = addReport(state, { army: aid || null, pos: pos || (aid ? state.armies[aid].pos : null), men: num(ch.men), source: ch.source || 'a raven', false: !!(ch.false || ch.lie), owner: findHouse(state, ch.owner) || (aid && state.armies[aid].owner), name: ch.name });
       return { op, text: `A report reaches you: ${r.name} (~${fmt(r.men)} men) near ${ch.at ? placeName(state, ch.at) : 'where it was last seen'} — ${r.source}` };
+    }
+    // ═══════════════════════════════════════════════════════════════════════════════════════════
+    // inject_rule — the model designs a mechanic, and the engine runs it
+    //
+    // "Fund a network of informants in the Riverlands, paid in stolen Lannister gold" is not any op
+    // in this file. It is a new quantity with its own economics, and the Weaver writes it:
+    //   { op:'inject_rule', house:'stark', name:'Informants in the Riverlands', kind:'income',
+    //     vars:{ informants: 0 },
+    //     grow: 'min(60, v.informants + 6 * months * (house.treasury > 2000))',
+    //     formula: 'v.informants * 14 * luck * months',
+    //     when: 'house.treasury > 500', note: 'Paid out of stolen Lannister coin.' }
+    // From the next turn the steward's ledger carries its own line, and the number lives in the save.
+    //
+    // The formula is a sandboxed expression, never JavaScript (see shared/rules.js for why), it is
+    // compiled and dry-run here so a bad rule never reaches a save, and every kind is capped so the
+    // model cannot invent its way to a million dragons a moon.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════
+    case 'inject_rule': case 'rule': case 'mechanic': {
+      const hid = findHouse(state, ch.house || ch.owner) || state.meta.player;
+      if (!state.houses[hid]) throw new Error('unknown house ' + ch.house);
+      // the player's own realm may only be reshaped by the player's own doing, not by passing rumour
+      if (ctx.protectPlayer && hid === state.meta.player && !ctx.mayInvent) throw new Error('a new custom of your realm must come from your own order, not from report');
+      state.rules = state.rules || [];
+      // ending a rule the story itself raised ("the informants are rolled up") needs no formula
+      if (/^(end|stop|cancel|lapse|revoke)$/i.test(String(ch.status || ''))) {
+        const key = String(ch.id || ch.name || '').toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 40);
+        const r = state.rules.find((x) => x.house === hid && x.id === key && x.status !== 'ended');
+        if (!r) throw new Error('no such custom to end');
+        r.status = 'ended';
+        return { op, text: `${r.name} is at an end` };
+      }
+      const spec = compileRule(state, { ...ch, house: hid, source: ctx.source || 'the story' });
+      const existing = state.rules.findIndex((r) => r.id === spec.id && r.house === hid);
+      if (state.rules.filter((r) => r.house === hid && !r.status).length >= 12 && existing < 0) throw new Error('this house already keeps as many special customs as its stewards can track');
+      if (existing >= 0) { state.rules[existing] = { ...state.rules[existing], ...spec, status: undefined }; return { op, text: `${spec.name} is changed` }; }
+      state.rules.push(spec);
+      state.vars = state.vars || {}; state.vars[hid] = state.vars[hid] || {};
+      for (const [k, v0] of Object.entries(spec.vars || {})) if (state.vars[hid][k] === undefined) state.vars[hid][k] = v0;
+      return { op, text: `NEW CUSTOM — ${state.houses[hid].name}: ${spec.name} (${spec.kind}: ${spec.formula})` };
     }
     case 'chronicle': case 'memory': {
       state.chronicle.push({ date, text: String(ch.text || '') });

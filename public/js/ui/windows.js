@@ -1,8 +1,11 @@
 // Side windows & detail sheets (CK3-style panels).
-import { app, $, $$, esc, fmt, placeName, getRelation, api, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
+import { app, $, $$, esc, fmt, placeName, getRelation, api, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, confirmModal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
 import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
+import { standing, standingWord } from '../shared/standing.js';
+import { regencyLine } from '../shared/regency.js';
 import { unitsText } from '../shared/units.js';
+import { liveRules } from '../shared/rules.js';
 import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS, tradeModifier } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
 import { vassalTemper } from '../shared/vassals.js';
@@ -21,12 +24,13 @@ export function openWindow(name, arg) {
   if (app.win === name && arg === undefined) return closeWindow();
   app.win = name; app.winArg = arg; sfx('open');
   $('#window').classList.remove('hidden');
+  $('#window').setAttribute('aria-hidden', 'false');
   $('#win-title').textContent = TITLES[name] || name;
-  $$('#action-ring button').forEach((b) => b.classList.toggle('active', b.dataset.win === name));
+  $$('#action-ring button').forEach((b) => { const on = b.dataset.win === name; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
   $('#sheet').classList.remove('solo');
   renderWindow();
 }
-export function closeWindow() { if (app.win) sfx('close'); app.win = null; $('#window').classList.add('hidden'); $$('#action-ring button').forEach((b) => b.classList.remove('active')); $('#sheet').classList.add('solo'); }
+export function closeWindow() { if (app.win) sfx('close'); app.win = null; $('#window').classList.add('hidden'); $('#window').setAttribute('aria-hidden', 'true'); $$('#action-ring button').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); }); $('#sheet').classList.add('solo'); }
 export function renderWindow() {
   if (!app.win || !app.state) return;
   const body = $('#win-body');
@@ -47,7 +51,9 @@ function realm() {
     <div class="detail-hero"><img class="banner" src="${banner(h, 80, 120)}" alt=""><div>
       <h2>House ${esc(h.name)}</h2><div class="words">${esc(h.words ? '“' + h.words + '”' : '')}</div>
       <div class="muted">${esc(h.title || RANK_NAMES[h.rank])} · ${REGION_NAMES[h.region] || ''}</div>
-      <div class="muted">Sworn to: ${liege ? `<a href="#" data-house="${liege.id}">${esc(liege.name)}</a>` : '<b>no one</b>'}</div></div></div>
+      <div class="muted">Sworn to: ${liege ? `<a href="#" data-house="${liege.id}">${esc(liege.name)}</a>` : '<b>no one</b>'}</div>
+      ${regencyLine(s, p) ? `<div class="muted">⚖ ${esc(regencyLine(s, p))}</div>` : ''}</div></div>
+    ${standingPanel(s, p)}
     <div class="stat-grid">
       <div class="s"><div class="k">Smallfolk</div><div class="v">~${fmt(Math.round(pop / 1000))}k</div></div>
       <div class="s"><div class="k">Realm levies</div><div class="v">~${fmt(tot.levies)}</div></div>
@@ -62,6 +68,26 @@ function realm() {
       <div style="display:flex;gap:0.5rem"><div style="flex:1" title="Prosperity ${x.prosperity}">${meter(x.prosperity, '#7fb85a')}</div><div style="flex:1" title="Unrest ${x.unrest}">${meter(x.unrest, '#d0604a')}</div></div></div>${x.id !== h.seat && vas.length ? `<button class="btn small" data-grant="${x.id}">Grant…</button>` : ''}</div>`).join('')}</div>
     <div class="section"><h4>Sworn vassals</h4>${vas.map((v) => vassalRow(s.houses[v])).join('') || '<div class="muted">None.</div>'}</div>`;
 }
+// Where the house stands in the realm, in the five measures the campaign is finally scored on. This is the
+// player's answer to "am I actually winning?", which the game could not previously tell them at all.
+function standingPanel(s, p) {
+  const st = standing(s, p); if (!st) return '';
+  const bars = [
+    ['Lands', st.lands, '#7fb85a', `${st.holdings} holdings`],
+    ['Swords', st.might, '#c0604a', `~${fmt(st.swords)} men`],
+    ['Gold', st.wealth, '#c9a44a', `${fmt(st.gold)} net`],
+    ['Sway', st.sway, '#7a9fd0', `${st.vassals} sworn houses`],
+    ['Blood', st.blood, '#b07ec0', `${st.kin} living kin`],
+    ['Order', st.order, '#8fbfa8', 'prosperity less unrest'],
+  ];
+  return `<div class="section standing">
+    <h4>The standing of the house</h4>
+    <div class="standing-score" title="A weighted measure of lands, swords, gold, sway, blood and good order. It is what the chronicle scores at the end.">
+      <b>${st.score}</b><span>/100 — ${esc(standingWord(st))}</span></div>
+    <div class="standing-bars">${bars.map(([k, v, c, sub]) => `<div class="sb" title="${esc(sub)}"><div class="sb-k">${k}</div>${meter(v, c)}<div class="sb-v">${v}</div></div>`).join('')}</div>
+  </div>`;
+}
+
 function obligationPills(v) {
   const t = v.obligations?.tribute || 'paying', l = v.obligations?.levies || 'not_called';
   const tc = t === 'paying' ? 'good' : ['late', 'reduced', 'forgiven'].includes(t) ? 'warn' : 'bad';
@@ -157,6 +183,27 @@ function tradeSection(s, p) {
     <div class="row-actions" style="margin-top:0.4rem"><select id="trade-with">${partners.map((h) => `<option value="${h.id}">House ${esc(h.name)}</option>`).join('')}</select><button class="btn small" id="trade-go">Seek a trade agreement</button></div></div>`;
 }
 
+// Customs of the realm: mechanics the chronicler invented and the ledger now settles every moon.
+// They are shown apart from the accounts, because they are the part of the world the story wrote.
+function customsSection(s, p) {
+  const rules = liveRules(s, p);
+  if (!rules.length) return '';
+  const KIND = { income: ['+', 'dragons a moon'], expense: ['−', 'dragons a moon'], food: ['', 'moons of stores'], unrest: ['', 'unrest on every holding'], prosperity: ['', 'prosperity on every holding'], levies: ['', 'men a moon'], var: ['', ''] };
+  return `<div class="section"><h4>Customs of your realm</h4>
+    <p class="muted" style="font-size:0.8rem;margin:-0.2rem 0 0.5rem">Not laws of the world, but of <i>your</i> world — things the chronicle raised, which your stewards now reckon with every moon.</p>
+    ${rules.map((r) => {
+      const [sign, unit] = KIND[r.kind] || ['', ''];
+      const vals = Object.entries(r.values || {}).map(([k, v]) => `${esc(k.replace(/_/g, ' '))} <b style="color:var(--gold2)">${fmt(Math.round(v))}</b>`).join(' · ');
+      return `<div class="proj"><div style="display:flex;justify-content:space-between;gap:0.6rem;align-items:baseline">
+        <b>${esc(r.name)}</b><span class="muted" style="font-size:0.78rem;white-space:nowrap">${sign}${unit ? esc(unit) : esc(r.kind)}</span></div>
+        ${r.note ? `<div class="muted" style="font-size:0.82rem">${esc(r.note)}</div>` : ''}
+        ${vals ? `<div style="font-size:0.82rem;margin-top:0.2rem">${vals}</div>` : ''}
+        ${r.last != null ? `<div class="muted" style="font-size:0.78rem">Last moon: ${r.kind === 'income' || r.kind === 'expense' ? `${sign}${fmt(Math.abs(Math.round(r.last)))} dragons` : `${Math.round(r.last * 10) / 10}`}</div>` : ''}
+        <div class="muted" style="font-size:0.72rem;margin-top:0.25rem;font-family:var(--mono,monospace);opacity:0.55" title="how your stewards reckon it">${esc(r.formula)}</div>
+      </div>`;
+    }).join('')}</div>`;
+}
+
 function economy() {
   const s = app.state, p = s.meta.player, h = player();
   const pr = project(s, p);
@@ -183,6 +230,7 @@ function economy() {
       <p class="muted" style="font-size:0.8rem">${esc(season.label)}: ${esc(s.world?.seasonNote || season.note)}</p></div>
     <div class="section"><h4>Taxation</h4><div class="tpl-grid">${Object.entries(TAX_LEVELS).map(([k, t]) => `<div class="tpl" data-tax="${k}" style="${k === tax ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t.label}${k === tax ? ' ✓' : ''}</b><div class="c">${esc(t.desc)}</div></div>`).join('')}</div></div>
     ${h.liege && s.houses[h.liege] ? (() => { const cur = h.obligations?.tribute || 'paying'; const D = { paying: ['Pay in full', 'What is owed, on time. Your liege is content.'], late: ['Pay late', 'Excuses and partial sums. Patience wears thin.'], withholding: ['Withhold', 'Keep the gold. Your liege will notice, and will act.'] }; return `<div class="section"><h4>Dues to House ${esc(s.houses[h.liege].name)}</h4><div class="tpl-grid">${Object.entries(D).map(([k, [t, d]]) => `<div class="tpl" data-dues="${k}" style="${k === cur ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t}${k === cur ? ' ✓' : ''}</b><div class="c">${d}</div></div>`).join('')}</div></div>`; })() : ''}
+    ${customsSection(s, p)}
     ${moonAccounts(h)}
     ${tradeSection(s, p)}
     ${L ? `<div class="section"><h4>Last accounts — ${esc(L.date)} (${L.days} day${L.days > 1 ? 's' : ''})${L.reporter ? ', by ' + esc(L.reporter) : ''}</h4><table class="ledger">
@@ -279,7 +327,7 @@ const wire = {
     };
     $$('[data-march]', body).forEach((b) => b.onclick = () => app.startPick('march', b.dataset.march));
     $$('[data-disband]', body).forEach((b) => b.onclick = async () => {
-      if (!confirm('Disband this host? Most of the men will go home to their fields.')) return;
+      if (!await confirmModal('Disband the host?', 'Most of these men will go back to their fields, and calling them again will take time and goodwill you may not have.', { yes: 'Send them home', no: 'Keep them under arms' })) return;
       try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'disband', army: b.dataset.disband } }); app.setState(r.state); toast('The host disbands.'); } catch (e) { toast(e.message, true); }
     });
     $('#raise-levies', body).onclick = () => {
@@ -356,10 +404,10 @@ document.addEventListener('click', (e) => {
 // ═════════════ Detail sheets ═════════════
 export function openSheet(kind, id) {
   app.sheet = { kind, id };
-  const el = $('#sheet'); el.classList.remove('hidden'); el.classList.toggle('solo', !app.win);
+  const el = $('#sheet'); el.classList.remove('hidden'); el.setAttribute('aria-hidden', 'false'); el.classList.toggle('solo', !app.win);
   renderSheet();
 }
-export function closeSheet() { app.sheet = null; $('#sheet').classList.add('hidden'); }
+export function closeSheet() { app.sheet = null; $('#sheet').classList.add('hidden'); $('#sheet').setAttribute('aria-hidden', 'true'); }
 export function renderSheet() {
   if (!app.sheet || !app.state) return;
   const { kind, id } = app.sheet;
@@ -582,7 +630,7 @@ document.addEventListener('click', (e) => { const w = e.target.closest('[data-wi
 async function courtAct(body, after) {
   try { const r = await api(`/games/${app.saveId}/act`, { body }); app.setState(r.state); if (r.summary) toast(r.summary); after?.(); return r; } catch (err) { toast(err.message, true); return null; }
 }
-document.addEventListener('click', (e) => {
+document.addEventListener('click', async (e) => {
   const g = e.target.closest('[data-gift]');
   if (g) {
     const s = app.state; const c = s.characters[g.dataset.gift]; const h = c ? s.houses[c.house] : s.houses[g.dataset.gift];
@@ -597,7 +645,7 @@ document.addEventListener('click', (e) => {
   const j = e.target.closest('[data-judge]');
   if (j) {
     const c = app.state.characters[j.dataset.who];
-    if (j.dataset.judge === 'execute' && !confirm(`Execute ${c.name}? House ${app.state.houses[c.house]?.name} will never forget it.`)) return;
+    if (j.dataset.judge === 'execute' && !await confirmModal(`Take ${c.name}'s head?`, `House ${app.state.houses[c.house]?.name || ''} will never forget it, and neither will the realm. A lord who passes the sentence should swing the sword.`, { yes: 'Pass the sentence', no: 'Stay your hand', danger: true })) return;
     courtAct({ kind: 'judge', character: c.id, verdict: j.dataset.judge });
     return;
   }

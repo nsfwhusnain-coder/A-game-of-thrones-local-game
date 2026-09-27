@@ -9,12 +9,14 @@ import { makeNoise } from '../map/noise.js';
 import { openPins } from '../shared/pins.js';
 import { riderPos } from '../shared/roads.js';
 import { viewOfArmies, ageText } from '../shared/intel.js';
+import { LivingMap } from './life.js';
 
 const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 const GEN_VERSION = 'atlas-v3';
 // Graphics quality (Settings): terrain mesh density, pixel ratio and shadows
 const QUALITY = { high: { seg: 960, dpr: 2, shadows: true }, balanced: { seg: 720, dpr: 1.5, shadows: true }, fast: { seg: 480, dpr: 1, shadows: false } };
+export const lifeOn = () => { try { const v = localStorage.getItem('map-life'); return v === null ? (localStorage.getItem('gfx-quality') !== 'fast') : v === '1'; } catch { return true; } };
 export const gfx = () => { try { return QUALITY[localStorage.getItem('gfx-quality')] || QUALITY.balanced; } catch { return QUALITY.balanced; } };
 const LAND_Y = 55, SEA_Y = 7, WATER_LEVEL = 0.35;
 
@@ -240,6 +242,7 @@ export class MapScene {
     this.syncEventPins();
     this.syncRiders();
     this.syncLandmarks();
+    this.syncLife();
     if (first) this.buildPlaces();
     if (first) {
       this.drawRoads();
@@ -465,6 +468,16 @@ export class MapScene {
       rec.label.el.classList.toggle('sel', a.id === this.selectedArmy);
     }
   }
+  // ───────────── the living map ─────────────
+  // Refugees, carts, outriders, deserters and ravens: read from the state once a turn, and walking
+  // every frame thereafter. Off by default on the 'fast' graphics setting, and switchable.
+  syncLife() {
+    if (!this.grid) return; // the path grid is built with the terrain
+    if (!this.life) this.life = new LivingMap(this.scene, { groundAt: (x, z) => this.groundAt(x, z), grid: this.grid, enabled: lifeOn() });
+    this.life.sync(this.state);
+  }
+  setLife(on) { try { localStorage.setItem('map-life', on ? '1' : '0'); } catch { /* private mode */ } this.life?.setEnabled(on); }
+
   // a march already made: a quiet solid line along the road, fading at its start
   trailMesh(path, color) {
     const m = new THREE.ShaderMaterial({
@@ -847,6 +860,8 @@ export class MapScene {
       for (const m of rec.group.children) if (m.isInstancedMesh) { m.position.y = marching ? Math.abs(Math.sin(time * 7 + m.id)) * 0.09 : 0; m.rotation.z = marching ? Math.sin(time * 3.5) * 0.02 : 0; }
       rec.label.pos.set(p[0], y + 6 * rec.group.scale.x, p[1]);
     }
+    // the realm's small life walks on, turn or no turn
+    if (this.life) this.life.frame(time, Math.min(0.1, dt));
     // banners flutter
     clothUniforms.uTime.value = time;
     // banners turn to face the viewer, so the sigil always reads and the pole stays behind the cloth

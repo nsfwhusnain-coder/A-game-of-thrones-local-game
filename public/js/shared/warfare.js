@@ -2,6 +2,7 @@
 // The simulator still decides what happens — this tells it (and the player) what is *likely*.
 import { realmOf, placeName } from './world.js';
 import { mounted } from './units.js';
+import { roadWarnings } from './chokepoints.js';
 
 import { MILES_PER_UNIT } from "../../data/geography.js"; // ~1.85 miles per game unit on the atlas
 export { MILES_PER_UNIT };
@@ -45,10 +46,14 @@ export function marchDays(a, from, to) {
 export function siegeEstimate(state, holding, besiegers) {
   const owner = state.houses[holding.owner];
   const food = Math.min(Number(owner?.figures?.food?.v) || 6, 24);
+  // a seat is stocked better than an outlying holdfast, and granaries are the whole point of a granary
+  const seat = holding.seatOf ? 1.25 : 1;
+  const granary = (holding.buildings || []).some((b) => /granar/i.test(b)) ? 1.6 : 1;
   const garrison = holding.garrison ?? Math.round((owner?.figures?.menAtArms?.v || 200) * 0.5);
   const b = besiegers.reduce((s, a) => s + a.men, 0);
   const storm = holding.fort >= 4 ? (b > garrison * 12 ? 'storming possible at terrible cost' : 'cannot be stormed; only starved or betrayed') : b > garrison * 6 ? 'can be stormed' : 'storming would be bloody';
-  return { months: Math.max(0.5, Math.round(food * (holding.fort >= 4 ? 1.2 : 0.8) * 10) / 10), garrison, besiegers: b, storm };
+  const stored = holding.siege?.stores;
+  return { months: stored != null ? Math.round(stored * 10) / 10 : Math.max(0.5, Math.round(food * (holding.fort >= 4 ? 1.2 : 0.8) * seat * granary * 10) / 10), garrison, besiegers: b, storm };
 }
 
 /** A textual war-room report for the prompt and the UI. */
@@ -76,7 +81,9 @@ export function warRoom(state) {
   // marches under way
   for (const a of armies.filter((x) => x.dest)) {
     const m = marchDays(a, a.pos, a.dest);
-    lines.push(`MARCH: ${a.name} → ${a.destName || 'destination'}: ~${m.miles} miles, ~${m.days} more days.`);
+    // geography is not negotiable: what the road makes them pay is stated before they walk it
+    const road = a.type === 'fleet' ? [] : roadWarnings(state, a, a.pos, a.dest);
+    lines.push(`MARCH: ${a.name} → ${a.destName || 'destination'}: ~${m.miles} miles, ~${m.days} more days.${road.length ? ` ON THE WAY — ${road.join(' ')}` : ''}`);
   }
   // guidance on distances for the player's hosts
   const p = state.meta.player;

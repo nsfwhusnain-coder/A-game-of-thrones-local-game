@@ -546,3 +546,345 @@ test('the story can march any host but the player\'s, and the engine walks it', 
   assert.equal(s.armies.lh.march.to, 'tully'); assert.equal(r.rejected.length, 1);
   assert.equal(s.armies.nh.march, undefined);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Regency, standing and the end of a story — the systems added in the AAA pass
+// ═══════════════════════════════════════════════════════════════════════════
+import { incapacity, chooseRegent, regencyTick, speakerFor, regencyLine, underRegency } from '../public/js/shared/regency.js';
+import { standing, standingWord, outcomeFor, epitaph } from '../public/js/shared/standing.js';
+import { applyChanges as apply2 } from '../public/js/shared/world.js';
+
+test('a child lord is ruled for: the mother takes the regency, and gives it up at sixteen', () => {
+  const s = fresh('arryn');
+  // Robert Arryn is eight in 298; Lysa is his mother
+  assert.equal(incapacity(s, 'arryn')?.kind, 'minority');
+  const reg = chooseRegent(s, 'arryn');
+  assert.equal(reg?.id, 'lysa_arryn');
+  const r = regencyTick(s, 30);
+  assert.equal(s.houses.arryn.regent, 'lysa_arryn');
+  assert.ok(r.events.some((e) => /regency/i.test(e.title)));
+  assert.equal(speakerFor(s, 'arryn').id, 'lysa_arryn');
+  assert.ok(underRegency(s, 'arryn'));
+  assert.match(regencyLine(s, 'arryn'), /Lysa Arryn rules as regent/);
+  // the boy comes of age
+  s.characters[s.houses.arryn.lord].age = 17;
+  const r2 = regencyTick(s, 30);
+  assert.equal(s.houses.arryn.regent, undefined);
+  assert.ok(r2.events.some((e) => /in .* own right/i.test(e.title)));
+});
+
+test('a captive lord is ruled for too, and the vassals like it less each moon', () => {
+  const s = fresh('stark');
+  const lordId = s.houses.stark.lord;
+  s.characters[lordId].status = 'imprisoned';
+  assert.equal(incapacity(s, 'stark')?.kind, 'captive');
+  const before = Object.values(s.houses).filter((v) => v.liege === 'stark').map((v) => s.characters[v.lord]?.loyalty ?? 60);
+  regencyTick(s, 60);
+  assert.ok(s.houses.stark.regent, 'someone must hold the seat');
+  const after = Object.values(s.houses).filter((v) => v.liege === 'stark').map((v) => s.characters[v.lord]?.loyalty ?? 60);
+  assert.ok(after.some((v, i) => v < before[i]), 'a captive liege costs loyalty');
+});
+
+test('the standing of a house is measured, and a great house outranks a small one', () => {
+  const s = fresh('stark');
+  const big = standing(s, 'stark'), small = standing(s, 'cassel') || standing(s, 'mormont');
+  assert.ok(big.score > small.score);
+  assert.ok(big.score >= 0 && big.score <= 100);
+  assert.equal(typeof standingWord(big), 'string');
+});
+
+test('a house stripped of everything is broken — but not on the first bad turn', () => {
+  const s = fresh('mormont');
+  for (const h of Object.values(s.holdings)) if (h.owner === 'mormont') h.owner = 'bolton';
+  for (const a of Object.values(s.armies)) if (a.owner === 'mormont') delete s.armies[a.id];
+  s.houses.mormont.figures.treasury.v = 0;
+  assert.equal(outcomeFor(s, 'mormont'), null, 'one turn of ruin is not the end');
+  const o = outcomeFor(s, 'mormont');
+  assert.equal(o?.kind, 'ruin');
+  assert.equal(o.victory, false);
+});
+
+test('the line ending is the end of the story', () => {
+  const s = fresh('mormont');
+  for (const c of Object.values(s.characters)) if (c.house === 'mormont') c.alive = false;
+  const o = outcomeFor(s, 'mormont');
+  assert.equal(o?.kind, 'extinct');
+  assert.match(o.title, /line of House Mormont is ended/);
+});
+
+test('taking King\'s Landing and making peace wins the game', () => {
+  const s = fresh('stark');
+  s.holdings.baratheon.owner = 'stark';
+  s.wars = [];
+  const o = outcomeFor(s, 'stark');
+  assert.equal(o?.kind, 'throne');
+  assert.equal(o.victory, true);
+  const e = epitaph(s, 'stark');
+  assert.equal(e.house, 'Stark');
+  assert.ok(e.standing.score > 0);
+});
+
+test('the story may not march the player into a war, by war_join or otherwise', () => {
+  const s = fresh('stark');
+  apply2(s, [{ op: 'war', status: 'start', id: 'w1', name: 'A war', attackers: ['lannister'], defenders: ['tully'] }]);
+  const r = apply2(s, [{ op: 'war_join', war: 'w1', house: 'stark', side: 'attacker' }], { protectPlayer: true });
+  assert.equal(r.applied.length, 0);
+  assert.match(r.rejected[0].reason, /only the player/);
+  // and no house fights on both sides of the same war
+  const r2 = apply2(s, [{ op: 'war_join', war: 'w1', house: 'lannister', side: 'defender' }]);
+  assert.equal(r2.applied.length, 0);
+  const w = s.wars.find((x) => x.id === 'w1');
+  assert.equal(w.defenders.includes('lannister'), false);
+});
+
+test('a host is never given to a commander the world does not know', () => {
+  const s = fresh('stark');
+  apply2(s, [{ op: 'army_create', id: 'h1', owner: 'stark', name: 'A host', at: 'stark', men: 1000 }]);
+  const r = apply2(s, [{ op: 'army_update', army: 'h1', commander: 'ser_nobody_of_nowhere' }]);
+  assert.match(r.rejected[0]?.reason || '', /unknown commander/);
+  assert.ok(!s.armies.h1.commander);
+});
+
+test('a siege costs the besieger: the camp sickens, and the castle eats its stores', () => {
+  const s = fresh('lannister');
+  apply2(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['tully'] },
+    { op: 'army_create', id: 'sg', owner: 'lannister', name: 'The siege host', at: 'tully', men: 12000 }]);
+  for (const a of Object.values(s.armies)) if (a.id !== 'sg' && ['tully', 'stark'].includes(a.owner)) delete s.armies[a.id];
+  const men0 = s.armies.sg.men;
+  resolveWarfare(s, 30, { r: () => 0.99 });
+  assert.equal(s.holdings.tully.status, 'besieged');
+  const stores0 = s.holdings.tully.siege.stores;
+  resolveWarfare(s, 30, { r: () => 0.99 });
+  assert.ok(s.armies.sg.men < men0, 'the camp loses men to the flux and desertion');
+  assert.ok(s.holdings.tully.siege.stores < stores0, 'the castle eats');
+  assert.ok((s.armies.sg.supply ?? 80) >= 20, 'a foraging host does not starve to nothing');
+});
+
+// ── The rule sandbox: the model designs a mechanic, the engine runs it ──
+import { compile, run, compileRule, evaluateRules, houseScope, liveRules, RuleError } from '../public/js/shared/rules.js';
+import { settle } from '../public/js/shared/economy.js';
+
+const scopeFor = (s, h = 'stark') => houseScope(s, s.houses[h], { months: 1, luck: 1, gross: 1000 });
+
+test('a formula is arithmetic, and arithmetic works', () => {
+  const s = fresh();
+  assert.equal(run(compile('2 + 3 * 4'), scopeFor(s)), 14);
+  assert.equal(run(compile('clamp(99, 0, 10)'), scopeFor(s)), 10);
+  assert.equal(run(compile('if_(1 > 2, 5, 7)'), scopeFor(s)), 7);
+  assert.equal(run(compile('house.at_war * 200'), scopeFor(s)), 0); // 298 AC: the North is at peace
+  assert.equal(run(compile('1 / 0'), scopeFor(s)), 0); // no infinities reach the ledger
+});
+
+test('a formula cannot reach out of its sandbox', () => {
+  const s = fresh();
+  for (const src of ['process.exit(1)', 'globalThis', '(function(){})()', 'house.treasury = 0', 'constructor', '[]', 'house["treasury"]', 'x'.repeat(500)]) {
+    assert.throws(() => run(compile(src), scopeFor(s)), RuleError, `should have refused: ${src}`);
+  }
+});
+
+test('an unknown name is refused at injection time, not silently zeroed', () => {
+  const s = fresh();
+  assert.throws(() => compileRule(s, { house: 'stark', name: 'Nonsense', kind: 'income', formula: 'house.dragons * 3' }), /is not something a rule can read/);
+});
+
+test('an injected rule becomes a line in the steward\'s ledger, moon after moon', () => {
+  const s = fresh();
+  const r = applyChanges(s, [{
+    op: 'inject_rule', house: 'stark', name: 'Informants in the Riverlands', kind: 'income',
+    vars: { informants: 4 }, grow: 'min(60, v.informants + 6 * months)',
+    formula: 'v.informants * 14 * months', when: 'house.treasury > 500', note: 'Paid in stolen Lannister gold.',
+  }], { source: 'test' });
+  assert.equal(r.rejected.length, 0);
+  assert.equal(s.rules.length, 1);
+  settle(s, 30);
+  const line = s.houses.stark.ledger.at(-1).lines.find((l) => l.rule === 'informants_in_the_riverlands');
+  assert.ok(line, 'the rule should have paid out');
+  assert.equal(line.kind, 'income');
+  assert.equal(s.vars.stark.informants, 10); // the network grew this moon
+  settle(s, 30);
+  assert.equal(s.vars.stark.informants, 16);
+  assert.ok(s.houses.stark.ledger.at(-1).lines.find((l) => l.rule === 'informants_in_the_riverlands').amount > line.amount);
+  assert.equal(liveRules(s, 'stark')[0].name, 'Informants in the Riverlands');
+});
+
+test('a rule cannot mint gold: every kind is capped per moon', () => {
+  const s = fresh();
+  applyChanges(s, [{ op: 'inject_rule', house: 'stark', name: 'A dragon hoard', kind: 'income', formula: '9999999' }], { source: 'test' });
+  const out = evaluateRules(s, s.houses.stark, { months: 1, luck: 1, gross: 4000 });
+  assert.equal(out.capped.length, 1);
+  assert.ok(out.lines[0].amount < 9999999 / 100);
+});
+
+test('a rule whose condition is false costs nothing', () => {
+  const s = fresh();
+  applyChanges(s, [{ op: 'inject_rule', house: 'stark', name: 'War tax', kind: 'income', formula: '500', when: 'house.at_war' }], { source: 'test' });
+  assert.equal(evaluateRules(s, s.houses.stark, { months: 1, luck: 1, gross: 1000 }).lines.length, 0);
+});
+
+test('a rule can be ended by the story that raised it', () => {
+  const s = fresh();
+  applyChanges(s, [{ op: 'inject_rule', house: 'stark', name: 'Smugglers of White Harbour', kind: 'income', formula: '300' }], { source: 'test' });
+  const r = applyChanges(s, [{ op: 'inject_rule', house: 'stark', id: 'smugglers_of_white_harbour', status: 'end' }], { source: 'test' });
+  assert.equal(r.rejected.length, 0);
+  assert.equal(evaluateRules(s, s.houses.stark, { months: 1, luck: 1, gross: 1000 }).lines.length, 0);
+  assert.equal(liveRules(s, 'stark').length, 0);
+});
+
+test('an injected rule survives a save round-trip (it is data, not code)', () => {
+  const s = fresh();
+  applyChanges(s, [{ op: 'inject_rule', house: 'stark', name: 'Tithe to the red priest', kind: 'expense', formula: 'house.holdings * 20' }], { source: 'test' });
+  const back = JSON.parse(JSON.stringify(s));
+  const out = evaluateRules(back, back.houses.stark, { months: 1, luck: 1, gross: 1000 });
+  assert.equal(out.lines[0].kind, 'expense');
+  assert.ok(out.lines[0].amount > 0);
+});
+
+test('a rule that runs away is stopped, not allowed to hang the turn', () => {
+  const s = fresh();
+  assert.equal(run(compile('2 ** 999999'), scopeFor(s)), 0); // no Infinity in the ledger
+  assert.throws(() => compile('1' + ' + 1'.repeat(400)), RuleError); // and no formula long enough to stall a turn
+});
+
+// ── Geography that bites: the hard places of Westeros ──
+import { crossings, chokepointToll, roadWarnings, hasLeave, roadCongestion, CHOKEPOINTS } from '../public/js/shared/chokepoints.js';
+
+const host = (owner, men = 12000) => ({ id: 'h', owner, name: 'A host', men, morale: 70, type: 'army' });
+
+test('the roads of Westeros cross the places they should, and no others', () => {
+  const s = fresh();
+  const names = (a, b) => crossings(s.holdings[a].pos, s.holdings[b].pos).map((c) => c.cp.id).sort();
+  assert.deepEqual(names('stark', 'tully'), ['green_fork', 'the_neck']); // south out of the North
+  assert.deepEqual(names('baratheon', 'arryn'), ['bloody_gate']);        // into the Vale by land
+  assert.deepEqual(names('lannister', 'tully'), ['golden_tooth']);
+  assert.deepEqual(names('baratheon', 'martell'), ['princes_pass']);
+  assert.deepEqual(names('baratheon', 'tully'), []);  // the riverlands are open country
+  assert.deepEqual(names('stark', 'umber'), []);      // and so is the North itself
+});
+
+test('the Neck is kind to Starks and cruel to everyone else', () => {
+  const s = fresh();
+  const from = s.holdings.stark.pos, to = s.holdings.tully.pos;
+  const north = chokepointToll(s, host('stark'), from, to, 40);
+  const lion = chokepointToll(s, host('lannister'), to, from, 40); // marching the other way, uninvited
+  const neckN = north.met.find((m) => m.id === 'the_neck');
+  const neckL = lion.met.find((m) => m.id === 'the_neck');
+  assert.equal(neckN.gated, true, 'Moat Cailin is Stark-held');
+  assert.equal(neckL.gated, false, 'a Lannister host has no leave');
+  assert.ok(neckL.lost > neckN.lost * 3, 'the bogs eat an unwelcome host');
+  assert.ok(lion.days > north.days);
+});
+
+test('the crannogmen will guide a friend through the bogs', () => {
+  const s = fresh();
+  s.holdings.moat_cailin.owner = 'bolton'; // no longer the player's gate
+  const a = host('tully');
+  assert.equal(hasLeave(s, a, CHOKEPOINTS.find((c) => c.id === 'the_neck')), null);
+  s.relations['reed|tully'] = { v: 45 };
+  assert.equal(hasLeave(s, a, CHOKEPOINTS.find((c) => c.id === 'the_neck')), 'guides');
+});
+
+test('the Freys charge for their bridge, and the gold changes hands', () => {
+  const s = fresh();
+  const cp = CHOKEPOINTS.find((c) => c.id === 'green_fork');
+  const a = host('stark', 10000);
+  const t = chokepointToll(s, a, s.holdings.stark.pos, s.holdings.tully.pos, 40);
+  assert.ok(t.gold >= (10000 / 1000) * cp.toll.perThousand * 0.9, 'a host of ten thousand pays for ten thousand');
+});
+
+test('winter doubles what a mountain costs', () => {
+  const s = fresh();
+  const summer = chokepointToll(s, host('lannister'), s.holdings.baratheon.pos, s.holdings.arryn.pos, 40);
+  s.world.season = 'winter';
+  const winter = chokepointToll(s, host('lannister'), s.holdings.baratheon.pos, s.holdings.arryn.pos, 40);
+  assert.ok(winter.losses > summer.losses && winter.days > summer.days);
+});
+
+test('a fleet does not care about mountain passes', () => {
+  const s = fresh();
+  const t = chokepointToll(s, { ...host('greyjoy'), type: 'fleet' }, s.holdings.stark.pos, s.holdings.tully.pos, 40);
+  assert.equal(t.met.length, 0);
+});
+
+test('a lord is told what the road will cost before he takes it', () => {
+  const s = fresh();
+  const w = roadWarnings(s, host('lannister'), s.holdings.lannister.pos, s.holdings.arryn.pos);
+  assert.ok(w.some((x) => /Bloody Gate|Mountains of the Moon/.test(x)), w.join(' | '));
+});
+
+// ── The toll a war takes on a mind ──
+import { psycheTick, stressors, mindLine, stressBand, mindsDigest } from '../public/js/shared/psyche.js';
+
+test('peace and home leave a man steady', () => {
+  const s = fresh();
+  for (let i = 0; i < 6; i++) psycheTick(s, 30);
+  const ned = s.characters.eddard_stark;
+  assert.equal(stressBand(ned), 'steady');
+  assert.equal(mindLine(ned), '');
+});
+
+test('captivity, war and a dead child wear a man down', () => {
+  const s = fresh();
+  const c = s.characters.eddard_stark;
+  c.status = 'imprisoned';
+  s.wars.push({ name: 'The war', status: 'active', attackers: ['lannister'], defenders: ['stark'] });
+  const why = stressors(s, c, 30).map((x) => x.why);
+  assert.ok(why.includes('a captive'));
+  assert.ok(why.some((w) => /war/.test(w)));
+  for (let i = 0; i < 6; i++) psycheTick(s, 30);
+  assert.ok((c.stress ?? 0) > 50, `expected a worn man, got ${c.stress}`);
+  assert.ok(/strain|fraying|breaking/.test(mindLine(c)), mindLine(c));
+});
+
+test('the numbers never reach the player: the model is given behaviour, not figures', () => {
+  const s = fresh();
+  const c = s.characters.eddard_stark;
+  c.stress = 72; c.paranoia = 80;
+  const d = mindsDigest(s, 'stark');
+  assert.ok(/fraying/.test(d));
+  assert.ok(!/72|80/.test(d), 'a stress score must never be written into a prompt');
+});
+
+test('a mind that is breaking is felt by the house, not reported as a stat', () => {
+  const s = fresh();
+  const c = s.characters.eddard_stark;
+  c.stress = 40;
+  c.status = 'imprisoned';
+  let events = [];
+  for (let i = 0; i < 3 && !events.some((e) => e.mind); i++) events = psycheTick(s, 30).events;
+  assert.ok(events.some((e) => e.mind), 'the household should notice');
+  assert.ok(events.every((e) => !/\bstress\b|\d\d\/100/.test(e.text)));
+});
+
+test('a countryside on the move slows the host that marches through it', () => {
+  const s = fresh();
+  const from = s.holdings.stark.pos, to = s.holdings.manderly.pos;
+  assert.equal(roadCongestion(s, from, to), 0, 'a realm at peace has clear roads');
+  s.holdings.manderly.status = 'sacked';
+  s.holdings.manderly.unrest = 90;
+  const jam = roadCongestion(s, from, to);
+  assert.ok(jam > 0.05 && jam <= 0.3, `expected a jammed road, got ${jam}`);
+});
+
+// ── The Citadel's shelves: retrieval instead of invention ──
+import { searchLore, loreFor, loreBlock, loreIndex } from '../server/lore.js';
+
+test('the shelves hold the lore the game ships with', () => {
+  assert.ok(loreIndex().N > 300, 'expected a few hundred passages');
+});
+
+test('a question about the bogs finds the crannogmen, not a Lannister', () => {
+  const hits = searchLore('the Neck Moat Cailin crannogmen bogs', 4);
+  assert.ok(hits.length);
+  assert.ok(/reed|crannog|neck|moat/i.test(hits[0].title + hits[0].text), hits[0].title);
+});
+
+test('what the maester has open on the table follows the game in progress', () => {
+  const s = fresh('lannister');
+  const block = loreBlock(s, { k: 5 });
+  assert.ok(/Lannister/i.test(block), block.slice(0, 200));
+  assert.ok(block.length < 4000, 'the shelves must not crowd out the world');
+});
+
+test('an empty question returns nothing rather than noise', () => {
+  assert.deepEqual(searchLore('   ', 5), []);
+});

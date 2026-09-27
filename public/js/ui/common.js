@@ -76,11 +76,46 @@ export function md(text) {
   if (inList) html += '</ul>';
   return html;
 }
+// The modal is a dialog: screen readers are told so, the page behind it is inert to the tab key, and focus
+// goes into the box and comes back to whatever opened it.
+let lastFocus = null;
 export function modal(html) {
-  $('#modal-box').innerHTML = `<button class="close" data-action="close-modal">✕</button>` + html;
-  $('#modal').classList.remove('hidden');
+  const box = $('#modal-box');
+  lastFocus = document.activeElement;
+  box.innerHTML = `<button class="close" data-action="close-modal" aria-label="Close">✕</button>` + html;
+  const wrap = $('#modal');
+  wrap.classList.remove('hidden');
+  wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
+  const first = box.querySelector('h2, h3'); if (first && !first.id) first.id = 'modal-title';
+  if (first) wrap.setAttribute('aria-labelledby', first.id);
+  // focus the first thing worth acting on, not the ✕
+  (box.querySelector('.btn.primary, input, textarea, select, .btn') || box).focus?.();
 }
-export function closeModal() { $('#modal').classList.add('hidden'); }
+export function closeModal() {
+  $('#modal').classList.add('hidden');
+  $('#modal').removeAttribute('aria-labelledby');
+  if (lastFocus?.isConnected) lastFocus.focus?.();
+  lastFocus = null;
+  document.dispatchEvent(new CustomEvent('wc-modal-closed'));
+}
+
+/**
+ * A question put to the lord in the game's own voice, in place of the browser's grey box.
+ * Resolves true if they assent. Esc, the ✕ and the backdrop all mean no.
+ */
+export function confirmModal(title, body, { yes = 'Do it', no = 'Think again', danger = false } = {}) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (v) => { if (settled) return; settled = true; document.removeEventListener('wc-modal-closed', onClose); closeModal(); resolve(v); };
+    const onClose = () => finish(false);
+    document.addEventListener('wc-modal-closed', onClose);
+    modal(`<h2>${esc(title)}</h2><p style="line-height:1.5">${esc(body)}</p>
+      <div class="settings-actions"><button class="btn ghost" id="cm-no">${esc(no)}</button><button class="btn primary${danger ? ' danger' : ''}" id="cm-yes">${esc(yes)}</button></div>`);
+    $('#cm-no').onclick = () => finish(false);
+    $('#cm-yes').onclick = () => finish(true);
+    $('#cm-yes').focus();
+  });
+}
 
 let saveTimer = null;
 export function saveOrders() {

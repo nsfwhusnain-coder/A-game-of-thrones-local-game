@@ -1,6 +1,9 @@
 // Prompt construction for the simulation. The model is the game engine: it narrates,
 // decides what every other house does, and emits structured changes that the engine applies.
+import { agentCharge } from './agents.js';
 import { threadsDigest, THREADS } from '../public/js/shared/plots.js';
+import { regencyLine } from '../public/js/shared/regency.js';
+import { standing, standingWord } from '../public/js/shared/standing.js';
 import { VOICES, HOUSE_WAYS } from '../public/data/voices.js';
 import { personaFor } from '../public/data/histories.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
@@ -8,6 +11,10 @@ import {
   dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS, spanOf, nearestHolding, roadPos,
 } from '../public/js/shared/world.js';
 import { estimateTokens } from './llm.js';
+import { describeRules } from '../public/js/shared/rules.js';
+import { mindsDigest } from '../public/js/shared/psyche.js';
+import { chokepointDigest } from '../public/js/shared/chokepoints.js';
+import { loreBlock } from './lore.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom, marchDays } from '../public/js/shared/warfare.js';
 import { unitsText } from '../public/js/shared/units.js';
@@ -56,6 +63,14 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
     (put a real choice before the PLAYER when a character or event demands their answer: an offer, a demand, a crisis, a judgement. 2-4 options, each plausible. The player's choice arrives as an order next turn.)
 - {"op":"report","army":ARMY_ID,"at":PLACE,"men":N,"source":"a raven from Lord X / a merchant / a spy","false":true?}
     (FOG OF WAR: the player sees only hosts near their own lands and hosts. Use this to bring them news of distant hosts — stale, exaggerated, or a planted lie with "false":true, e.g. a feint)
+- {"op":"inject_rule","house":HOUSE,"name":"Informants in the Riverlands","kind":"income|expense|food|unrest|prosperity|levies|var","formula":"v.informants * 14 * luck * months","when":"house.treasury > 500","grow":"min(60, v.informants + 6 * months)","vars":{"informants":4},"note":"why it exists","untilTurn":N}
+    THE ONE OP THAT WRITES NEW RULES. When the story creates something the engine has no number for — a smuggling ring, a network of informants, a cult's tithe, a new tax on the river trade, a plague that eats grain — do not merely narrate it: give it a formula, and the steward's ledger will carry it every moon from now on, in the save, for the rest of the game.
+    "formula" is arithmetic ONLY, in a tiny sandboxed language. No JavaScript, no function calls beyond the list below, no assignment, no quotes.
+    It may read: months, days, luck (≈0.8-1.2), turn, year; season.summer/autumn/winter/spring/harshness (1 or 0, harshness 0-1); house.treasury, house.debt, house.income, house.food, house.levies, house.men_at_arms, house.guard, house.ships, house.gross, house.holdings, house.vassals, house.at_war, house.wars, house.prosperity, house.unrest, house.population, house.soldiers, house.is_paramount; and v.<your own variables declared in "vars">.
+    Functions: min max abs round floor ceil sqrt log sign clamp(x,lo,hi) lerp(a,b,t) soft(x) if_(cond,a,b). Comparisons yield 1 or 0, so "house.at_war * 200" is "200 while at war".
+    "grow" (optional) updates the FIRST variable in "vars" each moon, so an invented thing can build up or wither: a network recruits, a debt compounds, a plague burns out.
+    Units by kind: income/expense = dragons that moon; food = moons of stores; unrest/prosperity = points on every holding; levies = men; var = a bare quantity other rules read.
+    Each is capped per moon (income/expense to a fraction of the house's gross, unrest 8, prosperity 6) — invent freely, but the engine still owns the physics. Max 12 live rules per house. To end one: {"op":"inject_rule","house":HOUSE,"id":"informants_in_the_riverlands","status":"end"}.
 - {"op":"chronicle","text":"one line recording a truly significant, lasting fact (deaths of great lords, wars, crowns, betrayals)"}`;
 
 // Compact schema for conversations (small models drown in the full list)
@@ -216,6 +231,11 @@ export function playerSheet(state) {
   lines.push(`PLAYER HOUSE: ${p} — House ${h.name}${h.title ? ', ' + h.title : ''}. Words: "${h.words}". Seat: ${h.seat ? state.holdings[h.seat].name : 'none'}. Liege: ${h.liege || 'none'}.`);
   const lord = h.lord ? state.characters[h.lord] : null;
   lines.push(`Head of house (the player acts as them): ${lord ? `${lord.name} (${lord.id})` : 'unknown'}.`);
+  // who truly holds the seal, and how the house stands — both are the engine's word, not the story's
+  const rg = regencyLine(state, p);
+  if (rg) lines.push(`REGENCY: ${rg} The player acts as the regent. Bannermen obey a regent slowly and grudgingly; rivals within the house circle.`);
+  const st = standing(state, p);
+  if (st) lines.push(`Standing of the house: ${st.score}/100 — ${standingWord(st)} (lands ${st.lands}, swords ${st.might}, gold ${st.wealth}, sway ${st.sway}, blood ${st.blood}, good order ${st.order}).`);
   if (state.meta.turn < 3) { const b = briefFor(h, state); lines.push(`House situation: ${b.situation} Strengths: ${b.strengths.join('; ')}. Weaknesses: ${b.weaknesses.join('; ')}.`); }
   lines.push(`Known figures (as last reported): ${figuresLine(h)}`);
   const pr = project(state, p);
@@ -233,6 +253,10 @@ export function playerSheet(state) {
   lines.push('Holdings: ' + holdings.map((x) => `${x.id} (${x.status}, unrest ${x.unrest}, prosperity ${x.prosperity}${x.garrison != null ? ', garrison ' + x.garrison : ''})`).join('; '));
   const chars = Object.values(state.characters).filter((c) => c.house === p && c.alive);
   lines.push('Members & retainers: ' + chars.map((c) => `${c.name} [${c.id}]${c.status !== 'free' ? ' (' + c.status + ')' : ''} @${placeName(state, c.loc)}`).join('; '));
+  const minds = mindsDigest(state, p);
+  if (minds) lines.push(minds);
+  const live = describeRules(state, p);
+  if (live.length) lines.push('CUSTOMS OF THIS REALM that you yourself wrote into the world (they are settled every moon; honour them in the story, change or end them when the story says so):\n' + live.map((x) => '  ' + x).join('\n'));
   const letters = (state.ravens || []).slice(0, 5);
   if (letters.length) lines.push('Letters the player has received recently:\n' + letters.map((r) => `  [${r.date}] from ${r.fromName}: ${r.text}`).join('\n'));
   const pending = (state.decisions || []).filter((d) => d.status === 'pending');
@@ -412,7 +436,7 @@ function greatMatters(state) {
 }
 function nearestPlace(state, pos) { let best = null, d = Infinity; for (const h of Object.values(state.holdings)) { const x = Math.hypot(h.pos[0] - pos[0], h.pos[1] - pos[1]); if (x < d) { d = x; best = h.id; } } return best; }
 
-export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg, until = null, { engineEvents = null, dateFrom = null } = {}) {
+export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg, until = null, { engineEvents = null, dateFrom = null, agent = null, brief = '' } = {}) {
   const sc = SCENARIOS[state.meta.scenario];
   const span = spanOf(spanKey);
   const budget = Math.max(4000, cfg.contextTokens - cfg.maxTokens - 1500);
@@ -457,8 +481,14 @@ Only use ids that exist in the tables below. Change only what the story justifie
     engineEvents?.length ? `WHAT THE ENGINE HAS ALREADY SET DOWN FOR THESE DAYS — true, and already in the chronicle as written; do NOT write them again. Write around them: what led to them, what people said and did about them, what they set in motion; and the rest of the realm's doings. Never contradict them (who arrived where, and on which day).\n${engineEvents.filter((e) => !e.bg).slice(0, 30).map((e) => `- day ${e.day}: ${e.title} — ${String(e.text || '').slice(0, 180)}`).join('\n')}` : '',
     ordersBlock(state, orders),
     (state.storyThreads || []).length ? 'THREADS THE PLAYER FOLLOWS (update them in "threads")\n' + state.storyThreads.map((t) => `- ${t.title}: ${t.last}`).join('\n') : '',
+    // the Maester is given the true matrix of hard places, so grounding is quoted, not invented
+    agent === 'maester' ? loreBlock(state, { k: 6 }) : '',
+    agent === 'maester' ? 'THE HARD PLACES OF WESTEROS (engine truth: these prices are real and are charged whether or not you mention them)\n' + chokepointDigest(state) : '',
     greatMatters(state),
     todaysBeats(state, span.days),
+    // The charge comes LAST so that every agent of the swarm shares the same prompt prefix and the
+    // model server can reuse its cache between them: only this final block differs.
+    agent ? agentCharge(agent, span, brief) :
     `Now simulate the ${span.label}. Reply with the JSON object only: {"summary":"...","events":[...],"changes":[...]} — complete and valid.`,
   ].filter(Boolean).join('\n\n');
   return [{ role: 'system', content: system }, { role: 'user', content: user }];

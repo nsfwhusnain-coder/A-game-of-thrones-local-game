@@ -724,3 +724,71 @@ body:has(#window:not(.hidden)) .mapmodes { right: calc(min(30rem, 36vw) + 1.6rem
 .chat-btns { display: flex; flex-direction: column; gap: 0.3rem; }
 .turn-until { font-size: 0.72rem; color: var(--muted); max-width: 15rem; line-height: 1.25; }
 .turn-until b { color: var(--gold2); font-weight: normal; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Accessibility, focus and motion  —  added in the AAA pass
+   The interface was mouse-only: buttons showed nothing at all under the tab
+   key, dialogs told screen readers nothing, and only banners honoured a
+   reduced-motion preference. All three are fixed here.
+   ═══════════════════════════════════════════════════════════════════════ */
+:where(button, a, [tabindex], input, select, textarea):focus-visible {
+  outline: 2px solid var(--gold2);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+/* the mouse must not drag focus rings around behind it */
+:where(button, a):focus:not(:focus-visible) { outline: none; }
+.btn.danger { border-color: var(--red); color: #ffd5cd; background: linear-gradient(color-mix(in srgb, var(--red) 55%, #1a0e0b), color-mix(in srgb, var(--red) 25%, #140a08)); }
+.btn.danger:hover { border-color: #ff8a78; color: #fff; }
+.skip-link { position: absolute; left: -999px; top: 0; z-index: 999; background: var(--panel-solid); color: var(--gold2); padding: 0.5rem 0.9rem; border: 1px solid var(--gold); }
+.skip-link:focus { left: 0.5rem; top: 0.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── the regency note under the ruler's name ── */
+.regency-note { display: block; font-family: var(--serif); font-size: 0.66rem; color: var(--gold); line-height: 1.25; margin-top: 0.15rem; border-top: 1px solid var(--line); padding-top: 0.15rem; }
+.regency-note.warn { color: #e8a060; }
+
+/* ── the standing of the house (Realm window) ── */
+.standing .standing-score { font-family: var(--display); color: var(--gold2); font-size: 0.95rem; margin-bottom: 0.4rem; }
+.standing .standing-score b { font-size: 1.6rem; color: var(--gold2); }
+.standing .standing-score span { color: var(--muted); font-size: 0.78rem; margin-left: 0.3rem; }
+.standing-bars { display: grid; gap: 0.25rem 0.7rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.standing-bars .sb { display: grid; grid-template-columns: 4.2rem 1fr 2rem; align-items: center; gap: 0.4rem; font-size: 0.74rem; }
+.standing-bars .sb-k { color: var(--muted); font-family: var(--display); letter-spacing: 0.05em; }
+.standing-bars .sb-v { text-align: right; color: var(--gold2); font-variant-numeric: tabular-nums; }
+
+/* ── the end of the story ── */
+.outcome { text-align: center; }
+.outcome-banner { width: 4.5rem; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.7)); margin-bottom: 0.4rem; }
+.outcome h2 { font-size: 1.5rem; }
+.outcome.win h2 { color: var(--gold2); text-shadow: 0 0 22px rgba(201,164,74,0.45); }
+.outcome.loss h2 { color: #e0786a; text-shadow: 0 0 22px rgba(176,58,46,0.35); }
+.outcome-text { line-height: 1.6; font-size: 1rem; max-width: 34rem; margin: 0.5rem auto 1rem; }
+.outcome-ledger { text-align: left; max-width: 26rem; margin: 0 auto 1rem; }
+.outcome .report-actions { justify-content: center; }
+
+/* ── smaller screens: the HUD stops fighting the map ── */
+@media (max-width: 860px) {
+  .drawer { width: min(92vw, 24rem); }
+  #hud-player .action-ring { grid-template-columns: repeat(4, 3rem); }
+  #hud-player .player-name { max-width: 8rem; }
+  .res-row .res:nth-child(n+5) { display: none; }
+  .standing-bars { grid-template-columns: 1fr; }
+  .window, .sheet { width: min(92vw, 26rem); }
+}
+
+/* ── how to play ── */
+.help-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.6rem; }
+.help-cols p { line-height: 1.55; }
+.help-cols ul { padding-left: 1.1rem; margin: 0.3rem 0; }
+.help-keys { grid-template-columns: auto 1fr; gap: 0.25rem 0.8rem; align-items: baseline; }
+.help-keys kbd { font-family: var(--display); font-size: 0.72rem; background: var(--panel2); border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 3px; padding: 0.08rem 0.4rem; color: var(--gold2); white-space: nowrap; }
+@media (max-width: 900px) { .help-cols { grid-template-columns: 1fr; } }
