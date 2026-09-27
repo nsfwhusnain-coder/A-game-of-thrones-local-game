@@ -769,7 +769,11 @@ function applyOne(state, ch, ctx) {
           // no one crosses the realm in a day: a far move is a journey, taken on the road
           const days = Math.max(2, Math.round(miles / 38));
           if (c.travel?.to !== l) { c.travel = { to: l, days, left: days, since: date, from: [...(roadPos(state, c) || here)] }; out.push(`sets out for ${placeName(state, l)} (~${days} days)`); }
-        } else { c.loc = l; delete c.travel; out.push((army ? 'travels with ' : 'now at ') + placeName(state, l)); }
+        } else {
+          c.loc = l; delete c.travel;
+          // placeName already says "with The King's progress" for a host, so do not say "with" twice
+          out.push(l.startsWith('army:') ? `travels ${placeName(state, l)}` : `now at ${placeName(state, l)}`);
+        }
       }
       if (ch.title) { c.title = ch.title; out.push('now ' + ch.title); }
       if (ch.status && ch.alive !== false) { c.status = ch.status; out.push(ch.status); }

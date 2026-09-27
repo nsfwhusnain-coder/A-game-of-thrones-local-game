@@ -864,3 +864,27 @@ test('a countryside on the move slows the host that marches through it', () => {
   const jam = roadCongestion(s, from, to);
   assert.ok(jam > 0.05 && jam <= 0.3, `expected a jammed road, got ${jam}`);
 });
+
+// ── The Citadel's shelves: retrieval instead of invention ──
+import { searchLore, loreFor, loreBlock, loreIndex } from '../server/lore.js';
+
+test('the shelves hold the lore the game ships with', () => {
+  assert.ok(loreIndex().N > 300, 'expected a few hundred passages');
+});
+
+test('a question about the bogs finds the crannogmen, not a Lannister', () => {
+  const hits = searchLore('the Neck Moat Cailin crannogmen bogs', 4);
+  assert.ok(hits.length);
+  assert.ok(/reed|crannog|neck|moat/i.test(hits[0].title + hits[0].text), hits[0].title);
+});
+
+test('what the maester has open on the table follows the game in progress', () => {
+  const s = fresh('lannister');
+  const block = loreBlock(s, { k: 5 });
+  assert.ok(/Lannister/i.test(block), block.slice(0, 200));
+  assert.ok(block.length < 4000, 'the shelves must not crowd out the world');
+});
+
+test('an empty question returns nothing rather than noise', () => {
+  assert.deepEqual(searchLore('   ', 5), []);
+});

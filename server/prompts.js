@@ -14,6 +14,7 @@ import { estimateTokens } from './llm.js';
 import { describeRules } from '../public/js/shared/rules.js';
 import { mindsDigest } from '../public/js/shared/psyche.js';
 import { chokepointDigest } from '../public/js/shared/chokepoints.js';
+import { loreBlock } from './lore.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom, marchDays } from '../public/js/shared/warfare.js';
 import { unitsText } from '../public/js/shared/units.js';
@@ -481,6 +482,7 @@ Only use ids that exist in the tables below. Change only what the story justifie
     ordersBlock(state, orders),
     (state.storyThreads || []).length ? 'THREADS THE PLAYER FOLLOWS (update them in "threads")\n' + state.storyThreads.map((t) => `- ${t.title}: ${t.last}`).join('\n') : '',
     // the Maester is given the true matrix of hard places, so grounding is quoted, not invented
+    agent === 'maester' ? loreBlock(state, { k: 6 }) : '',
     agent === 'maester' ? 'THE HARD PLACES OF WESTEROS (engine truth: these prices are real and are charged whether or not you mention them)\n' + chokepointDigest(state) : '',
     greatMatters(state),
     todaysBeats(state, span.days),
