@@ -1,0 +1,144 @@
+# 16 · Roadmap: work packages
+
+> The order of work, with acceptance criteria. Each work package (WP) is sized for one focused agent session or a few.
+> **Definition of done (every WP):** code + tests + docs updated (this GDD's relevant section marked *implemented* with
+> the commit), `npm run check` and `npm test` green on Windows and Ubuntu in CI, screenshots attached for UI work, no
+> regression in the scenario tests ([15](15-qa-tooling.md) §2), and a short entry in `docs/CHANGELOG.md`.
+> Sizes: **S** ≈ a day, **M** ≈ 2–4 days, **L** ≈ a week+ of agent work.
+
+---
+
+## Phase A — Stabilise the current build (so the owner can play while the rebuild happens)
+
+These patch the *existing* architecture; they are cheap and their tests carry over to the rebuild.
+
+| WP | Title | Fixes | Size | Acceptance |
+|---|---|---|---|---|
+| A1 | Windows boot: `fileURLToPath` everywhere | B-01 | S | server starts on Windows; `saves/` created in the repo; every `scripts/*.js` uses the helper |
+| A2 | Tests pass on Windows + CI workflow (`ci.yml`) | B-30 | S | matrix green (ubuntu + windows, Node 20/22) |
+| A3 | Swarm triage: the Bard gets the engine's applied receipts (`briefFromApplied`); the `OUTPUT FORMAT` block is agent-specific (not in the shared system prompt when an agent is set); default `swarm: 'lean'` | B-03, B-04, B-05 (partial) | S | a mock turn's Bard brief contains applied lines; the Hand's schema asks for ops only |
+| A4 | Retinues respect duty: no journeys for called/answered/serving vassal lords, the besieged, captives, canon-locked | B-10 | S | `no-feasts-at-war` scenario |
+| A5 | Late banners follow the main host wherever it is (not only while it marches) | B-02 | S | `muster-one-host` scenario (old architecture version) |
+| A6 | Guards: `army_update` refused on the player's hosts from the story; NPC `figure` changes to levies/menAtArms capped at ±25 % per turn unless caused by an engine event; status text may not overwrite engine states | B-08, B-09, B-20 | S | `player-hosts-protected`, `vassal-figures-protected` |
+| A7 | The King's progress: arrival beat fires on arrival; characters travel with the party (no `loc` ops); canon lock on `royal_progress` | B-06, B-07 | M | `kings-progress` |
+| A8 | Natives pass chokepoints free; island houses need ships (a simple rule: contingents from island seats wait for transport or use their own ships) | B-11 | M | `natives-pass-free`, `islands-need-ships` |
+| A9 | No spoilers in the stop reason / HUD | B-18 | S | `no-spoilers` |
+| A10 | Pronouns from `sex`; nature tags from explicit scales for the 50 characters of [08](08-characters-politics.md) §2.3 | B-21, B-22 | S | `pronouns`, `natures` |
+| A11 | Canon dates reordered per [10](10-narrative-events.md) §4 in `plots.js` | B-19 | S | `canon-order` (old engine) |
+
+## Phase B — The Truth Pipeline ([03](03-architecture.md), [04](04-ai-system.md))
+
+| WP | Title | Depends | Size | Acceptance |
+|---|---|---|---|---|
+| B1 | Engine foundations: `engine/rng.js` (seeded, in the save), day numbers, `data/balance.js`, id/alias tables, lint rule against `Math.random` in the engine | A2 | M | replay of a mock turn is byte-identical |
+| B2 | State v3: Party model, Activity system, `movement.js` (server-side routes, shared pathfinding), migration v2→v3 with a fixture save | B1 | L | invariants 1–4, 8 of 03 §14 hold every turn in the soak; the v2 fixture loads |
+| B3 | Fact log, fact kinds + engine text templates (correct pronouns), turn records in files, snapshots, multi-level undo | B2 | M | every engine subsystem emits facts, not events; undo 3 turns works; ironman disables undo |
+| B4 | Verb registry; port every existing action (`act()` kinds, `orders.js executeActions`, `court.js`) to verbs with `legal/cost/start/receipt` | B3 | L | all old actions reachable by verb; receipts for all |
+| B5 | AI client: `response_format` json_schema; providers `mock`/`replay`/`openai`; per-call routing and `id_slot`; CJK filter; schema builder + alias canonicaliser with the prefix rule | B1 | M | `ai-contract` tests; the prefix-collision fixture resolves `the_wall` → `castle_black` |
+| B6 | Order Interpreter v2: deterministic pre-parser, constrained call, receipts, clarifications; `bench/suites/interpret` (200 labelled orders) | B4, B5 | L | pre-parser ≥ 60 % exact on the suite in CI; 100 % receipts; bench runner works on mock |
+| B7 | Minds: salience, context builder, constrained intents, retry-with-refusal, house-ways behaviour trees (the fallback and the mock); `bench/suites/mind` | B4, B5 | L | Q4 on mock; every great house has a tree; mind calls recorded in the turn record |
+| B8 | Narrator: fact clusterer (stories), constrained narration, validator (names/places/numbers/anachronisms/game words/script), single-event regeneration, engine-text fallback; `bench/suites/narrate` | B3, B5 | L | adversarial fixtures all caught; `story-matches-map` passes on mock + replay |
+| B9 | Knowledge: news travel, sight, reports, rumours, feints; player view filtered server-side | B3 | M | invariants 9–10; the client never receives an unseen host's true position |
+| B10 | Commitments + Audience v2 (outcome schema) + letters as entities + council/advisor calls | B4, B5, B9 | L | `audience-binds`, `officers-know-truth` |
+| B11 | Jump v2: segments, interrupts, SSE streaming, *Stop here*; retire `runSwarm`, `server/agents.js`, the old `advance()` | B6–B10 | L | a 7-day mock jump ≤ 1.5 s engine time; SSE segments render in the client; stop-here reproduces facts up to the day |
+| B12 | Director + `data/hooks.js` (~80) | B7 | M | liveliness guarantees (09 §9) on mock |
+| B13 | Memory v2: relevant-memory builder (BM25 over facts + summaries), Consolidator from facts, threads from facts | B3, B5 | M | memory block within budget; no free-model threads |
+
+## Phase C — War and money ([06](06-economy.md), [07](07-military.md))
+
+| WP | Title | Depends | Size | Acceptance |
+|---|---|---|---|---|
+| C1 | Economy rebalance: populations, formulas, prices, the §5.2 targets, lenders (Iron Bank, Lannister receivables), `balance-sim.js` | B1 | L | Q10 |
+| C2 | Muster state machine v2: calls, answers, gathering, contingents with rendezvous, host card data (present / on the road / expected) | B2, B4 | L | `muster-one-host`; ETAs within ±2 days of actual in the soak |
+| C3 | Supply and logistics: merge branch `arena/01a0e08c-…` `logistics.js` adapted to parties; forage, devastation, disease | C2 | M | a host marched twice through a stripped province starves; the war room shows rations in days |
+| C4 | Battle v2: stances, standing orders, surprise/feints, lords' fates with canon protection, battle report facts | C2, B9 | M | unit tests for the Green Fork, Whispering Wood, Camps set-pieces (canon-like outcomes with canon numbers ≥ 70 % of seeds) |
+| C5 | Sieges v2: fortress table, terms, storm, relief, treachery | C4 | M | Storm's End cannot be starved without a fleet; terms accepted by a craven castellan |
+| C6 | The sea: ships, embark/land, storms, blockade, coastal raids, sea battles | C2 | L | ironborn raid the Stony Shore by sea; Stannis's fleet carries a host |
+| C7 | Sellswords, outlaws, the Watch's recruits, the free folk host, the khalasar rules | C2 | M | hired companies desert when unpaid; the khalasar cannot embark |
+| C8 | War state: goals, score, peace terms, cold wars | C4 | S | peace offered when score is lopsided |
+
+## Phase D — Canon and story ([08](08-characters-politics.md), [09](09-living-world.md), [10](10-narrative-events.md))
+
+| WP | Title | Depends | Size | Acceptance |
+|---|---|---|---|---|
+| D1 | Beat engine v2 (schema, triggers, alternates, lapses, canon locks, canon gravity setting); port the 11 threads | B3, B4 | L | `kings-progress`, `canon-order` on the new engine |
+| D2 | The full canon beat set (10 §4: ~60 beats) | D1, C2, C4 | L | Q9 over 24 moons on 3 non-involved houses |
+| D3 | Matters catalogue (~70) from `petitions.js` + beats; model cannot create matters freely | D1 | M | every template renders and resolves; B-28 gone |
+| D4 | Life: canon death windows, protected characters, regents data, health/wounds, ageing | B2 | M | no canon lord dies early under Canon gravity in the soak; `chooseRegent` never picks another branch |
+| D5 | House openings (10 §5) + briefs for every playable house | — | M | every house has a brief; the §5 houses hand-written |
+| D6 | Goals/agendas (~90) + house-ways trees for all great and major houses | B7 | L | every salient actor has ≥ 1 goal |
+| D7 | Style bible, few-shots and `data/anachronisms.js` | B8 | S | narration validator uses the data |
+| D8 | Living society: retinue scheduler v2, courts and calendars, the progress as a first-class party, guests at seats | B2, D1 | M | 09 §3 behaviours visible in the soak (≥ 5 journeys a moon realm-wide) |
+
+## Phase E — The map ([11](11-map-visuals.md))
+
+| WP | Title | Depends | Size | Acceptance |
+|---|---|---|---|---|
+| E1 | Camera: framing, bounds, zoom clamp, cursor zoom, LOD framework | — | M | B-29 camera items; `dev/map-lod.html` at L0–L3 |
+| E2 | Political overlay restyle + map modes (Diplomacy visibly distinct; Knowledge, War, Food) + legend | E1 | M | each mode distinct at L0 (pixel-diff test vs Realms > threshold) |
+| E3 | Terrain palette, forest impostors (no low-poly trees), the snow line | E1 | L | L3 shows impostor trees; winter shifts the snow line |
+| E4 | Labels: priority placement, no overlaps, halos; tooltip clearing | E1 | M | label-overlap assertion passes; B-31 gone |
+| E5 | Party tokens, clustering, figures (hosts, retinues, the progress, envoys, fleets), routes, trails | B2, E1 | L | `dev/tokens.html`; the progress visible from L0 |
+| E6 | Holding states and effects (siege, smoke, battle markers, weather) | E5 | M | fixture holdings in each state render |
+| E7 | Ambient life restyle + graphics presets + performance budgets | E5 | M | draw-call budget in SwiftShader test; Fast preset disables ambient |
+| E8 | Playback choreography (keyframes, day counter, facts on their day, camera rules) | B11, E5 | M | `dev/playback.html` fixture plays in order; reduced-motion cuts |
+
+## Phase F — The interface ([12](12-ui-ux.md))
+
+| WP | Title | Depends | Size | Acceptance |
+|---|---|---|---|---|
+| F1 | Design tokens, components, SVG-only icons (remove emoji from markup) | — | M | checklist items 4, 12, 19 |
+| F2 | New layout: top bar, 4-item strip, corners, chronicle panel; the Book with tabs; settings tabs | F1 | L | checklist 1, 2, 15, 17 |
+| F3 | Command composer v2: receipts, clarification chips, counsel ideas, polish | B6, F2 | M | checklist 8, 9 |
+| F4 | Audience, letters, council panels v2 | B10, F2 | M | letters in flight shown; outcome chips |
+| F5 | Cards (character, holding, host, house) + map context menu | F2, E5 | M | every card opens from the map and from names in text |
+| F6 | Matters as sealed letters + pins | D3, F2 | S | silence shown as an option; days left |
+| F7 | **Portraits, family trees, who-is-who** (12 §15) — keep and improve | F5 | L | checklist 21–24; family resemblance and age breakpoints in `dev/portraits.html` |
+| F8 | Title, house choice, loading, end, onboarding hints, help rewrite | F2 | M | the main-flow Playwright test passes with no console errors |
+| F9 | Accessibility, keyboard map, 1366/1024 layouts, checklist automation (`scripts/visual.js`) | F2–F8 | M | Q8 |
+
+## Phase G — Content ([13](13-content-data.md))
+
+| WP | Title | Depends | Size | Acceptance |
+|---|---|---|---|---|
+| G1 | Houses to ~260 with placeable seats | — | L | `check-data` rules 1, 3 |
+| G2 | Characters to ~700 with sex, born, natures, looks, voices, family links | G1, A10 | L | rule 2; every great house at its minimum |
+| G3 | Holdings/towns/places to ~300/~120 | G1 | M | rule 3 |
+| G4 | Happenings to ~400 | — | M | every region × season covered |
+| G5 | Scenario data rebuild (figures from 06/07, starting parties, pacts) | C1, C2, G1 | M | balance sim + muster table gates |
+
+## Phase H — Sound, polish and handoff
+
+| WP | Title | Depends | Size | Acceptance |
+|---|---|---|---|---|
+| H1 | Music states, fact sounds, narration read-aloud, voice casting coverage | B11 | M | `audio-map` tests |
+| H2 | Weaver re-enabled, schema-constrained (optional, off by default) | B5 | S | DSL checks + a schema |
+| H3 | Bench v2 runner + suites + `npm run playtest` report + coherence report | B6–B8 | M | runs on mock in CI; produces the owner's report format |
+| H4 | `scripts/finetune/` recipe (dataset builder from logs, Unsloth QLoRA config, GGUF export, llama-swap profile) | H3 | M | dry-run on a tiny fixture dataset in CI (no training) |
+| H5 | Docs: README rewritten; `docs/HANDOFF.md` (model guidance, llama-swap flags, owner checklist 15 §8, known limits); superseded docs marked | all | M | the owner can follow the checklist without asking |
+
+## Order and parallelism
+
+```
+A (all, small) ──► B1 ─► B2 ─► B3 ─► B4 ─┬─► B6 ─┐
+                   └► B5 ────────────────┼─► B7 ─┤
+                                          ├─► B8 ─┼─► B11 ─► B12, B13
+                                          ├─► B9 ─┤
+                                          └─► B10 ┘
+          C1 (after B1) ─────────────► C2 ─► C3 ─► C4 ─► C5, C8;  C6, C7 after C2
+          D1 (after B4) ─► D2, D3, D6, D8;  D4 after B2;  D5, D7 any time
+          E1 ─► E2, E3, E4;  E5 after B2 ─► E6, E7, E8 (E8 after B11)
+          F1 ─► F2 ─► F3..F8 ─► F9
+          G any time after the schemas settle (G1/G2 after A10, B2)
+          H after B11
+```
+
+**First milestone ("Truthful turn", end of B11 + A + C2):** a Stark game where the muster becomes one host, the King's
+progress arrives on the map when the chronicle says it does, every card is bound to facts, and a week resolves in one
+narrator call plus a handful of minds.
+
+**Second milestone ("Looks the part", E1–E5 + F1–F7):** the Pax-style layout, the restyled map with visible parties, the
+portraits and family trees improved.
+
+**Third milestone ("The whole war", C3–C8 + D1–D8 + G):** the War of the Five Kings plays out under Canon gravity with
+the player able to change any of it.

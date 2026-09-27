@@ -233,6 +233,8 @@ config.json            your model settings (git-ignored)
 The map geography is derived from *A Song of Ice and Fire Speculative World Map*, GIS files by **cadaei**, based on the maps of **Tear** (Cartographers' Guild) and **theMountainGoat**, released under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) via [mapbox/GOT-Inspired-Map](https://github.com/mapbox/GOT-Inspired-Map). The data was projected, simplified and annotated for this game. The derived files (`data-src/got-inspired-map/`, `public/data/atlas.js`) are shared under the same licence and must not be used commercially. The world of A Song of Ice and Fire, its places and its characters are © George R. R. Martin. This is a non-commercial fan project.
 - **Scenarios:** add an entry to `public/data/scenarios.js`.
 
+**The plan for the game's future is the Game Design Document in [docs/gdd/](docs/gdd/README.md)** (vision, audit, architecture, AI, systems, content, map, interface, QA and a work-package roadmap). It supersedes the older documents below where they disagree.
+
 See [docs/PAX-HISTORIA.md](docs/PAX-HISTORIA.md) for the swarm and the runtime rule language (how the
 model designs mechanics rather than only narrating them), [docs/DESIGN.md](docs/DESIGN.md) for the design contract (which systems the engine owns and which the story
 model owns), [docs/REVIEW.md](docs/REVIEW.md) for a full code and design review with the bugs found and fixed,

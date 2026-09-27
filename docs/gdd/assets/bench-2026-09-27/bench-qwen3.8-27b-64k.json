@@ -1,0 +1,65 @@
+{
+  "model": "qwen3.8-27b-64k",
+  "A": [
+    {
+      "ms": 13930,
+      "text": "{\n  \"actor\": \"tywin_lannister\",\n  \"intent\": \"send_letter\",\n  \"target\": \"casterly_rock\",\n  \"with\": \"tyrion\",\n  \"public_face\": \"private\",\n  \"reason\": \"The insult to my house is a stain that must be wiped with blood and coin. I will not let the girl Tully think she can take my son and keep him. I will send a demand for his return and a reminder that the West is vast and my purse is deeper,\"}",
+      "tps": 34.51315961522597,
+      "pp": 615.5021981102673,
+      "usage": {
+        "completion_tokens": 124,
+        "prompt_tokens": 393,
+        "total_tokens": 517,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    }
+  ],
+  "B": [
+    {
+      "ms": 5659,
+      "text": "{\n  \"actions\": [\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"banners_of_stark\",\n      \"destination\": \"moat_cailin\",\n      \"men\": 6300,\n      \"note\": \"Moving the 6,300 sworn bannermen from Winterfell to join Robb Stark at Moat Cailin to unify the northern host.\"\n    },\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"jon_snow\",\n      \"destination\": \"the_twins\",\n      \"men\": 3,\n      \"note\": \"Sending Jon Snow to the Wall (The Twins) with a small escort of 3 men.\"\n    }\n  ],\n  \"unclear\": \"None. All orders map directly to available subjects and destinations.\"\n}",
+      "tps": 37.98458098721731,
+      "pp": 594.8736760962406,
+      "usage": {
+        "completion_tokens": 196,
+        "prompt_tokens": 240,
+        "total_tokens": 436,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    }
+  ],
+  "C": [
+    {
+      "ms": 12788,
+      "text": "{\n  \"events\": [\n    {\n      \"fact\": 1,\n      \"headline\": \"The March to Moat Cailin\",\n      \"text\": \"The camp at Winterfell rose in a clamor of leather creaking and iron striking stone. The road to the south was dry and hard, the dust kicking up in long plumes that caught the pale late-summer sun. Lord Jon Umber stood atop his horse, his eyes scanning the columns of six thousand men—Umber, Glover, Bolton, Norrey, and Liddle—until the dust swallowed them. Roose Bolton rode near the front, his face a mask of cold stone; he said nothing, only watched the road ahead. The banners snapped in the wind, and the silence of the march grew heavy as they turned their backs to the Keep.\",\n      \"pov\": \"Jon Umber\"\n    },\n    {\n      \"fact\": 2,\n      \"headline\": \"The Long Road to the Wall\",\n      \"text\": \"Jon Snow watched the grey keep of Winterfell shrink behind him as he rode out of the gates. The air was thin and cold, the wind biting at his face. He shifted in his saddle, feeling the weight of the letter from Benjen Stark against his hip. Ghost, the pale direwolf, ran ahead of him, his paws striking the frozen earth with a soft, rhythmic thud. Six men of the household rode alongside, their faces grim, their eyes fixed on the distant grey line of the Wall.\",\n      \"pov\": \"Jon Snow\"\n    },\n    {\n      \"fact\": 3,\n      \"headline\": \"The Towers of Moat Cailin\",\n      \"text\": \"Robb Stark stood on the causeway, his hands white with the cold of the late summer air. The fallen stone was cleared, the path open and stark. The three standing towers, the eyes of the fort, were manned with archers, their arrows nocked and ready. The wind whistled through the gaps in the walls, a low, mournful sound. Robb looked south, toward the darkening horizon, but there was no word from the south, only the silence of the road and the watchful eyes of his men.\",\n      \"pov\": \"Robb Stark\"\n    }\n  ]\n}",
+      "tps": 40.81009674441534,
+      "pp": 767.963327967893,
+      "usage": {
+        "completion_tokens": 501,
+        "prompt_tokens": 323,
+        "total_tokens": 824,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    }
+  ],
+  "C_free": {
+    "ms": 13838,
+    "text": "{\n  \"events\": [\n    {\n      \"fact\": 1,\n      \"headline\": \"The March South\",\n      \"text\": \"The sound of boots on dry stone was a low, constant grind, like a mill wheel turning. Lord Jon Umber sat atop his grey mare, his face a tight mask of concentration, his eyes fixed on the road ahead. Beside him, Roose Bolton rode in silence, his armor dull and plain, offering no words, no commands, only the weight of his presence. The Umber men, three thousand strong, moved as one body, their banners snapping in the thin autumn air. Glover, Norrey, and Liddle followed in the wake, the banners of the sworn lords flapping against the cold wind. There was no cheer, no song, only the rhythmic thud of hooves on the hard-packed road, a steady pulse that would carry them south to Moat Cailin to join the young King in the North.\",\n      \"pov\": \"Roose Bolton\"\n    },\n    {\n      \"fact\": 2,\n      \"headline\": \"The Long Road North\",\n      \"text\": \"The cold was a physical thing, a sharp needle in the air. Jon Snow pulled the rein on his horse, feeling the weight of the saddlebag against his thigh. Inside, Benjen Stark’s letter lay folded, the parchment stiff with the cold. Six men of the household trotted alongside him, their breath pluming in the freezing air. Ahead, Ghost moved like a ghost himself, a white blur against the grey sky, his ears pricked forward, sensing the wind before he felt it. Jon did not look back at Winterfell. He looked only forward, toward the darkness of Castle Black, where the oath waited.\",\n      \"pov\": \"Jon Snow\"\n    },\n    {\n      \"fact\": 3,\n      \"headline\": \"The Causeway Clear\",\n      \"text\": \"The wind howled through the three towers, a low, mournful sound that echoed off the stone. Robb Stark stood on the ground, his hands clasped behind his back, watching the archers in the towers. They were steady, their bows raised, their eyes fixed on the road. The causeway lay empty, the fallen stone cleared, the path open and stark. There was no sound of battle, no cry of alarm, only the wind. The silence was heavy, a weight that pressed against his chest. He waited. The South was far away, and the news had not yet reached him.\",\n      \"pov\": \"Robb Stark\"\n    }\n  ]\n}",
+    "tps": 41.61678680965638,
+    "pp": 770.1607486678906,
+    "usage": {
+      "completion_tokens": 559,
+      "prompt_tokens": 349,
+      "total_tokens": 908,
+      "prompt_tokens_details": {
+        "cached_tokens": 91
+      }
+    }
+  }
+}

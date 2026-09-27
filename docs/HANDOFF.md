@@ -1,5 +1,8 @@
 # Handoff: continuing development of Westeros Chronicles
 
+> **2026-09-27:** the plan for all further work is the Game Design Document in [`docs/gdd/`](gdd/README.md) — start with [`docs/gdd/00-agent-brief.md`](gdd/00-agent-brief.md). This handoff remains the log of the earlier sessions; where it disagrees with the GDD, the GDD wins.
+
+
 This document is for whoever picks up development next, human or agent. It covers what the game is and how it runs, how the code is laid out, everything built so far, what was left half-finished, and what still needs doing. It also lists the conventions to keep.
 
 Read it together with `README.md` (player-facing: features, setup, llama.cpp advice) and `docs/DESIGN.md` (design contract: which systems the engine owns and which the story model owns).

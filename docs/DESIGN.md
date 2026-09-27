@@ -1,5 +1,8 @@
 # Design notes
 
+> **Superseded (2026-09-27):** the Game Design Document in [`docs/gdd/`](gdd/README.md) replaces this document wherever they disagree. Kept for history.
+
+
 ## What we take from Pax Historia
 
 Pax Historia is a map-based sandbox where an LLM acts as the game engine. Its core loop:

@@ -1,5 +1,8 @@
 # Westeros Chronicles — in-depth review
 
+> **Superseded (2026-09-27):** the Game Design Document in [`docs/gdd/`](gdd/README.md) replaces this document wherever they disagree. Kept for history.
+
+
 _Reviewed 27 September 2026, against `arena/01a0e032-a-game-of-thrones-local-game` (branched from `8dabd66`)._
 
 This is a full read of the codebase and a playtest of the simulation, with the bugs found, the systems that

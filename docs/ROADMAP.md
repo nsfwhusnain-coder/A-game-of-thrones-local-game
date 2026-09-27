@@ -1,5 +1,8 @@
 # Westeros Chronicles — improvement and development plan
 
+> **Superseded (2026-09-27):** the Game Design Document in [`docs/gdd/`](gdd/README.md) replaces this document wherever they disagree. Kept for history.
+
+
 _Written 27 September 2026, alongside `docs/REVIEW.md`. Read that first: it says what is broken and what is
 missing. This says what to do about it, in what order, and why that order._
 

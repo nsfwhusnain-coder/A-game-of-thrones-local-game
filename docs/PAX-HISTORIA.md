@@ -1,5 +1,8 @@
 # Pax Historia — the symbiotic swarm
 
+> **Superseded (2026-09-27):** the Game Design Document in [`docs/gdd/`](gdd/README.md) replaces this document wherever they disagree. Kept for history.
+
+
 _What was asked for, what now exists, what was done differently and why, and what comes next._
 
 The premise of this pass: the model should not merely narrate a simulation, it should **design

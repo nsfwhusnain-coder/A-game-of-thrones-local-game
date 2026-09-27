@@ -1,0 +1,107 @@
+{
+  "model": "qwen3.6-35b-a3b",
+  "A": [
+    {
+      "ms": 4206,
+      "text": "{\n  \"actor\": \"tywin_lannister\",\n  \"intent\": \"demand\",\n  \"target\": \"none\",\n  \"with\": \"king_robert_baratheon\",\n  \"public_face\": \"Compliance with the King's summons to King's Landing to discuss the realm's affairs.\",\n  \"reason\": \"I cannot act openly against Starks or Tullys while Robert sits on the Iron Throne and Ned Stark holds the Hand. To declare war now is to invite rebellion and stain the name of Lannister with the word 'traitor.' I must go to King's Landing,摆\"\n}",
+      "tps": 44.01064547352106,
+      "pp": 450.89904450706297,
+      "usage": {
+        "completion_tokens": 139,
+        "prompt_tokens": 393,
+        "total_tokens": 532,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    },
+    {
+      "ms": 3217,
+      "text": "{\n  \"actor\": \"tywin_lannister\",\n  \"intent\": \"send_letter\",\n  \"target\": \"none\",\n  \"with\": \"ser_kevan_lannister\",\n  \"public_face\": \"demanding_jaime's_release_and_tyrion's_return_under_threat_of_war\",\n  \"reason\": \"tyrion's abduction is a direct insult to lannister honour and a strategic liability. kevan must secure the western borders and prepare the treasury for war while i negotiate from strength. this buys time to assess starks' true intentions.\"\n}",
+      "tps": 42.73273233414277,
+      "pp": 61.50818058801821,
+      "usage": {
+        "completion_tokens": 133,
+        "prompt_tokens": 393,
+        "total_tokens": 526,
+        "prompt_tokens_details": {
+          "cached_tokens": 389
+        }
+      }
+    }
+  ],
+  "B": [
+    {
+      "ms": 9131,
+      "text": "{\n  \"actions\": [\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"luwin\",\n      \"destination\": \"moat_cailin\",\n      \"men\": 0,\n      \"note\": \"Luwin is at Winterfell and can send a letter to Robb Stark at Moat Cailin.\"\n    },\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"luwin\",\n      \"destination\": \"the_twins\",\n      \"men\": 0,\n      \"note\": \"Unclear. The order is to send the bannermen *to* Robb, not a letter to the Twins. This action is invalid based on the specific order.\"\n    },\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"luwin\",\n      \"destination\": \"the_twins\",\n      \"men\": 0,\n      \"note\": \"Unclear. The order is to send the bannermen *to* Robb, not a letter to the Twins. This action is invalid based on the specific order.\"\n    },\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"luwin\",\n      \"destination\": \"the_twins\",\n      \"men\": 0,\n      \"note\": \"Unclear. The order is to send the bannermen *to* Robb, not a letter to the Twins. This action is invalid based on the specific order.\"\n    }\n  ],\n  \"unclear\": \"The engine cannot directly 'send' a host or group of men as an immediate action in this turn structure without a preceding 'march' or 'move' command initiated by the leader. However, Luwin can send a \"\n\n}",
+      "tps": 48.632349593704795,
+      "pp": 337.6757496753388,
+      "usage": {
+        "completion_tokens": 408,
+        "prompt_tokens": 240,
+        "total_tokens": 648,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    },
+    {
+      "ms": 7132,
+      "text": "{\n  \"actions\": [\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"luwin\",\n      \"destination\": \"moat_cailin\",\n      \"men\": 0,\n      \"note\": \"Send a letter to Robb Stark at Moat Cailin.\"\n    },\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"luwin\",\n      \"destination\": \"the_twins\",\n      \"men\": 0,\n      \"note\": \"Send a letter to Catelyn Stark at the Twins.\"\n    },\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"luwin\",\n      \"destination\": \"the_twins\",\n      \"men\": 0,\n      \"note\": \"Send a letter to Theon Greyjoy at the Twins.\"\n    },\n    {\n      \"verb\": \"send_letter\",\n      \"subject\": \"luwin\",\n      \"destination\": \"the_twins\",\n      \"men\": 0,\n      \"note\": \"Send a letter to Jon Snow at the Twins.\"\n    }\n  ],\n  \"unclear\": \"The lord's orders are unclear. The bannermen are already at Winterfell, and Robb is at Moat Cailin. Sending them 'down' implies movement, but the specific destination for the bannermen is not stated. \"\n}",
+      "tps": 47.59065159055985,
+      "pp": 36.94399290675336,
+      "usage": {
+        "completion_tokens": 333,
+        "prompt_tokens": 240,
+        "total_tokens": 573,
+        "prompt_tokens_details": {
+          "cached_tokens": 236
+        }
+      }
+    }
+  ],
+  "C": [
+    {
+      "ms": 11884,
+      "text": "{\n  \"events\": [\n    {\n      \"fact\": 1,\n      \"headline\": \"The March South\",\n      \"text\": \"Jon Umber sat high in his saddle, the wool of his cloak heavy with the dry dust of the North. Below him, the ground trembled with the weight of six thousand men, a river of iron and fur flowing southward toward Moat Cailin. He counted them as he had been taught: three thousand eight hundred of his own Umbers, their furs matted with travel; eight hundred Glovers, grim-faced and silent; four hundred Boltons, led by the man who rode just behind him. Roose Bolton said nothing, his eyes fixed on the road ahead, unreadable as a frozen lake. Behind them came the Norreys and the Liddles, five hundred and fifty men of Liddlestone and seven hundred of the Norrey lands, all breaking camp under Lord Um伯\",\"pov\": \"Jon Umber\"\n    },\n    {\n      \"fact\": 2,\n      \"headline\": \"The White Wolf\",\n      \"text\": \"Ghost ran ahead, a shadow among shadows, his white fur blending with the pale light of the morning. Jon Snow followed on foot, the leather of the saddlebag pressing against his thigh, heavy with Benjen’s letter. He did not look back at Winterfell, nor at the men of the household who walked beside him. There were six of them, silent and steady, their faces set with the same resolve that had driven Jon from the castle walls. The wind bit at his cheeks, cold and sharp, carrying the scent of pine and impending snow. He kept his head down, eyes on the road, letting the direwolf lead him toward the Wall, toward the Night's Watch, toward whatever fate waited beyond the frozen border.\",\n      \"pov\": \"Jon Snow\"\n    },\n    {\n      \"fact\": 3,\n      \"headline\": \"The Causeway\",\n      \"text\": \"Robb Stark stood at the edge of the causeway, his young face hardened by weeks of war. The three standing towers rose above him, their battlements crowded with archers, bowstrings drawn taut against the sky. Below, the causeway was clear, the fallen stone swept away, leaving a path straight and deadly. He waited for word from the south, but none came. The wind carried only the sound of water lapping against the ancient stones of Moat Cailin. Robb’s hand rested on the pommel of his sword, his eyes scanning the horizon, waiting for the first sign of the enemy.\",\n      \"pov\": \"Robb Stark\"\n    }\n  ]\n}",
+      "tps": 51.99355967079306,
+      "pp": 419.93699644938715,
+      "usage": {
+        "completion_tokens": 576,
+        "prompt_tokens": 323,
+        "total_tokens": 899,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    },
+    {
+      "ms": 10442,
+      "text": "{\n  \"events\": [\n    {\n      \"fact\": 1,\n      \"headline\": \"The March\",\n      \"text\": \"Jon Umber sat heavy in his saddle, the leather creaking under his weight as he looked out over the sea of men. Three thousand eight hundred Umbers, eight hundred Glovers, four hundred Boltons, seven hundred Norreys, and five hundred Liddles formed a river of wool and iron flowing south along the dry roads. The air was sharp with the promise of cold nights to come. Beside him, Roose Bolton rode in silence, his face a mask of pale indifference, saying nothing as the host passed beneath the grey sky toward Moat Cailin. There was no cheer, only the rhythmic thud of hooves and the whisper of dry grass, a solemn procession bound for the Trident to join the Wolf King.\",\n      \"pov\": \"Jon Umber\"\n    },\n    {\n      \"fact\": 2,\n      \"headline\": \"The Ghost\",\n      \"text\": \"Snow felt the cold bite through his tunic as he urged his horse forward, leaving the stone walls of Winterfell behind. In his saddlebag, Benjen Stark’s letter lay folded, a weight against his hip that seemed heavier than steel. He was not alone; six men of the household rode with him, their faces grim in the late summer light. Ahead of them, Ghost ran like a shadow detached from its master, the great white direwolf’s eyes fixed on the distant horizon where Castle Black waited. Snow pulled his cloak tighter, knowing there was no turning back now.\",\n      \"pov\": \"Jon Snow\"\n    },\n    {\n      \"fact\": 3,\n      \"headline\": \"The Causeway\",\n      \"text\": \"Robb Stark stood at the edge of the causeway, his fifteen years feeling both ancient and fleeting in the chill wind. Below him, the water lapped against the stone foundations of the three standing towers, each one bristling with archers who scanned the southern horizon with bored eyes. The fallen stone that had choked the path for so long was gone, cleared away to leave a narrow bridge open to whatever came next. He waited. No word had come from the south, no raven bearing news of his father or his brother. The wind carried only the scent of wet mud and old rain, and Robb watched the empty road, wondering if the army would ever arrive.\",\n      \"pov\": \"Robb Stark\"\n    }\n  ]\n}",
+      "tps": 52.51516641881834,
+      "pp": 62.431715311378184,
+      "usage": {
+        "completion_tokens": 543,
+        "prompt_tokens": 323,
+        "total_tokens": 866,
+        "prompt_tokens_details": {
+          "cached_tokens": 319
+        }
+      }
+    }
+  ],
+  "C_free": {
+    "ms": 8930,
+    "text": "{\n  \"events\": [\n    {\n      \"fact\": 1,\n      \"headline\": \"The Iron Army Moves\",\n      \"text\": \"The dry dust of the North clung to Jon Umber’s boots as he watched the banners unfurl. Three thousand eight hundred Umbers, eight hundred Glovers, four hundred Boltons, seven hundred Norreys, and five hundred Liddles broke camp at Winterfell, their horses’ hooves kicking up clouds that stung the eyes. They marched south for Moat Cailin, a river of steel and wool flowing toward Robb Stark. Roose Bolton rode in their midst, his face as impassive as the stone walls behind them, saying little as the host gathered its strength.\",\n      \"pov\": \"Jon Umber\"\n    },\n    {\n      \"fact\": 2,\n      \"headline\": \"The Bastard’s Path\",\n      \"text\": \"Ghost’s white fur blended with the fading light as he ran ahead of Jon Snow, his yellow eyes scanning the path. Jon tightened the saddlebag where Benjen Stark’s letter rested against his hip, the weight of it heavier than any sword. Six men of the household rode with him, their silence louder than the wind cutting through the late summer air. They left Winterfell for Castle Black, leaving behind the warmth of home for the cold unknown beyond the Wall.\",\n      \"pov\": \"Jon Snow\"\n    },\n    {\n      \"fact\": 3,\n      \"headline\": \"The Boy King’s Hold\",\n      \"text\": \"Fifteen-year-old Robb Stark stood at Moat Cailin, feeling the chill of the night seep through his tunic despite the late summer day. The three standing towers were manned with archers, their silhouettes stark against the grey sky. Below, the causeway lay clear of fallen stone, a deliberate scar in the earth where debris had been removed. He waited for word from the south, but the horizon offered only emptiness, and the wind carried no messages.\",\n      \"pov\": \"Robb Stark\"\n    }\n  ]\n}",
+    "tps": 54.08248761296137,
+    "pp": 524.4094296132785,
+    "usage": {
+      "completion_tokens": 454,
+      "prompt_tokens": 349,
+      "total_tokens": 803,
+      "prompt_tokens_details": {
+        "cached_tokens": 91
+      }
+    }
+  }
+}

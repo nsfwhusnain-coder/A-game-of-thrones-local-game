@@ -1,0 +1,107 @@
+{
+  "model": "gemma4-26b-a4b",
+  "A": [
+    {
+      "ms": 17731,
+      "text": "{\n  \"actor\": \"tywin_lannister\",\n  \"intent\": \"demand\",\n  \"target\": \"stark\",\n  \"with\": \"messenger\",\n  \"public_face\": \"A formal demand for the immediate and unconditional release of Tyrion Lannister, to be delivered to Eddard Stark in King's Landing, accompanied by a warning of'\",\"reason\": \"Tyrion's capture by a Great House's daughter is an intolerable insult to House Lannister. I will not move my armies yet, but I must signal that the North and the Riverlands are playing a dangerous game. I will use the debt the Crown owes me\"\n}",
+      "tps": 51.59061378822361,
+      "pp": 528.4547207234698,
+      "usage": {
+        "completion_tokens": 152,
+        "prompt_tokens": 381,
+        "total_tokens": 533,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    },
+    {
+      "ms": 3193,
+      "text": "{\n  \"actor\": \"tywin_lannister\",\n  \"intent\": \"demand\",\n  \"target\": \"stark\",\n  \"with\": \"messenger\",\n  \"public_face\": \"Send a formal, cold demand to Lord Eddard Stark in King's Landing, demanding the immediate release of Tyrion Lannister and the cessation of all Tully/Starkhost-\",\"reason\": \"Tyrion has been seized by a highborn lady; this is an act of war or, at best, a grave insult to House Lannister. I will not march my full strength immediately, but I must force Stark's hand to choose between his honor and his life, while I'\"\n}",
+      "tps": 51.748798232418274,
+      "pp": 62.75179156364914,
+      "usage": {
+        "completion_tokens": 159,
+        "prompt_tokens": 381,
+        "total_tokens": 540,
+        "prompt_tokens_details": {
+          "cached_tokens": 376
+        }
+      }
+    }
+  ],
+  "B": [
+    {
+      "ms": 4022,
+      "text": "{\n  \"actions\": [\n    {\n      \"verb\": \"send_person\",\n      \"subject\": \"banners_of_stark\",\n      \"destination\": \"moat_cailin\",\n        \"men\": 6300,\n    \"note\": \"to join host_of_winterfell\"\n    },\n    {\n      \"verb\": \"send_person\",\n      \"subject\": \"jon_snow\",\n      \"destination\": \"the_twins\", \"men\": 0, \"note\": \"unclear\"\n    }\n  ],\n  \"unclear\": \"jon_snow destination\"\n}",
+      "tps": 45.4176452407735,
+      "pp": 493.77940816423103,
+      "usage": {
+        "completion_tokens": 160,
+        "prompt_tokens": 240,
+        "total_tokens": 400,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    },
+    {
+      "ms": 3062,
+      "text": "{ \"actions\": [ { \"verb\": \"send_person\", \"subject\": \"banners_of_stark\", \"destination\": \"moat_cailin\", \"men\": 6300, \"note\": \"to join robb_stark\" }, { \"verb\": \"send_person\", \"subject\": \"jon_snow\", \"destination\": \"the_twins\", \"men\": 0, \"note\": \"unclear\" } ], \"unclear\": \"jon_snow destination\" }",
+      "tps": 43.673586388260254,
+      "pp": 42.30726923499995,
+      "usage": {
+        "completion_tokens": 127,
+        "prompt_tokens": 240,
+        "total_tokens": 367,
+        "prompt_tokens_details": {
+          "cached_tokens": 235
+        }
+      }
+    }
+  ],
+  "C": [
+    {
+      "ms": 8471,
+      "text": "{\n  \"events\": [\n    {\n      \"fact\": 1,\n      \"headline\": \"The Umber Host Marches\",\n      \"text\": \"The air at Winterfell tasted of dust and dried pine. Jon Umber sat atop his great destrier, the weight of his mail pulling at his shoulders as he watched the columns begin to snake southward. Behind him, the massive levy of three thousand strong moved like a slow, iron river, followed by the glovers, the norreys, and the liddles. A smaller, more silent contingent of Boltons moved alongside them, their armor dark and unreflective. Lord Umber caught the gaze of Roose Bolton; the man was a pale shadow in the sunlight, his eyes cold and his lips pressed into a thin, bloodless line. He said nothing, merely adjusted his furs as the drums began to beat, signaling the march toward Moat Cailin.\",\n      \"pov\": \"Jon Umber\"\n    },\n    {\n      \"fact\": 2,\n      \"headline\": \"A Departure for the Wall\",\n      \"text\": \"The night was sharp and biting, a reminder that summer was a fleeting dream. Jon felt the heavy weight of Benjen’s letter tucked deep within his saddlebag, a secret cargo that felt heavier than any steel. He tightened the cinch on his horse, his breath blooming in white plumes before his face. Six men of his household moved through the shadows, their faces grim in the moonlight. A flash of white fur darted through the gloom—Ghost, running ahead into the darkness of the Wolfswood, a silent ghost indeed. With a pull on the reins, Jon turned his back on the warmth of the keep and faced the long road to Castle Black.\",\n      \"pov\": \"Jon Snow\"\n    },\n    {\n      \"fact\": 3,\n      \"headline\": \"Silence at the Moat\",\n      \"text\": \"The stones of the causeway lay cleared, the wreckage of old wars swept aside to make a path. Robb Stark stood amidst the ruin of the three great towers, his eyes scanning the horizon where the road met the sky. The archers stood atop the battlements, their bows gripped tight, their eyes searching the treeline for movement. The wind whistled through the gaps in the masonry, carrying nothing but the scent of damp earth and old stone. He had his men, and he had the towers, but the silence from the south was a heavy, suffocating thing.\",\n      \"pov\": \"Robb Stark\"\n    }\n  ]\n}",
+      "tps": 68.99715083090226,
+      "pp": 712.1458228471326,
+      "usage": {
+        "completion_tokens": 552,
+        "prompt_tokens": 324,
+        "total_tokens": 876,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    },
+    {
+      "ms": 8001,
+      "text": "{\n  \"events\": [\n    {\n      \"fact\": 1,\n      \"headline\": \"The March of the Umbers\",\n      \"text\": \"The dust rose in thick, choking clouds as the great host of the North began its trek. Lord Jon Umber sat high in his saddle, a mountain of a man amidst the sea of steel and boiled leather. Behind him, the weight of the North moved in a long, grinding line: the Glovers, the Norreys, the Liddles, and the Boltons. Roose Bolton rode in the shadow of the Umber banners, his pale eyes as cold as a winter storm. He spoke to no one, his face a mask of stillness as the dry summer air bit at his cheeks. The column stretched toward the south, a slow, heavy river of men leaving the warmth of Winterfell behind.\",\n      \"pov\": \"Jon Umber\"\n    },\n    {\n      \"fact\": 2,\n      \"headline\": \"Departure for the Wall\",\n      \"text\": \"The air was crisp, carrying the scent of pine and dying summer. Jon Snow checked the cinch on his saddle one last time, feeling the reassuring weight of Benjen’s letter tucked deep in his bag. Six men of the household moved quietly around him, checking their gear in the pale morning light. A white shape flickered at the edge of the tree line—Ghost, moving like a ghost through the undergrowth, his eyes fixed on the path ahead. With a heavy heart and a steady hand, Jon turned his horse north, leaving the warmth of the castle for the long road to Castle Black.\",\n      \"pov\": \"Jon Snow\"\n    },\n    {\n      \"fact\": 3,\n      \"headline\": \"Silence at the Moat\",\n      \"text\": \"The three great towers of Moat Cailin loomed like broken teeth against the darkening sky. On the battlements, the rhythmic twang of bowstrings punctuated the silence as archers took their stations, watching the empty road. Below, the causeway had been cleared of the rubble and fallen stone, leaving a path that led straight into the heart of the swamp. Robb Stark stood amidst the stillness, his youth betrayed only by the smoothness of his face, though his eyes were old. He looked south, waiting for a messenger, a bird, or a sign, but there was nothing but the wind whistling through the ruins.\",\n      \"pov\": \"Robb Stark\"\n    }\n  ]\n}",
+      "tps": 68.32226254939897,
+      "pp": 68.49033601358849,
+      "usage": {
+        "completion_tokens": 540,
+        "prompt_tokens": 324,
+        "total_tokens": 864,
+        "prompt_tokens_details": {
+          "cached_tokens": 319
+        }
+      }
+    }
+  ],
+  "C_free": {
+    "ms": 7000,
+    "text": "```json\n{\n  \"events\": [\n    {\n      \"fact\": 1,\n      \"headline\": \"The March Begins\",\n      \"text\": \"The dust rose in thick, choking clouds beneath the boots of three thousand Umbers. Jon Umber, the Greatjon, spat on the dry earth and looked toward the south. Behind his massive frame, the banners of Glover and Norrey snapped in the wind, a sea of colors marching toward the ruins of Moat Cailin. Roose Bolton rode in silence, his pale eyes as cold as the winter he seemed to carry with him. He said nothing to the men, his presence a quiet chill amidst the boisterous strength of the Northmen as they broke camp and turned their faces from Winterfell.\",\n      \"pov\": \"Jon Umber\"\n    },\n    {\n      \"fact\": 2,\n      \"headline\": \"A Departure for the Wall\",\n      \"text\": \"The saddlebag felt heavy against the horse's flank, containing the weight of Benjen's words. Jon Snow pulled his cloak tight against the biting morning air. Ahead of them, a flash of white moved through the trees—Ghost, silent and ghostly, running as if the wind itself were chasing him toward the Wall. Six men followed in his wake, their breath misting in the air. The road to Castle Black was long, and the silence of the North felt heavier than usual.\",\n      \"pov\": \"Jon Snow\"\n    },\n    {\n      \"fact\": 3,\n      \"headline\": \"Waiting at the Moat\",\n      \"text\": \"Robb Stark stood upon the causeway, his eyes scanning the horizon where the road met the bog. The three great towers of Moat Cailin loomed over him, their battlements bristling with archers who watched the treeline with steady eyes. The rubble and fallen stone that had once choked the path had been cleared, leaving the way open, yet the silence was deafening. He waited for a messenger, for a rider, for any sign of the south, but there was nothing but the wind whistling through the ancient ruins.\",\n      \"pov\": \"Robb Stark\"\n    }\n  ]\n}\n```",
+    "tps": 71.31076252417833,
+    "pp": 824.0903741755088,
+    "usage": {
+      "completion_tokens": 475,
+      "prompt_tokens": 348,
+      "total_tokens": 823,
+      "prompt_tokens_details": {
+        "cached_tokens": 91
+      }
+    }
+  }
+}
