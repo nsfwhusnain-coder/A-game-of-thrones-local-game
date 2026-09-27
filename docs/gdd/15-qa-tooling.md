@@ -61,7 +61,9 @@ of the playtest output the owner runs, so the owner can paste it back.
 ## 4. Determinism and replay
 
 - All engine randomness through `ctx.rng` (a lint rule forbids `Math.random` under `public/js/engine/` and
-  `server/turn/`).
+  `server/turn/`). *Implemented in WP B1*: `random()` from `engine/rng.js` draws from the save's stream in scope
+  (`server/dice.js`), and `scripts/lint-engine.js` (part of `npm run check`) also covers `public/js/shared/` and forbids
+  the clock and crypto; `tests/replay.test.js` replays three mock turns byte for byte ([DECISIONS.md#D-005](DECISIONS.md)).
 - A turn record stores the seed, the intents (including every mind's choice) and the model outputs' hashes.
 - `scripts/replay.js <save> <turn>` re-runs the turn from its snapshot with the recorded intents and asserts identical
   facts. CI replays the fixture saves each run.
