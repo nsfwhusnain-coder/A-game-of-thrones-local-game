@@ -26,7 +26,7 @@ import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vas
 import { worldTick, THREADS } from '../public/js/shared/plots.js';
 import { resolveWarfare } from '../public/js/shared/battles.js';
 import { roadEncounters } from '../public/js/shared/roads.js';
-import { updateIntel } from '../public/js/shared/intel.js';
+import { updateKnowledge, eyesOf, knows, holdNews, newsDue } from '../public/js/engine/knowledge.js';
 import { treacheryTick } from '../public/js/shared/treachery.js';
 import { regencyTick } from '../public/js/shared/regency.js';
 import { outcomeFor, standing } from '../public/js/shared/standing.js';
@@ -121,13 +121,14 @@ function appendFacts(id, facts) {
 /**
  * The fact log, filtered: turns `from`..`to` (inclusive), facts touching `house`, of `kind`, at most `limit` (the
  * newest). `view: 'player'` keeps only what the player's house may know: no one else's secrets, no other houses'
- * private business (sight and news travel refine this in WP B9).
+ * private business, nothing it has not yet heard of (engine/knowledge.js).
  */
 export function readFacts(id, { from, to, house, kind, limit = 2000, view } = {}) {
   const f = path.join(dir(id), 'facts.jsonl'); if (!fs.existsSync(f)) return [];
   const lo = Number(from) || -Infinity, hi = to == null || to === '' ? Infinity : Number(to);
-  const me = view === 'player' ? loadState(id).meta.player : null;
-  const known = (x) => !me || !['secret', 'houses'].includes(x.vis?.scope) || (x.vis.houses || x.houses || []).includes(me);
+  const st = view === 'player' ? loadState(id) : null; const me = st?.meta.player;
+  const E = st ? eyesOf(st, me) : null;
+  const known = (x) => !me || knows(st, me, x, undefined, E);
   const out = [];
   for (const line of fs.readFileSync(f, 'utf8').split('\n')) {
     if (!line) continue;
@@ -469,6 +470,9 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   vt.events.push(...retinueTick(state, spanInfo.days).events);
   vt.events.push(...deliverReplies(state));
   const engineEvents = dayEngineEvents(state, [...deathEvents, ...minds.cards, ...foldAnswers(vt.events)], spanInfo.days);
+  // news travels (engine/knowledge.js): what the house hears of late is told on the day its word arrives, or waits for a
+  // later turn; the word of earlier days that arrives now is told now
+  { const heard = [...holdNews(state, engineEvents), ...newsDue(state)].sort((a, b) => a.day - b.day); engineEvents.length = 0; engineEvents.push(...heard); }
   for (const a of Object.values(state.parties)) { delete a.bornDay; delete a.landed; }
   // ── THE STORY'S PART: the model writes the days around the engine's facts, and the rest of the realm's doings
   const applyCtx = { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days };
@@ -493,7 +497,7 @@ async function advanceWith(id, state, cfg, { span, orders }) {
     if (turned) { engineEvents.push(fact(state, 'season_turned', { title: `A white raven: ${turned.season} has come`, text: turned.text, where: resolvePlaceId('oldtown'), importance: 5, houses: [], day: spanInfo.days }, { data: { season: turned.season }, cause: { type: 'rule', ref: 'seasons' } })); applied.push({ op: 'season', text: `The season turns: ${turned.season.toUpperCase()}` }); }
   } else { state.world.seasonDays = 0; }
   // What the player's house has seen of the other hosts this period (fog of war)
-  updateIntel(state);
+  updateKnowledge(state);
   postTick(state);
   // Settle the books for the period (after the story has changed the causes)
   const econNotes = settle(state, spanInfo.days);

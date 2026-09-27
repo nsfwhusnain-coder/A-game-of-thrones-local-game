@@ -27,7 +27,7 @@ import { PLACE_NAMES } from '../public/data/geography.js';
 import { dispositionText } from '../public/js/shared/diplomacy.js';
 import { temperament, natureTags } from '../public/js/shared/temperament.js';
 import { DEMEANOURS } from '../public/data/demeanours.js';
-import { beliefsAboutPlayer } from '../public/js/shared/intel.js';
+import { beliefsAboutPlayer } from '../public/js/engine/knowledge.js';
 import { AGENDAS } from '../public/data/agendas.js';
 import { whereabouts as whereNow } from '../public/js/shared/roads.js';
 import { ordersBlock } from './orders.js';

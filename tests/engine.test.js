@@ -166,17 +166,17 @@ test('dictated numbers are read: "ten men", "a hundred riders", "two hundred and
 });
 
 // ── Fog of war ──
-import { viewOfArmies, updateIntel } from '../public/js/shared/intel.js';
+import { viewOfArmies, updateKnowledge as updateIntel } from '../public/js/engine/knowledge.js';
 test('the player sees hosts near their lands; distant ones by word of mouth, which can be stale or feinted', () => {
   const s = fresh();
   apply(s, [{ op: 'army_create', id: 'far', owner: 'martell', name: 'Dornish spears', at: 'martell', men: 6000 }, { op: 'army_create', id: 'near', owner: 'bolton', name: 'Bolton host', at: 'stark', men: 2000 }]);
   assert.equal(viewOfArmies(s).get('near')?.known, 'seen');
-  updateIntel(s, () => 0); // word travels: a great host is heard of
+  updateIntel(s, s.meta.player, () => 0); // word travels: a great host is heard of
   let v = viewOfArmies(s).get('far'); assert.equal(v.known, 'reported'); assert.ok(Math.abs(v.men - 6000) <= 1600);
-  s.parties.far.feint = 'tyrell'; s.meta.turn++; updateIntel(s, () => 0); // a feint sends word the wrong way
+  s.parties.far.feint = 'tyrell'; s.meta.turn++; updateIntel(s, s.meta.player, () => 0); // a feint sends word the wrong way
   assert.deepEqual(viewOfArmies(s).get('far').pos, s.holdings.tyrell.pos);
   delete s.parties.far.feint; s.parties.far.secrecy = 'hidden'; s.parties.far.pos = [...s.holdings.yronwood.pos];
-  for (let i = 0; i < 5; i++) { s.meta.turn++; updateIntel(s, () => 0.5); } // in secret: the realm loses track of it
+  for (let i = 0; i < 5; i++) { s.meta.turn++; updateIntel(s, s.meta.player, () => 0.5); } // in secret: the realm loses track of it
   assert.equal(viewOfArmies(s).get('far'), undefined);
 });
 test('a planted report shows a host that does not exist', () => {
@@ -522,7 +522,7 @@ import { retinueTick } from '../public/js/shared/retinues.js';
 import { marchDays } from '../public/js/shared/warfare.js';
 import { marchTick } from '../public/js/shared/marches.js';
 test('lords ride out with their households, stay, ride home — and the realm sees them', async () => {
-  const { isSeen } = await import('../public/js/shared/intel.js');
+  const { seesParty } = await import('../public/js/engine/knowledge.js'); const isSeen = (s, a) => seesParty(s, s.meta.player, a);
   const s = fresh(); let seed = 7; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const went = new Set(); let home = 0;
   for (let day = 0; day < 60; day++) {

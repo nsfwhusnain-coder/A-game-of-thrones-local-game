@@ -555,4 +555,6 @@ fixes imports; `npm run check` verifies every import resolves.
 7. Every open commitment's `by` is alive or the commitment is `void`.
 8. Every letter in flight has `arriveDay > sentDay` and a route distance ≥ 0.
 9. Knowledge never contains a fact before its day, and never a fact with `scope: 'secret'` unless learned via spy/scheme.
+   *(B9: `engine/state/validate.js` invariant 9, over the stored learnings and the news still on the road.)*
 10. The player-view state (`view.js`) contains no hidden truth (spot-checked by a test with a known secret).
+    *(B9: `server/view.js` `hiddenTruths`; `tests/knowledge.test.js`, `tests/http.test.js`.)*

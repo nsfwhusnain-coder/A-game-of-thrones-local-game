@@ -9,6 +9,7 @@ import { SCENARIOS } from '../public/data/scenarios.js';
 import { runCall } from './ai/client.js';
 import { routingProblems } from './ai/models.js';
 import { createInitialState } from '../public/js/shared/world.js';
+import { viewOf, viewTurn } from './view.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -71,7 +72,7 @@ route('GET', '/api/games/:id/undo', (req, p) => { const st = game.loadState(p.id
 route('POST', '/api/games/:id/undo', async (req, p) => game.undo(p.id, await readBody(req)));
 // the history of the save: its facts (as the player's house may know them) and each turn's record
 route('GET', '/api/games/:id/facts', (req, p) => { const q = new URL(req.url, 'http://x').searchParams; return game.readFacts(p.id, { from: q.get('from'), to: q.get('to'), house: q.get('house'), kind: q.get('kind'), limit: q.get('limit'), view: 'player' }); });
-route('GET', '/api/games/:id/turns/:n', (req, p) => game.readTurn(p.id, p.n));
+route('GET', '/api/games/:id/turns/:n', (req, p) => viewTurn(game.readTurn(p.id, p.n)));
 route('POST', '/api/games/:id/talk', async (req, p) => { const b = await readBody(req); return game.talk(p.id, b.character, String(b.message || '').slice(0, 4000)); });
 route('POST', '/api/games/:id/suggest', (req, p) => game.suggest(p.id));
 route('POST', '/api/games/:id/act', async (req, p) => game.act(p.id, await readBody(req)));
@@ -129,7 +130,8 @@ const server = http.createServer(async (req, res) => {
       for (const r of routes) {
         if (r.method !== req.method) continue;
         const m = url.pathname.match(r.re);
-        if (m) return send(res, 200, await r.handler(req, m.groups || {}));
+        // every state that leaves is the player's view of it (server/view.js): the truth stays on the server
+        if (m) return send(res, 200, viewOf(await r.handler(req, m.groups || {})));
       }
       return send(res, 404, { error: 'not found' });
     }

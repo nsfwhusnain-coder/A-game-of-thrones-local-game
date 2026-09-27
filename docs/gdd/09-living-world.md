@@ -164,6 +164,11 @@ driving beats and hooks:
 
 `engine/knowledge.js` replaces `shared/intel.js` (keeping its good parts: reports, spies, feints, secrecy).
 
+> *Implemented in WP B9* ([DECISIONS D-032–D-033](DECISIONS.md)): news worked out from each fact (`newsOf`), only
+> what cannot be worked out stored per house; the chronicle tells late news on the day it arrives; minds see their
+> house's knowledge; the player's view is filtered on the server (`server/view.js`). Rumours as beliefs (§7.3) come with
+> the `spread_rumour` verb (B10).
+
 ### 7.1 How news travels
 
 Every fact has an origin (place/pos) and a visibility scope:

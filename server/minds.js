@@ -9,22 +9,18 @@ import { HOLD, optionsFor, remember } from '../public/js/engine/minds/options.js
 import { treeChoice } from '../public/js/engine/minds/houseways.js';
 import { perform } from '../public/js/engine/actions/registry.js';
 import { asEvent } from '../public/js/engine/facts/log.js';
+import { newsOf, knows, eyesOf } from '../public/js/engine/knowledge.js';
 import { runCall } from './ai/client.js';
 import { intentOf } from './ai/calls/mind.js';
 
-/** Whether a house hears of a fact now: its own doings, the public ones, and what happens in its own country. Until
- * each house keeps its own knowledge (WP B9) this is how far news goes. */
-export function heard(state, f, house = state.meta.player) {
-  if ((f.houses || []).includes(house)) return true;
-  const scope = f.vis?.scope || 'public';
-  if (scope === 'public') return true;
-  if (scope === 'local') { const r = state.holdings[state.houses[house]?.seat]?.region; const at = f.place && state.holdings[f.place]?.region; return !!(r && at && r === at); }
-  return (f.vis?.houses || []).includes(house);
-}
+/** Whether news of a fact will reach a house at all (engine/knowledge.js): its own doings, what its eyes see, what
+ * the ravens and rumours carry to it — soon or late. */
+export const heard = (state, f, house = state.meta.player) => !!newsOf(state, f, house);
 
-/** What a house knows of the last days, for a mind's dossier: the most important facts it would have heard of. */
+/** What a house knows of the last days, for a mind's dossier: the weightiest facts that have reached it by now. */
 export function knownTo(state, facts, house, { limit = 8 } = {}) {
-  return facts.filter((f) => f.kind !== 'ledger' && heard(state, f, house)).sort((a, b) => b.importance - a.importance || b.day - a.day).slice(0, limit);
+  const E = eyesOf(state, house);
+  return facts.filter((f) => f.kind !== 'ledger' && knows(state, house, f, undefined, E)).sort((a, b) => b.importance - a.importance || b.day - a.day).slice(0, limit);
 }
 
 const tree = (state, x, { eager = false } = {}) => { const t = treeChoice(state, x.id, optionsFor(state, x.id), { eager }); return { x, via: 'tree', verb: t.verb, params: t.params, rule: t.rule }; };

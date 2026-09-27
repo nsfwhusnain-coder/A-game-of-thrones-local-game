@@ -9,7 +9,7 @@ import { makeNoise } from '../map/noise.js';
 import { openPins } from '../shared/pins.js';
 import { forces, isForce } from '../engine/parties.js';
 import { stretch } from '../engine/movement.js';
-import { viewOfArmies, ageText } from '../shared/intel.js';
+import { viewOfArmies, ageText } from '../engine/knowledge.js';
 import { LivingMap } from './life.js';
 
 const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -414,7 +414,7 @@ export class MapScene {
   // ───────────── armies ─────────────
   syncArmies(prev) {
     const s = this.state;
-    // fog of war: the player's map shows what their house knows (shared/intel.js), not the truth
+    // fog of war: the player's map shows what their house knows (engine/knowledge.js), not the truth
     const view = this.view = viewOfArmies(s);
     // hosts that exist only in a report (perhaps a lie): a plate where the report put them, nothing more
     for (const l of this.ghostLabels || []) l.el.remove();

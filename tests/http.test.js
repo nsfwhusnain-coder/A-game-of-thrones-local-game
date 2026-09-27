@@ -116,3 +116,17 @@ test('undo over the wire: how far back, several turns at once; ironman refuses; 
   assert.deepEqual(await api(`/games/${iron.id}/undo`), { depth: 0, ironman: true, turn: 1 });
   await assert.rejects(api(`/games/${iron.id}/undo`, { turns: 1 }), /ironman/i);
 });
+
+test('the player\'s view over the wire: an unseen host is not sent where it stands, and no one else\'s secret is', async () => {
+  const { id } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 3 });
+  const truth = JSON.parse(fs.readFileSync(path.join(saves, id, 'state.json'), 'utf8'));
+  await api(`/games/${id}/edit`, { changes: [{ op: 'army_create', id: 'hidden_host', owner: 'lannister', name: 'A Lannister host', at: 'lannister', men: 3000 }] });
+  const s = await api(`/games/${id}`);
+  const h = s.parties.hidden_host; assert.ok(!h || h.known === 'reported', 'a host in the West is not seen from Winterfell');
+  const raw = JSON.stringify(s);
+  assert.ok(!raw.includes(truth.characters.cersei_lannister.secret), 'Cersei\'s secret stays on the server');
+  assert.ok(raw.includes(truth.characters.eddard_stark.secret), 'the lord\'s own secret is his to read');
+  const t = await api(`/games/${id}/advance`, { span: '3d', orders: [] });
+  assert.equal(t.turn.minds, undefined); assert.equal(t.state.minds, undefined);
+  assert.equal((await api(`/games/${id}/turns/1`)).minds, undefined, 'the minds\' counsel is kept');
+});

@@ -14,7 +14,7 @@ import { atWar, battleOdds, marchDays, siegeEstimate } from '../shared/warfare.j
 import { THREADS, THREATS } from '../shared/plots.js';
 import { sfx } from './sfx.js';
 import { temperament, natureTags } from '../shared/temperament.js';
-import { viewOfArmies, ageText } from '../shared/intel.js';
+import { viewOfArmies, ageText } from '../engine/knowledge.js';
 import { DEMEANOURS } from '../../data/demeanours.js';
 import { profileFor, VOICE_CHOICES, voiceSettings, setVoiceSetting, speak, stopSpeaking } from './voice.js';
 import { forces, partyOf, placeOf, membersOf, together, statusText, sworn } from '../engine/parties.js';
@@ -455,7 +455,7 @@ function characterSheet(id) {
     <div class="skills">${SKILL_NAMES.map((n, i) => `<div class="sk" title="${n}"><div class="i">${SKILL_ICONS[i]}</div><div class="n">${sk[i]}</div><div class="l">${n.slice(0, 4).toUpperCase()}</div></div>`).join('')}</div>
     <div>${traits.map((t) => `<span class="pill trait">${esc(t)}</span>`).join('')}</div>
     ${c.bio ? `<p style="font-size:0.92rem;line-height:1.45">${esc(c.bio)}</p>` : ''}
-    ${c.secret && (mine || c.secretKnown) ? `<p style="font-size:0.88rem;border-left:3px solid var(--red);padding-left:0.5rem">🗝 <b>Secret:</b> <i>${esc(c.secret)}</i></p>` : c.secret && !mine ? '<p class="muted" style="font-size:0.8rem">🔒 There is more to this one than meets the eye.</p>' : ''}
+    ${c.secret && (mine || c.secretKnown) ? `<p style="font-size:0.88rem;border-left:3px solid var(--red);padding-left:0.5rem">🗝 <b>Secret:</b> <i>${esc(c.secret)}</i></p>` : (c.secretHidden || c.secret) && !mine ? '<p class="muted" style="font-size:0.8rem">🔒 There is more to this one than meets the eye.</p>' : ''}
     ${natureHtml(c)}
     ${!mine && c.alive && c.house !== p ? dispositionHtml(id) : ''}
     <h4>Family <button class="btn small" data-tree="${c.id}" style="float:right">Family tree</button></h4>
