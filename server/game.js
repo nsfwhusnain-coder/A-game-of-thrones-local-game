@@ -6,7 +6,7 @@ import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplie
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
-import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers } from './agents.js';
+import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
 import { chokepointToll, roadCongestion } from '../public/js/shared/chokepoints.js';
 import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
@@ -185,8 +185,6 @@ async function runSwarm(id, state, cfg, ctx) {
   const briefs = [];
   const say = (s) => { if (s) briefs.push(s); };
   let last = null; let bard = null; let bardErr = null;
-  // what the Hand and the Whisperer actually managed to do, told to the Bard as plain fact
-  const doneHere = [];
 
   for (let i = 0; i < agents.length; i++) {
     const agent = agents[i];
@@ -210,7 +208,7 @@ async function runSwarm(id, state, cfg, ctx) {
     if (ops.length) {
       const told = applyChanges(state, ops, { ...applyCtx, source: AGENT_SOURCE[agent] || applyCtx.source, mayInvent: agent === 'weaver' });
       applied.push(...told.applied); rejected.push(...told.rejected);
-      doneHere.push(...told.applied);
+      say(briefFromApplied(told.applied, `WHAT THE ${agent.toUpperCase()} ACTUALLY SET IN MOTION (engine receipts; true)`));
     }
     if (agent === 'maester') say(briefFromMaester(obj));
     if (agent === 'hand') say(briefFromPlan(obj));
@@ -250,7 +248,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   const cfg = loadConfig();
   const state = loadState(id);
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim()); }
-  for (const a of Object.values(state.armies)) { delete a.motion; delete a.arriveDay; }
+  for (const a of Object.values(state.armies)) { delete a.motion; delete a.musterMotion; delete a.arriveDay; }
   const chronicle = readChronicle(id);
   // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
   // so they truly happen; the story model is told what was done and narrates what follows.
@@ -293,7 +291,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   vt.events.push(...advanceMusters(state, spanInfo.days));
   // Marching orders the story didn't resolve: the engine walks the host along at marching pace
   for (const a of Object.values(state.armies)) {
-    if (!a.march || a.movedTurn === state.meta.turn) continue;
+    if (!a.march || a.march.pending || a.muster?.remaining || a.movedTurn === state.meta.turn) continue;
     const to = a.march.to; // read before the move: arriving clears the march order
     // when in the turn this host is on the road (the map replays it in step with the story's days)
     // a host raised during the turn (a lord answering on day 9) sets out that day, and marches only the days left
@@ -784,7 +782,7 @@ export function act(id, body) {
       break;
     }
     case 'raise': {
-      let lines; try { lines = raiseLevies(state, { at: body.at, men: body.men, commander: body.commander, name: body.name }); } catch (e) { throw httpError(400, e.message); }
+      let lines; try { lines = raiseLevies(state, { at: body.at, men: body.men, commander: body.commander, name: body.name, immediate: false }); } catch (e) { throw httpError(400, e.message); }
       addOrder(`Raise ${Math.round(Number(body.men) || 0)} of my own levies at ${placeName(state, body.at || me.seat)}${body.name ? ` as "${body.name}"` : ''}.`, '', 'done', lines.join('; '));
       result.summary = lines.join('; ');
       break;

@@ -63,59 +63,71 @@ export function vassalTick(state, days, touched = new Set()) {
     // --- the banners ---
     if (ob.levies === 'called' || ob.levies === 'delayed') {
       if (touched.has(v.id) && ob.levies !== 'delayed') continue;
-      ob.calledDays = (ob.calledDays || 0) + days;
+      const before = ob.calledDays || 0;
+      ob.calledDays = before + days;
       const seatPos = placePos(v.seat, state.holdings);
       const musterPos = placePos(ob.muster || liege.seat, state.holdings);
-      // a raven must reach them and the levies must be gathered from the fields: a week or two
-      const ready = ob.calledDays >= (ob.levies === 'delayed' ? 30 : 10 + Math.random() * 8);
-      if (!ready) continue;
+      // The answer has a date. Persist it instead of rolling a fresh threshold every turn: a
+      // lord cannot be nine days away from answering forever because the dice changed overnight.
+      if (!ob.respondAfter) ob.respondAfter = ob.levies === 'delayed' ? 30 : 10 + Math.floor(Math.random() * 9);
+      if (ob.calledDays < ob.respondAfter) continue;
+      const answerDay = clamp(Math.ceil(ob.respondAfter - before), 1, Math.max(1, days));
       const roll = Math.random() * 100;
       let answer;
       if (t >= 45) answer = roll < 88 ? 'answered' : 'delayed';
       else if (t >= 28) answer = roll < 50 ? 'answered' : roll < 90 ? 'delayed' : 'refused';
       else answer = roll < 20 ? 'answered' : roll < 50 ? 'delayed' : 'refused';
       if (ob.levies === 'delayed' && ob.calledDays > 75 && answer === 'delayed') answer = t >= 35 ? 'answered' : 'refused';
-      if (answer === 'delayed' && ob.levies === 'delayed') continue;
+      if (answer === 'delayed' && ob.levies === 'delayed') { ob.respondAfter = ob.calledDays + 30; continue; }
       ob.levies = answer;
+      delete ob.respondAfter;
       const lordName = state.characters[v.lord].name;
       if (answer === 'answered') {
         const lev = Number(v.figures?.levies?.v) || 0; const maa = Number(v.figures?.menAtArms?.v) || 0;
         const zeal = t >= 70 ? 0.9 : t >= 45 ? 0.75 : 0.5;
-        const men = Math.round((lev * zeal + maa * 0.6) / 50) * 50;
+        const levSent = Math.round(lev * zeal); const maaSent = Math.round(maa * 0.6);
+        const men = Math.round((levSent + maaSent) / 50) * 50;
         if (men >= 50 && seatPos) {
           const name = `Host of House ${v.name}`;
+          // Bannermen do not own a lever that turns fields into an army. The first local men
+          // pitch a camp at the house's seat; everyone else comes in over roughly a fortnight.
+          const daily = Math.max(50, Math.ceil(men / 12));
+          const first = Math.min(men, daily);
           const r = applyChanges(state, [
-            { op: 'army_create', owner: v.id, name, at: v.seat, men, commander: v.lord, composition: `Levies of House ${v.name}${maa > 200 ? ', with knights and men-at-arms' : ''}`, status: 'marching to muster' },
-            { op: 'figure', house: v.id, field: 'levies', delta: -Math.round(lev * zeal), source: 'Muster rolls' },
-            { op: 'figure', house: v.id, field: 'menAtArms', delta: -Math.round(maa * 0.6), source: 'Muster rolls' },
+            { op: 'army_create', owner: v.id, name, at: v.seat, men: first, commander: v.lord, composition: `Levies of House ${v.name}${maa > 200 ? ', with knights and men-at-arms' : ''}`, status: `mustering at ${state.holdings[v.seat]?.name || 'their seat'}` },
+            { op: 'figure', house: v.id, field: 'levies', delta: -levSent, source: 'Muster rolls' },
+            { op: 'figure', house: v.id, field: 'menAtArms', delta: -maaSent, source: 'Muster rolls' },
           ]);
           applied.push(...r.applied);
           const a = Object.values(state.armies).find((x) => x.owner === v.id && x.name === name && !x.serving); let riding = [];
           if (a) {
-            a.serving = v.liege; ob.host = a.id; a.bornDay = Math.floor(Math.random() * Math.max(1, days));
-            if (musterPos && ob.muster && ob.muster !== v.seat) { a.march = { to: ob.muster, since: state.meta.turn }; a.dest = musterPos; a.status = 'marching'; }
+            a.serving = v.liege; ob.host = a.id; a.bornDay = answerDay;
+            if (men > first) a.muster = { remaining: men - first, daily, total: men, house: v.id, to: ob.muster || liege.seat };
+            else if (musterPos && ob.muster && ob.muster !== v.seat) { a.march = { to: ob.muster, since: state.meta.turn }; a.dest = musterPos; a.status = 'marching'; }
             // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
             state.characters[v.lord].loc = 'army:' + a.id;
             const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && (!isWoman(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !c.travel && [v.seat, 'army:'].some((l) => String(c.loc || '').startsWith(l) || c.loc === v.seat) && !(c.roles || []).includes('maester'));
             riding = kin.filter(() => Math.random() < 0.55).slice(0, 2);
             for (const c of riding) { c.loc = 'army:' + a.id; delete c.travel; }
           }
-          const eta = a && musterPos ? marchDays(a, seatPos, musterPos).days : 0;
-          const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with him` : ''}${eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
-          if (mine) events.push({ day: (a?.bornDay || 0) + 1, title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] });
+          const gathering = Math.ceil(Math.max(0, men - first) / daily);
+          const road = a && musterPos && ob.muster !== v.seat ? marchDays(a, seatPos, musterPos).days : 0;
+          const text = `${lordName} answers the call. ${first.toLocaleString()} men have pitched camp beneath ${state.holdings[v.seat]?.name || 'his walls'}; ${Math.max(0, men - first).toLocaleString()} more are walking in from the fields over about ${gathering} days${riding.length ? `, with ${riding.map((c) => c.name).join(' and ')} riding beside him` : ''}${road ? `. When the muster is full they will march for ${state.holdings[ob.muster]?.name || 'the muster'} (~${road} days on the road)` : ''}.`;
+          if (mine) events.push({ day: answerDay, title: `House ${v.name} begins to muster`, text, details: `The ${v.name} camp will grow each day at ${state.holdings[v.seat]?.name || 'their seat'} before it takes the road.`, where: v.seat, importance: 3, type: 'war', houses: [v.id] });
         } else {
           ob.levies = 'answered';
-          if (mine) events.push({ title: `House ${v.name} answers — with little`, text: `${lordName} sends word that he has no men left to send.`, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
+          if (mine) events.push({ day: answerDay, title: `House ${v.name} answers — with little`, text: `${lordName} sends word that he has no men left to send.`, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
         }
       } else if (answer === 'delayed') {
         const excuses = ['the harvest is not yet in', 'fever in the villages', 'the roads are flooded', 'his own borders are threatened', 'his knights are scattered at a tourney', 'he must first settle a quarrel with his neighbour'];
         const text = `${lordName} writes that ${excuses[Math.floor(Math.random() * excuses.length)]}. He will come — later.`;
-        if (mine) events.push({ title: `House ${v.name} delays`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
+        ob.respondAfter = ob.calledDays + 30;
+        if (mine) events.push({ day: answerDay, title: `House ${v.name} delays`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
       } else {
         const text = `${lordName} refuses the summons. His men will stay at home.`;
         const k = [v.id, v.liege].sort().join('|');
         state.relations[k] = { ...(state.relations[k] || {}), v: clamp((state.relations[k]?.v ?? 0) - 10, -100, 100) };
-        if (mine) events.push({ title: `House ${v.name} refuses the call`, text, where: v.seat, importance: 4, type: 'war', houses: [v.id] });
+        if (mine) events.push({ day: answerDay, title: `House ${v.name} refuses the call`, text, where: v.seat, importance: 4, type: 'war', houses: [v.id] });
       }
       applied.push({ op: 'obligation', text: `House ${v.name}: banners ${ob.levies}` });
     }

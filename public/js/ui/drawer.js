@@ -122,7 +122,7 @@ function renderFeed(body) {
   const rv = app.reveal;
   const bar = rv ? `<div class="reveal-bar"><span class="rb-date" id="rb-date">${esc(rv.date || '')}</span><button class="btn small ghost" data-rb="pause">${rv.ctl.paused ? 'Resume' : 'Pause'}</button><button class="btn small ghost" data-rb="next">Next ›</button><button class="btn small ghost" data-rb="skip">Skip ⏭</button><span class="rb-count" id="rb-count">${rv.n} / ${rv.total}</span></div>` : '';
   body.innerHTML = bar + decisionsHtml() + threadsHtml(s) + (turns.length ? turns.map((t) => { const ev = storyEvents(t).reverse(); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
-      ${yoursHtml(t)}${ev.map((e) => storyHtml(s, t, e)).join('') || '<div class="news-quiet">No news of note.</div>'}
+      ${t.summary ? `<div class="chronicle-lead">${esc(t.summary)}</div>` : ''}${yoursHtml(t)}${ev.map((e) => storyHtml(s, t, e)).join('') || '<div class="news-quiet">No news of note.</div>'}
       ${bg ? `<div class="news-more" data-meanwhile="${t.turn}">+ ${bg} small happening${bg > 1 ? 's' : ''} across the realm</div>` : ''}</div>`; }).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>
       ${(() => { const b = briefFor(s.houses[s.meta.player], s); return `<div class="event imp-4"><div class="et">Your situation</div><div class="eb">${esc(b.situation)}</div><div class="eb" style="margin-top:0.4rem"><b>Aims:</b> ${b.goals.map(esc).join(' · ')}</div></div>`; })()}

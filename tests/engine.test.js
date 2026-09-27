@@ -205,7 +205,7 @@ test('a losing war tempts the schemers first: the Boltons treat with the enemy l
 });
 
 // ── Orders: the sworn hosts answering the call are the player's to command ──
-import { executeActions, commandable, carryOutOrders, raiseLevies } from '../server/orders.js';
+import { executeActions, commandable, carryOutOrders, raiseLevies, advanceMusters } from '../server/orders.js';
 test('"march the whole host to Moat Cailin" sends the sworn hosts on the road there too', async () => {
   const s = fresh();
   apply(s, [{ op: 'army_create', id: 'hb', owner: 'bolton', name: 'Host of House Bolton', at: 'bolton', men: 4000 }]);
@@ -889,11 +889,14 @@ test('an empty question returns nothing rather than noise', () => {
   assert.deepEqual(searchLore('   ', 5), []);
 });
 
-test('north of the Wall resolves beyond the Wall, never Winterfell or Casterly Rock', () => {
+test('north of the Wall resolves beyond the Wall, never the model\'s wrong Casterly Rock', () => {
   const s = fresh();
   const army = Object.values(s.armies).find((a) => a.owner === 'stark' && a.type === 'army');
-  const result = executeActions(s, [{ op: 'march', order: 1, army: army.id, to: 'north of the Wall' }], [{ text: 'March north of the Wall.' }]);
+  // This is the exact failure from play: even if an interpreter proposes the Rock, the lord's
+  // written destination is authoritative.
+  const result = executeActions(s, [{ op: 'march', order: 1, army: army.id, to: 'Casterly Rock' }], [{ text: 'March north of the Wall.' }]);
   assert.match(result[1][0], /Hardhome/);
+  assert.ok(result[1].some((x) => /The Wall/.test(x)), result[1].join(' '));
   assert.equal(s.armies[army.id].march.to, 'hardhome');
 });
 
@@ -905,4 +908,61 @@ test('a large levy call starts a camp and the men arrive over days', () => {
   assert.ok(host.muster.remaining > 0, lines.join(' '));
   assert.ok(host.men < 20000);
   assert.equal(s.houses.stark.figures.levies.v, before - Math.min(before, 20000));
+});
+
+test('an unresolved destination is refused aloud rather than replaced with a plausible wrong place', () => {
+  const s = fresh();
+  const army = Object.values(s.armies).find((a) => a.owner === 'stark' && a.type === 'army');
+  const result = executeActions(s, [{ op: 'march', order: 1, army: army.id, to: 'Casterly Rock' }], [{ text: "March to the Weeping Stones below Gorne's Way." }]);
+  assert.match(result[1].join(' '), /destination.+could not be resolved/i);
+  assert.equal(s.armies[army.id].march, undefined);
+});
+
+test('the playback clock gives every same-day event its own moving moment', async () => {
+  const { playbackMoments } = await import('../public/js/shared/turns.js');
+  const events = [{ day: 2 }, { day: 2 }, { day: 5 }];
+  const at = playbackMoments(events, 7);
+  assert.ok(at[0] > 1 / 7 && at[0] < at[1]);
+  assert.ok(at[1] < 2 / 7 && at[2] > at[1]);
+});
+
+test('a bannerman answers by pitching a small camp at his own seat, not appearing in full', async () => {
+  const s = fresh(); const { vassalTick } = await import('../public/js/shared/vassals.js');
+  s.houses.bolton.obligations = { tribute: 'paying', levies: 'called', muster: 'stark', calledDays: 0, respondAfter: 1 };
+  s.characters.roose_bolton.loyalty = 100;
+  const old = Math.random; Math.random = () => 0.1;
+  try { vassalTick(s, 1); } finally { Math.random = old; }
+  const host = Object.values(s.armies).find((a) => a.owner === 'bolton' && a.serving === 'stark');
+  assert.ok(host?.muster?.remaining > 0);
+  assert.equal(host.at, 'bolton');
+  assert.ok(host.men < host.muster.total);
+  assert.equal(host.march, undefined);
+});
+
+test('a camp fills day by day, then takes the road instead of marching while men are absent', () => {
+  const s = fresh();
+  raiseLevies(s, { at: 'stark', men: 1400, name: 'The Northern Host', to: 'north of the Wall', immediate: false });
+  const host = Object.values(s.armies).find((a) => a.name === 'The Northern Host');
+  assert.equal(host.march?.pending, true);
+  assert.equal(host.at, 'stark');
+  const events = advanceMusters(s, 14);
+  assert.ok(events.length > 2 && events.every((e, i) => !i || e.day > events[i - 1].day));
+  assert.equal(host.muster, undefined);
+  assert.equal(host.march.to, 'hardhome');
+  assert.equal(host.men, 1400);
+});
+
+test('an explicit order makes scattered bannermen follow the great host and merge when they catch it', async () => {
+  const s = fresh(); s.armies = {};
+  apply(s, [{ op: 'army_create', id: 'north', owner: 'stark', name: 'The Northern Host', at: 'moat_cailin', men: 6000 }, { op: 'army_create', id: 'hb', owner: 'bolton', name: 'Host of House Bolton', at: 'bolton', men: 3000 }]);
+  s.armies.hb.serving = 'stark'; s.houses.bolton.obligations = { levies: 'answered', host: 'hb', muster: 'stark' };
+  s.orders = [{ id: 'join', text: 'Order all my bannermen to join the Northern Host wherever it is.' }];
+  await carryOutOrders(s, null);
+  assert.equal(s.armies.hb.march?.to, 'army:north');
+  assert.match(s.armies.hb.status, /following/i);
+  s.armies.hb.pos = [...s.armies.north.pos]; delete s.armies.hb.march;
+  const { gatherMusters } = await import('../public/js/shared/vassals.js');
+  gatherMusters(s);
+  assert.equal(s.armies.hb, undefined);
+  assert.equal(s.armies.north.men, 9000);
 });

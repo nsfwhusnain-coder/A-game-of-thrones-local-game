@@ -2,29 +2,37 @@
 // actions — someone rides somewhere (with men), a host marches, men are recruited where the house has people,
 // an officer is hired, a levy is raised — and the engine carries them out. The story model is then told what
 // has already been done, so it narrates the consequences instead of deciding whether to obey.
-import { applyChanges, resolvePlaceId, placeName, slug, dateStr, dayNumber } from '../public/js/shared/world.js';
+import { applyChanges, resolvePlaceId, placeName, placePos, slug, dateStr, dayNumber } from '../public/js/shared/world.js';
 import { MILES_PER_UNIT } from '../public/data/geography.js';
 import { whereabouts } from '../public/js/shared/roads.js';
 import { commandable } from '../public/js/shared/errands.js';
 import { PROJECT_TEMPLATES } from '../public/js/shared/economy.js';
 import * as court from './court.js';
 import { unitsOf, unitsFor, addUnits, unitsText } from '../public/js/shared/units.js';
+import { roadWarnings } from '../public/js/shared/chokepoints.js';
 export { commandable };
 
 const OFFICES = ['spymaster', 'steward', 'maester', 'captain', 'master_at_arms', 'knight', 'envoy', 'commander'];
 
 // Where an order means to go: a place by name; a house ('the Lannisters') means its seat; a direction, the
 // obvious place on the road that way from the North and the Riverlands
-function destination(state, text) {
-  const id = resolvePlaceId(text); if (id) return id;
-  const t = String(text || '').toLowerCase();
-  const h = Object.values(state.houses).find((x) => x.seat && (t.includes(x.name.toLowerCase()) || t.includes(x.id.replace(/_/g, ' '))));
-  if (h) return h.seat;
-  // Explicit regions must win over the tempting one-word aliases. In particular,
-  // "north of the Wall" is not "the Wall" (and must never fall through to Winterfell).
+export function destination(state, text) {
+  const raw = String(text || '');
+  const exact = resolvePlaceId(raw); if (exact) return exact;
+  const t = raw.toLowerCase();
+  // Explicit regions beat every tempting one-word alias. "North of the Wall" is not
+  // Castle Black, and no model-supplied destination may overrule the lord's own words.
   if (/\bnorth\s+of\s+(?:the\s+)?wall\b|\bbeyond\s+(?:the\s+)?wall\b|\bfrostfangs\b/.test(t)) return resolvePlaceId('hardhome');
+  // The longest holding name in a sentence wins. This reads lowercase dictation too.
+  const namedPlace = Object.values(state.holdings)
+    .map((h) => [h.name.toLowerCase(), h.id]).sort((a, b) => b[0].length - a[0].length)
+    .find(([name]) => new RegExp(`\\b${name.replace(/[^a-z0-9 ]/g, '.')}\\b`, 'i').test(t));
+  if (namedPlace) return namedPlace[1];
+  // A house named as a target means its seat ("march on the Lannisters").
+  const h = Object.values(state.houses).find((x) => x.seat && (new RegExp(`\\b${x.name.toLowerCase()}s?\\b`).test(t) || new RegExp(`\\b${x.id.replace(/_/g, ' ')}s?\\b`).test(t)));
+  if (h) return h.seat;
   const dir = { south: 'moat_cailin', north: 'nights_watch', riverlands: 'tully', west: 'lannister', capital: 'kings_landing', crossing: 'frey', wall: 'nights_watch' };
-  for (const [k, v] of Object.entries(dir)) if (t.includes(k)) return resolvePlaceId(v);
+  for (const [k, v] of Object.entries(dir)) if (new RegExp(`\\b${k}\\b`).test(t)) return resolvePlaceId(v);
   return null;
 }
 
@@ -53,7 +61,7 @@ Reply with ONE JSON object: {"actions":[...],"story":[...]}. Only concrete moves
 - {"op":"recruit","order":1,"at":"<place name>","men":<number>,"kind":"men-at-arms|sellswords"}   — hire fighting men where the house has people (e.g. the lord's own city of residence)
 - {"op":"raise","order":1,"at":"<holding id>","men":<number, or omit for all that can be found>,"commander":"<person id, optional>","name":"<host name, optional, e.g. The Northern Host>","to":"<place name, optional>"}   — call up the house's OWN levies; they join the host already standing at that place (one army, not two)
 - {"op":"banners","order":1,"vassals":"all" or ["<house id>",...],"at":"<muster place>"}   — CALL THE BANNERS: summon sworn lords to bring their levies to the muster (they come over days, by their own temper)
-- {"op":"merge","order":1,"armies":["<host id>",...] or omit for all at one place,"name":"<optional new name>","commander":"<person id, optional>"}   — join hosts that stand in the same place into one
+- {"op":"merge","order":1,"armies":["<host id>",...] or omit for all at one place,"name":"<optional new name>","commander":"<person id, optional>"}   — join hosts into one; sworn hosts elsewhere march to the great host and merge when they catch it
 - {"op":"hire","order":1,"role":"${OFFICES.join('|')}","at":"<place name>"}   — take a new officer into service there
 - {"op":"appoint","order":1,"character":"<person id>","role":"${OFFICES.join('|')}"}   — give one of your people an office
 - {"op":"feast","order":1} / {"op":"tourney","order":1}   — the lord holds a feast or a tourney at his seat (the engine pays and weighs how the lords take it)
@@ -116,6 +124,9 @@ export function readOrdersByRule(state, orders, addressee = null) {
     if (gathering && !/\b(recruit|hire|sellswords?)\b/i.test(t)) {
       actions.push({ op: 'raise', order: n, at: resolvePlaceId(placeIn(t)) || state.houses[p].seat, men: num(t) || undefined, name: hostName(t) });
       return;
+    }
+    if (/\b(join|merge|combine|unite|rally)\b/i.test(t) && /\b(hosts?|arm(?:y|ies)|banners?|bannermen|forces|men)\b/i.test(t)) {
+      actions.push({ op: 'merge', order: n, name: hostName(t) }); return;
     }
     if (/\b(hold|throw|host|give|call|proclaim|announce)\b[^.]*\b(feast|tourney|tournament)\b/i.test(t)) { actions.push({ op: /tourney|tournament/i.test(t) ? 'tourney' : 'feast', order: n }); return; }
     const work = /\b(fund|build|expand|raise|found|begin|repair|strengthen|endow|open|dig|fill|deepen|train)\b/i.test(t) && WORKS.find(([, re]) => re.test(t.toLowerCase()));
@@ -198,13 +209,18 @@ export function executeActions(state, actions, orders = [], options = { immediat
         const mine = Object.values(state.armies).filter((x) => commandable(state, x));
         // 'the army', 'my host': the largest host at hand if the model named none we know
         const army = (state.armies[a.army] && commandable(state, state.armies[a.army]) ? state.armies[a.army] : null) || mine.find((x) => slug(x.name) === slug(a.army || '')) || (mine.length ? [...mine].sort((x, y) => y.men - x.men)[0] : null);
-        const to = destination(state, a.to);
+        const written = orders[i - 1]?.text;
+        const orderedTo = written ? destination(state, written) : null;
+        const namesRoad = written && /\b(march|advance|move|ride|make for|head|go|attack|invade|besiege)\b/i.test(written);
+        const to = orderedTo || (!namesRoad ? destination(state, a.to) : null);
         if (!army) throw new Error('you have no host to march — raise your levies or wait for your bannermen');
-        if (!to) throw new Error('unknown place ' + a.to);
-        army.march = { to, since: state.meta.turn }; army.status = 'marching';
-        const lead = leaderIn(state, orders[i - 1]?.text, army);
+        if (!to) throw new Error(`the destination in “${String(written || a.to || '').slice(0, 90)}” could not be resolved — name a castle, town, region, or house`);
+        army.march = { to, since: state.meta.turn }; army.dest = state.holdings[to]?.pos ? [...state.holdings[to].pos] : null; army.destName = placeName(state, to); army.at = null; army.status = 'marching';
+        const lead = leaderIn(state, written, army);
         if (lead) { army.commander = lead.id; lead.loc = 'army:' + army.id; delete lead.travel; }
-        note(i, `${army.name} (${army.men.toLocaleString('en-GB')} men${army.commander ? ` under ${state.characters[army.commander]?.name}` : ''}) marches for ${placeName(state, to)}`); continue;
+        note(i, `${army.name} (${army.men.toLocaleString('en-GB')} men${army.commander ? ` under ${state.characters[army.commander]?.name}` : ''}) marches for ${placeName(state, to)}`);
+        for (const warning of roadWarnings(state, army, army.pos, army.dest)) note(i, `The road: ${warning}`);
+        continue;
       }
       if (a.op === 'raise') { const lead = !a.commander && leaderIn(state, orders[i - 1]?.text, null, resolvePlaceId(a.at)); for (const l of raiseLevies(state, { ...(lead ? { ...a, commander: lead.id } : a), immediate: !!options.immediate })) note(i, l); continue; }
       if (a.op === 'banners') { for (const l of callBanners(state, a)) note(i, l); continue; }
@@ -296,8 +312,8 @@ export async function carryOutOrders(state, ask) {
   // 'all my men', 'the whole host', 'the banners': every sworn host answering the call goes where the order sends the rest
   fresh.forEach((o, k) => {
     if (!/\b(all|every|everything|whole|entire|all my men|the army|my army|banners|bannermen|our strength)\b/i.test(o.text)) return;
-    const went = (results[k + 1] || []).map((t) => t.match(/marches for (.+)$/)?.[1]).find(Boolean); if (!went) return;
-    const to = resolvePlaceId(went); if (!to) return;
+    const went = (results[k + 1] || []).map((t) => t.match(/(?:will march|marches) for ([^(;]+?)(?: when|$)/i)?.[1]).find(Boolean);
+    const to = destination(state, o.text) || resolvePlaceId(went); if (!to) return;
     for (const a of Object.values(state.armies)) {
       if (!commandable(state, a) || a.owner === state.meta.player || a.march?.to === to) continue;
       a.march = { to, since: state.meta.turn }; a.status = 'marching'; a.at = null;
@@ -455,7 +471,7 @@ export function orderEvents(state, orders, modelEvents) {
 }
 
 // ── Hosts: one army where the men are, not a new one for every muster ──
-const fieldHostAt = (state, owner, at) => Object.values(state.armies).find((x) => x.owner === owner && x.type !== 'fleet' && x.at === at && !x.march && !/garrison/i.test(x.status || ''));
+const fieldHostAt = (state, owner, at) => Object.values(state.armies).find((x) => x.owner === owner && x.type !== 'fleet' && x.at === at && (!x.march || x.march.pending) && !/garrison/i.test(x.status || ''));
 /** Fold one host into another: men, morale, supply, the banners in it, and the people riding with it. */
 export function foldInto(state, host, other) {
   host.units = addUnits(unitsOf(state, host), unitsOf(state, other));
@@ -498,19 +514,38 @@ export function raiseLevies(state, { at, men, commander, name, to, immediate }) 
   }
   if (n < Math.round(Number(men) || 0)) out.push(`only ${fmtN(n)} could be found of the ${fmtN(Math.round(Number(men)))} asked for`);
   const dest = to && destination(state, to);
-  if (dest && dest !== place) { host.march = { to: dest, since: state.meta.turn }; host.status = 'marching'; host.at = null; out.push(`${host.name} marches for ${placeName(state, dest)}`); }
+  if (dest && dest !== place) {
+    if (host.muster?.remaining) {
+      host.muster.to = dest; host.march = { to: dest, since: state.meta.turn, pending: true };
+      host.dest = placePos(dest, state.holdings); host.destName = placeName(state, dest);
+      out.push(`${host.name} will march for ${placeName(state, dest)} when the muster is full`);
+    } else { host.march = { to: dest, since: state.meta.turn }; host.dest = placePos(dest, state.holdings); host.destName = placeName(state, dest); host.status = 'marching'; host.at = null; out.push(`${host.name} marches for ${placeName(state, dest)}`); }
+  }
   return out;
 }
-/** Bring the next day's levy contingent into its camp. Numbers are engine-owned and grow visibly. */
+/** Bring each day's levy contingent into its camp. The state ends at the period's true total;
+ * dated events let playback show the camp filling instead of presenting one impossible jump. */
 export function advanceMusters(state, days) {
   const events = [];
   for (const a of Object.values(state.armies)) {
     if (!a.muster?.remaining || a.type === 'fleet') continue;
-    const add = Math.min(a.muster.remaining, Math.max(0, Math.round(a.muster.daily * days)));
-    if (!add) continue;
-    a.men += add; a.muster.remaining -= add;
-    if (a.muster.remaining <= 0) { delete a.muster; a.status = a.march ? 'marching' : 'mustered'; }
-    events.push({ title: `${a.name} grows in the fields`, text: `${add.toLocaleString('en-GB')} more men have reached the camp. The host now numbers ${a.men.toLocaleString('en-GB')}.`, where: a.at || null, importance: 2, type: 'war', houses: [a.owner] });
+    const m = a.muster;
+    const firstDay = Math.max(1, Math.floor(a.bornDay || 0) + 1);
+    const startMen = a.men;
+    let lastDay = firstDay - 1;
+    for (let day = firstDay; day <= days && m.remaining > 0; day++) {
+      const add = Math.min(m.remaining, Math.max(1, Math.round(m.daily)));
+      a.units = addUnits(unitsOf(state, a), unitsFor(state, { owner: a.owner, composition: a.composition }, add));
+      a.men += add; m.remaining -= add; lastDay = day;
+      if (a.owner === state.meta.player || a.serving === state.meta.player) events.push({ day, title: `${a.name} grows beneath the walls`, text: `${add.toLocaleString('en-GB')} more men reach the camp from the fields. ${a.name} now numbers ${a.men.toLocaleString('en-GB')}.`, details: m.remaining > 0 ? `${m.remaining.toLocaleString('en-GB')} men are still expected before the host takes the road.` : 'The last village contingent has come in; the muster is complete.', where: a.at || state.houses[a.owner]?.seat || null, importance: 2, type: 'war', houses: [a.owner] });
+    }
+    a.musterMotion = { start: Math.max(0, firstDay - 1) / Math.max(1, days), end: Math.max(firstDay, lastDay) / Math.max(1, days), from: startMen, to: a.men };
+    if (m.remaining <= 0) {
+      const to = m.to; delete a.muster;
+      if (to && to !== a.at) {
+        a.march = { to, since: state.meta.turn }; a.dest = placePos(to, state.holdings); a.destName = placeName(state, to); a.at = null; a.status = 'marching to muster'; a.bornDay = Math.min(days - 1, Math.max(0, lastDay));
+      } else { delete a.march; a.status = 'mustered'; }
+    }
   }
   return events;
 }
@@ -522,25 +557,38 @@ export function callBanners(state, { vassals, at }) {
   const list = vassals === 'all' || !Array.isArray(vassals) || !vassals.length ? all : all.filter((h) => vassals.some((v) => slug(v) === h.id || String(v).toLowerCase().includes(h.name.toLowerCase())));
   if (!list.length) throw new Error('no sworn lord to summon');
   const muster = resolvePlaceId(at) || destination(state, at) || me.seat;
-  for (const v of list) v.obligations = { ...(v.obligations || {}), levies: 'called', muster, calledDays: 0 };
+  for (const v of list) { v.obligations = { ...(v.obligations || {}), levies: 'called', muster, calledDays: 0 }; delete v.obligations.respondAfter; }
   return [`The banners are called: ${list.length} sworn house${list.length > 1 ? 's' : ''} summoned to muster at ${placeName(state, muster)} (${list.slice(0, 8).map((v) => v.name).join(', ')}${list.length > 8 ? '…' : ''}); each answers in their own time and temper`];
 }
-/** Bring hosts at one place together under one banner. */
+/** Bring hosts together under one banner. Hosts already together merge now; sworn hosts elsewhere
+ * march to the player's great host and gatherMusters folds them in when they meet. */
 export function mergeHosts(state, { armies, name, commander }) {
-  const mine = Object.values(state.armies).filter((a) => commandable(state, a) && a.type !== 'fleet');
-  // the castle's own garrison stays on its walls unless it is named
-  const picked = Array.isArray(armies) && armies.length ? mine.filter((a) => armies.includes(a.id) || armies.some((x) => slug(x) === slug(a.name))) : mine.filter((a) => !/garrison/i.test(a.status || ''));
-  const groups = new Map(); for (const a of picked) { const k = a.at || `${Math.round(a.pos[0] / 6)},${Math.round(a.pos[1] / 6)}`; groups.set(k, [...(groups.get(k) || []), a]); }
+  const mine = Object.values(state.armies).filter((a) => commandable(state, a) && a.type !== 'fleet' && !/garrison/i.test(a.status || ''));
+  const named = Array.isArray(armies) && armies.length;
+  const picked = named ? mine.filter((a) => armies.includes(a.id) || armies.some((x) => slug(x) === slug(a.name))) : mine;
+  if (picked.length < 2) throw new Error('there are no two field hosts to join');
+  const own = picked.filter((a) => a.owner === state.meta.player).sort((a, b) => b.men - a.men);
+  const target = own[0] || [...picked].sort((a, b) => b.men - a.men)[0];
   const out = [];
-  for (const g of groups.values()) {
-    if (g.length < 2) continue;
-    g.sort((a, b) => (b.owner === state.meta.player) - (a.owner === state.meta.player) || b.men - a.men);
-    const host = g[0]; for (const o of g.slice(1)) foldInto(state, host, o);
-    if (name) host.name = String(name).slice(0, 80);
-    const cmd = commander && state.characters[commander]; if (cmd?.alive) { host.commander = cmd.id; cmd.loc = 'army:' + host.id; }
-    out.push(`${g.length} hosts at ${placeName(state, host.at || host.pos)} are joined into ${host.name}: ${fmtN(host.men)} men${host.commander ? ` under ${state.characters[host.commander]?.name}` : ''}`);
+  const close = (a, b) => Math.hypot(a.pos[0] - b.pos[0], a.pos[1] - b.pos[1]) < 4;
+  for (const other of picked) {
+    if (other.id === target.id || !state.armies[other.id]) continue;
+    if (close(target, other)) {
+      const men = other.men; const old = other.name; foldInto(state, target, other);
+      out.push(`${old} and ${target.name} are joined into ${target.name}: ${fmtN(target.men)} men`);
+      continue;
+    }
+    // A bannerman ordered to join does not sit at his castle waiting for the great host to
+    // come back. He follows that host, wherever it is now, and merges when he catches it.
+    other.serving = state.meta.player;
+    other.march = { to: 'army:' + target.id, since: state.meta.turn };
+    other.dest = [...target.pos]; other.destName = target.name; other.at = null; other.status = `following ${target.name}`;
+    const v = state.houses[other.owner]; if (v?.obligations) v.obligations.host = other.id;
+    out.push(`${other.name} marches to join ${target.name} wherever it is`);
   }
-  if (!out.length) throw new Error('there are no two hosts in the same place to join — they must first march to one place');
+  if (name) target.name = String(name).slice(0, 80);
+  const cmd = commander && state.characters[commander]; if (cmd?.alive) { target.commander = cmd.id; cmd.loc = 'army:' + target.id; }
+  if (!out.length) throw new Error('the hosts are already joined');
   return out;
 }
 const fmtN = (n) => Math.round(n).toLocaleString('en-GB');

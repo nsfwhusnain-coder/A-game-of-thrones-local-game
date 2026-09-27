@@ -11,6 +11,26 @@ export const TURN_MIN = 1, TURN_MAX = 30, TURN_QUIET = 7;
 const CONTACT = 14; // map units: two hosts this close can come to blows
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
+/**
+ * Where each event falls on the turn's continuous 0..1 reel. Several things on one day are
+ * spread through that day instead of sharing one frozen frame; dates still bind their order.
+ */
+export function playbackMoments(events, spanDays) {
+  const days = Math.max(1, Number(spanDays) || 1);
+  const groups = new Map();
+  for (const e of events || []) {
+    const day = Math.max(1, Math.min(days, Math.round(Number(e.day) || 1)));
+    if (!groups.has(day)) groups.set(day, []);
+    groups.get(day).push(e);
+  }
+  const rank = new Map();
+  for (const [day, list] of groups) list.forEach((e, i) => rank.set(e, { day, i, n: list.length }));
+  return (events || []).map((e) => {
+    const r = rank.get(e) || { day: 1, i: 0, n: 1 };
+    return Math.min(1, Math.max(0, (r.day - 1 + (r.i + 1) / (r.n + 1)) / days));
+  });
+}
+
 // where a marching host will be after d days (straight along its road, at its pace)
 function posAfter(state, a, d) {
   const to = a.march && (String(a.march.to).startsWith('army:') ? state.armies[String(a.march.to).slice(5)]?.pos : state.holdings[a.march.to]?.pos);
