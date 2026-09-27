@@ -23,7 +23,7 @@ import { treacheryTick } from '../public/js/shared/treachery.js';
 import { regencyTick } from '../public/js/shared/regency.js';
 import { outcomeFor, standing } from '../public/js/shared/standing.js';
 import * as court from './court.js';
-import { carryOutOrders, readOrdersByRule, executeActions, named, startWorks, commandable, previewOrders, orderEvents, raiseLevies, callBanners, ravenDays } from './orders.js';
+import { carryOutOrders, readOrdersByRule, executeActions, named, startWorks, commandable, previewOrders, orderEvents, raiseLevies, callBanners, advanceMusters, ravenDays } from './orders.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -290,6 +290,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   const touched = new Set();
   const vt = vassalTick(state, spanInfo.days, touched);
   applied.push(...vt.applied);
+  vt.events.push(...advanceMusters(state, spanInfo.days));
   // Marching orders the story didn't resolve: the engine walks the host along at marching pace
   for (const a of Object.values(state.armies)) {
     if (!a.march || a.movedTurn === state.meta.turn) continue;

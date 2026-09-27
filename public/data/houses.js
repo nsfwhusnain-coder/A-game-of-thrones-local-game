@@ -228,6 +228,7 @@ export const EXTRA_HOLDINGS = [
 
 // Location aliases so the AI (and the road network) can reference places by id
 export const PLACE_ALIASES = {
+  north_of_the_wall: 'hardhome', beyond_the_wall: 'hardhome', frostfangs: 'hardhome', north_of_wall: 'hardhome',
   winterfell: 'stark', castle_black: 'nights_watch', the_wall: 'nights_watch', wall: 'nights_watch', dreadfort: 'bolton', karhold: 'karstark', last_hearth: 'umber',
   bear_island: 'mormont', deepwood_motte: 'glover', greywater_watch: 'reed', torrhens_square: 'tallhart',
   barrowton: 'dustin', cerwyn: 'cerwyn', riverrun: 'tully', twins: 'frey', the_twins: 'frey', raventree_hall: 'blackwood',

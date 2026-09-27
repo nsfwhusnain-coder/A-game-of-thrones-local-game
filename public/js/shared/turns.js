@@ -29,6 +29,9 @@ export function nextTurnLength(state) {
     const to = foe ? foe.pos : state.holdings[a.march.to]?.pos; if (!to) continue;
     add(marchDays(a, a.pos, to).days, `${a.name} ${foe ? `reaches ${foe.name}` : `reaches ${placeName(state, a.march.to)}`}`);
   }
+  // A camp filling from the fields is itself a reason to look again tomorrow.
+  // Without this, auto turns can jump over the visible growth of a muster.
+  if (Object.values(state.armies).some((a) => a.muster?.remaining > 0 && a.owner === p)) add(1, 'the levy camp grows');
   // the player's riders arrive
   for (const c of Object.values(state.characters)) if (c.alive && c.house === p && c.travel) add(Math.ceil(c.travel.left), `${c.name} reaches ${placeName(state, c.travel.to)}`);
   // a great bannerman's host reaches the muster (the host grows before the lord's eyes)
