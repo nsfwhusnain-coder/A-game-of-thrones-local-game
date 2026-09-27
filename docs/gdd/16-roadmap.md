@@ -27,7 +27,7 @@ These patch the *existing* architecture; they are cheap and their tests carry ov
 | A11 | Canon dates reordered per [10](10-narrative-events.md) §4 in `plots.js` | B-19 | S | `canon-order` (old engine) |
 
 **Status of Phase A (2026-09-27, commit after `16dd483`, done and verified on the owner's PC with the live model):**
-A1 ✅ · A2 ✅ (103 tests green on Windows; `.github/workflows/ci.yml` added — confirm the first Actions run is green) ·
+A1 ✅ · A2 ✅ (104 tests; GitHub Actions green on windows-latest and ubuntu-latest, Node 22 and 24, at `70d87a8`) ·
 A3 ✅ partial (the Bard gets only applied receipts; the shared system prompt no longer demands a full turn from agents;
 default `swarm: 'lean'`; plus an interim check that drops story events claiming arrivals the engine never recorded or
 retelling the engine's own news, and weekly folding of "answers the call" cards) · A4 ✅ · A5 ✅ (`obligations.join`;
