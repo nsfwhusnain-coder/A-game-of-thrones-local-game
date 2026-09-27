@@ -659,3 +659,88 @@ test('a siege costs the besieger: the camp sickens, and the castle eats its stor
   assert.ok(s.holdings.tully.siege.stores < stores0, 'the castle eats');
   assert.ok((s.armies.sg.supply ?? 80) >= 20, 'a foraging host does not starve to nothing');
 });
+
+// ── The rule sandbox: the model designs a mechanic, the engine runs it ──
+import { compile, run, compileRule, evaluateRules, houseScope, liveRules, RuleError } from '../public/js/shared/rules.js';
+import { settle } from '../public/js/shared/economy.js';
+
+const scopeFor = (s, h = 'stark') => houseScope(s, s.houses[h], { months: 1, luck: 1, gross: 1000 });
+
+test('a formula is arithmetic, and arithmetic works', () => {
+  const s = fresh();
+  assert.equal(run(compile('2 + 3 * 4'), scopeFor(s)), 14);
+  assert.equal(run(compile('clamp(99, 0, 10)'), scopeFor(s)), 10);
+  assert.equal(run(compile('if_(1 > 2, 5, 7)'), scopeFor(s)), 7);
+  assert.equal(run(compile('house.at_war * 200'), scopeFor(s)), 0); // 298 AC: the North is at peace
+  assert.equal(run(compile('1 / 0'), scopeFor(s)), 0); // no infinities reach the ledger
+});
+
+test('a formula cannot reach out of its sandbox', () => {
+  const s = fresh();
+  for (const src of ['process.exit(1)', 'globalThis', '(function(){})()', 'house.treasury = 0', 'constructor', '[]', 'house["treasury"]', 'x'.repeat(500)]) {
+    assert.throws(() => run(compile(src), scopeFor(s)), RuleError, `should have refused: ${src}`);
+  }
+});
+
+test('an unknown name is refused at injection time, not silently zeroed', () => {
+  const s = fresh();
+  assert.throws(() => compileRule(s, { house: 'stark', name: 'Nonsense', kind: 'income', formula: 'house.dragons * 3' }), /is not something a rule can read/);
+});
+
+test('an injected rule becomes a line in the steward\'s ledger, moon after moon', () => {
+  const s = fresh();
+  const r = applyChanges(s, [{
+    op: 'inject_rule', house: 'stark', name: 'Informants in the Riverlands', kind: 'income',
+    vars: { informants: 4 }, grow: 'min(60, v.informants + 6 * months)',
+    formula: 'v.informants * 14 * months', when: 'house.treasury > 500', note: 'Paid in stolen Lannister gold.',
+  }], { source: 'test' });
+  assert.equal(r.rejected.length, 0);
+  assert.equal(s.rules.length, 1);
+  settle(s, 30);
+  const line = s.houses.stark.ledger.at(-1).lines.find((l) => l.rule === 'informants_in_the_riverlands');
+  assert.ok(line, 'the rule should have paid out');
+  assert.equal(line.kind, 'income');
+  assert.equal(s.vars.stark.informants, 10); // the network grew this moon
+  settle(s, 30);
+  assert.equal(s.vars.stark.informants, 16);
+  assert.ok(s.houses.stark.ledger.at(-1).lines.find((l) => l.rule === 'informants_in_the_riverlands').amount > line.amount);
+  assert.equal(liveRules(s, 'stark')[0].name, 'Informants in the Riverlands');
+});
+
+test('a rule cannot mint gold: every kind is capped per moon', () => {
+  const s = fresh();
+  applyChanges(s, [{ op: 'inject_rule', house: 'stark', name: 'A dragon hoard', kind: 'income', formula: '9999999' }], { source: 'test' });
+  const out = evaluateRules(s, s.houses.stark, { months: 1, luck: 1, gross: 4000 });
+  assert.equal(out.capped.length, 1);
+  assert.ok(out.lines[0].amount < 9999999 / 100);
+});
+
+test('a rule whose condition is false costs nothing', () => {
+  const s = fresh();
+  applyChanges(s, [{ op: 'inject_rule', house: 'stark', name: 'War tax', kind: 'income', formula: '500', when: 'house.at_war' }], { source: 'test' });
+  assert.equal(evaluateRules(s, s.houses.stark, { months: 1, luck: 1, gross: 1000 }).lines.length, 0);
+});
+
+test('a rule can be ended by the story that raised it', () => {
+  const s = fresh();
+  applyChanges(s, [{ op: 'inject_rule', house: 'stark', name: 'Smugglers of White Harbour', kind: 'income', formula: '300' }], { source: 'test' });
+  const r = applyChanges(s, [{ op: 'inject_rule', house: 'stark', id: 'smugglers_of_white_harbour', status: 'end' }], { source: 'test' });
+  assert.equal(r.rejected.length, 0);
+  assert.equal(evaluateRules(s, s.houses.stark, { months: 1, luck: 1, gross: 1000 }).lines.length, 0);
+  assert.equal(liveRules(s, 'stark').length, 0);
+});
+
+test('an injected rule survives a save round-trip (it is data, not code)', () => {
+  const s = fresh();
+  applyChanges(s, [{ op: 'inject_rule', house: 'stark', name: 'Tithe to the red priest', kind: 'expense', formula: 'house.holdings * 20' }], { source: 'test' });
+  const back = JSON.parse(JSON.stringify(s));
+  const out = evaluateRules(back, back.houses.stark, { months: 1, luck: 1, gross: 1000 });
+  assert.equal(out.lines[0].kind, 'expense');
+  assert.ok(out.lines[0].amount > 0);
+});
+
+test('a rule that runs away is stopped, not allowed to hang the turn', () => {
+  const s = fresh();
+  assert.equal(run(compile('2 ** 999999'), scopeFor(s)), 0); // no Infinity in the ledger
+  assert.throws(() => compile('1' + ' + 1'.repeat(400)), RuleError); // and no formula long enough to stall a turn
+});

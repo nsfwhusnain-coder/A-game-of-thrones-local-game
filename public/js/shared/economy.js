@@ -2,6 +2,7 @@
 // prosperity, unrest, the season, sieges and raids, the tax policy, the loyalty of each vassal
 // (who may pay late, pay short or withhold entirely) and plain luck. The AI simulator changes
 // the inputs (statuses, prosperity, obligations, projects); this engine settles the books.
+import { evaluateRules } from './rules.js';
 import { RESOURCES, REGION_PROFILE, HOLDING_RESOURCES, POPULATION, POPULATION_DEFAULTS, TRIBUTE_SHARE, TAX_LEVELS, RESOURCE_VALUE } from '../../data/economy.js';
 
 const MINES = new Set(['gold', 'silver', 'iron']);
@@ -228,6 +229,21 @@ export function settle(state, days) {
       L.lines.push({ kind: 'expense', label: `Project: ${p.name}`, amount: Math.round(spend) });
       if (p.monthsLeft <= 0.01) { p.status = 'complete'; completeProject(state, p); notes.push({ house: house.id, text: `${p.name} is complete.`, important: true }); }
     }
+    // ── Customs of this realm that the engine did not ship with ──────────────────────────────
+    // Whatever the Weaver has invented for this house — smuggling rings, informant networks, a
+    // tavern tax, tithes to a red priest, a blood-magic cult's demands — is evaluated here and
+    // carries its own line in the steward's accounts, capped so the story cannot mint gold.
+    const woven = evaluateRules(state, house, { months, luck: 1 + gauss() * 0.18, gross: gross[house.id] || 0 });
+    for (const line of woven.lines) L.lines.push(line);
+    for (const n of woven.notes) notes.push(n);
+    for (const c of woven.capped) notes.push({ house: house.id, text: `${c.rule} would have brought ${c.wanted.toLocaleString()} this moon; the realm could bear only ${c.cap.toLocaleString()}.` });
+    if (woven.unrest || woven.prosperity) {
+      for (const h of houseHoldings(state, house.id)) {
+        if (woven.unrest) h.unrest = clamp(Math.round(h.unrest + woven.unrest), 0, 100);
+        if (woven.prosperity) h.prosperity = clamp(Math.round((h.prosperity + woven.prosperity) * 10) / 10, 0, 100);
+      }
+    }
+
     const income = L.lines.filter((l) => l.kind === 'income').reduce((s, l) => s + l.amount, 0);
     const expense = L.lines.filter((l) => l.kind === 'expense').reduce((s, l) => s + l.amount, 0);
     let treasury = (Number(f.treasury?.v) || 0) + income - expense;
@@ -249,7 +265,8 @@ export function settle(state, days) {
     const levyDrain = Math.min(0.35, soldiers / Math.max(0.01, pop) * 3); // men in the field don't till fields
     const aid = house.id === 'nights_watch' ? (almsFor(state).length ? Math.min(1.1, 0.85 + 0.15 * almsFor(state).length) : 0) * cons : 0; // grain carts up the kingsroad
     const stores = aid * months + (Number(f.food?.v) || 0) * cons + (prod * (1 - levyDrain) - cons) * months;
-    if (!nomad) f.food = { v: Math.round(clamp(stores / cons, 0, 96) * 10) / 10, asOf: date, src, confidence: 'reported' };
+    // a woven custom may feed the house or eat it (a smuggler's grain, a cult's sacrifices)
+    if (!nomad) f.food = { v: Math.round(clamp(stores / cons + woven.food, 0, 96) * 10) / 10, asOf: date, src, confidence: 'reported' };
     // A prudent steward buys grain when the stores run low — dear in winter, impossible under embargo or siege
     if (!nomad && f.food.v < 4 && cons > 0.05) {
       const sieged = hs.some((h) => h.id === house.seat && /besieg/.test(h.status || ''));
@@ -282,7 +299,8 @@ export function settle(state, days) {
     const cur = Number(f.levies?.v) || 0;
     const target = Math.max(0, potential - raised);
     const nv = cur + (target - cur) * clamp(0.12 * months, 0, 1);
-    if (Math.abs(nv - cur) >= 1) f.levies = { v: Math.round(nv), asOf: date, src: f.levies?.src || src, confidence: 'estimate' };
+    const nv2 = nv + woven.levies * months; // sworn swords a woven custom brings in (or costs)
+    if (Math.abs(nv2 - cur) >= 1) f.levies = { v: Math.max(0, Math.round(nv2)), asOf: date, src: f.levies?.src || src, confidence: 'estimate' };
     // why it moves: shown with the figure, so a drift of a few men a day is never a mystery
     if (f.levies) f.levies.why = { bear: Math.round(potential), raised, condition: Math.round(condition * 100) };
 

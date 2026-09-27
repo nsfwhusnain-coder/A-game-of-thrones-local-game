@@ -5,6 +5,7 @@ import { whereabouts } from '../shared/roads.js';
 import { standing, standingWord } from '../shared/standing.js';
 import { regencyLine } from '../shared/regency.js';
 import { unitsText } from '../shared/units.js';
+import { liveRules } from '../shared/rules.js';
 import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS, tradeModifier } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
 import { vassalTemper } from '../shared/vassals.js';
@@ -182,6 +183,27 @@ function tradeSection(s, p) {
     <div class="row-actions" style="margin-top:0.4rem"><select id="trade-with">${partners.map((h) => `<option value="${h.id}">House ${esc(h.name)}</option>`).join('')}</select><button class="btn small" id="trade-go">Seek a trade agreement</button></div></div>`;
 }
 
+// Customs of the realm: mechanics the chronicler invented and the ledger now settles every moon.
+// They are shown apart from the accounts, because they are the part of the world the story wrote.
+function customsSection(s, p) {
+  const rules = liveRules(s, p);
+  if (!rules.length) return '';
+  const KIND = { income: ['+', 'dragons a moon'], expense: ['−', 'dragons a moon'], food: ['', 'moons of stores'], unrest: ['', 'unrest on every holding'], prosperity: ['', 'prosperity on every holding'], levies: ['', 'men a moon'], var: ['', ''] };
+  return `<div class="section"><h4>Customs of your realm</h4>
+    <p class="muted" style="font-size:0.8rem;margin:-0.2rem 0 0.5rem">Not laws of the world, but of <i>your</i> world — things the chronicle raised, which your stewards now reckon with every moon.</p>
+    ${rules.map((r) => {
+      const [sign, unit] = KIND[r.kind] || ['', ''];
+      const vals = Object.entries(r.values || {}).map(([k, v]) => `${esc(k.replace(/_/g, ' '))} <b style="color:var(--gold2)">${fmt(Math.round(v))}</b>`).join(' · ');
+      return `<div class="proj"><div style="display:flex;justify-content:space-between;gap:0.6rem;align-items:baseline">
+        <b>${esc(r.name)}</b><span class="muted" style="font-size:0.78rem;white-space:nowrap">${sign}${unit ? esc(unit) : esc(r.kind)}</span></div>
+        ${r.note ? `<div class="muted" style="font-size:0.82rem">${esc(r.note)}</div>` : ''}
+        ${vals ? `<div style="font-size:0.82rem;margin-top:0.2rem">${vals}</div>` : ''}
+        ${r.last != null ? `<div class="muted" style="font-size:0.78rem">Last moon: ${r.kind === 'income' || r.kind === 'expense' ? `${sign}${fmt(Math.abs(Math.round(r.last)))} dragons` : `${Math.round(r.last * 10) / 10}`}</div>` : ''}
+        <div class="muted" style="font-size:0.72rem;margin-top:0.25rem;font-family:var(--mono,monospace);opacity:0.55" title="how your stewards reckon it">${esc(r.formula)}</div>
+      </div>`;
+    }).join('')}</div>`;
+}
+
 function economy() {
   const s = app.state, p = s.meta.player, h = player();
   const pr = project(s, p);
@@ -208,6 +230,7 @@ function economy() {
       <p class="muted" style="font-size:0.8rem">${esc(season.label)}: ${esc(s.world?.seasonNote || season.note)}</p></div>
     <div class="section"><h4>Taxation</h4><div class="tpl-grid">${Object.entries(TAX_LEVELS).map(([k, t]) => `<div class="tpl" data-tax="${k}" style="${k === tax ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t.label}${k === tax ? ' ✓' : ''}</b><div class="c">${esc(t.desc)}</div></div>`).join('')}</div></div>
     ${h.liege && s.houses[h.liege] ? (() => { const cur = h.obligations?.tribute || 'paying'; const D = { paying: ['Pay in full', 'What is owed, on time. Your liege is content.'], late: ['Pay late', 'Excuses and partial sums. Patience wears thin.'], withholding: ['Withhold', 'Keep the gold. Your liege will notice, and will act.'] }; return `<div class="section"><h4>Dues to House ${esc(s.houses[h.liege].name)}</h4><div class="tpl-grid">${Object.entries(D).map(([k, [t, d]]) => `<div class="tpl" data-dues="${k}" style="${k === cur ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t}${k === cur ? ' ✓' : ''}</b><div class="c">${d}</div></div>`).join('')}</div></div>`; })() : ''}
+    ${customsSection(s, p)}
     ${moonAccounts(h)}
     ${tradeSection(s, p)}
     ${L ? `<div class="section"><h4>Last accounts — ${esc(L.date)} (${L.days} day${L.days > 1 ? 's' : ''})${L.reporter ? ', by ' + esc(L.reporter) : ''}</h4><table class="ledger">

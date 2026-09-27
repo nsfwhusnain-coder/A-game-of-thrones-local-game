@@ -9,6 +9,7 @@ import { initEconomy, TAX_LEVELS, project } from './economy.js';
 import { heirOf } from './people.js';
 import { addReport, updateIntel } from './intel.js';
 import { commandable } from './errands.js';
+import { compileRule } from './rules.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -910,6 +911,45 @@ function applyOne(state, ch, ctx) {
       if (!aid && !ch.false && !ch.lie) throw new Error('unknown army ' + (ch.army || ch.id));
       const r = addReport(state, { army: aid || null, pos: pos || (aid ? state.armies[aid].pos : null), men: num(ch.men), source: ch.source || 'a raven', false: !!(ch.false || ch.lie), owner: findHouse(state, ch.owner) || (aid && state.armies[aid].owner), name: ch.name });
       return { op, text: `A report reaches you: ${r.name} (~${fmt(r.men)} men) near ${ch.at ? placeName(state, ch.at) : 'where it was last seen'} — ${r.source}` };
+    }
+    // ═══════════════════════════════════════════════════════════════════════════════════════════
+    // inject_rule — the model designs a mechanic, and the engine runs it
+    //
+    // "Fund a network of informants in the Riverlands, paid in stolen Lannister gold" is not any op
+    // in this file. It is a new quantity with its own economics, and the Weaver writes it:
+    //   { op:'inject_rule', house:'stark', name:'Informants in the Riverlands', kind:'income',
+    //     vars:{ informants: 0 },
+    //     grow: 'min(60, v.informants + 6 * months * (house.treasury > 2000))',
+    //     formula: 'v.informants * 14 * luck * months',
+    //     when: 'house.treasury > 500', note: 'Paid out of stolen Lannister coin.' }
+    // From the next turn the steward's ledger carries its own line, and the number lives in the save.
+    //
+    // The formula is a sandboxed expression, never JavaScript (see shared/rules.js for why), it is
+    // compiled and dry-run here so a bad rule never reaches a save, and every kind is capped so the
+    // model cannot invent its way to a million dragons a moon.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════
+    case 'inject_rule': case 'rule': case 'mechanic': {
+      const hid = findHouse(state, ch.house || ch.owner) || state.meta.player;
+      if (!state.houses[hid]) throw new Error('unknown house ' + ch.house);
+      // the player's own realm may only be reshaped by the player's own doing, not by passing rumour
+      if (ctx.protectPlayer && hid === state.meta.player && !ctx.mayInvent) throw new Error('a new custom of your realm must come from your own order, not from report');
+      state.rules = state.rules || [];
+      // ending a rule the story itself raised ("the informants are rolled up") needs no formula
+      if (/^(end|stop|cancel|lapse|revoke)$/i.test(String(ch.status || ''))) {
+        const key = String(ch.id || ch.name || '').toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 40);
+        const r = state.rules.find((x) => x.house === hid && x.id === key && x.status !== 'ended');
+        if (!r) throw new Error('no such custom to end');
+        r.status = 'ended';
+        return { op, text: `${r.name} is at an end` };
+      }
+      const spec = compileRule(state, { ...ch, house: hid, source: ctx.source || 'the story' });
+      const existing = state.rules.findIndex((r) => r.id === spec.id && r.house === hid);
+      if (state.rules.filter((r) => r.house === hid && !r.status).length >= 12 && existing < 0) throw new Error('this house already keeps as many special customs as its stewards can track');
+      if (existing >= 0) { state.rules[existing] = { ...state.rules[existing], ...spec, status: undefined }; return { op, text: `${spec.name} is changed` }; }
+      state.rules.push(spec);
+      state.vars = state.vars || {}; state.vars[hid] = state.vars[hid] || {};
+      for (const [k, v0] of Object.entries(spec.vars || {})) if (state.vars[hid][k] === undefined) state.vars[hid][k] = v0;
+      return { op, text: `NEW CUSTOM — ${state.houses[hid].name}: ${spec.name} (${spec.kind}: ${spec.formula})` };
     }
     case 'chronicle': case 'memory': {
       state.chronicle.push({ date, text: String(ch.text || '') });

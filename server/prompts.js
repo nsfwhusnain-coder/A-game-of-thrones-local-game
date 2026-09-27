@@ -10,6 +10,7 @@ import {
   dateStr, getRelation, resolvePlaceId, realmOf, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, SPANS, spanOf, nearestHolding, roadPos,
 } from '../public/js/shared/world.js';
 import { estimateTokens } from './llm.js';
+import { describeRules } from '../public/js/shared/rules.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom, marchDays } from '../public/js/shared/warfare.js';
 import { unitsText } from '../public/js/shared/units.js';
@@ -58,6 +59,14 @@ const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent 
     (put a real choice before the PLAYER when a character or event demands their answer: an offer, a demand, a crisis, a judgement. 2-4 options, each plausible. The player's choice arrives as an order next turn.)
 - {"op":"report","army":ARMY_ID,"at":PLACE,"men":N,"source":"a raven from Lord X / a merchant / a spy","false":true?}
     (FOG OF WAR: the player sees only hosts near their own lands and hosts. Use this to bring them news of distant hosts — stale, exaggerated, or a planted lie with "false":true, e.g. a feint)
+- {"op":"inject_rule","house":HOUSE,"name":"Informants in the Riverlands","kind":"income|expense|food|unrest|prosperity|levies|var","formula":"v.informants * 14 * luck * months","when":"house.treasury > 500","grow":"min(60, v.informants + 6 * months)","vars":{"informants":4},"note":"why it exists","untilTurn":N}
+    THE ONE OP THAT WRITES NEW RULES. When the story creates something the engine has no number for — a smuggling ring, a network of informants, a cult's tithe, a new tax on the river trade, a plague that eats grain — do not merely narrate it: give it a formula, and the steward's ledger will carry it every moon from now on, in the save, for the rest of the game.
+    "formula" is arithmetic ONLY, in a tiny sandboxed language. No JavaScript, no function calls beyond the list below, no assignment, no quotes.
+    It may read: months, days, luck (≈0.8-1.2), turn, year; season.summer/autumn/winter/spring/harshness (1 or 0, harshness 0-1); house.treasury, house.debt, house.income, house.food, house.levies, house.men_at_arms, house.guard, house.ships, house.gross, house.holdings, house.vassals, house.at_war, house.wars, house.prosperity, house.unrest, house.population, house.soldiers, house.is_paramount; and v.<your own variables declared in "vars">.
+    Functions: min max abs round floor ceil sqrt log sign clamp(x,lo,hi) lerp(a,b,t) soft(x) if_(cond,a,b). Comparisons yield 1 or 0, so "house.at_war * 200" is "200 while at war".
+    "grow" (optional) updates the FIRST variable in "vars" each moon, so an invented thing can build up or wither: a network recruits, a debt compounds, a plague burns out.
+    Units by kind: income/expense = dragons that moon; food = moons of stores; unrest/prosperity = points on every holding; levies = men; var = a bare quantity other rules read.
+    Each is capped per moon (income/expense to a fraction of the house's gross, unrest 8, prosperity 6) — invent freely, but the engine still owns the physics. Max 12 live rules per house. To end one: {"op":"inject_rule","house":HOUSE,"id":"informants_in_the_riverlands","status":"end"}.
 - {"op":"chronicle","text":"one line recording a truly significant, lasting fact (deaths of great lords, wars, crowns, betrayals)"}`;
 
 // Compact schema for conversations (small models drown in the full list)
@@ -240,6 +249,8 @@ export function playerSheet(state) {
   lines.push('Holdings: ' + holdings.map((x) => `${x.id} (${x.status}, unrest ${x.unrest}, prosperity ${x.prosperity}${x.garrison != null ? ', garrison ' + x.garrison : ''})`).join('; '));
   const chars = Object.values(state.characters).filter((c) => c.house === p && c.alive);
   lines.push('Members & retainers: ' + chars.map((c) => `${c.name} [${c.id}]${c.status !== 'free' ? ' (' + c.status + ')' : ''} @${placeName(state, c.loc)}`).join('; '));
+  const live = describeRules(state, p);
+  if (live.length) lines.push('CUSTOMS OF THIS REALM that you yourself wrote into the world (they are settled every moon; honour them in the story, change or end them when the story says so):\n' + live.map((x) => '  ' + x).join('\n'));
   const letters = (state.ravens || []).slice(0, 5);
   if (letters.length) lines.push('Letters the player has received recently:\n' + letters.map((r) => `  [${r.date}] from ${r.fromName}: ${r.text}`).join('\n'));
   const pending = (state.decisions || []).filter((d) => d.status === 'pending');
