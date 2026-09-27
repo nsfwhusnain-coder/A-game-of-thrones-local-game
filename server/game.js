@@ -9,6 +9,7 @@ import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '
 import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied, chronicleNeedsRewrite } from './agents.js';
 import { chokepointToll, roadCongestion } from '../public/js/shared/chokepoints.js';
 import { logisticsTick } from '../public/js/shared/logistics.js';
+import { financeTick } from '../public/js/shared/finance.js';
 import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
@@ -416,6 +417,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   postTick(state);
   // Settle the books for the period (after the story has changed the causes)
   const econNotes = settle(state, spanInfo.days);
+  const coin = financeTick(state, spanInfo.days); applied.push(...coin.applied);
   const events = (Array.isArray(obj.events) ? obj.events : []).map((e, k) => ({
     day: Math.max(1, Math.min(spanInfo.days, Math.round(Number(e.day) || Math.round(((k + 1) / ((obj.events?.length || 1) + 1)) * spanInfo.days)))),
     title: String(e.title || 'Untitled'), text: String(e.text || e.description || ''), details: e.details ? String(e.details) : '', where: resolvePlaceId(e.where || e.location) || null,
@@ -427,6 +429,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   // every order the lord gave has its event, told first on its day
   events.push(...orderEvents(state, state.orders, events));
   events.push(...engineEvents);
+  events.push(...coin.events.map((e) => ({ day: spanInfo.days, ...e })));
   // every event has its day in the period, so the turn can be told in order
   for (const e of events) if (!e.day) e.day = 1 + Math.floor(Math.random() * spanInfo.days);
   events.sort((a, b) => a.day - b.day || (b.orderId ? 1 : 0) - (a.orderId ? 1 : 0));

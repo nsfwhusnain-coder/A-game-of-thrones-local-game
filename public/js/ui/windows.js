@@ -6,6 +6,7 @@ import { standing, standingWord } from '../shared/standing.js';
 import { regencyLine } from '../shared/regency.js';
 import { unitsText } from '../shared/units.js';
 import { provisionState, logisticsText } from '../shared/logistics.js';
+import { financeView } from '../shared/finance.js';
 import { liveRules } from '../shared/rules.js';
 import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS, tradeModifier } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
@@ -184,6 +185,18 @@ function tradeSection(s, p) {
     <div class="row-actions" style="margin-top:0.4rem"><select id="trade-with">${partners.map((h) => `<option value="${h.id}">House ${esc(h.name)}</option>`).join('')}</select><button class="btn small" id="trade-go">Seek a trade agreement</button></div></div>`;
 }
 
+function financeSection(s, p) {
+  const f = financeView(s, p);
+  const standing = f.profile.score >= 75 ? 'a name welcomed in the black marble hall' : f.profile.score >= 55 ? 'credit worthy of a hearing' : f.profile.score >= 35 ? 'terms would be hard' : 'the black books remember too much';
+  return `<div class="section"><h4>The Iron Bank & merchant roads</h4>
+    <div class="muted" style="font-size:0.82rem">In Braavos your house is judged as <b>${standing}</b>. ${esc(f.profile.reasons[0] || '')} The factors would presently risk no more than about ${fmt(f.profile.limit)} dragons in all.</div>
+    ${f.loans.map((x) => `<div class="proj"><b>Iron Bank note — ${fmt(Math.round(x.principal))} dragons</b><div class="muted" style="font-size:0.8rem">${(x.rate * 100).toFixed(2)}% each moon · ${x.termMonths} moon term${x.accrued ? ` · ${fmt(Math.round(x.accrued))} interest waiting` : ''}${x.arrears ? ` · <span style="color:#ec9a8a">${fmt(Math.round(x.arrears))} in arrears</span>` : ''}</div></div>`).join('') || '<div class="muted" style="font-size:0.8rem;margin-top:0.4rem">No note bearing your seal lies open in Braavos.</div>'}
+    <div class="row-actions"><button class="btn small" data-order-tpl="Request a loan of  dragons from the Iron Bank for ">Seek a loan…</button>${f.loans.length ? '<button class="btn small" data-order-tpl="Repay  dragons on my note to the Iron Bank.">Repay…</button>' : ''}</div>
+    ${f.routes.length ? `<h4 style="margin-top:0.7rem">Roads that pay your ports</h4>${f.routes.map((r) => `<div class="row"><div class="grow"><div class="title">${esc(r.name)}</div><div class="sub">${esc(r.merchantName)} · ${esc(r.cargo)}</div></div><span class="pill ${r.risk >= 0.55 ? 'bad' : ''}">${r.risk >= 0.55 ? 'choked' : r.risk >= 0.3 ? 'dangerous' : 'running'}</span></div>`).join('')}` : ''}
+    ${f.memory.length ? `<div class="muted" style="font-size:0.76rem;margin-top:0.5rem">From the black books: ${f.memory.slice(-2).map((m) => esc(m.text)).join(' · ')}</div>` : ''}
+  </div>`;
+}
+
 // Customs of the realm: mechanics the chronicler invented and the ledger now settles every moon.
 // They are shown apart from the accounts, because they are the part of the world the story wrote.
 function customsSection(s, p) {
@@ -231,6 +244,7 @@ function economy() {
       <p class="muted" style="font-size:0.8rem">${esc(season.label)}: ${esc(s.world?.seasonNote || season.note)}</p></div>
     <div class="section"><h4>Taxation</h4><div class="tpl-grid">${Object.entries(TAX_LEVELS).map(([k, t]) => `<div class="tpl" data-tax="${k}" style="${k === tax ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t.label}${k === tax ? ' ✓' : ''}</b><div class="c">${esc(t.desc)}</div></div>`).join('')}</div></div>
     ${h.liege && s.houses[h.liege] ? (() => { const cur = h.obligations?.tribute || 'paying'; const D = { paying: ['Pay in full', 'What is owed, on time. Your liege is content.'], late: ['Pay late', 'Excuses and partial sums. Patience wears thin.'], withholding: ['Withhold', 'Keep the gold. Your liege will notice, and will act.'] }; return `<div class="section"><h4>Dues to House ${esc(s.houses[h.liege].name)}</h4><div class="tpl-grid">${Object.entries(D).map(([k, [t, d]]) => `<div class="tpl" data-dues="${k}" style="${k === cur ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t}${k === cur ? ' ✓' : ''}</b><div class="c">${d}</div></div>`).join('')}</div></div>`; })() : ''}
+    ${financeSection(s, p)}
     ${customsSection(s, p)}
     ${moonAccounts(h)}
     ${tradeSection(s, p)}

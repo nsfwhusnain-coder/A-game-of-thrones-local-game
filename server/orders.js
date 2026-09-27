@@ -10,6 +10,7 @@ import { PROJECT_TEMPLATES } from '../public/js/shared/economy.js';
 import * as court from './court.js';
 import { unitsOf, unitsFor, addUnits, unitsText } from '../public/js/shared/units.js';
 import { roadWarnings } from '../public/js/shared/chokepoints.js';
+import { requestLoan, repayLoan } from '../public/js/shared/finance.js';
 export { commandable };
 
 const OFFICES = ['spymaster', 'steward', 'maester', 'captain', 'master_at_arms', 'knight', 'envoy', 'commander'];
@@ -66,6 +67,7 @@ Reply with ONE JSON object: {"actions":[...],"story":[...]}. Only concrete moves
 - {"op":"appoint","order":1,"character":"<person id>","role":"${OFFICES.join('|')}"}   — give one of your people an office
 - {"op":"feast","order":1} / {"op":"tourney","order":1}   — the lord holds a feast or a tourney at his seat (the engine pays and weighs how the lords take it)
 - {"op":"works","order":1,"template":"${PROJECT_TEMPLATES.map((t) => t.key).join('|')}","at":"<holding id>"}   — fund building works (granaries, walls, a rookery…) on the house's own land
+- {"op":"borrow","order":1,"amount":<gold dragons>} / {"op":"repay","order":1,"amount":<gold dragons, omit for all affordable>}   — ask the Iron Bank for a loan, or repay its note; the engine alone decides terms and approval
 "story" — the numbers of orders that are not actions of these kinds (diplomacy, letters, intrigue, speeches, feasts…): the story will handle them.
 An order to gather "all the men of the North" means banners (sworn lords) AND raise (the house's own levies) at the same place, with the name given. A raven, letter or "send word" is never a travel action: it goes in "story" — only a person told to ride, go or deliver by hand travels. Use only ids from the lists. "to" is always a real place by name (a castle or town): for "attack the Lannisters" use their seat; for "go south" pick the place on the road that way. To fight when you have no host at hand, first "raise" levies (with "to"). Your sworn lords' hosts answering your call are yours to command too.
 Places by their name as written. If an order names "here", it means where the lord is. JSON only.`;
@@ -129,6 +131,8 @@ export function readOrdersByRule(state, orders, addressee = null) {
       actions.push({ op: 'merge', order: n, name: hostName(t) }); return;
     }
     if (/\b(hold|throw|host|give|call|proclaim|announce)\b[^.]*\b(feast|tourney|tournament)\b/i.test(t)) { actions.push({ op: /tourney|tournament/i.test(t) ? 'tourney' : 'feast', order: n }); return; }
+    if (/\b(?:borrow|seek|request|ask)\b[^.]*\b(?:loan|credit|iron bank|dragons|gold)\b/i.test(t)) { actions.push({ op: 'borrow', order: n, amount: goldIn(t) }); return; }
+    if (/\b(?:repay|pay|settle|honou?r)\b[^.]*\b(?:loan|debt|note|iron bank)\b/i.test(t)) { actions.push({ op: 'repay', order: n, amount: goldIn(t) || undefined }); return; }
     const work = /\b(fund|build|expand|raise|found|begin|repair|strengthen|endow|open|dig|fill|deepen|train)\b/i.test(t) && WORKS.find(([, re]) => re.test(t.toLowerCase()));
     if (work) { actions.push({ op: 'works', order: n, template: work[0], at: resolvePlaceId(placeIn(t)) || state.houses[p].seat }); return; }
     if (/\b(recruit|hire|enlist|sign on|raise)\b.*\b(men|swords|soldiers|sellswords|guards?|spears|company)\b/i.test(t) && !/\blevies\b/i.test(t)) {
@@ -198,7 +202,7 @@ export function executeActions(state, actions, orders = [], options = { immediat
   const note = (i, text) => { (results[i] = results[i] || []).push(text); };
   // an order to spend what the house does not have is refused before anything else — and the world hears of it
   const purse = Math.round(Number(me.figures.treasury?.v) || 0);
-  orders.forEach((o, k) => { const g = goldIn(o?.text); if (g && g > purse * 1.02) note(k + 1, `could not be done: the treasury holds ${purse.toLocaleString('en-GB')} dragons, not ${Math.round(g).toLocaleString('en-GB')}`); });
+  orders.forEach((o, k) => { const g = goldIn(o?.text); if (g && g > purse * 1.02 && !/\b(?:borrow|loan|credit|iron bank)\b/i.test(o?.text || '')) note(k + 1, `could not be done: the treasury holds ${purse.toLocaleString('en-GB')} dragons, not ${Math.round(g).toLocaleString('en-GB')}`); });
   const broke = new Set(Object.keys(results).map(Number));
   for (const a0 of actions || []) {
     const a = withOp(a0); const i = Number(a.order) || 0; if (!a?.op || broke.has(i)) continue;
@@ -225,6 +229,8 @@ export function executeActions(state, actions, orders = [], options = { immediat
       if (a.op === 'raise') { const lead = !a.commander && leaderIn(state, orders[i - 1]?.text, null, resolvePlaceId(a.at)); for (const l of raiseLevies(state, { ...(lead ? { ...a, commander: lead.id } : a), immediate: !!options.immediate })) note(i, l); continue; }
       if (a.op === 'banners') { for (const l of callBanners(state, a)) note(i, l); continue; }
       if (a.op === 'merge') { for (const l of mergeHosts(state, a)) note(i, l); continue; }
+      if (a.op === 'borrow') { const written = orders[i - 1]?.text; const amount = goldIn(written) || (!written ? Number(a.amount) : 0); if (!(amount >= 500)) throw new Error('name the sum to ask of the Iron Bank'); const r = requestLoan(state, p, amount, written); note(i, r.accepted ? r.text : `could not be done: ${r.text}`); continue; }
+      if (a.op === 'repay') { const written = orders[i - 1]?.text; const amount = goldIn(written) || (!written && a.amount ? Number(a.amount) : Infinity); const r = repayLoan(state, p, amount); note(i, r.paid ? r.text : `could not be done: ${r.text}`); continue; }
       if (a.op === 'works') { const w = startWorks(state, a.template, a.at); note(i, `Work begins: ${w.name} (${w.cost.toLocaleString('en-GB')} dragons over ${w.months} moons)`); continue; }
       if (a.op === 'feast' || a.op === 'tourney') { const r = court[a.op](state); note(i, r.summary || r.text); continue; }
       if (a.op === 'appoint') {
@@ -268,8 +274,8 @@ export async function planOrders(state, orders, ask) {
   return acts;
 }
 // a model that forgets "op" still said what it meant: someone and a place is a journey, a host and a place a march
-const OP_ALIAS = { project: 'works', fund: 'works', build: 'works', call_banners: 'banners', summon: 'banners', muster: 'raise', raise_army: 'raise', raise_levies: 'raise', army_create: 'raise', march_army: 'march', army_move: 'march', move: 'march', ride: 'travel', send: 'travel', send_character: 'travel', recruit_men: 'recruit', hire_men: 'recruit', join: 'merge', combine: 'merge', merge_armies: 'merge' };
-const KNOWN_OPS = new Set(['travel', 'march', 'recruit', 'raise', 'hire', 'appoint', 'banners', 'merge', 'works', 'feast', 'tourney']);
+const OP_ALIAS = { project: 'works', fund: 'works', build: 'works', call_banners: 'banners', summon: 'banners', muster: 'raise', raise_army: 'raise', raise_levies: 'raise', army_create: 'raise', march_army: 'march', army_move: 'march', move: 'march', ride: 'travel', send: 'travel', send_character: 'travel', recruit_men: 'recruit', hire_men: 'recruit', join: 'merge', combine: 'merge', merge_armies: 'merge', loan: 'borrow', borrow_gold: 'borrow', pay_debt: 'repay', repay_loan: 'repay' };
+const KNOWN_OPS = new Set(['travel', 'march', 'recruit', 'raise', 'hire', 'appoint', 'banners', 'merge', 'works', 'feast', 'tourney', 'borrow', 'repay']);
 function withOp(a0) {
   let a = a0; if (!a || typeof a !== 'object') return a;
   if (a.op && OP_ALIAS[String(a.op).toLowerCase()]) a = { ...a, op: OP_ALIAS[String(a.op).toLowerCase()], template: a.template || a.name || a.project };

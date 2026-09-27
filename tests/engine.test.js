@@ -1022,6 +1022,45 @@ test('a great column churns a wet road to mud, and a summer without marches heal
   assert.ok(cut > marchDays(a, from, to, s).days);
 });
 
+import { initFinance, requestLoan, financeTick, routeRisk } from '../public/js/shared/finance.js';
+test('the Iron Bank sets its own limit and remembers both loans and refusals', () => {
+  const s = fresh(), h = s.houses.stark; const before = h.figures.treasury.v;
+  const yes = requestLoan(s, 'stark', 5000, 'granaries before winter');
+  assert.equal(yes.accepted, true); assert.equal(h.figures.treasury.v, before + 5000);
+  assert.equal(yes.loan.principal, 5000);
+  const no = requestLoan(s, 'stark', 100000000, 'a golden dragon for every smallfolk');
+  assert.equal(no.accepted, false);
+  assert.deepEqual(s.finance.ironBank.memory.stark.map((x) => x.kind), ['lent', 'refused']);
+});
+
+test('a model cannot choose the sum or terms of an Iron Bank loan', () => {
+  const s = fresh();
+  const r = executeActions(s, [{ op: 'borrow', order: 1, amount: 900000 }], [{ text: 'Borrow 5,000 gold dragons from the Iron Bank for granaries.' }]);
+  const loan = Object.values(s.finance.ironBank.loans)[0];
+  assert.equal(loan.principal, 5000); assert.match(r[1][0], /Iron Bank lends 5,000/);
+  assert.ok(loan.rate > 0 && loan.termMonths >= 18);
+});
+
+test('three unpaid moons enter the Iron Bank’s persistent black books', () => {
+  const s = fresh(); requestLoan(s, 'stark', 5000, 'ships');
+  s.houses.stark.figures.treasury.v = 0; s.houses.stark.figures.income.v = -500;
+  const r = financeTick(s, 120);
+  assert.ok(r.events.some((e) => /calls House Stark's note/.test(e.title)));
+  assert.ok(s.finance.ironBank.memory.stark.some((x) => x.kind === 'default'));
+  assert.equal(requestLoan(s, 'stark', 5000, 'more ships').accepted, false);
+});
+
+test('war and a hostile fleet choke a named merchant road and its port dues', () => {
+  const s = fresh(); initFinance(s); const route = s.finance.routes.pentos_kings_landing;
+  const safe = routeRisk(s, route); financeTick(s, 30); const safeYield = route.lastYield;
+  s.wars.push({ id: 'trade_war', name: 'War on Pentos', attackers: ['baratheon'], defenders: ['pentos'], status: 'active' });
+  apply(s, [{ op: 'army_create', id: 'blockade', owner: 'baratheon', name: 'Royal Fleet', at: 'kings_landing', men: 1000, type: 'fleet', ships: 80 }]);
+  const danger = routeRisk(s, route); const r = financeTick(s, 30);
+  assert.ok(danger > safe && route.lastYield < safeYield);
+  assert.ok(r.events.some((e) => /choked/.test(e.title)));
+  assert.ok(s.finance.merchants.narrow_sea.treasury > 190000);
+});
+
 import { chronicleNeedsRewrite } from '../server/agents.js';
 test('the chronicler rejects occurrence lists but accepts grounded scenes', () => {
   assert.equal(chronicleNeedsRewrite({ summary: 'Things happened.', events: [{ title: 'A battle', text: 'The north won.', details: '', importance: 4 }] }), true);

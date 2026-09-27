@@ -112,6 +112,13 @@ export function armyUpkeep(a) {
 function houseHoldings(state, id) { return Object.values(state.holdings).filter((x) => x.owner === id); }
 
 /** Expected monthly figures for a house (used for projections in the UI and the prompt). */
+function debtCharges(state, houseId, debt) {
+  const loans = Object.values(state.finance?.ironBank?.loans || {}).filter((x) => x.house === houseId && x.status === 'active');
+  const bankPrincipal = loans.reduce((n, x) => n + (Number(x.principal) || 0), 0);
+  const ordinary = Math.max(0, (Number(debt) || 0) - bankPrincipal);
+  return { ordinary: ordinary * 0.004, bank: loans.reduce((n, x) => n + (Number(x.principal) || 0) * (Number(x.rate) || 0), 0) };
+}
+
 export function project(state, houseId) {
   const house = state.houses[houseId]; if (!house) return null;
   const tax = TAX_LEVELS[house.policy?.tax || 'normal'];
@@ -130,7 +137,7 @@ export function project(state, houseId) {
   const alms = almsFor(state).find((x) => x.id === houseId)?.amount || 0;
   const household = (house.figures.menAtArms?.v || 0) * (houseId === 'nights_watch' ? 0.12 : 0.38) + (house.figures.guard?.v || 0) * 0.6 + alms;
   const court = house.policy?.courtCost ?? ({ crown: 6000, paramount: 1500, major: 160, minor: 40, city_state: 5000 }[house.rank] || 30);
-  const interest = (house.figures.debt?.v || 0) * 0.004;
+  const charges = debtCharges(state, houseId, house.figures.debt?.v); const interest = charges.ordinary + charges.bank;
   const projects = (state.projects || []).filter((p) => p.house === houseId && p.status === 'active').reduce((s, p) => s + p.perMonth, 0);
   const liege = house.liege ? state.houses[house.liege] : null;
   const owed = liege && (house.obligations?.tribute === 'paying') ? own / tax.income * (TRIBUTE_SHARE[liege.rank] ?? 0.2) : 0;
@@ -210,7 +217,9 @@ export function settle(state, days) {
     if (household) L.lines.push({ kind: 'expense', label: 'Men-at-arms & household guard', amount: Math.round(household) });
     const court = (house.policy?.courtCost ?? ({ crown: 6000, paramount: 1500, major: 160, minor: 40, city_state: 5000 }[house.rank] || 30)) * months * rnd(0.85, 1.2);
     L.lines.push({ kind: 'expense', label: 'Court, feasts & household', amount: Math.round(court) });
-    const interest = (f.debt?.v || 0) * 0.004 * months;
+    // Iron Bank notes are serviced by financeTick from their own written terms; only other
+    // obligations pay the realm's generic interest here, so the same Braavosi note is not charged twice.
+    const interest = debtCharges(state, house.id, f.debt?.v).ordinary * months;
     if (interest) L.lines.push({ kind: 'expense', label: 'Interest on debts', amount: Math.round(interest) });
     // The Night's Watch lives on the alms of the realm; friendly great houses send coin and grain north
     if (house.id === 'nights_watch' || (state.houses.nights_watch && ['crown', 'paramount'].includes(house.rank))) {

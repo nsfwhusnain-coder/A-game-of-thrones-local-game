@@ -19,6 +19,7 @@ import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom, marchDays } from '../public/js/shared/warfare.js';
 import { unitsText } from '../public/js/shared/units.js';
 import { logisticsText, roadText } from '../public/js/shared/logistics.js';
+import { financeView } from '../public/js/shared/finance.js';
 import { retinuesDigest } from '../public/js/shared/retinues.js';
 import { briefFor } from '../public/data/briefs.js';
 import { vassalTemper } from '../public/js/shared/vassals.js';
@@ -243,6 +244,9 @@ export function playerSheet(state) {
   lines.push(`Known figures (as last reported): ${figuresLine(h)}`);
   const pr = project(state, p);
   if (pr) lines.push(`Steward's projection per moon: income ~${fmt(pr.income)} (own lands ${fmt(pr.own)}, tribute ${fmt(pr.tribute)}), expenses ~${fmt(pr.expenses)} (hosts ${fmt(pr.upkeep)}, household ${fmt(pr.household)}, court ${fmt(pr.court)}, interest ${fmt(pr.interest)}, projects ${fmt(pr.projects)}, owed to liege ${fmt(pr.owed)}) → net ${fmt(pr.low)} to ${fmt(pr.high)}. Tax policy: ${h.policy?.tax || 'normal'}.`);
+  const coin = financeView(state, p);
+  if (coin.loans.length) lines.push('Iron Bank notes (terms and payments are engine-set): ' + coin.loans.map((x) => `${fmt(x.principal)} principal, ${(x.rate * 100).toFixed(2)}% each moon, ${fmt(x.accrued || 0)} interest waiting${x.arrears ? `, ${fmt(x.arrears)} arrears` : ''}`).join('; '));
+  if (coin.routes.length) lines.push('Merchant roads touching these lands: ' + coin.routes.map((x) => `${x.name} (${x.cargo}; ${x.risk >= 0.55 ? 'choked by danger' : x.risk >= 0.3 ? 'dangerous' : 'running'})`).join('; '));
   const projs = (state.projects || []).filter((x) => x.house === p && x.status === 'active');
   if (projs.length) lines.push('Works under way: ' + projs.map((x) => `${x.name} (${Math.round(x.monthsLeft * 10) / 10} moons left)`).join('; '));
   const vas = vassalsOf(state, p);
