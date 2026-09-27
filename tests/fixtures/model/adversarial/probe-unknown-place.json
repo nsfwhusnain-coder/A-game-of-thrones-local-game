@@ -1,0 +1,7 @@
+{
+  "kind": "probe",
+  "note": "A reply that ignored the schema (a server that does not enforce it): an unknown place is refused by the validator, never guessed.",
+  "reply": "{\"place\": \"castle of the wall\", \"words\": \"Winter is Coming\"}",
+  "expect": "reject",
+  "problem": "not one of"
+}

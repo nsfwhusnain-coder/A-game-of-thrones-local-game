@@ -1,0 +1,5 @@
+// The registry of model calls (docs/gdd/04-ai-system.md §1). Each module carries the whole contract of 04 §14; the
+// contract test (tests/ai-contract.test.js) runs over every entry, so a new call is covered the moment it is added.
+import probe from './probe.js';
+
+export const CALLS = { probe };

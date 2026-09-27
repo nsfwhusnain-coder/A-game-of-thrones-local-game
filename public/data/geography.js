@@ -18,7 +18,8 @@ export const PLACES = {};
 export const PLACE_NAMES = {};
 export const PLACE_KIND = {}; // castle | town | ruin | site (inns, villages, fords)
 for (const l of LOCATIONS) {
-  if (!l.name || /^(village|holdfast|sept|tower|inn|fishing village|unnamed village)$/i.test(l.name)) continue;
+  // a place called only "Inn" or "Village" is no place anyone can name (the test is on the name without its note)
+  if (!l.name || /^(village|holdfast|sept|tower|inn|fishing village|unnamed village)$/i.test(l.name.replace(/\s*\(.*\)$/, ''))) continue;
   const id = slug(l.name.replace(/\s*\(.*\)$/, ''));
   if (PLACES[id]) continue;
   PLACES[id] = [l.x, l.y]; PLACE_NAMES[id] = l.name.replace(/\s*\(.*\)$/, '');
@@ -27,6 +28,8 @@ for (const l of LOCATIONS) {
 // A few places everyone talks about, under the names they are usually given
 const extra = { crossroads_inn: 'crossroads_inn', the_crossroads: 'crossroads_inn', inn_at_the_crossroads: 'crossroads_inn', oldstones: 'oldstones', high_heart: 'high_heart', the_nightfort: 'nightfort', moles_town: 'moles_town', queenscrown: 'queenscrown', the_whispers: 'the_whispers', tower_of_joy: 'tower_of_joy', castamere: 'castamere', tarbeck_hall: 'tarbeck_hall', fairmarket: 'fairmarket', stoney_sept: 'stoney_sept', mummers_ford: 'mummers_ford', ghoyan_drohe: 'ghoyan_drohe', chroyane: 'the_sorrows', the_sorrows: 'the_sorrows', ar_noy: 'ar_noy', ny_sar: 'ny_sar', selhorys: 'selhorys', valysar: 'valysar', volon_therys: 'volon_therys' };
 for (const [alias, id] of Object.entries(extra)) if (PLACES[id] && !PLACES[alias]) { PLACES[alias] = PLACES[id]; PLACE_NAMES[alias] = PLACE_NAMES[id]; }
+/** A place's other ids (the ones added above) → the id it is known by. */
+export const PLACE_ALIAS_OF = Object.fromEntries(Object.entries(extra).filter(([a, id]) => a !== id && PLACES[id]));
 // Back-compat: the old map's road junctions are now ordinary places
 export const JUNCTIONS = PLACES;
 

@@ -95,3 +95,35 @@ import in `public/js/engine/`, `public/js/shared/` and `server/turn/`.
 **Why.** The same guarantee (a turn replays byte for byte: `tests/replay.test.js`, which even swaps `Math.random` between
 the two runs) at a fraction of the churn, and the rebuilt modules of later work packages can still take `ctx.rng`
 explicitly where that reads better — `random()` and `ctx.rng` draw from the same stream.
+
+## D-006 · 2026-09-27 · One module per model call, and one runner that never throws (WP B5)
+
+**What.** `server/ai/` is the only way the game talks to a model from now on:
+- `calls/<kind>.js` carries the whole contract of 04 §14 in one place — `context`, `schema`, `prompt`, `check`, `mock`,
+  `fallback`, and `fingerprint` for recorded replies — and `calls/index.js` registers it. `tests/ai-contract.test.js`
+  runs over the registry: a new call is under test the moment it exists (mock schema-valid, prompt within budget and
+  equal to its snapshot in `tests/__snapshots__/prompts/`, fallback when the server is dead, strict wire schema).
+- `client.js runCall()` reads, canonicalises and checks every reply; a failed check earns **one** retry that names the
+  problems (04 §5.4), then the call's fallback. It never throws into a turn; the record says why.
+- `providers/`: `openai` (response_format json_schema strict, thinking off, `cache_prompt`, `id_slot`, the routed model
+  and temperature, no "continue where you stopped" — a continuation would restart the grammar), `mock` (each call's
+  rule-based reply, serialised and read like a model's, so the mock passes the same checks), `replay` (recorded replies
+  by fingerprint from `tests/fixtures/model/<kind>/`, falling through to the mock).
+- `schema.js`: enums from the live world. `buildEnum` keeps every natural name as a member and removes clashes where one
+  member is a strict prefix of another naming something else — dropping the name its thing can spare (`baratheon_ds`
+  goes, `dragonstone` stays; `jon` goes, `jon_snow` stays). Our private `x-canon` marks tell `canonicalize` which map
+  turns a member back into an id and are stripped from the schema on the wire. A small validator covers the JSON Schema
+  subset we send. `hasForeignScript`/`stripForeignScript` handle the Qwen CJK leak (B-27); the current pipeline strips
+  stray glyphs from the chronicle, audiences and council already.
+- `models.js`: per-call routing from `config.json` `models` (04 §11.3), the GDD's temperatures and budgets, and a
+  warning when one jump's calls would swap models.
+- `context/primer.js`: the static primer every call begins with, then the difficulty and canon-gravity paragraphs.
+- *Settings → Test connection* runs the `probe` call: it reports whether the server enforces a JSON schema and whether
+  "the Wall" lands on Castle Black (the bench's pitfall).
+
+**Ids.** The GDD's examples call the Wall's castle `castle_black`; this world's holding id for it is `nights_watch`
+(Castle Black is the Night's Watch's seat), and `castle_black`, `the_wall`, `wall` are its aliases. The acceptance
+"`the_wall` → `castle_black`" is met as `the_wall` → the Castle Black holding.
+
+**Why.** Everything a call needs, tested and reviewed in one file, is what keeps a dozen calls honest as the pipeline
+grows (B6–B13); the runner's guarantees are what let a turn survive any model misbehaving.

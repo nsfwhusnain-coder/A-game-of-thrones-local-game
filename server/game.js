@@ -13,6 +13,7 @@ import { needsShips, planVoyage, retarget, sail } from '../public/js/shared/sea.
 import { random } from '../public/js/engine/rng.js';
 import { nextId } from '../public/js/engine/ids.js';
 import { withDice } from './dice.js';
+import { stripForeignScript } from './ai/schema.js';
 import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
@@ -441,7 +442,8 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   const econNotes = settle(state, spanInfo.days);
   const events = (Array.isArray(obj.events) ? obj.events : []).map((e, k) => ({
     day: Math.max(1, Math.min(spanInfo.days, Math.round(Number(e.day) || Math.round(((k + 1) / ((obj.events?.length || 1) + 1)) * spanInfo.days)))),
-    title: String(e.title || 'Untitled'), text: String(e.text || e.description || ''), details: e.details ? String(e.details) : '', where: resolvePlaceId(e.where || e.location) || null,
+    // a stray foreign glyph from the sampler ("Lord Um伯", B-27) is dropped before the chronicle keeps the words
+    title: stripForeignScript(String(e.title || 'Untitled')), text: stripForeignScript(String(e.text || e.description || '')), details: e.details ? stripForeignScript(String(e.details)) : '', where: resolvePlaceId(e.where || e.location) || null,
     importance: Math.max(1, Math.min(5, Number(e.importance) || 2)), type: String(e.type || 'court'), houses: Array.isArray(e.houses) ? e.houses : [],
     ...(Number(e.order) >= 1 ? { order: Number(e.order) } : {}),
   }));
@@ -479,7 +481,7 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   }
   // one date for every view (HUD, feed, reel, pins): day d of the period is the d-th day after it began
   events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; e.date = dateStr(addDays(state.meta.date, e.day - spanInfo.days)); });
-  const record = { carried, turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, ...(turnReason ? { until: turnReason } : {}), orders: state.orders, summary: String(obj.summary || ''), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
+  const record = { carried, turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, ...(turnReason ? { until: turnReason } : {}), orders: state.orders, summary: stripForeignScript(String(obj.summary || '')), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
   state.history.push(record);
   state.orders = [];
   // If the simulator raised no matter for the player over a moon or more, the realm brings one itself
@@ -620,7 +622,7 @@ async function talkWith(id, state, cfg, charId, message) {
     if (rescued) { reply = rescued; changes = []; } else reply = String(r.text).replace(/```[\s\S]*?```/g, '').replace(/\{[\s\S]*\}/g, '').replace(/^\s*"?reply"?\s*:\s*/i, '').trim() || '*They say nothing you can make sense of.*';
     changes = [];
   }
-  reply = reply.replace(/<br\s*\/?>/gi, '\n'); // the model writes HTML line breaks now and then; the scene shows its own
+  reply = stripForeignScript(reply.replace(/<br\s*\/?>/gi, '\n')); // HTML line breaks become the scene's own; stray foreign glyphs go (B-27)
   // Sanity guard: a conversation can refine the ledger, not rewrite it (protects against model hallucinations)
   changes = changes.filter((ch) => {
     if (!ch || String(ch.op) !== 'figure') return true;
@@ -959,7 +961,7 @@ async function councilWith(id, state, cfg, members, message) {
   // each counsellor seated has a place in the answer: one who did not speak is shown keeping silent, not lost
   const listening = !String(message || '').trim();
   if (!listening) for (const i of ids) if (!read.replies.some((x) => x.speaker === i)) read.replies.push({ speaker: i, text: `*${state.characters[i].name} listened, and said nothing this time.*`, silent: true });
-  const replies = read.replies; const changes = read.changes;
+  const replies = read.replies.map((x) => ({ ...x, text: stripForeignScript(x.text) })); const changes = read.changes;
   const { applied, rejected } = applyChanges(state, changes, { source: 'Council', protectPlayer: true });
   const key = 'council:' + ids.sort().join(',');
   const date = dateStr(state.meta.date), turn = state.meta.turn;

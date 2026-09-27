@@ -3,9 +3,12 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
-import { loadConfig, saveConfig, listModels, chat } from './llm.js';
+import { loadConfig, saveConfig, listModels } from './llm.js';
 import * as game from './game.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
+import { runCall } from './ai/client.js';
+import { routingProblems } from './ai/models.js';
+import { createInitialState } from '../public/js/shared/world.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -39,9 +42,19 @@ route('GET', '/api/version', () => ({ build: build() }));
 route('GET', '/api/config', () => ({ ...loadConfig(), apiKey: loadConfig().apiKey ? '••••' : '' }));
 route('POST', '/api/config', async (req) => { const b = await readBody(req); if (b.apiKey === '••••') delete b.apiKey; const c = saveConfig(b); return { ...c, apiKey: c.apiKey ? '••••' : '' }; });
 route('GET', '/api/models', async () => ({ models: await listModels() }));
+// The model test (Settings → Test connection): a tiny grammar-constrained call (server/ai/calls/probe.js) that shows
+// whether the server answers, whether it enforces a JSON schema, and whether "the Wall" lands on the Wall.
 route('POST', '/api/llm/test', async () => {
-  const r = await chat([{ role: 'system', content: 'You are a maester. Reply with a JSON object {"ok":true,"words":"<house words of House Stark>"} and nothing else.' }, { role: 'user', content: 'Test.' }], { json: true, maxTokens: 200, kind: 'test' });
-  return { ok: true, ms: r.ms, model: r.model, text: r.text.slice(0, 400) };
+  const cfg = loadConfig();
+  const r = await runCall('probe', createInitialState('agot_298', 'stark', { seed: 298 }), {}, { cfg });
+  const first = r.record.attempts[0] || {};
+  if (first.error) throw new Error(first.error);
+  return {
+    ok: r.via !== 'fallback', ms: r.ms, model: r.model || first.model, via: r.via,
+    schema: !first.problems?.some((p) => /unreadable|not one of|missing|not allowed|expected/.test(p)),
+    prefixSafe: r.value?.place === 'nights_watch', words: r.value?.words || '', problems: r.problems, routing: routingProblems(cfg),
+    text: JSON.stringify(r.value),
+  };
 });
 route('GET', '/api/scenarios', () => Object.values(SCENARIOS).map(({ id, name, subtitle, description, date }) => ({ id, name, subtitle, description, date })));
 route('GET', '/api/saves', () => game.listSaves());

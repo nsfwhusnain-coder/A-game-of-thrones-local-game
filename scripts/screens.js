@@ -27,8 +27,19 @@ const api = async (p, body) => {
   const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j;
 };
 
-// Each scenario returns { id, focus: [x, y], dist } — the game to open and where to look.
+// Each scenario returns { id, focus: [x, y], dist } — the game to open and where to look — or { page: async (page) =>
+// … } to drive the page itself before the shot.
 const SCENARIOS = {
+  // Settings → Test connection on the mock provider: the JSON-schema probe's report (WP B5)
+  async settings() {
+    return { page: async (page) => {
+      await page.click('#title-screen [data-action="settings"]');
+      await page.waitForSelector('#cfg-test');
+      await page.click('#cfg-test');
+      await page.waitForFunction(() => /Connected|✖/.test(document.querySelector('#cfg-result')?.textContent || ''), null, { timeout: 30000 });
+      await page.evaluate(() => document.querySelector('#cfg-result').scrollIntoView({ block: 'center' }));
+    } };
+  },
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
@@ -54,15 +65,18 @@ async function main() {
     const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
     for (const name of wanted) {
       if (!SCENARIOS[name]) { console.error(`unknown scenario ${name}`); continue; }
-      const { id, focus, dist } = await SCENARIOS[name]();
+      const { id, focus, dist, page: drive } = await SCENARIOS[name]();
       for (const [w, h] of SIZES) {
         const page = await browser.newPage({ viewport: { width: w, height: h } });
         const errors = []; page.on('pageerror', (e) => errors.push(e.message));
-        await page.goto(`http://127.0.0.1:${PORT}/?dev&game=${id}`);
-        // the map is ready when the game has made it and the loading veil is down again
-        await page.waitForFunction(() => window.__wc?.map && document.querySelector('#map-loading')?.classList.contains('hidden'), null, { timeout: 240000, polling: 500 });
-        if (focus) await page.evaluate(([p, d]) => window.__wc.map.flyTo(p, d), [focus, dist]);
-        await page.waitForTimeout(4000);
+        await page.goto(`http://127.0.0.1:${PORT}/?dev${id ? `&game=${id}` : ''}`);
+        if (id) {
+          // the map is ready when the game has made it and the loading veil is down again
+          await page.waitForFunction(() => window.__wc?.map && document.querySelector('#map-loading')?.classList.contains('hidden'), null, { timeout: 240000, polling: 500 });
+          if (focus) await page.evaluate(([p, d]) => window.__wc.map.flyTo(p, d), [focus, dist]);
+        }
+        if (drive) await drive(page);
+        await page.waitForTimeout(id ? 4000 : 1500);
         const file = path.join(OUT, `${name}-${w}x${h}.jpg`); // JPEG: small enough to commit beside a pull request
         await page.screenshot({ path: file, type: 'jpeg', quality: 82 });
         console.log(`${file}${errors.length ? `  (page errors: ${errors.join(' | ')})` : ''}`);
