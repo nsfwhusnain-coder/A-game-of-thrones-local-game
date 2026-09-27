@@ -78,7 +78,7 @@ test('a distant audience is a letter: the answer lands days later, in Letters an
   assert.equal(r.reply, null); assert.ok(r.raven.days >= 1);
   assert.ok(r.state.chats.lysa_arryn.at(-1).pending);
   let s = r.state; let found = null;
-  for (let d = 0; d < r.raven.days * 2 + 1 && !found; d++) { const t = await api(`/games/${id}/advance`, { span: '1d', orders: [] }); s = t.state; found = t.turn.events.find((e) => /Lysa Arryn answers Eddard Stark/.test(e.title)); }
+  for (let d = 0; d < r.raven.days * 2 + 1 && !found; d++) { const t = await api(`/games/${id}/advance`, { span: '1d', orders: [] }); s = t.state; found = t.turn.events.find((e) => /Lysa Arryn answers Eddard Stark/.test(e.title) || (e.narrated && e.houses.includes('arryn') && e.record.some((x) => /^A raven from/.test(x)))); }
   assert.ok(found, 'the answer arrived as an event');
   assert.ok(s.ravens.some((x) => x.from === 'lysa_arryn'));
   assert.ok(!s.chats.lysa_arryn.at(-1).pending);

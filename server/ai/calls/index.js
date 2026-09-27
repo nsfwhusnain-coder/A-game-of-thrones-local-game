@@ -3,5 +3,6 @@
 import probe from './probe.js';
 import interpret from './interpret.js';
 import mind from './mind.js';
+import narrate from './narrate.js';
 
-export const CALLS = { probe, interpret, mind };
+export const CALLS = { probe, interpret, mind, narrate };

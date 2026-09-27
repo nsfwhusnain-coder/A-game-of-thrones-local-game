@@ -1,0 +1,7 @@
+{
+ "kind": "narrate",
+ "note": "Game words in the prose.",
+ "reply": "{\"events\": [{\"story\": \"S2\", \"headline\": \"Lord Tyrell feasts the Reach at Highgarden\", \"line\": \"Mace Tyrell's feast raised morale across the Reach.\", \"scene\": \"The roses were cut at dawn and there were too many of them. Mace Tyrell laughed at every toast, his own most of all, and a serving girl who carried the swan did not see his mother's eyes follow the lords who did not drink.\", \"pov\": \"a serving girl at Highgarden\"}], \"meanwhile\": \"Poachers were hanged in the wolfswood.\"}",
+ "expect": "refuse",
+ "problem": "game words"
+}

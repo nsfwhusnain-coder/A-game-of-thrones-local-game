@@ -668,6 +668,12 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .yours .yo { color: var(--muted); }
 .yours .yr { color: var(--gold2); padding-left: 0.8rem; }
 .yours .yr.bad { color: #e0786a; }
+/* a told story's record: the engine's own lines, small and quiet beneath the prose */
+.story-rec { margin-top: 0.35rem; font-size: 0.76rem; color: var(--muted); }
+.story-rec summary { cursor: pointer; font-family: var(--display); letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.66rem; color: var(--gold); }
+.story-rec ul { margin: 0.25rem 0 0; padding-left: 1rem; }
+.story-rec li { margin: 0.1rem 0; }
+.news-meanwhile { font-size: 0.82rem; font-style: italic; color: var(--muted); padding: 0.25rem 0.3rem 0; line-height: 1.4; }
 .news-more, .news-quiet { font-size: 0.78rem; color: var(--muted); padding: 0.2rem 0.3rem; cursor: pointer; }
 .news-more:hover { color: var(--gold2); }
 /* ── map modes: one small control; click it to choose another ── */

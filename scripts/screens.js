@@ -3,6 +3,7 @@
 // opens it (?game=<id>), points the camera and shoots at both sizes.
 //
 //   node scripts/screens.js [scenario …]        → visual-out/<scenario>-<w>x<h>.jpg   (default: all scenarios)
+//   SCREENS_PROVIDER=replay node scripts/screens.js narrator   (recorded model replies instead of the mock)
 //
 // Playwright is a dev tool, never a runtime dependency: `npm i --no-save playwright`, or a global install.
 import { spawn, execSync } from 'node:child_process';
@@ -108,6 +109,31 @@ const SCENARIOS = {
       await page.evaluate((titles) => { const el = [...document.querySelectorAll('#drawer-body *')].find((x) => x.children.length < 4 && titles.some((t) => (x.textContent || '').includes(t.slice(0, 24)))); el?.scrollIntoView({ block: 'start' }); }, said);
     } };
   },
+  // the chronicle told (WP B8): the first Stark week, told by the recorded narrator (run with SCREENS_PROVIDER=replay) —
+  // stories in the books' voice, one of them left in the plain words of the record because it invented an arrival
+  async narrator() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 298 });
+    await api(`/games/${id}/advance`, { span: '7d', orders: [{ text: 'Call the banners to Winterfell.' }, { text: 'Send Jon Snow to Castle Black.' }] });
+    return { id, focus: state.holdings.stark.pos, dist: 900, page: async (page) => {
+      await page.evaluate(() => {
+        const told = [...document.querySelectorAll('#drawer-body .story')].find((x) => x.querySelector('.story-rec') && /Karstark/.test(x.textContent));
+        told?.querySelector('.story-rec')?.setAttribute('open', '');
+        told?.scrollIntoView({ block: 'start' });
+        const body = document.querySelector('#drawer-body'); if (body) body.scrollTop -= 44; // clear of the sticky date
+      });
+    } };
+  },
+  // the same week from its start: the lord's own command told under his words, and the week's Meanwhile line
+  async commanded() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 298 });
+    await api(`/games/${id}/advance`, { span: '7d', orders: [{ text: 'Call the banners to Winterfell.' }, { text: 'Send Jon Snow to Castle Black.' }] });
+    return { id, focus: state.holdings.stark.pos, dist: 900, page: async (page) => {
+      await page.evaluate(() => {
+        const el = document.querySelector('#drawer-body .news-meanwhile'); el?.scrollIntoView({ block: 'end' });
+        const body = document.querySelector('#drawer-body'); if (body) body.scrollTop += 12;
+      });
+    } };
+  },
   // beginning a chronicle, ironman or not (WP B3)
   async begin() {
     return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); } };
@@ -130,7 +156,7 @@ async function main() {
   const wanted = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(SCENARIOS);
   fs.mkdirSync(OUT, { recursive: true });
   const saves = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-screens-'));
-  const srv = spawn(process.execPath, ['server/index.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), WC_PROVIDER: 'mock', WC_SAVES: saves }, stdio: 'ignore' });
+  const srv = spawn(process.execPath, ['server/index.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), WC_PROVIDER: process.env.SCREENS_PROVIDER || 'mock', WC_SAVES: saves }, stdio: 'ignore' });
   try {
     for (let i = 0; i < 100; i++) { try { await api('/version'); break; } catch { await new Promise((r) => setTimeout(r, 100)); } }
     const { chromium } = playwright();

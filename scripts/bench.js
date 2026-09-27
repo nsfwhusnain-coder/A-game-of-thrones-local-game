@@ -23,6 +23,11 @@
 //   npm run bench -- --suite mind                         # every situation put to the model's mind (the 85 % gate)
 //   npm run bench -- --suite mind --reader tree           # the house ways alone (no model)
 //   npm run bench -- --suite mind --record tests/fixtures/model/mind
+//
+// The narrate suite (04 §13): sixty weeks of twelve seeded games, told by the narrator and held to their facts
+//   npm run bench -- --suite narrate                      # true on the first telling (the 90 % gate), faults by rule
+//   npm run bench -- --suite narrate --judge              # and a judge's score for the voice (the 3.8 gate)
+//   npm run bench -- --suite narrate --record tests/fixtures/model/narrate
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -33,6 +38,34 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, all) => (
 
 if (args.suite === 'interpret') { await interpretBench(); process.exit(0); }
 if (args.suite === 'mind') { await mindBench(); process.exit(0); }
+if (args.suite === 'narrate') { await narrateBench(); process.exit(0); }
+async function narrateBench() {
+  const { loadConfig } = await import('../server/llm.js');
+  const cfg = { ...loadConfig(), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.provider ? { provider: args.provider } : {}), ...(args.mock ? { provider: 'mock' } : {}) };
+  const { bundles, runNarrateSuite, narrateReport, JUDGE, judgeSchema } = await import('../bench/lib/narrate.js');
+  const { narrateTurn } = await import('../server/narrator.js');
+  const { openaiReply } = await import('../server/ai/providers/openai.js');
+  const { routeFor } = await import('../server/ai/models.js');
+  const recordTo = typeof args.record === 'string' ? path.resolve(args.record) : null; let recorded = 0;
+  console.log('Playing the twelve games on the mock…');
+  const list = await bundles({ only: typeof args.only === 'string' ? args.only.split(',') : null });
+  const who = cfg.provider === 'mock' ? 'mock (the facts told plainly, through the call and the validator)' : cfg.provider === 'replay' ? 'recorded replies' : cfg.model || '(server default)';
+  console.log(`Narrate suite — ${who}: ${list.length} weeks`);
+  const narrate = (state, cards) => narrateTurn(state, cards, { provider: cfg.provider, cfg, log: (kind, messages, reply) => {
+    if (!recordTo || kind !== 'narrate') return; fs.mkdirSync(recordTo, { recursive: true });
+    const key = /YOUR LAST TELLING OF (S\d+)/.exec(messages.at(-1).content)?.[1] || '*';
+    fs.writeFileSync(path.join(recordTo, `week-${state.meta.player}-${state.meta.turn}-${key}-${recorded++}.json`), JSON.stringify({ kind, fingerprint: null, model: cfg.model || 'unknown', note: `recorded by the bench, ${new Date().toISOString().slice(0, 10)}; set the fingerprint from the turn record's narration.key to replay it`, reply }, null, 1) + '\n');
+  } });
+  const judge = args.judge && !['mock', 'replay'].includes(cfg.provider) ? async (state, card) => {
+    const route = { ...routeFor(cfg, 'narrate'), temperature: 0.2, maxTokens: 120 };
+    const messages = [{ role: 'system', content: JUDGE }, { role: 'user', content: `HEADLINE: ${card.title}\nLINE: ${card.text}\nSCENE: ${card.details}\nPOV: ${card.pov}` }];
+    try { const r = await openaiReply({ kind: 'judge', messages, schema: judgeSchema, route, cfg }); const v = JSON.parse(r.text); return Number.isInteger(v.score) ? v : null; } catch { return null; }
+  } : null;
+  const r = await runNarrateSuite(list, narrate, { judge });
+  const text = narrateReport(r, { reader: who }) + `\n_${new Date().toISOString().slice(0, 16)} · provider ${cfg.provider}${recordTo ? ` · ${recorded} replies recorded to ${path.relative(ROOT, recordTo)}` : ''}_\n`;
+  const out = path.join(ROOT, 'bench', `narrate-${slugOf(cfg.provider === 'mock' ? 'mock' : cfg.provider === 'replay' ? 'replay' : cfg.model || 'model')}-${new Date().toISOString().slice(0, 10)}.md`);
+  fs.writeFileSync(out, text); console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`);
+}
 async function mindBench() {
   const { runMindSuite, mindReport } = await import('../bench/lib/mind.js');
   const { runCall } = await import('../server/ai/client.js');

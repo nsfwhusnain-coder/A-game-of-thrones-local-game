@@ -323,6 +323,11 @@ description in any setting.
 
 Plus a general guard in every narration prompt: "Only what has happened by today has happened."
 
+> *Implemented in WP B8*: `data/anachronisms.js` (`anachronismsIn(state, text)`), each phrase allowed once this game has
+> reached it — the beat in the story's log, a title held, a death, a battle fought — rather than by the beat ids of this
+> table, which the beat engine (D1) will bring. Added: "King Joffrey" before Joffrey is king, "the War of the Five Kings"
+> before there are kings to count. The narrator's validator reads it; the audience and letter validators will (B10).
+
 ## 10. Threads the player follows
 
 Kept from the current feed ("Threads to follow"): up to 8 open threads per player, each a title + latest line, built

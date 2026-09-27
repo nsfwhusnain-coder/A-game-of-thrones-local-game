@@ -1,0 +1,83 @@
+{
+ "about": "The North at the start of the war: the banners called, sons sent away, hosts on the long roads south; a lord of the Dreadfort and the Watch.",
+ "games": [
+  {
+   "id": "stark-banners",
+   "house": "stark",
+   "seed": 298,
+   "orders": {
+    "1": [
+     "Call the banners to Winterfell.",
+     "Send Jon Snow to Castle Black."
+    ],
+    "3": [
+     "March the host to Moat Cailin."
+    ]
+   },
+   "tell": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "id": "stark-quiet",
+   "house": "stark",
+   "seed": 41,
+   "orders": {
+    "1": [
+     "Hold a feast at Winterfell."
+    ],
+    "2": [
+     "Send Robb Stark to White Harbor."
+    ]
+   },
+   "tell": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "id": "bolton",
+   "house": "bolton",
+   "seed": 7,
+   "orders": {
+    "1": [
+     "Raise 1000 men at the Dreadfort."
+    ],
+    "2": [
+     "March the host to Winterfell."
+    ]
+   },
+   "tell": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "id": "nights-watch",
+   "house": "nights_watch",
+   "seed": 12,
+   "orders": {
+    "1": [
+     "Send Benjen Stark to Winterfell."
+    ]
+   },
+   "tell": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
+  }
+ ]
+}

@@ -107,7 +107,7 @@ export function regencyTick(state, days = 30) {
     const mine = h.id === p;
     events.push(fact(state, 'regency_begun', {
       title: `${reg.name} takes the regency of House ${h.name}`,
-      text: `With ${why.text}, ${reg.name} rules House ${h.name} in ${lord && isFemale(lord) ? 'her' : 'his'} name.`,
+      text: `${why.text.replace(/^./, (x) => x.toUpperCase())}, so ${reg.name} rules House ${h.name} in ${lord && isFemale(lord) ? 'her' : 'his'} name.`,
       details: `A regent's word carries the house's seal but not its blood: bannermen obey a regent more slowly, and less far, than they obey their lord.`,
       where: h.seat, importance: mine ? 4 : 2, type: 'court', houses: [h.id], day: 1,
     }, { actors: [reg.id, h.lord], data: { why: why.kind } }));

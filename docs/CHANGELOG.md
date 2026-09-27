@@ -3,6 +3,30 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B8: the chronicle is told, and never wrong (WP B8)
+
+- **The week is told as stories, in the voice of the books.** What your house learns in a turn is gathered into at most
+  eight stories — the banners answering at Karhold, Jon Snow leaving by the Hunter's Gate, the King's progress at the
+  Twins — and each is told once: a herald's headline, one plain line, and a short scene behind one person's eyes. The
+  small happenings of the realm become one "Meanwhile" sentence above the list of them.
+- **Every telling is checked against what truly happened.** A person seen where they are not, an arrival no one made, a
+  number the facts do not hold, a castle the story never went near, a word from a later chapter ("the King in the
+  North" in 298), a game word or a stray foreign glyph — and the story is told again, alone, with what was wrong. If it
+  is wrong twice, it stays in the plain words of the record. The chronicle is never allowed to be wrong.
+- **The record is one click away.** Under a told story, "The record" opens the engine's own lines behind it, with their
+  exact numbers.
+- **Your own orders are told under your words**: "Eddard Stark commanded: 'Send Jon Snow to Castle Black.'" and then
+  the scene of it.
+- Settings: **Who tells the turn** (the chronicler, or the old bard) and **How many lords think each week** (3, 6, 10 or
+  none). `config.json`: `"narrator": "on" | "off"`, `"minds": 3 | 6 | 10 | "off"`.
+- Fixes on the way: a regency read "With Edric Dayne is 10 years old, …"; a new game's `seed` was ignored by the API.
+- For the owner: `npm run bench -- --suite narrate` tells sixty weeks of twelve seeded games with your model and reports
+  how many stories were true on the first telling (the gate is 90 %), and the faults by rule; add `--judge` for a score
+  of the voice (the gate is 3.8 of 5).
+- Owner to verify: begin a Stark game, order "Call the banners to Winterfell." and "Send Jon Snow to Castle Black.", end
+  a week. The chronicle tells stories with scenes; open "The record" under one; your two orders are told under your
+  words. In the save's `turns/000001.json`, `narration` says how many stories were told, told again or left plain.
+
 ## 2026-09-27 — B7: the lords of the realm think for themselves (WP B7)
 
 - **Every week, the lords who matter decide something.** The King, the great lords, a lord whose castle is besieged or

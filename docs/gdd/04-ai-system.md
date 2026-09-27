@@ -267,6 +267,13 @@ not need to. This is how house ways (`data/voices.js HOUSE_WAYS`) and agendas (`
 **When:** at the end of each jump segment. **Goal:** turn the facts the player's house knows into 3–8 chronicle events in
 the voice of the books, bound to facts, adding nothing.
 
+> *Implemented in WP B8* ([DECISIONS D-028–D-031](DECISIONS.md)): `engine/facts/cluster.js` (stories), `server/ai/calls/
+> narrate.js` (dossier, schema, style-bible instructions with the Tarly example, mock = the facts told plainly),
+> `server/ai/validate/narration.js` (every rule of §6.4), `server/narrator.js` (one telling, a failed story told again
+> alone, then the engine's cards; a told story replaces the engine's cards for its facts and keeps their lines as "the
+> record"), `data/anachronisms.js`. Until jumps are segmented (B11) the narrator tells the whole turn once. The Bard of
+> the swarm is not called while the narrator is on (`config.json` `"narrator": "on" | "off"`).
+
 ### 6.1 Input: stories, not facts
 
 `engine/facts/cluster.js` groups the segment's player-known facts into **stories** (≤ 8): facts sharing a thread, a party,
@@ -534,6 +541,10 @@ Injected into Mind, Director, Audience and Interpreter prompts (one paragraph ea
 
 A judge model scores voice (optional, offline, any capable model). Reports go to `bench/<date>-<model>.md`.
 
+> *`narrate` built in WP B8* (D-031): sixty weeks of twelve seeded games in `bench/suites/narrate`, played on the mock
+> and told again by the narrator under test; `npm run bench -- --suite narrate [--judge] [--record <dir>]` writes
+> `bench/narrate-<model>-<date>.md`. CI holds the mock's plain telling to ≥ 98 % true on the validator.
+>
 > *`interpret` built in WP B6* (D-019): 275 orders (55 × Stark, Lannister, Mallister, Night's Watch, Greyjoy) in
 > `bench/suites/interpret`, and a hold-out of 25 in `bench/suites/interpret-holdout`; `bench/lib/interpret.js` scores
 > them (exact, params, clarify, receipts, and how many the pre-parser reads alone and how many of those are right).
