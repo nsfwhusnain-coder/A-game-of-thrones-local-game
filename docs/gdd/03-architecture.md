@@ -199,6 +199,11 @@ Fact = {
 }
 ```
 
+> *Implemented in WP B3* (`engine/facts/log.js`, `engine/facts/kinds.js`; [DECISIONS.md#D-011](DECISIONS.md)): facts are
+> made where the engine makes the change — every subsystem and every `applyChanges` op — and the chronicle's cards are
+> their projections (a card carries `fact`). `title` (the card's headline) is kept beside `text`; `vis.houses` is set
+> only where the scope needs it; `playback` waits for jump v2 (B10). `cause.type` is one of the five above.
+
 ### 3.7 Intent and Order
 
 ```js
@@ -421,6 +426,12 @@ in brackets; the engine raises importance by +1 when the player's house or kin i
   `plague` [4], `season_turned` [5], `custom_created` [2].
 - **Ambient** — `happening` [1] (flavour from `data/happenings.js`), `behaviour` [1] (psyche lines), `weather` [1].
 
+> *Implemented in WP B3* (`engine/facts/kinds.js`; [DECISIONS.md#D-013](DECISIONS.md)): every kind above, with its card
+> type and default scope; templates (pronouns from `shared/people.js`) for the kinds the engine phrases from data alone.
+> Added: `ambush` [2] (outlaws on a small company), `men_hired` [2], `gift` [2], `ledger` [1] (the steward's notes),
+> `house_ended` [5], `canon_beat` [4] (a beat of the great story, with its `thread`), and `legacy` (facts rebuilt from a
+> pre-B3 save's turn records).
+
 ## 9. Canon locks
 
 An entity or character a live canon beat depends on (the royal progress while `kings_ride` is active; Khal Drogo's
@@ -442,8 +453,9 @@ whitelist. The lock releases when the beat completes, lapses, or canon gravity i
 | `POST /api/games/:id/jump` `{span}` → `{jobId}` | Start a jump. |
 | `GET /api/games/:id/jump/:jobId/stream` (SSE) | `progress` (phase, who is deciding), `segment` (facts + events + keyframes), `done` (turn record summary), `error`. |
 | `POST /api/games/:id/jump/:jobId/stop` `{day}` | Intervene: stop after `day` (§6.2; 05 §5). |
-| `POST /api/games/:id/undo` `{turns: 1}` | Multi-level undo from snapshots (unless ironman). |
-| `GET /api/games/:id/facts?from&to&house` | Fact log (dev and the world log UI). |
+| `POST /api/games/:id/undo` `{turns: 1}` | Multi-level undo from snapshots (unless ironman). *(B3; `GET …/undo` → `{depth, ironman, turn}`)* |
+| `GET /api/games/:id/facts?from&to&house` | Fact log (dev and the world log UI). *(B3; also `kind`, `limit`; the player's view: no other house's secrets)* |
+| `GET /api/games/:id/turns/:n` | A turn's record (from `turns/`). *(B3)* |
 | `GET /api/games/:id/debug/turn/:n` | Dev only: intents, model calls, rejected items (15 §6). |
 
 ## 11. Saves, undo and replays
@@ -460,6 +472,14 @@ saves/<id>/
 ```
 
 - **Undo** restores a snapshot and truncates `facts.jsonl`/`turns/` to match. Multi-level (up to 10), disabled in ironman.
+
+> *Implemented in WP B3* ([DECISIONS.md#D-012](DECISIONS.md)): the snapshot is taken when the turn is asked for, with
+> the orders already written (undo gives them back to be changed), and also keeps the chronicle and the byte lengths of
+> `facts.jsonl` and `world-log.md`, which undo cuts back to. `state.history` keeps the last 30 turns (and any not yet
+> consolidated) for the prompts and the feed; every turn is in `turns/`. `GET /api/games/:id/undo` says how far back
+> the glass can turn. A save from before B3 keeps its one old undo point, and its history is written to `turns/` (with
+> a best-effort `legacy` fact per applied line) on its first new turn. Replay-from-snapshot (`scripts/replay.js`) comes
+> with the intents of B6; the byte-identical replay test covers the fact log today.
 - **Replay** (`scripts/replay.js <save> <turn>`) re-runs a turn from its snapshot with the recorded intents and seed and
   diffs the result against the recorded facts — the determinism test ([15](15-qa-tooling.md) §4).
 

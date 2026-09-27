@@ -76,3 +76,24 @@ test('council: a question, then "let them talk" — they go on without the lord 
   const log = b.state.chats['council:' + [...members].sort().join(',')];
   assert.equal(log.filter((m) => m.role === 'player').length, 1);
 });
+
+test('undo over the wire: how far back, several turns at once; ironman refuses; the facts and turns are served', async () => {
+  const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+  const u0 = await api(`/games/${id}/undo`); assert.deepEqual([u0.depth, u0.ironman], [0, false]);
+  const dates = [];
+  for (const span of ['3d', '4d', '5d']) dates.push((await api(`/games/${id}/advance`, { span, orders: [] })).turn.dateFrom);
+  assert.equal((await api(`/games/${id}/undo`)).depth, 3);
+  const facts = await api(`/games/${id}/facts?from=1&to=3`);
+  assert.ok(Array.isArray(facts) && facts.length && facts.every((f) => f.turn >= 1 && f.turn <= 3));
+  assert.equal((await api(`/games/${id}/turns/2`)).turn, 2);
+  const back = await api(`/games/${id}/undo`, { turns: 2 });
+  assert.equal(back.meta.turn, 1);
+  assert.equal((await api(`/games/${id}/facts?from=2`)).length, 0, 'the unmade turns\' facts are gone');
+  await assert.rejects(api(`/games/${id}/turns/3`), /no such turn/);
+  // an ironman chronicle: no glass to turn back
+  const iron = await api('/games', { scenario: 'agot_298', house: 'tully', ironman: true });
+  assert.equal(iron.state.meta.settings.ironman, true);
+  await api(`/games/${iron.id}/advance`, { span: '2d', orders: [] });
+  assert.deepEqual(await api(`/games/${iron.id}/undo`), { depth: 0, ironman: true, turn: 1 });
+  await assert.rejects(api(`/games/${iron.id}/undo`, { turns: 1 }), /ironman/i);
+});

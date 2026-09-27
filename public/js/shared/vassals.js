@@ -8,6 +8,7 @@ import { incapacity } from './regency.js';
 import { pronouns, isFemale } from './people.js';
 import { needsShips } from './sea.js';
 import { random } from '../engine/rng.js';
+import { fact, shown } from '../engine/facts/log.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -60,7 +61,7 @@ export function vassalTick(state, days, touched = new Set()) {
         ob.tribute = next;
         const text = next === 'paying' ? `House ${v.name} pays its dues to House ${liege.name} in full again.` : next === 'late' ? `House ${v.name}'s dues to House ${liege.name} are late. Excuses come by raven.` : `House ${v.name} withholds its dues from House ${liege.name} outright.`;
         applied.push({ op: 'obligation', text });
-        if (mine) events.push({ title: next === 'paying' ? `House ${v.name} pays again` : `House ${v.name} ${next === 'late' ? 'is late with its dues' : 'withholds its dues'}`, text, where: v.seat, importance: next === 'withholding' ? 3 : 2, type: 'economy', houses: [v.id] });
+        events.push(...shown(mine, fact(state, 'tax_changed', { title: next === 'paying' ? `House ${v.name} pays again` : `House ${v.name} ${next === 'late' ? 'is late with its dues' : 'withholds its dues'}`, text, where: v.seat, importance: next === 'withholding' ? 3 : 2, type: 'economy', houses: [v.id] }, { actors: [v.lord], data: { dues: next } })));
       }
     }
     // --- the banners ---
@@ -87,15 +88,16 @@ export function vassalTick(state, days, touched = new Set()) {
         const men = Math.round((lev * zeal + maa * 0.6) / 50) * 50;
         if (men >= 50 && seatPos) {
           const name = `Host of House ${v.name}`;
+          const born = Math.floor(random() * Math.max(1, days)); // the day the host is raised, and sets out
           const r = applyChanges(state, [
             { op: 'army_create', owner: v.id, name, at: v.seat, men, commander: v.lord, composition: `Levies of House ${v.name}${maa > 200 ? ', with knights and men-at-arms' : ''}`, status: 'marching to muster' },
             { op: 'figure', house: v.id, field: 'levies', delta: -Math.round(lev * zeal), source: 'Muster rolls' },
             { op: 'figure', house: v.id, field: 'menAtArms', delta: -Math.round(maa * 0.6), source: 'Muster rolls' },
-          ]);
+          ], { on: born + 1, cause: { type: 'rule', ref: 'the call' } });
           applied.push(...r.applied);
           const a = Object.values(state.parties).find((x) => x.owner === v.id && x.name === name && !x.serving); let riding = [];
           if (a) {
-            a.serving = v.liege; ob.host = a.id; a.bornDay = Math.floor(random() * Math.max(1, days));
+            a.serving = v.liege; ob.host = a.id; a.bornDay = born;
             if (musterPos && ob.muster && ob.muster !== v.seat) { a.march = { to: ob.muster, since: state.meta.turn }; settle(state, a); }
             // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
             joinParty(state, state.characters[v.lord], a);
@@ -107,21 +109,21 @@ export function vassalTick(state, days, touched = new Set()) {
           // an island lord's men cannot march to the mainland: they take ship, or wait for ships (shared/sea.js)
           const byShip = musterPos && needsShips(seatPos, musterPos);
           const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with ${pronouns(state.characters[v.lord]).him}` : ''}${byShip ? `; they must cross the sea to reach ${state.holdings[ob.muster]?.name || 'the muster'}` : eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
-          if (mine) events.push({ day: (a?.bornDay || 0) + 1, title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] });
+          events.push(...shown(mine, fact(state, 'call_answered', { day: (a?.bornDay || 0) + 1, title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] }, { actors: [v.lord, ...riding.map((c) => c.id)], data: { men, party: a?.id || null, to: ob.muster || null } })));
         } else {
           ob.levies = 'answered';
-          if (mine) events.push({ title: `House ${v.name} answers — with little`, text: `${lordName} sends word that ${pronouns(state.characters[v.lord]).he} has no men left to send.`, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
+          events.push(...shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text: `${lordName} sends word that ${pronouns(state.characters[v.lord]).he} has no men left to send.`, where: v.seat, importance: 2, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { men: 0 } })));
         }
       } else if (answer === 'delayed') {
         const P = pronouns(state.characters[v.lord]);
         const excuses = ['the harvest is not yet in', 'fever in the villages', 'the roads are flooded', `${P.his} own borders are threatened`, `${P.his} knights are scattered at a tourney`, `${P.he} must first settle a quarrel with ${P.his} neighbour`];
         const text = `${lordName} writes that ${excuses[Math.floor(random() * excuses.length)]}. ${P.He} will come — later.`;
-        if (mine) events.push({ title: `House ${v.name} delays`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
+        events.push(...shown(mine, fact(state, 'call_delayed', { title: `House ${v.name} delays`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] }, { actors: [v.lord] })));
       } else {
         const text = `${lordName} refuses the summons. ${pronouns(state.characters[v.lord]).His} men will stay at home.`;
         const k = [v.id, v.liege].sort().join('|');
         state.relations[k] = { ...(state.relations[k] || {}), v: clamp((state.relations[k]?.v ?? 0) - 10, -100, 100) };
-        if (mine) events.push({ title: `House ${v.name} refuses the call`, text, where: v.seat, importance: 4, type: 'war', houses: [v.id] });
+        events.push(...shown(mine, fact(state, 'call_refused', { title: `House ${v.name} refuses the call`, text, where: v.seat, importance: 4, type: 'war', houses: [v.id] }, { actors: [v.lord] })));
       }
       applied.push({ op: 'obligation', text: `House ${v.name}: banners ${ob.levies}` });
     }
@@ -144,7 +146,7 @@ function unrestTick(state, days) {
       { label: 'Hear their grievances', hint: `~${cost.toLocaleString()} dragons in grain and remitted rents`, fx: [{ rising: [h.id, 'grant', cost] }] },
       { label: 'Hang the ringleaders, pardon the rest', hint: 'A middle course', fx: [{ rising: [h.id, 'hang'] }] },
       { label: 'Let it burn itself out', hint: 'It may spread', fx: [{ rising: [h.id, 'ignore'] }] }] }]);
-    events.push({ title: `Rising at ${h.name}`, text: `The smallfolk of ${h.name} are up in arms.`, where: h.id, importance: 4, type: 'court', houses: [p] });
+    events.push(fact(state, 'rising', { title: `Rising at ${h.name}`, text: `The smallfolk of ${h.name} are up in arms.`, where: h.id, importance: 4, type: 'court', houses: [p] }, { data: { holding: h.id } }));
   }
   return events;
 }
@@ -187,7 +189,7 @@ function rebellionTick(state, days) {
       { label: 'Declare them traitors and march', hint: 'War. Every lord will see the price of defiance.', fx: [{ rebel: [v.id, 'war'] }] },
       { label: 'Offer terms', hint: 'Forgive their dues and hear their grievances. Some will call it weakness.', fx: [{ rebel: [v.id, 'terms'] }] },
       { label: 'Release them from their oaths', hint: 'Let them go. Your realm shrinks.', fx: [{ rebel: [v.id, 'release'] }] }] }]);
-    events.push({ title: `House ${v.name} defies House ${state.houses[v.liege]?.name}`, text: `${lord.name} refuses the authority of House ${state.houses[v.liege]?.name}.`, where: v.seat, importance: 5, type: 'war', houses: [v.id] });
+    events.push(fact(state, 'fealty_renounced', { title: `House ${v.name} defies House ${state.houses[v.liege]?.name}`, text: `${lord.name} refuses the authority of House ${state.houses[v.liege]?.name}.`, where: v.seat, importance: 5, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { from: v.liege } }));
   }
   return events;
 }
@@ -263,7 +265,7 @@ export function gatherMusters(state) {
     moveMembers(state, a, host);
     if (v.obligations) v.obligations.host = host.id;
     delete state.parties[a.id]; settle(state, host);
-    if (liegeId === state.meta.player) events.push({ ...(a.arriveDay ? { day: a.arriveDay } : {}), title: `House ${v.name} joins ${host.name}`, text: `${a.men.toLocaleString()} men under the ${v.name} banner join ${host.name}${host.at ? ` at ${state.holdings[host.at]?.name}` : ' on the march'}. The host now numbers ${host.men.toLocaleString()}.`, where: host.at || null, importance: 2, type: 'war', houses: [v.id] });
+    events.push(...shown(liegeId === state.meta.player, fact(state, 'host_joined', { ...(a.arriveDay ? { day: a.arriveDay } : {}), title: `House ${v.name} joins ${host.name}`, text: `${a.men.toLocaleString()} men under the ${v.name} banner join ${host.name}${host.at ? ` at ${state.holdings[host.at]?.name}` : ' on the march'}. The host now numbers ${host.men.toLocaleString()}.`, where: host.at || null, importance: 2, type: 'war', houses: [v.id, liegeId] }, { actors: [v.lord], data: { party: a.id, host: host.id, men: a.men } })));
   }
   return events;
 }
@@ -287,7 +289,7 @@ export function fieldService(state, days) {
         lev.v = (Number(lev.v) || 0) + Math.round(leave * 0.9);
         v.obligations = { ...(v.obligations || {}), levies: 'refused' }; delete v.obligations.host;
         for (const c of membersOf(state, host)) if (c.house === vid) sendHome(state, c, v.seat);
-        if (host.owner === state.meta.player) events.push({ title: `House ${v.name} goes home`, text: `Tired of the war and of ${state.characters[state.houses[host.owner]?.lord]?.name || `${pronouns(state.characters[v.lord]).his} liege`}'s command, ${state.characters[v.lord]?.name || 'the lord'} strikes ${pronouns(state.characters[v.lord]).his} tents in the night and marches ${leave.toLocaleString()} men home.`, where: v.seat, importance: 4, type: 'war', houses: [vid] });
+        events.push(...shown(host.owner === state.meta.player, fact(state, 'desertion', { title: `House ${v.name} goes home`, text: `Tired of the war and of ${state.characters[state.houses[host.owner]?.lord]?.name || `${pronouns(state.characters[v.lord]).his} liege`}'s command, ${state.characters[v.lord]?.name || 'the lord'} strikes ${pronouns(state.characters[v.lord]).his} tents in the night and marches ${leave.toLocaleString()} men home.`, where: v.seat, importance: 4, type: 'war', houses: [vid, host.owner] }, { actors: [v.lord], data: { host: host.id, men: leave } })));
       }
     }
     if (host.men <= 0) disband(state, host);

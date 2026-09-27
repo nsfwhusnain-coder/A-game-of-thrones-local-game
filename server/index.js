@@ -58,14 +58,19 @@ route('POST', '/api/llm/test', async () => {
 });
 route('GET', '/api/scenarios', () => Object.values(SCENARIOS).map(({ id, name, subtitle, description, date }) => ({ id, name, subtitle, description, date })));
 route('GET', '/api/saves', () => game.listSaves());
-route('POST', '/api/games', async (req) => { const b = await readBody(req); return game.newGame(b.scenario || 'agot_298', b.house); });
+route('POST', '/api/games', async (req) => { const b = await readBody(req); return game.newGame(b.scenario || 'agot_298', b.house, { ironman: !!b.ironman }); });
 route('GET', '/api/games/:id/progress', (req, p) => game.getProgress(p.id) || { phase: 'idle' });
 route('GET', '/api/games/:id', (req, p) => game.loadState(p.id));
 route('DELETE', '/api/games/:id', (req, p) => { game.deleteSave(p.id); return { ok: true }; });
 route('POST', '/api/games/:id/orders', async (req, p) => ({ orders: game.setOrders(p.id, (await readBody(req)).orders) }));
 route('POST', '/api/games/:id/orders/preview', async (req, p) => game.previewOrderPlans(p.id));
 route('POST', '/api/games/:id/advance', async (req, p) => game.advance(p.id, await readBody(req)));
-route('POST', '/api/games/:id/undo', (req, p) => game.undo(p.id));
+// undo (docs/gdd/03-architecture.md §11): how far back the glass can turn, and turning it
+route('GET', '/api/games/:id/undo', (req, p) => { const st = game.loadState(p.id); return { depth: game.undoDepth(p.id, st), ironman: !!st.meta.settings?.ironman, turn: st.meta.turn }; });
+route('POST', '/api/games/:id/undo', async (req, p) => game.undo(p.id, await readBody(req)));
+// the history of the save: its facts (as the player's house may know them) and each turn's record
+route('GET', '/api/games/:id/facts', (req, p) => { const q = new URL(req.url, 'http://x').searchParams; return game.readFacts(p.id, { from: q.get('from'), to: q.get('to'), house: q.get('house'), kind: q.get('kind'), limit: q.get('limit'), view: 'player' }); });
+route('GET', '/api/games/:id/turns/:n', (req, p) => game.readTurn(p.id, p.n));
 route('POST', '/api/games/:id/talk', async (req, p) => { const b = await readBody(req); return game.talk(p.id, b.character, String(b.message || '').slice(0, 4000)); });
 route('POST', '/api/games/:id/suggest', (req, p) => game.suggest(p.id));
 route('POST', '/api/games/:id/act', async (req, p) => game.act(p.id, await readBody(req)));

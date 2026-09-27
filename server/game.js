@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplies } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
@@ -31,6 +32,7 @@ import { updateIntel } from '../public/js/shared/intel.js';
 import { treacheryTick } from '../public/js/shared/treachery.js';
 import { regencyTick } from '../public/js/shared/regency.js';
 import { outcomeFor, standing } from '../public/js/shared/standing.js';
+import { emit, fact, asEvent, flush, redate, factById } from '../public/js/engine/facts/log.js';
 import * as court from './court.js';
 import { carryOutOrders, readOrdersByRule, executeActions, named, startWorks, commandable, previewOrders, orderEvents, raiseLevies, callBanners, advanceMusters, ravenDays } from './orders.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
@@ -65,6 +67,9 @@ export function loadState(id) {
 function saveState(id, state) {
   settleWorld(state); // a save is always settled: every party's state and every person's activity true to the world
   fs.mkdirSync(dir(id), { recursive: true });
+  // what was done goes into the fact log before the state that follows from it (docs/gdd/03-architecture.md §11)
+  appendFacts(id, flush(state));
+  delete state.meta.clock; // the clock runs only while a turn is being played
   const f = path.join(dir(id), 'state.json');
   fs.writeFileSync(f + '.tmp', JSON.stringify(state));
   fs.renameSync(f + '.tmp', f);
@@ -99,6 +104,79 @@ function appendWorldLog(id, state, t) {
   fs.appendFileSync(f, lines.join('\n') + '\n');
 }
 
+// ── The save's own history (docs/gdd/03-architecture.md §11) ──
+//   facts.jsonl              every fact, one JSON object per line, appended as it is saved (never rewritten, only cut
+//                            back by an undo)
+//   turns/000123.json        each turn's record (state.history keeps only the recent ones the game still reads)
+//   snapshots/000123.json.gz the world as it stood before turn 123 (state, chronicle, the logs' lengths): undo's
+//                            ground. The last ten are kept; an ironman chronicle keeps none.
+const pad = (n) => String(n).padStart(6, '0');
+const KEEP_SNAPSHOTS = 10, KEEP_HISTORY = 30;
+const sizeOf = (f) => { try { return fs.statSync(f).size; } catch { return 0; } };
+function appendFacts(id, facts) {
+  if (facts.length) fs.appendFileSync(path.join(dir(id), 'facts.jsonl'), facts.map((f) => JSON.stringify(f)).join('\n') + '\n');
+}
+/**
+ * The fact log, filtered: turns `from`..`to` (inclusive), facts touching `house`, of `kind`, at most `limit` (the
+ * newest). `view: 'player'` keeps only what the player's house may know: no one else's secrets, no other houses'
+ * private business (sight and news travel refine this in WP B9).
+ */
+export function readFacts(id, { from, to, house, kind, limit = 2000, view } = {}) {
+  const f = path.join(dir(id), 'facts.jsonl'); if (!fs.existsSync(f)) return [];
+  const lo = Number(from) || -Infinity, hi = to == null || to === '' ? Infinity : Number(to);
+  const me = view === 'player' ? loadState(id).meta.player : null;
+  const known = (x) => !me || !['secret', 'houses'].includes(x.vis?.scope) || (x.vis.houses || x.houses || []).includes(me);
+  const out = [];
+  for (const line of fs.readFileSync(f, 'utf8').split('\n')) {
+    if (!line) continue;
+    let x; try { x = JSON.parse(line); } catch { continue; }
+    if (x.turn < lo || x.turn > hi || (house && !x.houses?.includes(house)) || (kind && x.kind !== kind) || !known(x)) continue;
+    out.push(x);
+  }
+  return out.slice(-Math.max(1, Math.min(20000, Number(limit) || 2000)));
+}
+/** A turn's record: from its file, or (a save from before turn files) from the state's history. */
+export function readTurn(id, n) {
+  const f = path.join(dir(id), 'turns', `${pad(Number(n))}.json`);
+  if (fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf8'));
+  const t = loadState(id).history.find((x) => x.turn === Number(n));
+  if (!t) throw httpError(404, 'no such turn');
+  return t;
+}
+function writeTurn(id, record) {
+  const d = path.join(dir(id), 'turns'); fs.mkdirSync(d, { recursive: true });
+  fs.writeFileSync(path.join(d, `${pad(record.turn)}.json`), JSON.stringify(record));
+}
+// A save from before turn files: its history is written out once, and its applied lines become a best-effort fact log
+// (kind 'legacy'; docs/gdd/03-architecture.md §12.7), so the world log UI and the memory have something to read.
+function archiveLegacy(id, state) {
+  const d = path.join(dir(id), 'turns'); if (fs.existsSync(d)) return;
+  fs.mkdirSync(d, { recursive: true });
+  const legacy = [];
+  for (const t of state.history || []) {
+    writeTurn(id, t);
+    (t.applied || []).forEach((a, k) => legacy.push({ id: `f${t.turn}.L${k + 1}`, turn: t.turn, day: null, kind: 'legacy', actors: [], houses: [], vis: { scope: 'public' }, importance: 1, text: String(a.text || a) }));
+  }
+  if (legacy.length && !fs.existsSync(path.join(dir(id), 'facts.jsonl'))) appendFacts(id, legacy);
+}
+/** Keep the world as it stands before turn `state.meta.turn + 1` is played (nothing, in an ironman chronicle). */
+function snapshot(id, state) {
+  if (state.meta.settings?.ironman) return;
+  const d = path.join(dir(id), 'snapshots'); fs.mkdirSync(d, { recursive: true });
+  const snap = { turn: state.meta.turn + 1, state, chronicle: readChronicle(id), factsBytes: sizeOf(path.join(dir(id), 'facts.jsonl')), worldLogBytes: sizeOf(path.join(dir(id), 'world-log.md')) };
+  fs.writeFileSync(path.join(d, `${pad(snap.turn)}.json.gz`), zlib.gzipSync(JSON.stringify(snap)));
+  const all = fs.readdirSync(d).filter((f) => /^\d{6}\.json\.gz$/.test(f)).sort();
+  for (const f of all.slice(0, -KEEP_SNAPSHOTS)) fs.rmSync(path.join(d, f), { force: true });
+}
+/** How many turns can be unmade now: the unbroken run of snapshots back from the latest turn. */
+export function undoDepth(id, state = loadState(id)) {
+  if (state.meta.settings?.ironman) return 0;
+  const d = path.join(dir(id), 'snapshots'); let n = 0;
+  while (n < KEEP_SNAPSHOTS && state.meta.turn - n >= 1 && fs.existsSync(path.join(d, `${pad(state.meta.turn - n)}.json.gz`))) n++;
+  if (!n && fs.existsSync(path.join(dir(id), 'prev-state.json'))) n = 1; // a save from before snapshots kept one undo point
+  return n;
+}
+
 export function writeChronicle(id, text) { fs.writeFileSync(path.join(dir(id), 'chronicle.md'), text); }
 function appendChronicle(id, text) { fs.appendFileSync(path.join(dir(id), 'chronicle.md'), text); }
 function logLLM(id, kind, messages, response) {
@@ -107,8 +185,10 @@ function logLLM(id, kind, messages, response) {
   fs.writeFileSync(path.join(dir(id), `last-prompt-${kind}.txt`), messages.map((m) => `### ${m.role.toUpperCase()}\n${m.content}`).join('\n\n'));
 }
 
-export function newGame(scenario, house) {
-  const state = createInitialState(scenario, house);
+export function newGame(scenario, house, { ironman = false, seed } = {}) {
+  const state = createInitialState(scenario, house, seed != null ? { seed: Number(seed) >>> 0 } : {});
+  // an ironman chronicle is written once: no undo, no snapshots (docs/gdd/03-architecture.md §11)
+  if (ironman) state.meta.settings = { ...(state.meta.settings || {}), ironman: true };
   const id = `${house}-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`;
   saveState(id, state);
   const h = state.houses[house];
@@ -223,7 +303,7 @@ async function runSwarm(id, state, cfg, ctx) {
     // what this agent is allowed to change, applied at once so the next agent sees a true world
     const ops = filterOps(agent, obj.changes);
     if (ops.length) {
-      const told = applyChanges(state, ops, { ...applyCtx, source: AGENT_SOURCE[agent] || applyCtx.source, mayInvent: agent === 'weaver' });
+      const told = applyChanges(state, ops, { ...applyCtx, source: AGENT_SOURCE[agent] || applyCtx.source, mayInvent: agent === 'weaver', cause: { type: 'intent', ref: agent } });
       applied.push(...told.applied); rejected.push(...told.rejected);
       doneHere.push(...told.applied);
       tell(briefFromApplied(told.applied, `WHAT ${agent === 'whisperer' ? 'MOVED IN SECRET' : 'THE GREAT HOUSES TRULY DID'} THESE DAYS (the engine's record: tell these — and no march, arrival, battle or meeting that is not here or in WHAT THE ENGINE HAS ALREADY SET DOWN)`));
@@ -270,6 +350,15 @@ export async function advance(id, { span = 'auto', orders } = {}) {
 }
 async function advanceWith(id, state, cfg, { span, orders }) {
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o.text) })).filter((o) => o.text.trim()); }
+  // the world as it stands before the turn is kept for undo, orders and all (they come back to be changed and given
+  // again); the old single undo point of earlier versions is no longer needed
+  archiveLegacy(id, state);
+  snapshot(id, state);
+  for (const f of ['prev-state.json', 'prev-chronicle.md']) fs.rmSync(path.join(dir(id), f), { force: true });
+  // the turn's clock dates its facts (engine/facts/log.js): day 1 is the morrow, and the turn runs to its last day once
+  // its length is known
+  const day0 = dayNumber(state.meta.date);
+  state.meta.clock = { turn: state.meta.turn + 1, from: day0 + 1, to: day0 + 1 };
   for (const a of Object.values(state.parties)) { delete a.motion; delete a.arriveDay; }
   const chronicle = readChronicle(id);
   // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
@@ -279,9 +368,7 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   let turnReason = null;
   if (!span || span === 'auto' || span === 'turn') { const n = nextTurnLength(state); span = `${n.days}d`; turnReason = n.reason; }
   const spanInfo = spanOf(span);
-  // Keep an undo point
-  fs.writeFileSync(path.join(dir(id), 'prev-state.json'), JSON.stringify(state));
-  fs.writeFileSync(path.join(dir(id), 'prev-chronicle.md'), chronicle);
+  state.meta.clock.to = day0 + spanInfo.days;
 
   const dateFrom = dateStr(state.meta.date);
   const yearBefore = state.meta.date.year;
@@ -304,8 +391,9 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   // ── THE ENGINE'S PART OF THE TURN: what the rules decide, day by day — marches and arrivals, musters, battles,
   // the great matters of the story, lords on the road, letters landing. The story is then told around these facts.
   const applied = [], rejected = [];
-  { const r0 = applyChanges(state, naturalDeaths, { source: 'The years', spanDays: spanInfo.days }); applied.push(...r0.applied); }
-  const deathEvents = naturalDeaths.map((d) => state.characters[d.id]).filter((c) => c && !c.alive).map((c) => ({ title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, type: 'court', houses: [c.house] }));
+  // the years' dead are told in the years' own words: their facts are recorded here, before the heirs' (not by the op)
+  const deathEvents = naturalDeaths.map((d) => state.characters[d.id]).map((c) => fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause: naturalDeaths.find((d) => d.id === c.id).cause, age: c.age }, cause: { type: 'rule', ref: 'the years' } }));
+  { const r0 = applyChanges(state, naturalDeaths, { source: 'The years', spanDays: spanInfo.days, told: ['character'] }); applied.push(...r0.applied); }
   // Vassals whose obligations the story did not settle act on their own temper: dues, and the banners
   const touched = new Set();
   const vt = vassalTick(state, spanInfo.days, touched);
@@ -357,12 +445,12 @@ async function advanceWith(id, state, cfg, { span, orders }) {
     console.warn(`turn ${state.meta.turn + 1}: simulator reply unreadable (${error}); the engine advanced the world alone`);
   }
 
-  const told = applyChanges(state, obj.changes || [], applyCtx);
+  const told = applyChanges(state, obj.changes || [], { ...applyCtx, cause: { type: 'intent', ref: 'story' } });
   applied.push(...told.applied); rejected.push(...told.rejected);
-  // The seasons turn on their own if the story does not turn them
+  // The seasons turn on their own if the story does not turn them (the white raven is news on the turn's last day)
   if (!applied.some((a) => a.op === 'season')) {
     const turned = seasonTick(state, spanInfo.days);
-    if (turned) { vt.events.unshift({ title: `A white raven: ${turned.season} has come`, text: turned.text, where: resolvePlaceId('oldtown'), importance: 5, type: 'court', houses: [] }); applied.push({ op: 'season', text: `The season turns: ${turned.season.toUpperCase()}` }); }
+    if (turned) { engineEvents.push(fact(state, 'season_turned', { title: `A white raven: ${turned.season} has come`, text: turned.text, where: resolvePlaceId('oldtown'), importance: 5, houses: [], day: spanInfo.days }, { data: { season: turned.season }, cause: { type: 'rule', ref: 'seasons' } })); applied.push({ op: 'season', text: `The season turns: ${turned.season.toUpperCase()}` }); }
   } else { state.world.seasonDays = 0; }
   // What the player's house has seen of the other hosts this period (fog of war)
   updateIntel(state);
@@ -375,6 +463,7 @@ async function advanceWith(id, state, cfg, { span, orders }) {
     title: stripForeignScript(String(e.title || 'Untitled')), text: stripForeignScript(String(e.text || e.description || '')), details: e.details ? stripForeignScript(String(e.details)) : '', where: resolvePlaceId(e.where || e.location) || null,
     importance: Math.max(1, Math.min(5, Number(e.importance) || 2)), type: String(e.type || 'court'), houses: Array.isArray(e.houses) ? e.houses : [],
     ...(Number(e.order) >= 1 ? { order: Number(e.order) } : {}),
+    story: true, // the story's telling, not the engine's record: no fact stands behind it (03 §1)
   }));
   // the story sometimes writes the same event twice: tell it once
   for (let k = events.length - 1; k > 0; k--) if (events.slice(0, k).some((x) => x.title === events[k].title && x.text === events[k].text)) events.splice(k, 1);
@@ -388,13 +477,14 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   for (const e of events) if (!e.day) e.day = 1 + Math.floor(random() * spanInfo.days);
   events.sort((a, b) => a.day - b.day || (b.orderId ? 1 : 0) - (a.orderId ? 1 : 0));
   for (const a of applied.filter((x) => x.op === 'succession')) {
-    const hh = state.houses[a.house];
-    events.unshift({ title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === state.meta.player ? 5 : 4, type: 'court', houses: [a.house] });
+    const hh = state.houses[a.house]; const f = factById(state, a.fact);
+    const card = { title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === state.meta.player ? 5 : 4, type: 'court', houses: [a.house] };
+    events.unshift(f ? { ...card, fact: f.id, day: asEvent(state, f).day } : card);
   }
   const p = state.meta.player;
   const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
   // the steward's small notes are the life of your lands, not headlines; only the grave ones are news
-  for (const n of mine.slice(0, 6)) events.push({ title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, type: 'economy', houses: [n.house], ...(n.important ? {} : { bg: true, mine: true }) });
+  for (const n of mine.slice(0, 6)) events.push(fact(state, 'ledger', { title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, houses: [n.house], ...(n.important ? {} : { bg: true, mine: true }) }, { cause: { type: 'rule', ref: 'economy' } }));
   // every event has its day (successions at the start, the steward's accounts at the end) and an id for its pin
   for (const e of events) if (!e.day) e.day = /^A new head/.test(e.title) ? 1 : spanInfo.days;
   // the story threads the player follows, kept by the story from turn to turn (not the engine's great matters)
@@ -408,10 +498,13 @@ async function advanceWith(id, state, cfg, { span, orders }) {
     }
     state.storyThreads = [...now.values()].slice(-8);
   }
-  // one date for every view (HUD, feed, reel, pins): day d of the period is the d-th day after it began
-  events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; e.date = dateStr(addDays(state.meta.date, e.day - spanInfo.days)); });
+  // one date for every view (HUD, feed, reel, pins): day d of the period is the d-th day after it began — and the fact
+  // behind each card falls on the same day as the card
+  events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; e.date = dateStr(addDays(state.meta.date, e.day - spanInfo.days)); redate(state, e); });
   const record = { carried, turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, ...(turnReason ? { until: turnReason } : {}), orders: state.orders, summary: stripForeignScript(String(obj.summary || '')), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
   state.history.push(record);
+  // the game reads back only the recent turns (and those the chronicle has not yet taken in); every turn is in turns/
+  state.history = state.history.filter((t) => t.turn > state.meta.turn - KEEP_HISTORY || t.turn > (state.consolidatedThrough ?? 0));
   state.orders = [];
   // If the simulator raised no matter for the player over a moon or more, the realm brings one itself
   const newDecision = applied.some((a) => a.op === 'decision');
@@ -445,7 +538,7 @@ async function advanceWith(id, state, cfg, { span, orders }) {
     const oc = outcomeFor(state);
     if (oc) {
       state.outcome = { ...oc, turn: state.meta.turn, date: record.date };
-      events.push({ title: oc.title, text: oc.text, where: state.houses[p].seat || null, importance: 5, type: 'court', houses: [p], day: spanInfo.days });
+      events.push(fact(state, oc.victory ? 'crowned' : 'house_ended', { title: oc.title, text: oc.text, where: state.houses[p].seat || null, importance: 5, type: 'court', houses: [p], day: spanInfo.days }, { actors: [state.houses[p].lord], data: { outcome: oc.kind, victory: oc.victory }, cause: { type: 'rule', ref: 'standing' } }));
       state.chronicle.push({ date: record.date, text: `${oc.title} — ${oc.text}` });
     }
   }
@@ -459,6 +552,8 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   settleWorld(state);
   const broken = validate(state);
   if (broken.length) { record.invariants = broken.slice(0, 20); console.warn(`turn ${record.turn}: ${broken.length} invariant(s) broken — ${broken.slice(0, 3).join('; ')}`); }
+  const made = state.facts || []; record.facts = { count: made.length, ...(made.length ? { first: made[0].id, last: made.at(-1).id } : {}) };
+  writeTurn(id, record);
   saveState(id, state);
   try { appendWorldLog(id, state, record); } catch (e) { console.warn('world log:', e.message); }
   // Compress old turns into the chronicle without making the player wait
@@ -516,13 +611,37 @@ export async function consolidateNow(id) {
   return maybeConsolidate(id, loadState(id), cfg, true);
 }
 
-export function undo(id) {
-  const f = path.join(dir(id), 'prev-state.json');
-  if (!fs.existsSync(f)) throw httpError(400, 'nothing to undo');
-  fs.copyFileSync(f, path.join(dir(id), 'state.json'));
-  const c = path.join(dir(id), 'prev-chronicle.md');
-  if (fs.existsSync(c)) fs.copyFileSync(c, path.join(dir(id), 'chronicle.md'));
-  fs.rmSync(f);
+/**
+ * Unmake the last `turns` turns (1–10): the world goes back to how it stood before the earliest of them, orders and
+ * all; the fact log and the world log are cut back to their lengths then, and the turns after it are forgotten. An
+ * ironman chronicle cannot be unwritten.
+ */
+export async function undo(id, { turns = 1 } = {}) {
+  if (consolidating.has(id)) await consolidating.get(id).catch(() => {}); // the chronicle is not written under our feet
+  const state = loadState(id);
+  if (state.meta.settings?.ironman) throw httpError(403, 'An ironman chronicle cannot be unwritten.');
+  const n = Math.max(1, Math.round(Number(turns) || 1));
+  const target = state.meta.turn - n + 1; // the earliest turn unmade: the world returns to the eve of it
+  const snap = path.join(dir(id), 'snapshots', `${pad(target)}.json.gz`);
+  if (target < 1) throw httpError(400, state.meta.turn ? `only ${state.meta.turn} turn${state.meta.turn > 1 ? 's have' : ' has'} been played` : 'nothing has happened yet');
+  if (n > KEEP_SNAPSHOTS || !fs.existsSync(snap)) {
+    // a save from before snapshots kept one undo point: the state and chronicle as they stood
+    const legacy = path.join(dir(id), 'prev-state.json');
+    if (n === 1 && fs.existsSync(legacy)) {
+      fs.copyFileSync(legacy, path.join(dir(id), 'state.json'));
+      const c = path.join(dir(id), 'prev-chronicle.md'); if (fs.existsSync(c)) fs.copyFileSync(c, path.join(dir(id), 'chronicle.md'));
+      fs.rmSync(legacy); return loadState(id);
+    }
+    const depth = undoDepth(id, state);
+    throw httpError(400, depth ? `only the last ${depth} turn${depth > 1 ? 's' : ''} can be undone` : 'nothing to undo');
+  }
+  const { state: before, chronicle, factsBytes, worldLogBytes } = JSON.parse(zlib.gunzipSync(fs.readFileSync(snap)).toString('utf8'));
+  const cut = (f, bytes) => { const p = path.join(dir(id), f); if (fs.existsSync(p) && sizeOf(p) > bytes) fs.truncateSync(p, bytes); };
+  cut('facts.jsonl', factsBytes); cut('world-log.md', worldLogBytes);
+  writeChronicle(id, chronicle);
+  const gone = (d) => { const p = path.join(dir(id), d); if (fs.existsSync(p)) for (const f of fs.readdirSync(p)) if (Number(f.slice(0, 6)) >= target) fs.rmSync(path.join(p, f), { force: true }); };
+  gone('turns'); gone('snapshots');
+  saveState(id, before);
   return loadState(id);
 }
 
@@ -588,12 +707,15 @@ async function talkWith(id, state, cfg, charId, message) {
     state.post = state.post || [];
     state.post.unshift({ id: `post_${state.meta.turn}_${state.post.length}_${c.id}`, to: c.id, toName: c.name, text: message, sent: dateStr(state.meta.date), sentDay: today, arriveDay: today + days, days, status: 'in flight' });
     state.pendingReplies = [...(state.pendingReplies || []), { char: c.id, arrivesDay: today + days * 2, changes, mayMove: ownMan ? mayMove : [], text: reply }];
+    emit(state, 'letter_sent', { actors: [lordId, c.id], houses: [p, c.house], data: { to: c.id, days }, vis: { scope: 'houses', houses: [p, c.house] }, cause: { type: 'order', ref: 'letter' }, text: `A raven flies from ${lord?.name || `House ${state.houses[p].name}`} to ${c.name} (~${days} days).` });
     const turn = state.meta.turn;
     state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn, via: 'raven' }, { role: 'npc', text: reply, date: dateStr(back), turn, pending: true, arrivesDay: today + days * 2, mood: stance.moodWord, ...(stance.verdict ? { verdict: stance.verdict } : {}) }];
     saveState(id, state);
     return { reply: null, raven: { days, back: dateStr(back) }, applied: [], rejected: [], state, stance: { verdict: null, mood: moodWord(stance.mood), patience: stance.mood.patience, full: stance.mood.full, closed: !!stance.mood.closed } };
   }
-  let { applied, rejected } = applyChanges(state, changes, { source: c.name, protectPlayer: true, mayMove: ownMan ? mayMove : [] });
+  // the audience is a fact (who spoke with whom, and where); what was said stays in the conversation
+  emit(state, 'audience_held', { actors: [lordId, c.id], houses: [p, c.house], place: resolvePlaceId(c.loc) || partyOf(state, c)?.at || null, data: { verdict: stance.verdict || null }, vis: { scope: 'houses', houses: [p, c.house] }, cause: { type: 'order', ref: 'audience' }, text: `${lord?.name || `The lord of House ${state.houses[p].name}`} speaks with ${c.name}.` });
+  let { applied, rejected } = applyChanges(state, changes, { source: c.name, protectPlayer: true, mayMove: ownMan ? mayMove : [], cause: { type: 'intent', ref: c.id } });
   // the model forgot to act on a plain command to a servant: read it by rule, with the servant as the one addressed
   if (ownMan && c.id !== state.houses[p].lord && !applied.some((a) => ['travel', 'ride', 'recruit', 'hire'].includes(a.op))) {
     const plan = readOrdersByRule(state, [{ text: message }], c.id);
@@ -613,6 +735,7 @@ function dayEngineEvents(state, evs, days) {
   for (const e of evs) {
     if (e.day) { e.day = Math.max(1, Math.min(days, Math.round(e.day))); continue; }
     e.day = (e.where && arrived.get(e.where)) || 1 + Math.floor(random() * days);
+    redate(state, e); // its fact (and the heir's, if it tells a death) falls on the same day
   }
   return evs.sort((a, b) => a.day - b.day);
 }
@@ -626,7 +749,7 @@ function foldAnswers(evs) {
     if (g.length < 2) { out.push(...g); continue; }
     const parts = g.map((e) => { const m = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men(, .+? riding with (?:him|her))?.*?\(~(\d+) days\)/); const sea = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men.*must cross the sea/); return m ? `${m[1]}${m[3] ? ` with ${m[3].replace(/^, | riding with (him|her)$/g, '')}` : ''} (${m[2]} men, ~${m[4]} days away)` : sea ? `${sea[1]} (${sea[2]} men, by sea)` : e.title.replace(/ answers the call$/, ''); });
     const men = g.reduce((a, e) => a + (Number(String(e.text).match(/with ([\d,]+) men/)?.[1]?.replace(/,/g, '')) || 0), 0);
-    out.push({ ...g[0], day, title: `${g.length} lords answer the call — ${men.toLocaleString('en-GB')} men on the march`, text: `${parts.join('; ')}.`, houses: [...new Set(g.flatMap((e) => e.houses || []))], importance: 3 });
+    out.push({ ...g[0], day, title: `${g.length} lords answer the call — ${men.toLocaleString('en-GB')} men on the march`, text: `${parts.join('; ')}.`, houses: [...new Set(g.flatMap((e) => e.houses || []))], importance: 3, facts: g.map((e) => e.fact).filter(Boolean) });
   }
   return out;
 }
@@ -663,13 +786,13 @@ function deliverReplies(state) {
   for (const r of state.pendingReplies || []) {
     const c = state.characters[r.char];
     if (!c || r.arrivesDay > today) { if (c) keep.push(r); continue; }
-    const res = applyChanges(state, r.changes || [], { source: c.name, protectPlayer: true, mayMove: r.mayMove || [] });
+    const res = applyChanges(state, r.changes || [], { source: c.name, protectPlayer: true, mayMove: r.mayMove || [], cause: { type: 'intent', ref: r.char }, on: 1 });
     const entry = (state.chats[r.char] || []).find((m) => m.pending && m.arrivesDay === r.arrivesDay);
     if (entry) { delete entry.pending; entry.date = dateStr(state.meta.date); entry.applied = res.applied.map((a) => a.text); }
     state.ravens.unshift({ id: nextId(state, 'r'), day: today, from: c.id, fromName: c.name, to: lordId, text: String(r.text).replace(/\*[^*]*\*/g, '').trim(), date: dateStr(state.meta.date), read: false });
     const first = String(r.text).replace(/\*[^*]*\*/g, ' ').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s/)[0] || '';
     const pp = partyOf(state, c); const whence = pp ? (pp.kind === 'rider' ? 'the road' : `the camp of ${pp.name}`) : placeName(state, c.loc);
-    events.push({ title: `${c.name} answers ${state.characters[lordId]?.name || 'the lord'}`, text: `A raven from ${whence}: “${first.slice(0, 220)}”${res.applied.length ? ` — ${res.applied.map((a) => a.text).join('; ')}` : ''}`, where: resolvePlaceId(c.loc) || null, importance: 3, type: 'diplomacy', houses: [p, c.house], mine: true, day: 1 });
+    events.push(fact(state, 'letter_arrived', { title: `${c.name} answers ${state.characters[lordId]?.name || 'the lord'}`, text: `A raven from ${whence}: “${first.slice(0, 220)}”${res.applied.length ? ` — ${res.applied.map((a) => a.text).join('; ')}` : ''}`, where: resolvePlaceId(c.loc) || null, importance: 3, houses: [p, c.house], mine: true, day: 1 }, { actors: [c.id, lordId], data: { from: c.id, reply: true }, vis: { scope: 'houses', houses: [p, c.house] } }));
   }
   state.pendingReplies = keep;
   return events;
@@ -723,10 +846,11 @@ function actWith(id, state, body) {
     state.orders.push({ id: nextId(state, 'o'), text, auto: true, ...(n ? { note: n } : {}), ...(status ? { status, executed: true, result: result ? [result] : [text] } : {}) });
   };
   let result = {};
+  const cause = { type: 'order', ref: `act:${body.kind}` }; // the lord's own hand, settled on the spot
   switch (body.kind) {
     case 'tax': {
       if (!TAX_LEVELS[body.level]) throw httpError(400, 'bad tax level');
-      applyChanges(state, [{ op: 'tax', house: p, level: body.level }]);
+      applyChanges(state, [{ op: 'tax', house: p, level: body.level }], { cause });
       addOrder(`Proclaim ${TAX_LEVELS[body.level].label.toLowerCase()} taxes across my lands and on my vassals' dues.`, '', 'done');
       break;
     }
@@ -738,8 +862,10 @@ function actWith(id, state, body) {
     case 'dues': {
       if (!me.liege) throw httpError(400, 'you owe dues to no one');
       if (!['paying', 'late', 'withholding'].includes(body.status)) throw httpError(400, 'bad status');
+      const was = me.obligations?.tribute;
       me.obligations = { ...(me.obligations || {}), tribute: body.status };
       const lg = state.houses[me.liege];
+      if (was !== body.status) emit(state, 'tax_changed', { actors: [me.lord, lg.lord], houses: [p, lg.id], data: { dues: body.status, was: was || null, liege: lg.id }, cause, text: `House ${me.name} ${body.status === 'paying' ? 'pays its dues to' : body.status === 'late' ? 'is late with its dues to' : 'withholds its dues from'} House ${lg.name}.` });
       addOrder(body.status === 'paying' ? `Pay my dues to House ${lg.name} in full.` : body.status === 'late' ? `Delay my dues to House ${lg.name}; send excuses and small sums.` : `Withhold all dues from House ${lg.name}.`, '', 'done');
       break;
     }
@@ -752,8 +878,8 @@ function actWith(id, state, body) {
       const vassals = (body.vassals || []).filter((v) => state.houses[v]?.liege === p);
       if (!vassals.length) throw httpError(400, 'choose at least one vassal');
       const muster = resolvePlaceId(body.at) || me.seat;
-      const called = callBanners(state, { vassals, at: muster });
-      if (Number(body.ownLevies) >= 50) { try { called.push(...raiseLevies(state, { at: muster, men: body.ownLevies })); } catch (e) { called.push(`could not raise your own levies: ${e.message}`); } }
+      const called = callBanners(state, { vassals, at: muster, cause });
+      if (Number(body.ownLevies) >= 50) { try { called.push(...raiseLevies(state, { at: muster, men: body.ownLevies, cause })); } catch (e) { called.push(`could not raise your own levies: ${e.message}`); } }
       const at = state.holdings[muster] ? state.holdings[muster].name : state.holdings[me.seat]?.name;
       addOrder(`CALL THE BANNERS: I summon ${vassals.map((v) => 'House ' + state.houses[v].name).join(', ')} to muster their levies at ${at}${body.deadline ? ' within ' + body.deadline : ''}.${body.note ? ' ' + body.note : ''} Raise my own levies as well${body.ownLevies ? ` (${body.ownLevies} men)` : ''}.`, '', 'underway', called.join('; '));
       break;
@@ -764,6 +890,7 @@ function actWith(id, state, body) {
       const opt = d.options[Number(body.option)]; if (!opt && !body.custom) throw httpError(400, 'bad option');
       d.status = 'decided'; d.choice = opt ? opt.label : String(body.custom).slice(0, 500); d.note = body.note ? String(body.note).slice(0, 500) : ''; d.decidedTurn = state.meta.turn;
       let settled = [];
+      emit(state, 'judgement', { actors: [me.lord, d.from], houses: [p], place: d.where || me.seat || null, data: { matter: d.id, choice: d.choice }, cause, text: `${state.characters[me.lord]?.name || `House ${me.name}`} decides: ${d.title} — ${d.choice}.` });
       if (opt?.fx) { settled = applyPetitionFx(state, opt.fx, dateStr(state.meta.date)); d.effects = settled; }
       addOrder(`DECISION — ${d.title}: I choose "${d.choice}".${d.note ? ' ' + d.note : ''}`, settled.length ? `[Already settled by the ledger, do not apply again: ${settled.join('; ')}. Narrate how people react.]` : '', settled.length ? 'done' : null);
       if (settled.length) result.effects = settled;
@@ -777,6 +904,7 @@ function actWith(id, state, body) {
       c.roles = [...new Set([...(c.roles || []), body.role])];
       if (c.house !== p) { c.memories = [...(c.memories || []), `Appointed ${ROLES[body.role]} of House ${me.name}.`]; }
       c.opinion = Math.min(100, (c.opinion || 0) + 10);
+      emit(state, 'office_granted', { actors: [c.id, me.lord], houses: [p, c.house], data: { office: body.role }, cause, text: `${c.name} is named ${ROLES[body.role]} of House ${me.name}.` });
       addOrder(`Appoint ${c.name} as ${ROLES[body.role]} of House ${me.name}.`, '', 'done');
       break;
     }
@@ -784,13 +912,13 @@ function actWith(id, state, body) {
       const h = state.holdings[body.holding]; if (!h || h.owner !== p) throw httpError(400, 'you can only grant your own holdings');
       if (h.id === me.seat) throw httpError(400, 'you cannot give away your own seat');
       const to = state.houses[body.house]; if (!to || to.liege !== p) throw httpError(400, 'you can only grant lands to your sworn vassals');
-      applyChanges(state, [{ op: 'holding', id: h.id, owner: to.id, note: `Granted by House ${me.name} to House ${to.name}` }, { op: 'relation', a: p, b: to.id, delta: 20, reason: `Granted ${h.name}` }]);
+      applyChanges(state, [{ op: 'holding', id: h.id, owner: to.id, note: `Granted by House ${me.name} to House ${to.name}` }, { op: 'relation', a: p, b: to.id, delta: 20, reason: `Granted ${h.name}` }], { cause });
       const lord = to.lord && state.characters[to.lord]; if (lord) { lord.opinion = Math.min(100, (lord.opinion || 0) + 20); lord.loyalty = Math.min(100, (lord.loyalty || 60) + 15); }
       addOrder(`Grant ${h.name} and its lands to House ${to.name} for their loyal service.`, '', 'done');
       break;
     }
     case 'raise': {
-      let lines; try { lines = raiseLevies(state, { at: body.at, men: body.men, commander: body.commander, name: body.name }); } catch (e) { throw httpError(400, e.message); }
+      let lines; try { lines = raiseLevies(state, { at: body.at, men: body.men, commander: body.commander, name: body.name, cause }); } catch (e) { throw httpError(400, e.message); }
       addOrder(`Raise ${Math.round(Number(body.men) || 0)} of my own levies at ${placeName(state, body.at || me.seat)}${body.name ? ` as "${body.name}"` : ''}.`, '', 'done', lines.join('; '));
       result.summary = lines.join('; ');
       break;
@@ -811,6 +939,7 @@ function actWith(id, state, body) {
       const home = Math.round(a.kind === 'fleet' ? 0 : Math.max(0, a.men - others) * 0.9);
       // the rest get down where the host stands (yours) or ride home (a sworn host released from service)
       if (a.owner !== p) for (const c of membersOf(state, a)) sendHome(state, c, owner.seat);
+      emit(state, 'host_disbanded', { actors: [a.commander], houses: [a.owner, a.serving], place: a.at || null, pos: a.pos, data: { party: a.id, name: a.name, men: a.men, why: a.owner === p ? 'disbanded' : 'released from service' }, cause });
       disband(state, a);
       if (home) applyChanges(state, [{ op: 'figure', house: a.owner, field: 'levies', delta: home, source: 'Men sent home' }]);
       if (a.owner !== p) { owner.obligations = { ...(owner.obligations || {}), levies: 'not_called' }; delete owner.obligations.host; }
@@ -822,7 +951,7 @@ function actWith(id, state, body) {
       if (body.character) {
         const c = state.characters[body.character]; const ride = c && rideOf(state, c); if (!ride || c.house !== p) throw httpError(400, 'no one of yours is on that road');
         const home = ride.from || me.seat;
-        const r = applyChanges(state, [{ op: 'travel', character: c.id, to: home }], { source: 'Your orders' });
+        const r = applyChanges(state, [{ op: 'travel', character: c.id, to: home }], { source: 'Your orders', cause });
         if (!r.applied.length) throw httpError(409, r.rejected[0]?.reason || 'they cannot turn back');
         addOrder(`Recall ${c.name}: turn back for ${placeName(state, home)}.`, '', 'underway', r.applied[0].text);
         result.summary = r.applied[0].text; break;
@@ -830,6 +959,7 @@ function actWith(id, state, body) {
       const a = state.parties[body.army]; if (!a || !commandable(state, a) || !a.march) throw httpError(400, 'that host is not marching');
       delete a.march; a.route = null; settleParty(state, a);
       const near = placeName(state, nearestHolding(state, a.pos));
+      emit(state, 'turned_back', { actors: [a.commander], houses: [a.owner], pos: a.pos, data: { party: a.id, halted: true }, cause, text: `${a.name} halts near ${near}.` });
       addOrder(`${a.name} halts and holds where it stands, near ${near}.`, '', 'done'); result.summary = `${a.name} halts near ${near}.`; break;
     }
     case 'march': {
@@ -838,6 +968,7 @@ function actWith(id, state, body) {
         const foe = partyAt(state, body.to); if (!foe) throw httpError(400, 'no such host');
         const m = marchDays(a, a.pos, foe.pos, state);
         a.march = { to: ref(foe.id), since: state.meta.turn }; planRoute(state, a, foe.pos, ref(foe.id), { toName: foe.name }); settleParty(state, a);
+        emit(state, 'set_out', { actors: [a.commander], houses: [a.owner, foe.owner], pos: a.pos, data: { party: a.id, against: foe.id, days: m.days }, cause });
         addOrder(`${a.name} marches to attack ${foe.name} (House ${state.houses[foe.owner]?.name}, ~${foe.men} men), ~${m.days} days away${body.intent ? ' — ' + body.intent : ''}.`, '[The engine will fight this battle when the hosts meet; narrate the approach.]', 'underway');
         break;
       }
@@ -846,6 +977,7 @@ function actWith(id, state, body) {
       const m = marchDays(a, a.pos, dest, state);
       // the road is planned now, so the map shows the way it will take (engine/movement.js); over the sea, it takes ship
       a.march = { to: body.to, since: state.meta.turn }; planRoute(state, a, dest, body.to, { toName: placeName(state, body.to) }); settleParty(state, a);
+      emit(state, 'set_out', { actors: [a.commander], houses: [a.owner], pos: a.pos, data: { party: a.id, to: body.to, days: m.days }, cause });
       addOrder(`${a.name} marches on ${placeName(state, body.to)} (~${m.miles} miles, ~${m.days} days)${body.intent ? ' — ' + body.intent : ''}.`, '', 'underway');
       break;
     }
@@ -896,7 +1028,9 @@ async function councilWith(id, state, cfg, members, message) {
   const listening = !String(message || '').trim();
   if (!listening) for (const i of ids) if (!read.replies.some((x) => x.speaker === i)) read.replies.push({ speaker: i, text: `*${state.characters[i].name} listened, and said nothing this time.*`, silent: true });
   const replies = read.replies.map((x) => ({ ...x, text: stripForeignScript(x.text) })); const changes = read.changes;
-  const { applied, rejected } = applyChanges(state, changes, { source: 'Council', protectPlayer: true });
+  const lordId = state.houses[state.meta.player].lord;
+  emit(state, 'audience_held', { actors: [lordId, ...ids], houses: [state.meta.player], place: state.houses[state.meta.player].seat || null, data: { council: true }, vis: { scope: 'houses', houses: [state.meta.player] }, cause: { type: 'order', ref: 'council' }, text: `${state.characters[lordId]?.name || 'The lord'} holds council with ${ids.map((i) => state.characters[i].name).join(', ')}.` });
+  const { applied, rejected } = applyChanges(state, changes, { source: 'Council', protectPlayer: true, cause: { type: 'intent', ref: 'council' } });
   const key = 'council:' + ids.sort().join(',');
   const date = dateStr(state.meta.date), turn = state.meta.turn;
   state.chats[key] = [...(state.chats[key] || []), ...(listening ? [] : [{ role: 'player', text: message, date, turn }]), ...replies.map((x) => ({ role: 'npc', speaker: x.speaker, text: x.text, date, turn }))];

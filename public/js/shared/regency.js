@@ -8,6 +8,7 @@
 // in the eyes of its vassals. The story model is told the result and narrates around it.
 import { isFemale } from './people.js';
 import { placeOf } from '../engine/parties.js';
+import { fact } from '../engine/facts/log.js';
 
 export const MAJORITY = 16; // the age at which a lord is held fit to rule in his own right
 
@@ -89,11 +90,11 @@ export function regencyTick(state, days = 30) {
         const lord = state.characters[h.lord];
         delete h.regent;
         const mine = h.id === p;
-        events.push({
+        events.push(fact(state, 'regency_ended', {
           title: `${lord?.name || 'The lord'} rules in ${lord && isFemale(lord) ? 'her' : 'his'} own right`,
           text: `${cur.name}'s regency over House ${h.name} is at an end. ${lord?.name || 'The lord'} takes the seal ${(lord?.age ?? 20) >= MAJORITY ? 'on coming of age' : 'once more'}.`,
           where: h.seat, importance: mine ? 4 : 2, type: 'court', houses: [h.id], day: Math.max(1, Math.round(days / 2)),
-        });
+        }, { actors: [h.lord, cur.id] }));
         applied.push({ op: 'regency', text: `${h.name}: the regency of ${cur.name} ends` });
       }
       continue;
@@ -104,12 +105,12 @@ export function regencyTick(state, days = 30) {
     h.regent = reg.id;
     const lord = state.characters[h.lord];
     const mine = h.id === p;
-    events.push({
+    events.push(fact(state, 'regency_begun', {
       title: `${reg.name} takes the regency of House ${h.name}`,
       text: `With ${why.text}, ${reg.name} rules House ${h.name} in ${lord && isFemale(lord) ? 'her' : 'his'} name.`,
       details: `A regent's word carries the house's seal but not its blood: bannermen obey a regent more slowly, and less far, than they obey their lord.`,
       where: h.seat, importance: mine ? 4 : 2, type: 'court', houses: [h.id], day: 1,
-    });
+    }, { actors: [reg.id, h.lord], data: { why: why.kind } }));
     applied.push({ op: 'regency', text: `${h.name}: ${reg.name} rules as regent (${why.kind})` });
   }
   // The cost of a proxy: bannermen chafe, and the smallfolk grumble, while a child or a captive holds the seat.

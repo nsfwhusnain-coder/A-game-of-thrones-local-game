@@ -12,6 +12,7 @@ import { isFemale } from './people.js';
 import { atWar } from './warfare.js';
 import { random } from '../engine/rng.js';
 import { sworn } from '../engine/parties.js';
+import { fact } from '../engine/facts/log.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -58,19 +59,20 @@ export function treacheryTick(state, days, r = random) {
     if (rec.with && rec.pressure >= 70 && defeats >= 1 && r() < 0.5 * k) {
       const enemy = state.houses[rec.with];
       changes.push({ op: 'liege', house: v.id, liege: rec.with }, { op: 'war_join', war: (state.wars.find((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].includes(liege)) || {}).id, house: v.id, side: state.wars.find((w) => w.status !== 'ended' && w.attackers.includes(rec.with)) ? 'attacker' : 'defender' }, { op: 'relation', a: v.id, b: liege, delta: -40, reason: 'turned his cloak' });
-      const her = isFemale(lord); events.push({ title: `${lord.name} turns ${her ? 'her' : 'his'} cloak`, text: `House ${v.name} has gone over to House ${enemy.name}. ${lord.name} ${T.guile > 0.85 ? 'had been in secret talks for moons' : 'saw which way the wind blew'}.`, details: `${state.houses[liege].name}'s ${defeats > 1 ? 'defeats' : 'defeat'} gave ${her ? 'her' : 'him'} the reason ${her ? 'she' : 'he'} wanted. ${her ? 'Her' : 'His'} men ride under new banners now.`, where: v.seat, importance: liege === p ? 5 : 4, type: 'intrigue', houses: [v.id, liege, rec.with], day: 1 + Math.floor(r() * days) });
+      const her = isFemale(lord); events.push(fact(state, 'fealty_renounced', { title: `${lord.name} turns ${her ? 'her' : 'his'} cloak`, text: `House ${v.name} has gone over to House ${enemy.name}. ${lord.name} ${T.guile > 0.85 ? 'had been in secret talks for moons' : 'saw which way the wind blew'}.`, details: `${state.houses[liege].name}'s ${defeats > 1 ? 'defeats' : 'defeat'} gave ${her ? 'her' : 'him'} the reason ${her ? 'she' : 'he'} wanted. ${her ? 'Her' : 'His'} men ride under new banners now.`, where: v.seat, importance: liege === p ? 5 : 4, type: 'intrigue', houses: [v.id, liege, rec.with], day: 1 + Math.floor(r() * days) }, { actors: [lord.id], data: { from: v.liege, to: enemy.id } }));
       delete state.plotting[v.id]; continue;
     }
     state.plotting[v.id] = rec;
   }
-  const { applied } = applyChanges(state, changes, { source: 'Treachery', protectPlayer: false });
+  // a turned cloak is told above as one fact: the new fealty and the war it joins are part of it
+  const { applied } = applyChanges(state, changes, { source: 'Treachery', protectPlayer: false, told: ['liege', 'war_join'], cause: { type: 'rule', ref: 'treachery' } });
   return { events, applied };
 }
 
 function whisper(state, v, lord, rec, days, r) {
   const enemy = state.houses[rec.with];
   const how = [`riders in ${enemy.name} colours were seen leaving ${state.holdings[v.seat]?.name || v.name} by night`, `a maester swears ravens from ${state.holdings[v.seat]?.name || v.name} fly toward ${state.holdings[enemy.seat]?.name || enemy.name}`, `${lord.name}'s steward was seen drinking with a ${enemy.name} man at an inn`, `a septon says ${lord.name} no longer prays for your victory`];
-  return { title: `Whispers about House ${v.name}`, text: `Word reaches you that ${how[Math.floor(r() * how.length)]}. It may be nothing.`, where: v.seat, importance: 3, type: 'intrigue', houses: [v.id], mine: true, day: 1 + Math.floor(r() * days) };
+  return fact(state, 'rumour', { title: `Whispers about House ${v.name}`, text: `Word reaches you that ${how[Math.floor(r() * how.length)]}. It may be nothing.`, where: v.seat, importance: 3, type: 'intrigue', houses: [v.id], mine: true, day: 1 + Math.floor(r() * days) }, { actors: [lord.id], vis: { scope: 'houses', houses: [state.meta.player] } });
 }
 
 /** In battle: do the plotting lords' men fight? Returns the men withdrawn and who withdrew them. */

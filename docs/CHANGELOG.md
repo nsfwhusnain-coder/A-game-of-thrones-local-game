@@ -3,6 +3,26 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B3: facts are the history; undo goes back ten turns (WP B3)
+
+- **Undo goes further back.** The ↶ button now asks how far: the last turn, or up to the last ten. The world returns to
+  the eve of the turn you pick, with the orders you gave for it still written, so you can change a word and go again
+  — and the same orders play out the same way. The world log and the chronicle are cut back with it.
+- **Ironman.** Beside "Begin" on the title screen: an ironman chronicle is written once, with no undo (the button is
+  hidden, and the server refuses it).
+- **Everything that happens is recorded as a fact** — who, where, which day, why, and who may know of it — in the
+  save's `facts.jsonl`: every march begun and ended, every host raised or disbanded, every death, capture, battle,
+  holding taken, war, pact, letter, feast and tax. The chronicle's news cards are drawn from those facts (the narrator
+  and the knowledge rules of the next packages read them too), and each fact is on the day its card says.
+- A seasons fix: the white raven announcing a new season was being lost before it reached the chronicle; it now
+  arrives on the turn's last day.
+- A soak found a rider left stranded on the open sea after being recalled mid-voyage: a traveller aboard ship can now
+  only be turned once the ship makes port, and a recall that finds no road leaves the journey as it was.
+- Saves stay small: past turns are kept in `turns/` instead of inside `state.json` (the game still shows the last 30).
+- Owner to verify: play three turns, press ↶ and choose "The last 3 turns" — you are back on the eve of the first,
+  your orders still written; advance again and the same things happen. Start a new game with Ironman ticked: the ↶
+  button is gone. `npm run soak -- --turns 40 --houses stark` should end "every invariant held every turn".
+
 ## 2026-09-27 — B2: everything that moves is a party, and walks real roads (WP B2)
 
 - **Hosts march along the roads, not in straight lines.** A march is planned once, over the same map you see: by the

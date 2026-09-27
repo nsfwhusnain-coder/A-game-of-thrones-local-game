@@ -40,20 +40,22 @@ test('a turn replayed from the same save is byte-identical (mock provider)', asy
   const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
   game.act(id, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 3000 });
   game.setOrders(id, [{ text: 'Send Ser Rodrik Cassel with fifty men to White Harbor.' }, { text: 'Raise 500 levies at Winterfell.' }]);
-  const file = path.join(game.SAVES, id, 'state.json');
-  const start = fs.readFileSync(file, 'utf8');
+  const file = path.join(game.SAVES, id, 'state.json'), log = path.join(game.SAVES, id, 'facts.jsonl');
+  const start = fs.readFileSync(file, 'utf8'), logStart = fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '';
   // each replay runs with a different Math.random: if any engine code still used it, the two would part ways
   const play = async (seed) => {
-    fs.writeFileSync(file, start);
+    fs.writeFileSync(file, start); fs.writeFileSync(log, logStart);
     const own = makeRng(seedState(seed)); const real = Math.random; Math.random = () => own.next();
     try {
       const turns = [];
       for (const span of ['7d', '12d', '5d']) turns.push((await game.advance(id, { span })).turn);
-      return { state: fs.readFileSync(file, 'utf8'), turns: JSON.stringify(turns) };
+      return { state: fs.readFileSync(file, 'utf8'), turns: JSON.stringify(turns), facts: fs.readFileSync(log, 'utf8') };
     } finally { Math.random = real; }
   };
   const first = await play(1); const second = await play(999);
   assert.ok(JSON.parse(first.state).meta.turn === 3, 'three turns were played');
   assert.equal(second.turns, first.turns, 'the turns tell the same story');
   assert.equal(second.state, first.state, 'the world is the same, byte for byte');
+  assert.ok(first.facts.length > logStart.length, 'the turns recorded their facts');
+  assert.equal(second.facts, first.facts, 'and so is its history: the same facts, byte for byte');
 });

@@ -12,6 +12,7 @@ import { placeOf, joinParty, settle } from '../engine/parties.js';
 import { pronouns } from './people.js';
 import { happenings } from './happenings.js';
 import { random } from '../engine/rng.js';
+import { fact } from '../engine/facts/log.js';
 
 const ym = (d) => d.year * 12 + (d.month - 1);
 const YM = (y, m) => y * 12 + (m - 1);
@@ -26,6 +27,9 @@ const player = (s) => s.meta.player;
 const plays = (s, ...houses) => houses.includes(player(s));
 const inWar = (s, a, b) => (s.wars || []).some((w) => w.status !== 'ended' && ((w.attackers.includes(a) && w.defenders.includes(b)) || (w.attackers.includes(b) && w.defenders.includes(a))));
 const ev = (title, text, where, importance = 3, type = 'court', houses = []) => ({ title, text, where, importance, type, houses });
+// A card of the threads or of the realm's own life, recorded as its fact: `kind` (default: a beat of the great story)
+// and `actors` ride on the card until it is recorded (engine/facts/log.js).
+const record = (s, e, more = {}) => { const { kind = 'canon_beat', actors, data, ...card } = e; return fact(s, kind, card, { ...more, actors, data: { ...data, ...more.data } }); };
 
 // ── The threads ──
 export const THREADS = [
@@ -453,12 +457,12 @@ function threatTick(s, days) {
     const north = Object.values(s.holdings).filter((h) => s.houses[h.owner]?.region === 'north' && h.pos[1] < 700);
     const h = pick(north.length ? north : Object.values(s.holdings).filter((x) => s.houses[x.owner]?.region === 'north'));
     if (h) {
-      out.events.push(ev('Wildlings over the Wall', `A band of free folk slips over the Wall and falls on the lands of ${h.name}: steadings burned, sheep and women carried off. The Watch is spread too thin.`, h.id, s.houses[h.owner]?.id === player(s) || s.houses[h.owner]?.liege === player(s) ? 4 : 2, 'war', [h.owner, 'free_folk', 'nights_watch']));
+      out.events.push({ ...ev('Wildlings over the Wall', `A band of free folk slips over the Wall and falls on the lands of ${h.name}: steadings burned, sheep and women carried off. The Watch is spread too thin.`, h.id, s.houses[h.owner]?.id === player(s) || s.houses[h.owner]?.liege === player(s) ? 4 : 2, 'war', [h.owner, 'free_folk', 'nights_watch']), kind: 'raid', data: { by: 'free_folk' } });
       out.changes.push({ op: 'holding', id: h.id, unrest: Math.min(100, (h.unrest || 0) + 12), prosperity: Math.max(0, (h.prosperity || 50) - 8), note: 'Raided by wildlings' });
       out.raid = h.id;
     }
   }
-  if (T.others > 55 && random() < k * 0.18) out.events.push(ev('The dead in the snow', 'Rangers come back from beyond the Wall with a tale no one at court believes: men dead a fortnight rose and walked. At Castle Black they burn their dead now.', 'nights_watch', 4, 'court', ['nights_watch']));
+  if (T.others > 55 && random() < k * 0.18) out.events.push({ ...ev('The dead in the snow', 'Rangers come back from beyond the Wall with a tale no one at court believes: men dead a fortnight rose and walked. At Castle Black they burn their dead now.', 'nights_watch', 4, 'court', ['nights_watch']), kind: 'rumour', data: { threat: 'others' } });
   return out;
 }
 
@@ -474,7 +478,7 @@ function churn(s, days) {
       if (!pairs.length) return;
       const [a, b] = pick(pairs); const ha = s.houses[a], hb = s.houses[b];
       const h = Object.values(s.holdings).find((x) => x.owner === b);
-      out.events.push(ev(`${lordName(ha)} and ${lordName(hb)} at odds`, `${lordName(ha)}'s men and ${lordName(hb)}'s came to blows over ${pick(['a stolen herd', 'a burned mill', 'a dead squire', 'a boundary stone', 'a runaway bride'])}. ${lordName(ha)} swears it was not his doing; ${lordName(hb)} does not believe him.`, h?.id || hb.seat, 2, 'war', [a, b]));
+      out.events.push({ ...ev(`${lordName(ha)} and ${lordName(hb)} at odds`, `${lordName(ha)}'s men and ${lordName(hb)}'s came to blows over ${pick(['a stolen herd', 'a burned mill', 'a dead squire', 'a boundary stone', 'a runaway bride'])}. ${lordName(ha)} swears it was not his doing; ${lordName(hb)} does not believe him.`, h?.id || hb.seat, 2, 'war', [a, b]), kind: 'raid', actors: [ha.lord, hb.lord], data: { feud: true } });
       out.changes.push({ op: 'relation', a, b, delta: -6 });
       if (h) out.changes.push({ op: 'holding', id: h.id, unrest: Math.min(100, (h.unrest || 0) + 6) });
     },
@@ -483,25 +487,25 @@ function churn(s, days) {
       const a = pick(cands); if (!a) return;
       const friends = Object.entries(s.relations || {}).filter(([k, r]) => r.v >= 20 && k.split('|').includes(a.id)).map(([k]) => k.split('|').find((x) => x !== a.id)).filter((x) => s.houses[x] && x !== player(s));
       const b = s.houses[pick(friends.length ? friends : great.filter((h) => h.region === a.region && h.id !== a.id).map((h) => h.id))]; if (!b) return;
-      out.events.push(ev(`${lordName(a)} feasts ${lordName(b)}`, `At ${s.holdings[a.seat]?.name || a.name}, ${lordName(a)} feasts ${lordName(b)} for a fortnight. There is talk of a match between their children, and more wine than wisdom.`, a.seat, 1, 'court', [a.id, b.id]));
+      out.events.push({ ...ev(`${lordName(a)} feasts ${lordName(b)}`, `At ${s.holdings[a.seat]?.name || a.name}, ${lordName(a)} feasts ${lordName(b)} for a fortnight. There is talk of a match between their children, and more wine than wisdom.`, a.seat, 1, 'court', [a.id, b.id]), kind: 'feast', actors: [a.lord, b.lord] });
       out.changes.push({ op: 'relation', a: a.id, b: b.id, delta: 5 });
     },
     () => { // outlaws where the land is restless
       const h = pick(Object.values(s.holdings).filter((x) => (x.unrest || 0) > 45 && x.owner !== player(s))); if (!h) return;
-      out.events.push(ev(`Outlaws near ${h.name}`, `Broken men and outlaws have taken to the woods around ${h.name}. Travellers go armed, and merchants go around.`, h.id, 1, 'economy', [h.owner]));
+      out.events.push({ ...ev(`Outlaws near ${h.name}`, `Broken men and outlaws have taken to the woods around ${h.name}. Travellers go armed, and merchants go around.`, h.id, 1, 'economy', [h.owner]), kind: 'unrest_rising', data: { outlaws: true } });
       out.changes.push({ op: 'holding', id: h.id, prosperity: Math.max(0, (h.prosperity || 50) - 5) });
     },
     () => { // a tourney
       const a = pick(great.filter((h) => ['paramount', 'major', 'crown'].includes(h.rank) && (s.wars || []).every((w) => w.status === 'ended' || !w.attackers.concat(w.defenders).includes(h.id)))); if (!a) return;
       const knights = Object.values(s.characters).filter((c) => c.alive && (c.roles || []).includes('knight') && !/imprisoned/.test(c.status || ''));
       const w = pick(knights); if (!w) return;
-      out.events.push(ev(`${w.name} champion at ${s.holdings[a.seat]?.name || a.name}`, `At ${lordName(a)}'s tourney for a name-day, ${w.name} unhorses all comers and crowns a blushing girl queen of love and beauty.`, a.seat, 1, 'court', [a.id, w.house]));
+      out.events.push({ ...ev(`${w.name} champion at ${s.holdings[a.seat]?.name || a.name}`, `At ${lordName(a)}'s tourney for a name-day, ${w.name} unhorses all comers and crowns a blushing girl queen of love and beauty.`, a.seat, 1, 'court', [a.id, w.house]), kind: 'tourney_result', actors: [w.id, a.lord] });
       out.changes.push({ op: 'character', id: w.id, note: `Champion of the tourney at ${s.holdings[a.seat]?.name || a.name}.` });
     },
     () => { // a good harvest or a bad one somewhere
       const h = pick(Object.values(s.holdings).filter((x) => x.owner !== player(s) && !['wall', 'beyond', 'essos'].includes(x.region))); if (!h) return;
       const good = random() < 0.55;
-      out.events.push(ev(good ? `Full granaries at ${h.name}` : `Blight at ${h.name}`, good ? `The harvest around ${h.name} is the best in memory; the lord's granaries are full to the rafters.` : `A blight has taken the wheat around ${h.name}. The smallfolk are already eating their seed corn.`, h.id, 1, 'economy', [h.owner]));
+      out.events.push({ ...ev(good ? `Full granaries at ${h.name}` : `Blight at ${h.name}`, good ? `The harvest around ${h.name} is the best in memory; the lord's granaries are full to the rafters.` : `A blight has taken the wheat around ${h.name}. The smallfolk are already eating their seed corn.`, h.id, 1, 'economy', [h.owner]), kind: 'happening', data: { harvest: good ? 'good' : 'blight' } });
       out.changes.push({ op: 'holding', id: h.id, prosperity: Math.max(0, Math.min(100, (h.prosperity || 50) + (good ? 6 : -8))) });
     },
   ];
@@ -579,7 +583,7 @@ function opportunity(s, raidAt) {
 export function advanceThreads(s, threads = THREADS) {
   s.plots = s.plots || {}; s.plots.stages = s.plots.stages || {}; s.plots.flags = s.plots.flags || {};
   const now = ym(s.meta.date);
-  const events = []; const changes = []; const decisions = []; const fired = [];
+  const events = []; const changes = []; const decisions = []; const fired = []; const batches = [];
   for (const t of threads) {
     const i = s.plots.stages[t.id] || 0; const st = t.stages[i];
     if (!st || now < st.at) continue;
@@ -588,13 +592,17 @@ export function advanceThreads(s, threads = THREADS) {
     s.plots.stages[t.id] = i + 1;
     fired.push(`${t.id}.${st.id}`);
     if (!r) continue;
-    events.push(...(r.events || []));
-    if (r.post) { applyChanges(s, r.changes || [], { source: 'The ravens' }); r.post(s); } else changes.push(...(r.changes || []));
+    const cause = { type: 'beat', ref: `${t.id}.${st.id}` };
+    const told = (r.events || []).map((e) => record(s, e, { thread: t.id, data: { stage: st.id }, cause }));
+    events.push(...told);
+    // what the beat changes is part of the beat's moment: its facts fall on the beat's day
+    const ctx = { source: 'The ravens', cause, ...(told[0] ? { alongside: told[0].fact } : {}) };
+    if (r.post) { applyChanges(s, r.changes || [], ctx); r.post(s); } else { changes.push(...(r.changes || [])); batches.push({ changes: r.changes || [], ctx }); }
     Object.assign(s.plots.flags, r.flags || {});
     if (r.decision) decisions.push(r.decision);
     (s.plots.log = s.plots.log || []).push({ thread: t.id, stage: st.id, turn: s.meta.turn, date: s.meta.date && `${s.meta.date.month}/${s.meta.date.year}`, title: r.events?.[0]?.title || t.name });
   }
-  return { events, changes, decisions, fired };
+  return { events, changes, decisions, fired, batches };
 }
 
 export function worldTick(state, days) {
@@ -603,12 +611,15 @@ export function worldTick(state, days) {
   s.plots.stages = s.plots.stages || {};
   s.plots.flags = s.plots.flags || {};
   s.plots.threats = s.plots.threats || { free_folk: 30, others: 12, iron_bank: 20, winter: 20 };
-  const { events, changes, decisions } = advanceThreads(s);
-  const th = threatTick(s, days); events.push(...(th.events || [])); changes.push(...(th.changes || []));
-  const ch = churn(s, days); for (const e of ch.events) e.bg = true; events.push(...ch.events); changes.push(...ch.changes);
+  const { events, decisions, batches } = advanceThreads(s);
+  const applied = [];
+  for (const b of batches) applied.push(...applyChanges(s, b.changes, b.ctx).applied);
+  const changes = [];
+  const th = threatTick(s, days); events.push(...(th.events || []).map((e) => record(s, e))); changes.push(...(th.changes || []));
+  const ch = churn(s, days); events.push(...ch.events.map((e) => record(s, { ...e, bg: true }))); changes.push(...ch.changes);
   // and the thousand small lives of the realm, from the books
   const hp = happenings(s, days); events.push(...hp.events); changes.push(...hp.changes);
-  const { applied } = applyChanges(s, changes, { source: 'The ravens' });
+  applied.push(...applyChanges(s, changes, { source: 'The ravens' }).applied);
   const pending = (s.decisions || []).filter((d) => d.status === 'pending').length;
   if (!decisions.length && pending < 2 && random() < 0.6 * Math.min(1, days / 30)) { const o = opportunity(s, th.raid); if (o) decisions.push(o); }
   for (const d of decisions.slice(0, 2)) {

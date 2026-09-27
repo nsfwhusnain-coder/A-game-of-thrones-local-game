@@ -3,12 +3,15 @@
 // is walked, not when a story says so. Routes come from engine/movement.js; the sea crossings of hosts from sea.js;
 // the hard places of the realm (the Neck, the Twins, the Bloody Gate…) take their price from chokepoints.js.
 import { planRoute, advance, stale } from '../engine/movement.js';
+import { landmassOf } from '../engine/geo.js';
 import { idOf, isForce, settle, setDown, joinParty, membersOf, TRAVELLERS } from '../engine/parties.js';
 import { placeName, placePos, resolvePlaceId } from './world.js';
 import { needsShips, planVoyage, retarget, sail } from './sea.js';
 import { chokepointToll, roadCongestion } from './chokepoints.js';
+import { fact } from '../engine/facts/log.js';
 
 const round1 = (x) => Math.round(x * 10) / 10;
+const nearestPort = (state, pos) => Object.values(state.holdings).filter((h) => h.coastal).sort((x, y) => Math.hypot(x.pos[0] - pos[0], x.pos[1] - pos[1]) - Math.hypot(y.pos[0] - pos[0], y.pos[1] - pos[1]))[0]?.id || null;
 
 /**
  * Walk every party with a march order through a turn of `span` days that began on absolute day `turnStart`. A party
@@ -44,8 +47,11 @@ export function marchTick(state, { span, turnStart }) {
     const legTo = toPort ? a.sea.port.pos : goal;
     if (stale(state, a, legKey, legTo)) planRoute(state, a, legTo, legKey, { toName: toPort ? placeName(state, a.sea.port.id) : quarry ? quarry.name : placeName(state, order) });
     if (!a.route) {
-      if (mine) events.push({ day: born + 1, title: `${a.name} can find no way`, text: `${a.name} cannot reach ${quarry ? quarry.name : placeName(state, order)}: no road leads there${a.kind === 'fleet' ? ' by sea' : ''}.`, where: a.at || null, importance: 3, type: 'war', houses: [a.owner] });
-      delete a.march; settle(state, a); continue;
+      if (mine) events.push(fact(state, 'turned_back', { day: born + 1, title: `${a.name} can find no way`, text: `${a.name} cannot reach ${quarry ? quarry.name : placeName(state, order)}: no road leads there${a.kind === 'fleet' ? ' by sea' : ''}.`, where: a.at || null, importance: 3, houses: [a.owner] }, { actors: [a.commander], data: { party: a.id, to: order, why: 'no road' } }));
+      delete a.march;
+      // one who can go no further is never left on the waves: the ship puts them ashore at the nearest port
+      if (TRAVELLERS.has(a.kind) && landmassOf(a.pos, 3) < 0) { const port = nearestPort(state, a.pos); if (port) { setDown(state, a, port); delete state.parties[a.id]; continue; } }
+      settle(state, a); continue;
     }
     let days = span - born;
     // ── What lies in the way ──────────────────────────────────────────────────────────────────────────────────────
@@ -65,7 +71,7 @@ export function marchTick(state, { span, turnStart }) {
           if (hh?.figures?.treasury && fr?.figures?.treasury) { hh.figures.treasury.v = Math.max(0, hh.figures.treasury.v - toll.gold); fr.figures.treasury.v += toll.gold; }
         }
         const reach = Math.min(span, born + Math.max(1, Math.round(days * 0.6)));
-        for (const e of toll.events) events.push({ day: reach, importance: mine ? Math.max(3, e.importance) : e.importance, ...e });
+        for (const e of toll.events) events.push(fact(state, 'crossed', { ...e, day: reach, importance: mine ? Math.max(3, e.importance) : e.importance }, { actors: [a.commander], data: { party: a.id, men: a.men } }));
         for (const mt of toll.met) applied.push({ op: 'chokepoint', text: `${a.name} at ${mt.name}: ${mt.gated ? 'passed' : 'forced the crossing'}${mt.lost ? `, ${mt.lost.toLocaleString('en-GB')} men lost` : ''}${mt.days ? `, ${mt.days} days` : ''}` });
         r.paid = [...new Set([...(r.paid || []), ...toll.met.map((m) => m.id)])];
       }
@@ -86,7 +92,7 @@ export function marchTick(state, { span, turnStart }) {
       delete a.march; a.pos = [...quarry.pos];
       if (TRAVELLERS.has(a.kind)) {
         for (const c of membersOf(state, a)) joinParty(state, c, quarry);
-        if (a.owner === p) events.push({ day, title: `${state.characters[a.commander]?.name || a.name} reaches ${quarry.name}`, text: `${state.characters[a.commander]?.name || a.name} has found ${quarry.name} on the road and rides with it now.`, where: quarry.at || null, importance: 2, type: 'court', houses: [a.owner] });
+        if (a.owner === p) events.push(fact(state, 'arrived', { day, title: `${state.characters[a.commander]?.name || a.name} reaches ${quarry.name}`, text: `${state.characters[a.commander]?.name || a.name} has found ${quarry.name} on the road and rides with it now.`, where: quarry.at || null, importance: 2, type: 'court', houses: [a.owner] }, { actors: [a.commander], data: { party: a.id, joined: quarry.id }, pos: quarry.pos }));
         delete state.parties[a.id]; continue;
       }
       settle(state, a); continue;
@@ -99,12 +105,14 @@ export function marchTick(state, { span, turnStart }) {
       setDown(state, a, place); delete state.parties[a.id];
       if (who && came.includes(who)) {
         applied.push({ op: 'character', text: `${who.name} arrives at ${placeName(state, place)}` });
-        if (who.house === p) events.push({ day, title: `${who.name} reaches ${placeName(state, place)}`, text: `${who.name} has arrived at ${placeName(state, place)} on the orders of ${state.characters[state.houses[p].lord]?.name || 'the lord'}.`, where: place, importance: 2, type: 'court', houses: [who.house] });
+        const told = fact(state, 'arrived', { day, title: `${who.name} reaches ${placeName(state, place)}`, text: `${who.name} has arrived at ${placeName(state, place)}${who.house === p ? ` on the orders of ${state.characters[state.houses[p].lord]?.name || 'the lord'}` : ''}.`, where: place, importance: who.house === p ? 2 : 1, type: 'court', houses: [who.house] }, { actors: came.map((c) => c.id), data: { party: a.id } });
+        if (who.house === p) events.push(told);
       }
       continue;
     }
     settle(state, a);
-    if (a.owner === p) events.push({ day, title: `${a.name} reaches ${placeName(state, place)}`, text: `${a.name} (${a.men.toLocaleString('en-GB')} men) has arrived at ${placeName(state, place)}.`, where: place, importance: 2, type: 'war', houses: [a.owner] });
+    const told = fact(state, 'arrived', { day, title: `${a.name} reaches ${placeName(state, place)}`, text: `${a.name} (${a.men.toLocaleString('en-GB')} men) has arrived at ${placeName(state, place)}.`, where: place, importance: a.owner === p ? 2 : 1, houses: [a.owner, ...(a.serving ? [a.serving] : [])] }, { actors: membersOf(state, a).map((c) => c.id), data: { party: a.id, men: a.men, kind: a.kind } });
+    if (a.owner === p) events.push(told);
   }
   return { events, applied };
 }

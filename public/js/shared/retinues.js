@@ -5,6 +5,7 @@
 import { placeName, dateStr } from './world.js';
 import { partyOf, joinParty, disband, settle, forces } from '../engine/parties.js';
 import { canAttend } from '../engine/activity.js';
+import { emit, fact } from '../engine/facts/log.js';
 import { pronouns } from './people.js';
 import { random } from '../engine/rng.js';
 
@@ -41,13 +42,16 @@ export function retinueTick(state, days, r = random) {
     const P = a.purpose; if (a.kind !== 'retinue' || !P) continue;
     const lord = state.characters[a.commander];
     if (!lord?.alive || partyOf(state, lord) !== a) { disband(state, a); continue; } // the lord has left it: the tail goes home
-    const home = () => { P.returning = true; a.march = { to: P.home, since: state.meta.turn }; a.at = null; settle(state, a); };
+    const home = (why) => {
+      P.returning = true; a.march = { to: P.home, since: state.meta.turn }; a.at = null; settle(state, a);
+      emit(state, 'set_out', { actors: [a.commander], houses: [a.owner], place: P.dest || null, pos: a.pos, data: { party: a.id, to: P.home, returning: true, why }, cause: { type: 'rule', ref: 'retinues' }, text: `${lord.name} rides home to ${state.holdings[P.home]?.name || 'the seat'}${why === 'duty' ? ', called back by the war' : ''}.` });
+    };
     // summoned or at war while abroad: the visit is cut short and the lord rides home to raise his men
-    if (!P.returning && dutyBound(state, state.houses[a.owner] || {})) { home(); continue; }
+    if (!P.returning && dutyBound(state, state.houses[a.owner] || {})) { home('duty'); continue; }
     if (a.march) continue;
     if (!P.returning && a.at === P.dest) {
       P.stay -= days;
-      if (P.stay <= 0) home();
+      if (P.stay <= 0) home('done');
     } else if (P.returning && a.at === P.home) {
       disband(state, a, P.home);
     } else if (!P.returning && a.at && a.at !== P.dest) { a.march = { to: P.dest, since: state.meta.turn }; settle(state, a); }
@@ -80,7 +84,7 @@ function sendOut(state, r) {
   state.parties[id] = { id, owner: h.id, name: `${lord.name}'s party`, commander: lord.id, at: null, pos: [...seat.pos], men, kind: 'retinue', members: [], composition: 'Household knights and riders, mounted', morale: 75, supply: 90, asOf: dateStr(state.meta.date), public: true, march: { to: dest.id, since: state.meta.turn }, purpose: { dest: dest.id, home: seat.id, stay: purpose.stay[0] + Math.floor(r() * (purpose.stay[1] - purpose.stay[0] + 1)), why } };
   joinParty(state, lord, state.parties[id]); settle(state, state.parties[id]);
   const toYou = dest.owner === p;
-  return { title: `${lord.name} rides for ${dest.name}`, text: `${lord.name} leaves ${seat.name} with ${men} knights and riders under the ${h.name} banner, ${why}.`, where: seat.id, importance: toYou ? 3 : 1, type: 'court', houses: [h.id, ...(toYou ? [p] : [])], ...(toYou ? {} : { bg: true }) };
+  return fact(state, 'set_out', { title: `${lord.name} rides for ${dest.name}`, text: `${lord.name} leaves ${seat.name} with ${men} knights and riders under the ${h.name} banner, ${why}.`, where: seat.id, importance: toYou ? 3 : 1, type: 'court', houses: [h.id, ...(toYou ? [p] : [])], ...(toYou ? {} : { bg: true }) }, { actors: [lord.id], data: { party: id, to: dest.id, why } });
 }
 
 function destination(state, h, seat, purpose, r) {
