@@ -394,6 +394,10 @@ Verb = {
 }
 ```
 
+> *Implemented in WP B4* (`engine/actions/`; [DECISIONS.md#D-015](DECISIONS.md)): 27 verbs — every action that
+> existed (the cards, written orders, the court) — with `legal/cost/start/receipt/facts/mind`, plus `said` (the order
+> line the story model is told until B11). The rest of the catalogue arrives with the systems that need it (C, D, E).
+
 The full verb catalogue (≈ 60 verbs) with legality and resolution rules is in [07](07-military.md) §12 (military),
 [08](08-characters-politics.md) §12 (diplomacy, court, intrigue) and [06](06-economy.md) §9 (economy). Canon-only verbs
 (`crown_self`, `proclaim_claim`, `execute_publicly`, `burn_with_wildfire`…) have `mind.allowed: false` and are used only
@@ -446,7 +450,7 @@ whitelist. The lock releases when the beat completes, lapses, or canon gravity i
 | `GET /api/games/:id` | The **player's view**: state filtered server-side by the player's knowledge (other houses' hosts replaced by `knowledge.parties`, secrets stripped). The client never receives the truth it should not know. |
 | `POST /api/games/:id/orders` `{text}` → `{order}` | Draft + interpret + receipt. |
 | `PATCH /api/games/:id/orders/:oid` `{text | patch}` / `DELETE …` | Edit/clarify/remove. |
-| `POST /api/games/:id/act` `{verb, params}` | Direct actions from cards (no model). |
+| `POST /api/games/:id/act` `{verb, params}` | Direct actions from cards (no model). *(B4: answers `{ state, receipt, summary }`; a refusal is a 409 with its reason; the old `{ kind, … }` still maps to verbs)* |
 | `POST /api/games/:id/audience` `{with, text, mode}` | Audience/letter line (streams reply beats). |
 | `POST /api/games/:id/council` `{members, text}` | Council. |
 | `POST /api/games/:id/matters/:mid` `{option | text}` | Answer a matter. |

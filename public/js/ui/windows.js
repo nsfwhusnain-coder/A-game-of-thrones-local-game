@@ -1,5 +1,5 @@
 // Side windows & detail sheets (CK3-style panels).
-import { app, $, $$, esc, fmt, placeName, getRelation, api, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, confirmModal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
+import { app, $, $$, esc, fmt, placeName, getRelation, api, doVerb, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, confirmModal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
 import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
 import { standing, standingWord } from '../shared/standing.js';
@@ -324,13 +324,13 @@ const wire = {
         <div class="row-actions"><button class="btn primary" id="bn-go">Send the ravens</button></div></div>`;
       $('#bn-go', f).onclick = async () => {
         const vassals = $$('.bv', f).filter((x) => x.checked).map((x) => x.value);
-        try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'call_banners', vassals, at: $('#bn-at', f).value, deadline: $('#bn-dl', f).value, note: $('#bn-note', f).value } }); app.setState(r.state); toast(`Ravens fly to ${vassals.length} houses. Their answers will come as time passes.`); } catch (e) { toast(e.message, true); }
+        await doVerb('call_banners', { vassals, at: $('#bn-at', f).value, deadline: $('#bn-dl', f).value, note: $('#bn-note', f).value });
       };
     };
     $$('[data-march]', body).forEach((b) => b.onclick = () => app.startPick('march', b.dataset.march));
     $$('[data-disband]', body).forEach((b) => b.onclick = async () => {
       if (!await confirmModal('Disband the host?', 'Most of these men will go back to their fields, and calling them again will take time and goodwill you may not have.', { yes: 'Send them home', no: 'Keep them under arms' })) return;
-      try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'disband', army: b.dataset.disband } }); app.setState(r.state); toast('The host disbands.'); } catch (e) { toast(e.message, true); }
+      await doVerb('disband_host', { army: b.dataset.disband });
     });
     $('#raise-levies', body).onclick = () => {
       const s = app.state, p = s.meta.player, h = player();
@@ -345,23 +345,23 @@ const wire = {
         <div class="row-actions"><button class="btn primary" id="rl-go">Raise them</button></div>`);
       $('#rl-men').oninput = (e) => { $('#rl-n').textContent = e.target.value; };
       $('#rl-go').onclick = async () => {
-        try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'raise', men: Number($('#rl-men').value), at: $('#rl-at').value, commander: $('#rl-cmd').value, name: $('#rl-name').value || undefined } }); app.setState(r.state); $('#modal').classList.add('hidden'); toast('The levies are called. They muster now.'); } catch (e) { toast(e.message, true); }
+        await doVerb('raise_levies', { men: Number($('#rl-men').value), at: $('#rl-at').value, commander: $('#rl-cmd').value, name: $('#rl-name').value || undefined }, { after: () => $('#modal').classList.add('hidden') });
       };
     };
   },
   economy(body) {
     const tg = $('#trade-go', body); if (tg) tg.onclick = () => { const h = app.state.houses[$('#trade-with', body).value]; const lord = h?.lord && app.state.characters[h.lord]; if (!lord?.alive) return toast('There is no one to treat with.', true); app.openChat?.(lord.id, `Let our merchants trade freely between our lands — your goods for ours, with fair tolls on both sides. What say you?`); };
-    $$('[data-tax]', body).forEach((el) => el.onclick = async () => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'tax', level: el.dataset.tax } }); app.setState(r.state); toast(`Taxes set to ${TAX_LEVELS[el.dataset.tax].label.toLowerCase()}. Your lords will notice.`); } catch (e) { toast(e.message, true); } });
-    $$('[data-dues]', body).forEach((el) => el.onclick = async () => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'dues', status: el.dataset.dues } }); app.setState(r.state); toast(el.dataset.dues === 'paying' ? 'Your dues will be paid in full.' : el.dataset.dues === 'late' ? 'Your steward will find reasons for delay.' : 'Not a single dragon goes to your liege.'); } catch (e) { toast(e.message, true); } });
-    $$('[data-proj]', body).forEach((el) => el.onclick = async () => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'project', template: el.dataset.proj, holding: $('#proj-hold', body).value } }); app.setState(r.state); toast('Work begins. Coin will flow out each moon until it is done.'); } catch (e) { toast(e.message, true); } });
-    $$('[data-cancel-proj]', body).forEach((el) => el.onclick = async () => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'cancel_project', project: el.dataset.cancelProj } }); app.setState(r.state); } catch (e) { toast(e.message, true); } });
+    $$('[data-tax]', body).forEach((el) => el.onclick = () => doVerb('set_tax', { level: el.dataset.tax }));
+    $$('[data-dues]', body).forEach((el) => el.onclick = () => doVerb('set_dues', { status: el.dataset.dues }));
+    $$('[data-proj]', body).forEach((el) => el.onclick = () => doVerb('fund_works', { template: el.dataset.proj, holding: $('#proj-hold', body).value }));
+    $$('[data-cancel-proj]', body).forEach((el) => el.onclick = () => doVerb('cancel_works', { project: el.dataset.cancelProj }));
   },
   intrigue(body) {
     $('#plot-go', body).onclick = () => {
       const kind = $('#plot-kind', body).selectedOptions[0].text.replace('…', ''); const t = app.state.houses[$('#plot-target', body).value];
       const key = $('#plot-kind', body).value;
       // spies and secrets are the spymaster's own work, settled at once; the rest go to the world as secret orders
-      if (key === 'spy' || key === 'secrets') { courtAct({ kind: 'scheme', house: t.id, kind2: key }); return; }
+      if (key === 'spy' || key === 'secrets') { courtAct(key === 'secrets' ? 'gather_secrets' : 'plant_spy', { house: t.id }); return; }
       addOrder(`[SECRET SCHEME] ${kind} House ${t.name}. ${$('#plot-means', body).value}`.trim()); toast('The scheme is added to your orders — in secret.');
     };
   },
@@ -389,7 +389,7 @@ document.addEventListener('click', (e) => {
     modal(`<h2>Appoint a ${esc(label)}</h2><p class="muted">Choose from your household, wards and guests. Or describe whom you seek and the realm will find someone.</p>
       ${cands.map((c) => `<div class="row clickable" data-appoint-pick="${c.id}"><img class="por" src="${por(c, 64)}"><div class="grow"><div class="title">${esc(c.name)}</div><div class="sub">${esc(c.title || c.roles.join(', '))} · ${SKILL_NAMES.map((n, i) => `${SKILL_ICONS[i]}${c.skills?.[i] ?? '?'}`).join(' ')}</div></div></div>`).join('') || '<p class="muted">No one suitable at your seat.</p>'}
       <hr><label>Or seek someone new</label><input class="input" id="seek-text" placeholder="e.g. a hard old knight from the mountain clans who knows siegecraft"><div class="row-actions"><button class="btn" id="seek-go">Send word</button></div>`);
-    $$('[data-appoint-pick]').forEach((r) => r.onclick = async () => { try { const res = await api(`/games/${app.saveId}/act`, { body: { kind: 'appoint', character: r.dataset.appointPick, role } }); app.setState(res.state); $('#modal').classList.add('hidden'); toast(`${s.characters[r.dataset.appointPick].name} is now your ${label}.`); } catch (err) { toast(err.message, true); } });
+    $$('[data-appoint-pick]').forEach((r) => r.onclick = () => doVerb('appoint_office', { character: r.dataset.appointPick, role }, { after: () => $('#modal').classList.add('hidden') }));
     $('#seek-go').onclick = () => { addOrder(`Find and appoint a new ${label} for my household: ${$('#seek-text').value}`); $('#modal').classList.add('hidden'); toast('The order is given.'); };
   }
   const gr = e.target.closest('[data-grant]');
@@ -397,7 +397,7 @@ document.addEventListener('click', (e) => {
     const s = app.state, p = s.meta.player; const hd = s.holdings[gr.dataset.grant];
     const vas = vassalsOf(s, p).map((v) => s.houses[v]);
     modal(`<h2>Grant ${esc(hd.name)}</h2><p class="muted">Lands are the surest way to bind a lord to you — and to make his neighbours jealous.</p>${vas.map((v) => `<div class="row clickable" data-grant-to="${v.id}">${sig(v)}<div class="grow"><div class="title">House ${esc(v.name)}</div><div class="sub">${esc(v.lord ? s.characters[v.lord]?.name : '')} · loyalty ${s.characters[v.lord]?.loyalty ?? '?'}</div></div>${relHtml(getRelation(s, p, v.id))}</div>`).join('') || '<p class="muted">You have no vassals.</p>'}`);
-    $$('[data-grant-to]').forEach((r) => r.onclick = async () => { try { const res = await api(`/games/${app.saveId}/act`, { body: { kind: 'grant', holding: hd.id, house: r.dataset.grantTo } }); app.setState(res.state); $('#modal').classList.add('hidden'); toast(`${hd.name} now belongs to House ${s.houses[r.dataset.grantTo].name}.`); } catch (err) { toast(err.message, true); } });
+    $$('[data-grant-to]').forEach((r) => r.onclick = () => doVerb('grant_holding', { holding: hd.id, house: r.dataset.grantTo }, { after: () => $('#modal').classList.add('hidden') }));
   }
   const tpl = e.target.closest('[data-order-tpl]');
   if (tpl) { $('#order-input').value = tpl.dataset.orderTpl; $('#order-input').focus(); }
@@ -628,10 +628,8 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('click', (e) => { const w = e.target.closest('[data-win-open]'); if (w) openWindow(w.dataset.winOpen); });
 
-// ── the lord's own acts, settled by the engine at once (server/court.js) ──
-async function courtAct(body, after) {
-  try { const r = await api(`/games/${app.saveId}/act`, { body }); app.setState(r.state); if (r.summary) toast(r.summary); after?.(); return r; } catch (err) { toast(err.message, true); return null; }
-}
+// ── the lord's own acts, settled by the engine at once (engine/actions: court, diplomacy, military verbs) ──
+const courtAct = (verb, params = {}, after) => doVerb(verb, params, { after });
 document.addEventListener('click', async (e) => {
   const g = e.target.closest('[data-gift]');
   if (g) {
@@ -641,14 +639,14 @@ document.addEventListener('click', async (e) => {
       <div class="scale-row"><input type="range" id="gift-n" min="50" max="${Math.max(50, have)}" step="50" value="${start}" style="flex:1"><b id="gift-v">${fmt(start)}</b>&nbsp;dragons</div>
       <div class="report-actions"><button class="btn ghost" data-action="close-modal">Not now</button><button class="btn primary" id="gift-go">Send it</button></div>`);
     $('#gift-n').oninput = (ev) => { $('#gift-v').textContent = fmt(Number(ev.target.value)); };
-    $('#gift-go').onclick = () => courtAct({ kind: 'gift', to: g.dataset.gift, gold: Number($('#gift-n').value) }, () => $('#modal').classList.add('hidden'));
+    $('#gift-go').onclick = () => courtAct('send_gift', { to: g.dataset.gift, gold: Number($('#gift-n').value) }, () => $('#modal').classList.add('hidden'));
     return;
   }
   const j = e.target.closest('[data-judge]');
   if (j) {
     const c = app.state.characters[j.dataset.who];
     if (j.dataset.judge === 'execute' && !await confirmModal(`Take ${c.name}'s head?`, `House ${app.state.houses[c.house]?.name || ''} will never forget it, and neither will the realm. A lord who passes the sentence should swing the sword.`, { yes: 'Pass the sentence', no: 'Stay your hand', danger: true })) return;
-    courtAct({ kind: 'judge', character: c.id, verdict: j.dataset.judge });
+    courtAct('judge_prisoner', { character: c.id, verdict: j.dataset.judge });
     return;
   }
   const d = e.target.closest('[data-declare]');
@@ -656,13 +654,13 @@ document.addEventListener('click', async (e) => {
     const h = app.state.houses[d.dataset.declare];
     modal(`<h2>⚔ War on House ${esc(h.name)}</h2><p>Once the heralds ride, there is no calling them back. ${player().liege === h.id ? '<b>They are your liege: this is rebellion.</b>' : ''}</p><label>Your cause, for the heralds to cry</label><input class="input" id="cb-text" placeholder="e.g. the murder of my father; the lands they stole at the Twins">
       <div class="report-actions"><button class="btn ghost" data-action="close-modal">Stay your hand</button><button class="btn danger" id="cb-go">Declare war</button></div>`);
-    $('#cb-go').onclick = () => courtAct({ kind: 'declare_war', house: h.id, reason: $('#cb-text').value.trim() }, () => $('#modal').classList.add('hidden'));
+    $('#cb-go').onclick = () => courtAct('declare_war', { house: h.id, reason: $('#cb-text').value.trim() }, () => $('#modal').classList.add('hidden'));
     return;
   }
   const f = e.target.closest('[data-court]');
-  if (f) courtAct({ kind: f.dataset.court });
+  if (f) courtAct({ feast: 'hold_feast', tourney: 'hold_tourney' }[f.dataset.court]);
   const sc = e.target.closest('[data-secrecy]');
-  if (sc) courtAct({ kind: 'secrecy', army: sc.dataset.armyId, mode: sc.dataset.secrecy });
+  if (sc) courtAct('set_secrecy', { army: sc.dataset.armyId, mode: sc.dataset.secrecy });
   const fe = e.target.closest('[data-feint]');
   if (fe) {
     const s = app.state; const a = s.parties[fe.dataset.feint];
@@ -670,7 +668,7 @@ document.addEventListener('click', async (e) => {
     modal(`<h2>A feint</h2><p>Let the realm believe that ${esc(a.name)} marches somewhere it does not. Heralds, loose tongues in the taverns, a letter left to be found. Those who see the host with their own eyes will not be fooled.</p>
       <label>Spread word that it marches on</label><select class="input" id="feint-to">${opts.map((h) => `<option value="${h.id}"${a.feint === h.id ? ' selected' : ''}>${esc(h.name)}</option>`).join('')}</select>
       <div class="report-actions"><button class="btn ghost" data-action="close-modal">Cancel</button>${a.feint ? '<button class="btn" id="feint-off">End the feint</button>' : ''}<button class="btn primary" id="feint-go">Spread the word</button></div>`);
-    $('#feint-go').onclick = () => courtAct({ kind: 'secrecy', army: a.id, mode: 'feint', to: $('#feint-to').value }, () => $('#modal').classList.add('hidden'));
-    const off = $('#feint-off'); if (off) off.onclick = () => courtAct({ kind: 'secrecy', army: a.id, mode: 'open' }, () => $('#modal').classList.add('hidden'));
+    $('#feint-go').onclick = () => courtAct('set_secrecy', { army: a.id, mode: 'feint', to: $('#feint-to').value }, () => $('#modal').classList.add('hidden'));
+    const off = $('#feint-off'); if (off) off.onclick = () => courtAct('set_secrecy', { army: a.id, mode: 'open' }, () => $('#modal').classList.add('hidden'));
   }
 });

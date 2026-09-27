@@ -20,13 +20,26 @@ export const REGION_NAMES = { north: 'The North', wall: 'The Wall', beyond: 'Bey
 export const RANK_NAMES = { crown: 'The Crown', paramount: 'Great House', major: 'Major House', minor: 'Minor House', city_state: 'Free City', order: 'Sworn Order', tribe: 'Host', exile: 'Exiles', company: 'Sellswords' };
 
 // each kind of order has its sound: steel for the host, coin for the treasury, wax for decisions
-const ACT_SOUND = { raise: 'steel', call_banners: 'steel', march: 'steel', disband: 'steel', tax: 'coins', dues: 'coins', project: 'coins', cancel_project: 'coins', grant: 'coins', decide: 'seal', appoint: 'seal', gift: 'coins', feast: 'bell', tourney: 'horn', judge: 'seal', declare_war: 'horn' };
+// the sound of a verb done (engine/actions/registry.js)
+const ACT_SOUND = { raise_levies: 'steel', call_banners: 'steel', march_host: 'steel', attack_host: 'steel', halt_host: 'steel', merge_hosts: 'steel', disband_host: 'steel', set_tax: 'coins', set_dues: 'coins', fund_works: 'coins', cancel_works: 'coins', grant_holding: 'coins', answer_matter: 'seal', appoint_office: 'seal', send_gift: 'coins', hold_feast: 'bell', hold_tourney: 'horn', judge_prisoner: 'seal', declare_war: 'horn' };
 export async function api(path, opts = {}) {
   const res = await fetch('/api' + path, { method: opts.method || (opts.body ? 'POST' : 'GET'), headers: { 'Content-Type': 'application/json' }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
   if (!res.ok) { if (opts.body) sfx('error'); throw new Error(data.error || `HTTP ${res.status}`); }
-  if (path.endsWith('/act') && ACT_SOUND[opts.body?.kind]) sfx(ACT_SOUND[opts.body.kind]);
+  if (path.endsWith('/act') && ACT_SOUND[opts.body?.verb]) sfx(ACT_SOUND[opts.body.verb]);
   return data;
+}
+/**
+ * Do a verb (a card's action): the server checks it, carries it out and answers with its receipt, which is what the
+ * player is told — in the world's words, the same words the order and the chronicle keep. Refused, the refusal is told.
+ * Returns the server's answer ({ state, receipt, summary, … }), or null if refused.
+ */
+export async function doVerb(verb, params = {}, { after, say } = {}) {
+  try {
+    const r = await api(`/games/${app.saveId}/act`, { body: { verb, params } });
+    app.setState(r.state); toast(say ? say(r) : r.summary || '');
+    after?.(r); return r;
+  } catch (e) { toast(e.message, true); return null; }
 }
 // A passing notice. The same message (or the same key, for progress) replaces its predecessor rather than
 // stacking; at most three are shown; a click dismisses one.

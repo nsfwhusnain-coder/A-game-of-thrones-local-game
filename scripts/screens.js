@@ -59,6 +59,16 @@ const SCENARIOS = {
     for (const span of ['4d', '5d', '6d']) await api(`/games/${id}/advance`, { span, orders: [] });
     return { id, focus: state.holdings.stark.pos, dist: 700, page: async (page) => { await page.click('[data-action="undo"]'); await page.waitForSelector('.undo-levels [data-undo="3"]'); } };
   },
+  // a card's action is a verb, and the receipt is what the lord is told (WP B4): the Stark host marches for Moat Cailin
+  async receipt() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+    const r = await api(`/games/${id}/act`, { verb: 'raise_levies', params: { at: 'stark', men: 4000, name: 'The Host of Winterfell' } });
+    const host = Object.values(r.state.parties).find((a) => a.owner === 'stark' && a.kind === 'host');
+    return { id, focus: [state.holdings.stark.pos[0] + 10, state.holdings.stark.pos[1] + 90], dist: 700, page: async (page) => {
+      await page.evaluate(async (army) => { const m = await import('/js/ui/common.js'); await m.doVerb('march_host', { army, to: 'moat_cailin' }); }, host.id);
+      await page.waitForSelector('#toasts .toast');
+    } };
+  },
   // beginning a chronicle, ironman or not (WP B3)
   async begin() {
     return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); } };
