@@ -1,0 +1,7 @@
+{
+ "kind": "audience",
+ "note": "A promise the lord did not ask for (gold, when he asked for men) is not in the verdict's enum.",
+ "reply": "{\"beats\": [{\"kind\": \"narration\", \"text\": \"Roose Bolton let the silence run long enough to be noticed.\"}, {\"kind\": \"speech\", \"text\": \"Moat Cailin, then. My men will be there before the fortnight is out, my lord.\"}], \"outcome\": {\"agrees_to\": [{\"kind\": \"pay\", \"target\": \"none\", \"by_days\": 14}], \"asks_for\": \"\", \"reveals\": \"none\", \"mood\": \"guarded\"}}",
+ "expect": "refuse",
+ "problem": "allowed values"
+}

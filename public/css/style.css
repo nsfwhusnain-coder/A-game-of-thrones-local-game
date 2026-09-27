@@ -673,6 +673,9 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .story-rec summary { cursor: pointer; font-family: var(--display); letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.66rem; color: var(--gold); }
 .story-rec ul { margin: 0.25rem 0 0; padding-left: 1rem; }
 .story-rec li { margin: 0.1rem 0; }
+.msg.advisor .adv-h { font-family: var(--display); font-size: 0.78rem; letter-spacing: 0.08em; color: #6b4a14; margin: 0.5rem 0 0.15rem; }
+.msg.advisor .adv-l { margin: 0 0 0.2rem; padding-left: 1.1rem; }
+.msg.advisor li { margin: 0.1rem 0; }
 .story-heard { margin-top: 0.3rem; font-size: 0.74rem; font-style: italic; color: var(--muted); }
 .news-meanwhile { font-size: 0.82rem; font-style: italic; color: var(--muted); padding: 0.25rem 0.3rem 0; line-height: 1.4; }
 .news-more, .news-quiet { font-size: 0.78rem; color: var(--muted); padding: 0.2rem 0.3rem; cursor: pointer; }

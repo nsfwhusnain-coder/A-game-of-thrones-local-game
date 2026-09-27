@@ -1,0 +1,7 @@
+{
+ "kind": "council",
+ "note": "The Qwen leak in a counsellor's speech is caught.",
+ "reply": "{\"speeches\": [{\"speaker\": \"luwin\", \"text\": \"The ravens say \\u51ac is coming.\"}, {\"speaker\": \"rodrik_cassel\", \"text\": \"Then we should be ready.\"}]}",
+ "expect": "refuse",
+ "problem": "script"
+}

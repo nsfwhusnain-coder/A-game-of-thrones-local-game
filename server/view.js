@@ -4,6 +4,7 @@
 // and the realm's minds keep their counsel. The engine and the models work on the whole truth; only this leaves.
 import { knowledgeOf, eyesOf, seesParty, knows } from '../public/js/engine/knowledge.js';
 import { forces, idOf } from '../public/js/engine/parties.js';
+import { moodWord } from '../public/js/shared/temperament.js';
 
 // what a seen host shows of itself: its banners, its numbers, who leads it — not where it is going
 const SEEN = ['id', 'kind', 'owner', 'serving', 'name', 'commander', 'at', 'men', 'pos', 'members', 'state', 'composition', 'ships', 'public', 'exile', 'contingents'];
@@ -52,8 +53,13 @@ export function playerView(state) {
     ...state, parties, characters, houses,
     // our own knowledge only; the other houses' are theirs
     knowledge: { [me]: k },
-    // the realm's minds keep their counsel; replies still on the road are not yet read
+    // the realm's minds keep their counsel; replies still on the road are not yet read; tempers are read in faces
     minds: undefined, pendingReplies: undefined,
+    moods: Object.fromEntries(Object.entries(state.moods || {}).map(([id, m]) => [id, { turn: m.turn, full: m.full, patience: m.patience, closed: m.closed, word: moodWord(m) }])),
+    // promises: those made to or by our house, without how much they were meant (the engine's secret)
+    commitments: (state.commitments || []).filter((c) => [state.characters[c.by]?.house, state.characters[c.to]?.house || c.to].includes(me)).map(({ sincerity, acted, ...c }) => c),
+    // letters: ours, and the answers that have landed
+    post: (state.post || []).filter((l) => !l.reply || l.status !== 'in flight'),
     // pacts: ours, our friends', and the realm's open alliances and marriages
     pacts: (state.pacts || []).filter((p) => friends.has(p.a) || friends.has(p.b) || ['alliance', 'marriage'].includes(p.type)),
     // the facts of the days in hand that have reached us
@@ -95,7 +101,9 @@ export function hiddenTruths(state, view) {
     if (v?.march || v?.route || v?.commander) out.push(`10: ${a.id}'s march or leader is sent`);
   }
   for (const c of Object.values(view.characters)) if (c.house !== me && c.secret && !state.characters[c.id]?.secretKnown) out.push(`10: ${c.id}'s secret is sent`);
-  if (view.minds || view.pendingReplies) out.push('10: the minds or the unread replies are sent');
+  if (view.minds || view.pendingReplies || Object.values(view.moods || {}).some((m) => 'anger' in m)) out.push('10: the minds, the tempers or the unread replies are sent');
+  if ((view.commitments || []).some((c) => 'sincerity' in c)) out.push('10: how much a promise was meant is sent');
+  if ((view.post || []).some((l) => l.reply && l.status === 'in flight')) out.push('10: an answer still on the road is sent');
   for (const h of Object.keys(view.knowledge || {})) if (h !== me) out.push(`10: House ${h}'s knowledge is sent`);
   for (const t of view.history || []) if (t.minds) out.push(`10: turn ${t.turn}'s minds are sent`);
   return out;

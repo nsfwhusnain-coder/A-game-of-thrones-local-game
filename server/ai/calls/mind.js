@@ -14,6 +14,7 @@ import { dateStr, getRelation } from '../../../public/js/shared/world.js';
 import { AGENDAS } from '../../../public/data/agendas.js';
 import { VOICES } from '../../../public/data/voices.js';
 import { system } from '../context/primer.js';
+import { promisesOf, promiseText } from '../../../public/js/engine/politics/commitments.js';
 
 const n = (x) => Math.round(Number(x) || 0).toLocaleString('en-GB');
 const SCALE = [['courage', 'courage'], ['wits', 'wits'], ['guile', 'guile'], ['pride', 'pride'], ['volatility', 'temper'], ['warmth', 'warmth'], ['honesty', 'honesty'], ['ambition', 'ambition']];
@@ -77,6 +78,7 @@ export default {
         `YOUR STRENGTH: coin ~${n(w?.gold)} dragons; levies ~${n(w?.levies)} uncalled; men-at-arms ${n(w?.menAtArms)}${w?.hosts.length ? `; hosts: ${w.hosts.map((a) => `${a.id} "${a.name}" ${n(a.men)}${a.at ? ` at ${state.holdings[a.at]?.name || a.at}` : ' in the field'}${a.march ? ` (marching)` : ''}`).join('; ')}` : '; no host in the field'}.`,
         `YOUR HOUSE: ${w?.liege ? `sworn to House ${w.liege.name}` : 'sworn to no one'}${w?.vassals.length ? ` · ${w.vassals.length} houses sworn to you (the banners ${w.bannersCalled ? 'are called' : 'are not called'})` : ''}${w?.atWar ? ` · AT WAR with ${w.foes.map((x) => `House ${state.houses[x]?.name}`).join(', ')}` : ' · at peace'}.`,
         `WHAT YOU KNOW (as it reached you; it may be late or wrong):\n${known.length ? known.slice(0, 8).map((f) => `- ${f.text}`).join('\n') : '- Nothing of note has reached you this past fortnight.'}`,
+        promisesOf(state, c.id).length ? `YOUR PROMISES (a lord's word is remembered): ${promisesOf(state, c.id).map((x) => promiseText(state, x)).join('; ')}.` : null,
         rel.length ? `RELATIONS: ${rel.map(([x, v]) => `${x.name} ${v > 0 ? '+' : '−'}${Math.abs(v)}`).join(' · ')}` : null,
         `WHAT YOU CAN DO NOW (choose one):\n${optionLines.join('\n')}`,
         `A ${c.sex === 'f' ? 'LADY' : 'LORD'} OF YOUR NATURE: ${hintFor(state, c.id, tree)}`,

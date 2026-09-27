@@ -144,7 +144,6 @@ export async function carryOutOrders(state, interpret) {
 // another house is weighed by the same temperament as a face-to-face audience (shared/temperament.js): he
 // agrees, names a price, stalls, refuses, gives in from fear, or answers in anger. The engine records the
 // outcome (a pact agreed, fealty sworn) and tells the story model, which writes his reply by raven.
-import { weighAudience, holdToVerdict } from '../public/js/shared/temperament.js';
 
 const SENDING = /\b(raven|letter|write|envoy|emissary|herald|word to|message|demand|threaten|warn|offer|propose|ask|tell|order|command|summon|insist|bid|urge|invite|request)\b/i;
 function addressed(state, text) {
@@ -172,21 +171,17 @@ function addressed(state, text) {
   }
   return hit || null;
 }
-const OUTCOME = { agree: 'AGREES', bargain: 'will not agree yet and NAMES HIS PRICE', stall: 'PUTS YOU OFF — commits to nothing', refuse: 'REFUSES', rage: 'REFUSES IN ANGER', yield: 'GIVES IN, afraid', dismiss: 'REFUSES and will hear no more this moon' };
 export function resolveEnvoys(state, orders) {
   const done = [];
   for (const o of orders) {
-    if (o.auto || o.envoy || !SENDING.test(o.text)) continue;
-    // the one the order was read as writing to (a lord of another house), else whoever it names
-    const to = o.parsed?.letter?.to && state.characters[o.parsed.letter.to];
-    const c = to ? (to.house !== state.meta.player && to.alive ? to : null) : addressed(state, o.text); if (!c) continue;
-    const stance = weighAudience(state, c, o.text);
-    if (!stance.verdict) continue; // news, a greeting: the story model tells it
-    const changes = holdToVerdict(state, c, stance, []);
-    const r = applyChanges(state, changes, { source: `${c.name}'s answer`, protectPlayer: true });
-    o.envoy = { who: c.id, verdict: stance.verdict };
-    o.note = [o.note, `[The engine has weighed this message: ${c.name} ${OUTCOME[stance.verdict] || stance.verdict}${stance.proposal ? ` (${stance.proposal})` : ''}${r.applied.length ? ' — recorded: ' + r.applied.map((x) => x.text).join('; ') : ''}. ${stance.mood.fear > 40 ? 'He is afraid. ' : stance.mood.anger > 40 ? 'He is angry. ' : ''}Write his answer as a "raven" op from ${c.id} to ${state.houses[state.meta.player].lord}, in his own voice, and let the consequences follow.]`].filter(Boolean).join(' ');
-    done.push({ order: o.text, result: [`${c.name} ${OUTCOME[stance.verdict] || stance.verdict}`] });
+    // a letter already flying is answered when it lands (server/letters.js), in the mood and the world of that day
+    if (o.auto || o.envoy || o.post || o.parsed?.actions?.length || !SENDING.test(o.text)) continue;
+    // words for a lord of another house that were not read as a letter still go as one
+    const c = addressed(state, o.text); if (!c || c.house === state.meta.player || !c.alive) continue;
+    const r = perform(state, 'send_letter', { params: { to: c.id, text: o.text }, source: { type: 'order', ref: o.id || null } });
+    if (!r.ok) continue;
+    o.post = r.done.post; o.envoy = { who: c.id };
+    done.push({ order: o.text, result: r.receipt.map((l) => l.text) });
   }
   return done;
 }

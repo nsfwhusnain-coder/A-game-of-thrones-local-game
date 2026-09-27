@@ -4,9 +4,9 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
-import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplies } from './llm.js';
-import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
-import { createInitialState, migrateState, applyChanges, placeName, addDays, dateStr, spanOf, resolvePlaceId, dayNumber, findChar } from '../public/js/shared/world.js';
+import { chat, extractJson, extractField, loadConfig, estimateTokens } from './llm.js';
+import { buildJumpPrompt, buildSuggestPrompt, buildConsolidatePrompt, engineFacts } from './prompts.js';
+import { createInitialState, migrateState, applyChanges, placeName, addDays, dateStr, spanOf, resolvePlaceId, dayNumber } from '../public/js/shared/world.js';
 import { partyOf, together } from '../public/js/engine/parties.js';
 import { settleWorld } from '../public/js/engine/state/settle.js';
 import { validate } from '../public/js/engine/state/validate.js';
@@ -36,6 +36,10 @@ import { carryOutOrders, readOrders, answerOrder, named, orderEvents, advanceMus
 import { interpretOrder } from './orders/interpret.js';
 import { runMinds, knownTo } from './minds.js';
 import { narrateTurn, narratorOn } from './narrator.js';
+import { deliverLetters, reveal } from './letters.js';
+import { replyText, promisesIn } from './ai/calls/audience.js';
+import { makeCommitment, COMMITMENTS, commitmentsTick } from '../public/js/engine/politics/commitments.js';
+import { runCall } from './ai/client.js';
 import { parseOrder } from './orders/parse.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
@@ -398,6 +402,9 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
   // so they truly happen; the story model is told what was done and narrates what follows.
   const carried = await carryOutOrders(state, interpreter(id, state, cfg)).catch((e) => { console.warn('orders:', e.message); return []; });
+  // the promises lords have made are acted on from the morrow (engine/politics/commitments.js): a sincere one through
+  // the same verbs as an order — Roose Bolton's men turn for Moat Cailin; a false one not at all
+  commitmentsTick(state, { phase: 'start' });
   // a turn runs until the next thing that matters (a host arrives, a foe draws near, an answer lands…), at most a moon
   let turnReason = null;
   if (!span || span === 'auto' || span === 'turn') { const n = nextTurnLength(state); span = `${n.days}d`; turnReason = n.reason; }
@@ -468,7 +475,12 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   vt.events.push(...ps.events); applied.push(...ps.applied);
   // lords on the road with their households: feasts, weddings, their liege's hall, the market towns
   vt.events.push(...retinueTick(state, spanInfo.days).events);
-  vt.events.push(...deliverReplies(state));
+  vt.events.push(...deliverReplies(state)); // answers of saves from before letters were things (written when sent)
+  // letters that land are read and answered on the day they land; the answers that land are delivered (server/letters.js)
+  const recent = readFacts(id, { from: state.meta.turn - 1 });
+  vt.events.push(...await deliverLetters(state, { provider: cfg.provider, cfg, log: (kind, messages, response) => logLLM(id, kind, messages, response), known: (h) => knownTo(state, recent, h, { limit: 6 }) }).catch((e) => { console.warn('letters:', e.message); return []; }));
+  // promises kept or broken this turn, judged after the marches (a host that reached Moat Cailin has kept its word)
+  vt.events.push(...commitmentsTick(state).filter((f) => f.houses.includes(state.meta.player)).map((f) => asEvent(state, f, { mine: true })));
   const engineEvents = dayEngineEvents(state, [...deathEvents, ...minds.cards, ...foldAnswers(vt.events)], spanInfo.days);
   // news travels (engine/knowledge.js): what the house hears of late is told on the day its word arrives, or waits for a
   // later turn; the word of earlier days that arrives now is told now
@@ -710,77 +722,52 @@ async function talkWith(id, state, cfg, charId, message) {
   if (!c) throw httpError(404, 'unknown character');
   if (!c.alive) throw httpError(400, `${c.name} is dead.`);
   if (moodOf(state, c).closed) throw httpError(409, `${c.name} will not hear you again this moon.`);
+  const p = state.meta.player; const lordId = state.houses[p].lord; const lord = state.characters[lordId]; const ownMan = c.house === p;
+  const turn = state.meta.turn; const today = dayNumber(state.meta.date);
+  // far away, this is a letter (server/letters.js): it flies for days, it is read and weighed when it lands, and the
+  // answer flies back — only then does it count
+  if (lord && !together(state, lord, c)) {
+    const r = perform(state, 'send_letter', { params: { to: c.id, text: message }, source: { type: 'order', ref: 'letter' } });
+    if (!r.ok) throw httpError(409, r.refusal.text);
+    const post = state.post.find((x) => x.id === r.done.post); post.from = lordId; post.via = 'audience';
+    const days = r.done.days; const back = addDays(state.meta.date, days * 2);
+    state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn, via: 'raven' }, { role: 'npc', text: '', date: dateStr(back), turn, pending: true, letter: post.id, arrivesDay: today + days * 2 }];
+    saveState(id, state);
+    const m = moodOf(state, c);
+    return { reply: null, raven: { days, back: dateStr(back) }, applied: [], rejected: [], state, stance: { verdict: null, mood: moodWord(m), patience: m.patience, full: m.full, closed: !!m.closed } };
+  }
   // the engine weighs the words first: their nature, their mood, the odds — and settles the outcome
   const stance = weighAudience(state, c, message);
-  const messages = buildChatPrompt(state, charId, message, readChronicle(id), cfg, stance);
-  const onProgress = tracker(id, 'chat');
-  let r; try { r = await chat(messages, { json: true, kind: 'chat', onProgress }); } finally { done(id); }
-  logLLM(id, 'chat', messages, r.text);
-  let reply = r.text, changes = [];
-  try {
-    const o = extractJson(r.text);
-    reply = String(o.reply ?? o.response ?? o.text ?? o.message ?? '');
-    changes = Array.isArray(o.changes) ? o.changes : [];
-    if (!reply.trim()) throw new Error('empty');
-  } catch {
-    // broken JSON: rescue the "reply" field if we can, else keep the prose and drop the machinery
-    const rescued = extractField(r.text, 'reply');
-    if (rescued) { reply = rescued; changes = []; } else reply = String(r.text).replace(/```[\s\S]*?```/g, '').replace(/\{[\s\S]*\}/g, '').replace(/^\s*"?reply"?\s*:\s*/i, '').trim() || '*They say nothing you can make sense of.*';
-    changes = [];
-  }
-  reply = stripForeignScript(reply.replace(/<br\s*\/?>/gi, '\n')); // HTML line breaks become the scene's own; stray foreign glyphs go (B-27)
-  // Sanity guard: a conversation can refine the ledger, not rewrite it (protects against model hallucinations)
-  changes = changes.filter((ch) => {
-    if (!ch || String(ch.op) !== 'figure') return true;
-    if (!ch.source || /your name/i.test(ch.source)) ch.source = c.name;
-    const h = state.houses[ch.house]; const f = h?.figures?.[ch.field]; const v = Number(String(ch.value ?? '').replace(/,/g, ''));
-    if (!f || !isFinite(v) || ch.value === undefined) return true;
-    const cur = Number(f.v) || 0;
-    return cur === 0 ? v < 5000 : v / cur < 2.5 && v / cur > 0.4;
-  });
-  // Commands to one's own people are carried out: they may ride, recruit and hire in the house's name;
-  // no one else may spend the player's gold or move the player's men.
-  const p = state.meta.player; const ownMan = c.house === p;
-  changes = changes.filter((ch) => {
-    if (!ch || !['travel', 'ride', 'recruit', 'hire', 'hire_men'].includes(String(ch.op))) return true;
-    if (!ownMan) return false;
-    ch.house = p; if (['travel', 'ride'].includes(String(ch.op)) && !ch.character) ch.character = c.id;
-    return true;
-  });
-  // "opinion" in an answer is theirs of you: the model sometimes files it under the lord it is talking to
-  const lordId = state.houses[p].lord;
-  for (const ch of changes) if (ch && String(ch.op) === 'character' && findChar(state, ch.id || ch.character) === lordId) { ch.id = c.id; delete ch.character; }
-  // the one you speak to, and anyone you name to them, may be sent on the road by your word
-  const mayMove = Object.values(state.characters).filter((x) => x.house === p && (x.id === c.id || named(state, x, message))).map((x) => x.id);
-  changes = holdToVerdict(state, c, stance, changes);
-  // far away, this is a letter: it flies for days, and the answer flies back — and only then does it count
-  const lord = state.characters[lordId];
-  if (!together(state, lord, c)) {
-    const days = ravenDays(state, lord, c); const today = dayNumber(state.meta.date);
-    const back = addDays(state.meta.date, days * 2);
-    state.post = state.post || [];
-    state.post.unshift({ id: `post_${state.meta.turn}_${state.post.length}_${c.id}`, to: c.id, toName: c.name, text: message, sent: dateStr(state.meta.date), sentDay: today, arriveDay: today + days, days, status: 'in flight' });
-    state.pendingReplies = [...(state.pendingReplies || []), { char: c.id, arrivesDay: today + days * 2, changes, mayMove: ownMan ? mayMove : [], text: reply }];
-    emit(state, 'letter_sent', { actors: [lordId, c.id], houses: [p, c.house], data: { to: c.id, days }, vis: { scope: 'houses', houses: [p, c.house] }, cause: { type: 'order', ref: 'letter' }, text: `A raven flies from ${lord?.name || `House ${state.houses[p].name}`} to ${c.name} (~${days} days).` });
-    const turn = state.meta.turn;
-    state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn, via: 'raven' }, { role: 'npc', text: reply, date: dateStr(back), turn, pending: true, arrivesDay: today + days * 2, mood: stance.moodWord, ...(stance.verdict ? { verdict: stance.verdict } : {}) }];
-    saveState(id, state);
-    return { reply: null, raven: { days, back: dateStr(back) }, applied: [], rejected: [], state, stance: { verdict: null, mood: moodWord(stance.mood), patience: stance.mood.patience, full: stance.mood.full, closed: !!stance.mood.closed } };
-  }
-  // the audience is a fact (who spoke with whom, and where); what was said stays in the conversation
-  emit(state, 'audience_held', { actors: [lordId, c.id], houses: [p, c.house], place: resolvePlaceId(c.loc) || partyOf(state, c)?.at || null, data: { verdict: stance.verdict || null }, vis: { scope: 'houses', houses: [p, c.house] }, cause: { type: 'order', ref: 'audience' }, text: `${lord?.name || `The lord of House ${state.houses[p].name}`} speaks with ${c.name}.` });
-  let { applied, rejected } = applyChanges(state, changes, { source: c.name, protectPlayer: true, mayMove: ownMan ? mayMove : [], cause: { type: 'intent', ref: c.id } });
-  // a plain command to one of the house's own people, said to their face, is an order: read by the rules, with them
-  // as the one addressed ("ride to the Twins" means them), and carried out through the verbs like a written one
-  if (ownMan && c.id !== state.houses[p].lord && !applied.some((a) => ['travel', 'ride', 'recruit', 'hire'].includes(a.op))) {
+  const applied = [], rejected = [];
+  // one's own people: the command is read as an order to them and done through the verbs, before they answer, so what
+  // they say is what they are about to do (04 §8.1)
+  if (ownMan && c.id !== lordId) {
     const read = parseOrder(state, message, { addressee: c.id });
     for (const a of read.clarify ? [] : read.actions) {
       const r = perform(state, a.verb, { params: a.params, source: { type: 'order', ref: 'audience' } });
       for (const l of r.receipt) (r.ok ? applied.push({ op: a.verb, text: l.text.replace(/\.$/, '') }) : rejected.push({ change: { verb: a.verb, ...a.params }, reason: `could not be done: ${l.text.replace(/\.$/, '')}` }));
     }
   }
-  const turn = state.meta.turn;
-  state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn }, { role: 'npc', text: reply, date: dateStr(state.meta.date), turn, applied: applied.map((a) => a.text), mood: stance.moodWord, ...(stance.verdict ? { verdict: stance.verdict } : {}) }];
+  const known = knownTo(state, readFacts(id, { from: state.meta.turn - 1 }), c.house, { limit: 6 });
+  const onProgress = tracker(id, 'chat');
+  let r; try {
+    r = await runCall('audience', state, { character: c.id, words: message, stance, face: true, known, receipt: applied.map((a) => a.text) }, { provider: cfg.provider, cfg, onProgress, log: (kind, messages, response) => logLLM(id, kind, messages, response) });
+  } finally { done(id); }
+  const v = r.value;
+  const reply = replyText(v);
+  // the audience is a fact (who spoke with whom, and where); what was said stays in the conversation
+  emit(state, 'audience_held', { actors: [lordId, c.id], houses: [p, c.house], place: resolvePlaceId(c.loc) || partyOf(state, c)?.at || null, data: { verdict: stance.verdict || null }, vis: { scope: 'houses', houses: [p, c.house] }, cause: { type: 'order', ref: 'audience' }, text: `${lord?.name || `The lord of House ${state.houses[p].name}`} speaks with ${c.name}.` });
+  // what the verdict settles of a proposal (a pact, fealty) and leaves in their memory — the engine's, not the model's
+  const settled = applyChanges(state, holdToVerdict(state, c, stance, []), { source: c.name, protectPlayer: true, cause: { type: 'intent', ref: c.id } });
+  applied.push(...settled.applied); rejected.push(...settled.rejected);
+  // what they promise binds them (engine/politics/commitments.js): witnessed, rolled for sincerity in secret
+  for (const x of ownMan ? [] : promisesIn(v, r.ctx || {})) {
+    const cm = makeCommitment(state, { by: c.id, to: lordId, kind: x.kind, params: x.params, days: x.days, source: { type: 'audience', ref: c.id }, publicity: 'witnessed', duress: stance.verdict === 'yield' });
+    applied.push({ op: 'commitment', text: `${c.name} promises to ${COMMITMENTS[cm.kind].says(state, cm)} within ${cm.dueDay - cm.madeDay} days` });
+  }
+  if (v.outcome?.reveals === 'their_secret' && c.secret && !c.secretKnown) reveal(state, c, p);
+  const mood = v.outcome?.mood || stance.moodWord;
+  state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn }, { role: 'npc', text: reply, date: dateStr(state.meta.date), turn, applied: applied.map((a) => a.text), mood, ...(v.outcome?.asks_for ? { asks: v.outcome.asks_for } : {}), ...(stance.verdict ? { verdict: stance.verdict } : {}) }];
   if (state.chronicle.length) { appendChronicle(id, state.chronicle.map((x) => `- ${x.date}: ${x.text}`).join('\n') + '\n'); state.chronicle = []; }
   saveState(id, state);
   return { reply, applied, rejected, state, stance: { verdict: stance.verdict, mood: moodWord(stance.mood), patience: stance.mood.patience, full: stance.mood.full, closed: !!stance.mood.closed } };
@@ -916,42 +903,41 @@ function actWith(id, state, body) {
   return { state, receipt: r.receipt, summary: told(r), ...(r.done?.effects?.length ? { effects: r.done.effects } : {}) };
 }
 
-export async function council(id, members, message) {
+export async function council(id, members, message, { advisor = false } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
-  return withDice(state, () => councilWith(id, state, cfg, members, message));
+  return withDice(state, () => councilWith(id, state, cfg, members, message, { advisor }));
 }
-async function councilWith(id, state, cfg, members, message) {
+async function councilWith(id, state, cfg, members, message, { advisor = false } = {}) {
   const ids = (members || []).filter((m) => state.characters[m]?.alive);
   if (!ids.length) throw httpError(400, 'no one to hold council with');
-  const messages = buildCouncilPrompt(state, ids, message, readChronicle(id), cfg);
-  const onProgress = tracker(id, 'council');
-  const people = Object.fromEntries(ids.map((i) => [i, state.characters[i].name]));
-  let read;
-  try {
-    let r = await chat(messages, { json: true, kind: 'council', onProgress });
-    logLLM(id, 'council', messages, r.text);
-    read = readReplies(r.text, people, ids[0]);
-    // nothing said, or only gestures: ask once more, plainly
-    if (!read.replies.length || !read.spoken) {
-      const again = [...messages.slice(0, -1), { role: 'user', content: messages.at(-1).content + '\n\nEach counsellor must SPEAK — their answer in words, first person; at most one short *gesture*. JSON only, no code fences.' }];
-      r = await chat(again, { json: true, kind: 'council', onProgress });
-      logLLM(id, 'council', again, r.text);
-      const second = readReplies(r.text, people, ids[0]); if (second.replies.length) read = second;
-    }
-  } finally { done(id); }
-  if (!read.replies.length) throw httpError(502, 'The council could not agree on an answer. Put the question again.');
-  // each counsellor seated has a place in the answer: one who did not speak is shown keeping silent, not lost
   const listening = !String(message || '').trim();
-  if (!listening) for (const i of ids) if (!read.replies.some((x) => x.speaker === i)) read.replies.push({ speaker: i, text: `*${state.characters[i].name} listened, and said nothing this time.*`, silent: true });
-  const replies = read.replies.map((x) => ({ ...x, text: stripForeignScript(x.text) })); const changes = read.changes;
+  // the advisor: the one whose office knows the matter best answers at length (04 §8.4)
+  const who = advisor ? [advisorFor(state, ids, message)] : ids;
+  const onProgress = tracker(id, 'council');
+  let r; try {
+    r = await runCall('council', state, { members: who, words: message, advisor, listening }, { provider: cfg.provider, cfg, onProgress, log: (kind, messages, response) => logLLM(id, kind, messages, response) });
+  } finally { done(id); }
+  const replies = (r.value?.speeches || []).map((x) => ({ speaker: x.speaker, text: stripForeignScript(x.text) }));
+  if (!replies.length) throw httpError(502, 'The council could not agree on an answer. Put the question again.');
+  // each counsellor seated has a place in the answer: one who did not speak is shown keeping silent, not lost
+  if (!listening && !advisor) for (const i of ids) if (!replies.some((x) => x.speaker === i)) replies.push({ speaker: i, text: `*${state.characters[i].name} listened, and said nothing this time.*`, silent: true });
   const lordId = state.houses[state.meta.player].lord;
   emit(state, 'audience_held', { actors: [lordId, ...ids], houses: [state.meta.player], place: state.houses[state.meta.player].seat || null, data: { council: true }, vis: { scope: 'houses', houses: [state.meta.player] }, cause: { type: 'order', ref: 'council' }, text: `${state.characters[lordId]?.name || 'The lord'} holds council with ${ids.map((i) => state.characters[i].name).join(', ')}.` });
-  const { applied, rejected } = applyChanges(state, changes, { source: 'Council', protectPlayer: true, cause: { type: 'intent', ref: 'council' } });
+  // counsel changes nothing: what the lord decides from it becomes an order
   const key = 'council:' + ids.sort().join(',');
   const date = dateStr(state.meta.date), turn = state.meta.turn;
-  state.chats[key] = [...(state.chats[key] || []), ...(listening ? [] : [{ role: 'player', text: message, date, turn }]), ...replies.map((x) => ({ role: 'npc', speaker: x.speaker, text: x.text, date, turn }))];
+  state.chats[key] = [...(state.chats[key] || []), ...(listening ? [] : [{ role: 'player', text: message, date, turn }]), ...replies.map((x) => ({ role: 'npc', speaker: x.speaker, text: x.text, date, turn, ...(advisor ? { advisor: true } : {}) }))];
   saveState(id, state);
-  return { replies, applied, rejected, state, key };
+  return { replies, applied: [], rejected: [], state, key };
+}
+// money to the steward, war to the master-at-arms, the realm's story and its letters to the maester
+function advisorFor(state, ids, q) {
+  const has = (role) => ids.find((i) => (state.characters[i].roles || []).includes(role));
+  const t = String(q || '').toLowerCase();
+  return (/\b(afford|gold|coin|treasury|debt|grain|food|ledger)\b/.test(t) && has('steward'))
+    || (/\b(war|host|army|neighbour|threat|fight|defend|banners|men)\b/.test(t) && (has('master_at_arms') || has('captain')))
+    || (/\b(loyal|vassal|trust|spies|secret)\b/.test(t) && has('spymaster'))
+    || has('maester') || ids[0];
 }

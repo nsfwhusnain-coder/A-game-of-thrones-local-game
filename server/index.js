@@ -76,7 +76,7 @@ route('GET', '/api/games/:id/turns/:n', (req, p) => viewTurn(game.readTurn(p.id,
 route('POST', '/api/games/:id/talk', async (req, p) => { const b = await readBody(req); return game.talk(p.id, b.character, String(b.message || '').slice(0, 4000)); });
 route('POST', '/api/games/:id/suggest', (req, p) => game.suggest(p.id));
 route('POST', '/api/games/:id/act', async (req, p) => game.act(p.id, await readBody(req)));
-route('POST', '/api/games/:id/council', async (req, p) => { const b = await readBody(req); return game.council(p.id, b.members, String(b.message || '').slice(0, 4000)); });
+route('POST', '/api/games/:id/council', async (req, p) => { const b = await readBody(req); return game.council(p.id, b.members, String(b.message || '').slice(0, 4000), { advisor: !!b.advisor }); });
 route('POST', '/api/games/:id/consolidate', (req, p) => game.consolidateNow(p.id));
 route('POST', '/api/games/:id/ack', async (req, p) => game.acknowledge(p.id, (await readBody(req)).keys));
 route('POST', '/api/games/:id/ravens/read', (req, p) => ({ ravens: game.markRavensRead(p.id) }));

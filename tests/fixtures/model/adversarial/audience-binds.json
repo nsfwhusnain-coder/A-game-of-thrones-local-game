@@ -1,0 +1,9 @@
+{
+ "kind": "audience",
+ "note": "The fixture's agreement (15 \u00a72 audience-binds): Roose promises his men at Moat Cailin within the fortnight, by the name the enum offers.",
+ "reply": "{\"beats\": [{\"kind\": \"narration\", \"text\": \"Roose Bolton let the silence run long enough to be noticed.\"}, {\"kind\": \"speech\", \"text\": \"Moat Cailin, then. My men will be there before the fortnight is out, my lord.\"}], \"outcome\": {\"agrees_to\": [{\"kind\": \"march_to\", \"target\": \"moat_cailin\", \"by_days\": 14}], \"asks_for\": \"\", \"reveals\": \"none\", \"mood\": \"guarded\"}}",
+ "expect": "accept",
+ "canonical": {
+  "outcome.agrees_to.0.target": "moat_cailin"
+ }
+}
