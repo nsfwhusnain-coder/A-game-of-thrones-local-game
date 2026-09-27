@@ -205,7 +205,7 @@ test('a losing war tempts the schemers first: the Boltons treat with the enemy l
 });
 
 // ── Orders: the sworn hosts answering the call are the player's to command ──
-import { executeActions, commandable, carryOutOrders } from '../server/orders.js';
+import { executeActions, commandable, carryOutOrders, raiseLevies } from '../server/orders.js';
 test('"march the whole host to Moat Cailin" sends the sworn hosts on the road there too', async () => {
   const s = fresh();
   apply(s, [{ op: 'army_create', id: 'hb', owner: 'bolton', name: 'Host of House Bolton', at: 'bolton', men: 4000 }]);
@@ -887,4 +887,22 @@ test('what the maester has open on the table follows the game in progress', () =
 
 test('an empty question returns nothing rather than noise', () => {
   assert.deepEqual(searchLore('   ', 5), []);
+});
+
+test('north of the Wall resolves beyond the Wall, never Winterfell or Casterly Rock', () => {
+  const s = fresh();
+  const army = Object.values(s.armies).find((a) => a.owner === 'stark' && a.type === 'army');
+  const result = executeActions(s, [{ op: 'march', order: 1, army: army.id, to: 'north of the Wall' }], [{ text: 'March north of the Wall.' }]);
+  assert.match(result[1][0], /Hardhome/);
+  assert.equal(s.armies[army.id].march.to, 'hardhome');
+});
+
+test('a large levy call starts a camp and the men arrive over days', () => {
+  const s = fresh();
+  const before = s.houses.stark.figures.levies.v;
+  const lines = raiseLevies(s, { at: 'stark', men: 20000, name: 'The Northern Host', immediate: false });
+  const host = Object.values(s.armies).find((a) => a.name === 'The Northern Host');
+  assert.ok(host.muster.remaining > 0, lines.join(' '));
+  assert.ok(host.men < 20000);
+  assert.equal(s.houses.stark.figures.levies.v, before - Math.min(before, 20000));
 });
