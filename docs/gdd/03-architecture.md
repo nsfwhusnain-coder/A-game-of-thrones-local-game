@@ -120,6 +120,10 @@ Character = {
 
 ### 3.3 Party (the one mover)
 
+> *Implemented in WP B2* (`engine/parties.js`; [DECISIONS.md#D-007](DECISIONS.md)): a person's place is the one string
+> `c.loc` (a place id or `party:<id>`, the `location` below derived from it); `leader` is spelled `commander`, `orders`
+> is `march: { to, since }`, `troops` is still `men` + `units` until C1–C3; `contingents` include the owner's share.
+
 ```js
 Party = {
   id, kind: 'host' | 'fleet' | 'garrison' | 'retinue' | 'progress' | 'envoy' | 'rider' | 'caravan' | 'band',
@@ -219,6 +223,10 @@ HouseKnowledge = {
 
 ## 4. Activities (one thing at a time)
 
+> *Implemented in WP B2* (`engine/activity.js`; [DECISIONS.md#D-009](DECISIONS.md)): stored as `{ kind, since, party?,
+> until?, source? }` — priority and interruptibility are the kind's; activities that circumstances decide are re-derived
+> on every settle, only claims outlive them.
+
 ```js
 Activity = { kind, party: partyId | null, since, until, priority, source: {type, ref}, interruptible: bool }
 ```
@@ -256,11 +264,14 @@ length. This alone fixes B-10.
 `retinues.js` movement and `life.js`'s notion of "things on roads" (the latter becomes visual only).
 
 - **Speed** (miles/day, before season and road modifiers): foot host 15, mixed host 18, all-horse host 30, forced march
-  +30 % speed with daily attrition and morale loss (07 §5), retinue 25, lone rider 40, envoy 30, the royal progress 10
+  +30 % speed with daily attrition and morale loss (07 §5), retinue 25, lone rider 40, envoy 30, the royal progress 30
   (wheelhouse), caravan 12, fleet 60–100 by ship type and wind (07 §9). `MILES_PER_UNIT` stays as in `warfare.js`.
 - **Routes** are computed once when the order is given (A* over land/sea from `map3d/pathfind.js`, moved to a shared
   module so the server can use it), stored as `route.path`, and advanced by distance each day. The server computes paths;
-  the client renders the same path (fixes the "hosts glide straight" / island crossings, B-11).
+  the client renders the same path (fixes the "hosts glide straight" / island crossings, B-11). *Implemented in WP B2*
+  (`engine/movement.js` on the atlas raster of `engine/geo.js`, [DECISIONS.md#D-008](DECISIONS.md)): the route stores
+  the day each point is reached; a rider or envoy whose way is blocked by the sea — or much shorter by it — takes ship
+  from the best port. The progress's 10 miles a day could not keep the canon timetable on a 3,000-mile Westeros: 30.
 - **Water:** a land party may only cross open sea when embarked on a fleet (verb `embark`). Islands (Skagos, Bear Island,
   the Iron Islands, Tarth, Dragonstone, the Three Sisters) have no land route; their lords' hosts need ships or a
   crossing place (`places.crossings`). Short ferry crossings (the Twins' bridge, the Blackwater Rush fords, the
@@ -469,6 +480,10 @@ saves/<id>/
 8. `meta.seed`/`rngState` created; `activity` set from location and roles.
 
 Migration is covered by a test that loads a v2 fixture save (commit one small save under `tests/fixtures/`).
+*Steps 1–3 and 8 implemented in WP B2* (`engine/state/migrate.js`, `tests/fixtures/saves/v2-stark-turn3.json.gz`,
+`tests/parties.test.js`): parties with kinds and states, `party:` locations and members, riders as rider parties,
+placeless people placed, parties the old straight-line marches left on the sea put back ashore, activities. The rest
+arrive with the packages that own them (letters B10, matters/threads B12–D1, knowledge B9, history B3).
 
 ## 13. Module layout v3
 
@@ -501,6 +516,10 @@ Old modules are moved, not copied: each work package that moves a module deletes
 fixes imports; `npm run check` verifies every import resolves.
 
 ## 14. Invariants (tested every turn in dev and in CI soaks)
+
+> *1–4 and 8 implemented in WP B2* (`engine/state/validate.js`): checked after every turn (a breach is logged and kept
+> in the turn record), at every scenario start (`npm run check`), in `tests/soak.test.js` (every CI run) and in the
+> nightly 200-turn soak (`scripts/soak.js`, `.github/workflows/nightly.yml`).
 
 1. Every character is in exactly one place: `location.at` xor `location.party`, and a party lists them in `members`.
 2. Every living character has exactly one activity; a `commanding` activity's party has them as `leader`.
