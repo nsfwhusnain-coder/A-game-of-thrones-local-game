@@ -1,0 +1,10 @@
+{
+ "kind": "mind",
+ "note": "The Qwen leak in a mind's line is caught.",
+ "args": {
+  "actor": "tywin_lannister"
+ },
+ "reply": "{\"target\":\"none\",\"host\":\"none\",\"leader\":\"none\",\"men\":0,\"gold\":0,\"choice\":\"none\",\"with\":\"\",\"public_face\":\"\",\"secret_aim\":\"\",\"line\":\"Let them come to 我.\",\"verb\":\"wait\"}",
+ "expect": "refuse",
+ "problem": "script"
+}

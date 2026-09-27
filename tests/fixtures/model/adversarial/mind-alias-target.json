@@ -1,0 +1,12 @@
+{
+ "kind": "mind",
+ "note": "A mind names a place as people call it: \"casterly_rock\" is the Rock, and becomes its id.",
+ "args": {
+  "actor": "tywin_lannister"
+ },
+ "reply": "{\"target\":\"casterly_rock\",\"host\":\"none\",\"leader\":\"none\",\"men\":0,\"gold\":0,\"choice\":\"none\",\"with\":\"\",\"public_face\":\"\",\"secret_aim\":\"\",\"line\":\"Summon them. All of them.\",\"verb\":\"call_banners\"}",
+ "expect": "accept",
+ "canonical": {
+  "target": "lannister"
+ }
+}

@@ -83,37 +83,8 @@ export function vassalTick(state, days, touched = new Set()) {
       ob.levies = answer;
       const lordName = state.characters[v.lord].name;
       if (answer === 'answered') {
-        const lev = Number(v.figures?.levies?.v) || 0; const maa = Number(v.figures?.menAtArms?.v) || 0;
-        const zeal = t >= 70 ? 0.9 : t >= 45 ? 0.75 : 0.5;
-        const men = Math.round((lev * zeal + maa * 0.6) / 50) * 50;
-        if (men >= 50 && seatPos) {
-          const name = `Host of House ${v.name}`;
-          const born = Math.floor(random() * Math.max(1, days)); // the day the host is raised, and sets out
-          const r = applyChanges(state, [
-            { op: 'army_create', owner: v.id, name, at: v.seat, men, commander: v.lord, composition: `Levies of House ${v.name}${maa > 200 ? ', with knights and men-at-arms' : ''}`, status: 'marching to muster' },
-            { op: 'figure', house: v.id, field: 'levies', delta: -Math.round(lev * zeal), source: 'Muster rolls' },
-            { op: 'figure', house: v.id, field: 'menAtArms', delta: -Math.round(maa * 0.6), source: 'Muster rolls' },
-          ], { on: born + 1, cause: { type: 'rule', ref: 'the call' } });
-          applied.push(...r.applied);
-          const a = Object.values(state.parties).find((x) => x.owner === v.id && x.name === name && !x.serving); let riding = [];
-          if (a) {
-            a.serving = v.liege; ob.host = a.id; a.bornDay = born;
-            if (musterPos && ob.muster && ob.muster !== v.seat) { a.march = { to: ob.muster, since: state.meta.turn }; settle(state, a); }
-            // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
-            joinParty(state, state.characters[v.lord], a);
-            const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && (!isFemale(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !rideOf(state, c) && (c.loc === v.seat || isRef(c.loc)) && !(c.roles || []).includes('maester'));
-            riding = kin.filter(() => random() < 0.55).slice(0, 2);
-            for (const c of riding) joinParty(state, c, a);
-          }
-          const eta = a && musterPos ? marchDays(a, seatPos, musterPos).days : 0;
-          // an island lord's men cannot march to the mainland: they take ship, or wait for ships (shared/sea.js)
-          const byShip = musterPos && needsShips(seatPos, musterPos);
-          const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with ${pronouns(state.characters[v.lord]).him}` : ''}${byShip ? `; they must cross the sea to reach ${state.holdings[ob.muster]?.name || 'the muster'}` : eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
-          events.push(...shown(mine, fact(state, 'call_answered', { day: (a?.bornDay || 0) + 1, title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] }, { actors: [v.lord, ...riding.map((c) => c.id)], data: { men, party: a?.id || null, to: ob.muster || null } })));
-        } else {
-          ob.levies = 'answered';
-          events.push(...shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text: `${lordName} sends word that ${pronouns(state.characters[v.lord]).he} has no men left to send.`, where: v.seat, importance: 2, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { men: 0 } })));
-        }
+        const r = raiseForLiege(state, v, { days, mine });
+        applied.push(...r.applied); events.push(...r.events);
       } else if (answer === 'delayed') {
         const P = pronouns(state.characters[v.lord]);
         const excuses = ['the harvest is not yet in', 'fever in the villages', 'the roads are flooded', `${P.his} own borders are threatened`, `${P.his} knights are scattered at a tourney`, `${P.he} must first settle a quarrel with ${P.his} neighbour`];
@@ -268,6 +239,54 @@ export function gatherMusters(state) {
     events.push(...shown(liegeId === state.meta.player, fact(state, 'host_joined', { ...(a.arriveDay ? { day: a.arriveDay } : {}), title: `House ${v.name} joins ${host.name}`, text: `${a.men.toLocaleString()} men under the ${v.name} banner join ${host.name}${host.at ? ` at ${state.holdings[host.at]?.name}` : ' on the march'}. The host now numbers ${host.men.toLocaleString()}.`, where: host.at || null, importance: 2, type: 'war', houses: [v.id, liegeId] }, { actors: [v.lord], data: { party: a.id, host: host.id, men: a.men } })));
   }
   return events;
+}
+
+/**
+ * A sworn house answers its liege's summons: its levies and men-at-arms (as many as its temper sends) are raised at its
+ * seat as a host serving the liege, its lord and some of his kin ride with it, and it marches for the muster. The
+ * banners' own answer in vassalTick, and a lord who chooses to answer at once (the verb answer_call, a mind's choice).
+ * Returns { applied, events, men, party, text }.
+ */
+export function raiseForLiege(state, v, { days = 1, mine = v.liege === state.meta.player, cause = { type: 'rule', ref: 'the call' } } = {}) {
+  const applied = []; const events = [];
+  const ob = v.obligations = v.obligations || {}; const t = vassalTemper(state, v.id);
+  // the muster is where the call named, else the liege's seat — the host marches for the one its answer names
+  const muster = ob.muster || state.houses[v.liege]?.seat;
+  const seatPos = placePos(v.seat, state.holdings); const musterPos = placePos(muster, state.holdings);
+  const lordName = state.characters[v.lord].name;
+  ob.levies = 'answered';
+  const lev = Number(v.figures?.levies?.v) || 0; const maa = Number(v.figures?.menAtArms?.v) || 0;
+  const zeal = t >= 70 ? 0.9 : t >= 45 ? 0.75 : 0.5;
+  const men = Math.round((lev * zeal + maa * 0.6) / 50) * 50;
+  if (men >= 50 && seatPos) {
+    const name = `Host of House ${v.name}`;
+    const born = Math.floor(random() * Math.max(1, days)); // the day the host is raised, and sets out
+    const r = applyChanges(state, [
+      { op: 'army_create', owner: v.id, name, at: v.seat, men, commander: v.lord, composition: `Levies of House ${v.name}${maa > 200 ? ', with knights and men-at-arms' : ''}`, status: 'marching to muster' },
+      { op: 'figure', house: v.id, field: 'levies', delta: -Math.round(lev * zeal), source: 'Muster rolls' },
+      { op: 'figure', house: v.id, field: 'menAtArms', delta: -Math.round(maa * 0.6), source: 'Muster rolls' },
+    ], { on: born + 1, cause });
+    applied.push(...r.applied);
+    const a = Object.values(state.parties).find((x) => x.owner === v.id && x.name === name && !x.serving); let riding = [];
+    if (a) {
+      a.serving = v.liege; ob.host = a.id; a.bornDay = born;
+      if (musterPos && muster !== v.seat) { a.march = { to: muster, since: state.meta.turn }; settle(state, a); }
+      // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
+      joinParty(state, state.characters[v.lord], a);
+      const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && (!isFemale(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !rideOf(state, c) && (c.loc === v.seat || isRef(c.loc)) && !(c.roles || []).includes('maester'));
+      riding = kin.filter(() => random() < 0.55).slice(0, 2);
+      for (const c of riding) joinParty(state, c, a);
+    }
+    const eta = a?.march && musterPos ? marchDays(a, seatPos, musterPos).days : 0;
+    // an island lord's men cannot march to the mainland: they take ship, or wait for ships (shared/sea.js)
+    const byShip = musterPos && needsShips(seatPos, musterPos);
+    const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with ${pronouns(state.characters[v.lord]).him}` : ''}${byShip ? `; they must cross the sea to reach ${state.holdings[muster]?.name || 'the muster'}` : eta ? `, and marches for ${state.holdings[muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
+    events.push(...shown(mine, fact(state, 'call_answered', { day: (a?.bornDay || 0) + 1, title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] }, { actors: [v.lord, ...riding.map((c) => c.id)], data: { men, party: a?.id || null, to: muster || null }, cause })));
+    return { applied, events, men, party: a?.id || null, text };
+  }
+  const text = `${lordName} sends word that ${pronouns(state.characters[v.lord]).he} has no men left to send.`;
+  events.push(...shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { men: 0 }, cause })));
+  return { applied, events, men: 0, party: null, text };
 }
 
 /** Lords in the field grow restless; the disloyal take their men home. Call once per turn with the days elapsed. */

@@ -1,0 +1,7 @@
+{
+ "kind": "mind",
+ "fingerprint": "tywin_lannister|call_banners,raise_levies,send_person,set_tax,set_dues,fund_works,hire_men,send_gift,hold_feast,hold_tourney,wait",
+ "model": "hand-written",
+ "note": "Hand-written in the shape a model answers: Tywin calls his banners, with the words the narrator will use.",
+ "reply": "{\"target\":\"casterly_rock\",\"host\":\"none\",\"leader\":\"none\",\"men\":0,\"gold\":0,\"choice\":\"none\",\"with\":\"ravens to every lord of the West\",\"public_face\":\"to keep the King's peace\",\"secret_aim\":\"to be ready before anyone else is\",\"line\":\"I want every sworn sword of the West at the Rock within the month.\",\"verb\":\"call_banners\"}"
+}

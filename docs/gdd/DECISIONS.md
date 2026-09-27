@@ -362,3 +362,80 @@ wife; "the Neck" is Moat Cailin. The orders list may take up to 40 % of the draw
 make each order taller.
 
 **Why.** These are the names players write; each was a misreading on the suite or a hold-out.
+
+## D-022 · 2026-09-27 · The realm's minds as built (WP B7)
+
+**What.** `public/js/engine/minds/` holds the engine's side — `salience.js` (04 §5.1: rank, what has just happened to
+them, nearness to the player, less if they decided lately), `options.js` (what an actor may do now: candidates for each
+verb a mind may use, every one checked with the verb's own `legal()`, and `wait`), `houseways.js` (the behaviour trees)
+— and `server/minds.js` runs a week of minds: the best six (config `minds`: 3 | 6 | 10, or `"off"`) think with the model
+two at a time, those beyond the budget with something pressing act by their house's ways, and every choice is done
+through its verb on the turn's first day, after the player's orders. A turn longer than a week gives six minds a week
+(at most 18). The choices and who made them are in the turn record (`minds`); a house remembers what it did lately.
+
+**Departures.** 04 §5.2's no-op `hold` is `wait`: "hold" is a prefix of `hold_feast` and a grammar would let a model
+stop short on it (04 §3.1); for the same reason the Wall's verdict is the choice `take_the_black`. The realm's
+office-holders get no mind until they have verbs of their own (schemes and counsel, B9–B10); a commander who is not his
+house's head moves only the host he leads. Minds do not sail fleets (the war at sea is C6), and under canon gravity the
+hosts whose coming is a beat of the story — the free folk, the khalasar, the Golden Company, the Targaryen exiles —
+keep to their camps until the story moves them. Houses that are not lordships (the Watch, the peoples, exiles,
+companies, the free cities) keep no court and levy no taxes. With minds on, the swarm's Hand — the old way the other
+houses were moved, by change operations straight from a model — is not called.
+
+**Why.** 03 §1: models propose, the engine resolves. The Hand wrote changes to the world; a mind can only choose one of
+the registry's lawful options, and the verb does it.
+
+## D-023 · 2026-09-27 · The mind call's schema, and how a refusal is told back (WP B7)
+
+**What.** 04 §5.3's `verb, target, leader, men, with, public_face, secret_aim, line`, plus `host` (which of one's hosts),
+`gold` (a gift's size) and `choice` (the option's own word: a tax level, a verdict, a kind of works) — the options need
+them. The enums hold only what the options name (targets with the names people use for them). The check holds the
+answer to one of the options as written, then asks the verb's `legal()` with the answer's numbers; a refusal is told back
+through the client's one retry, in the verb's own words. 04 §5.4's "remove the refused option" would need the schema
+rebuilt between tries; the model is told why instead. A choice refused when it is done (another lord acted first) is
+decided again by the house's ways on the world as it stands. The mock and the fallback are the house's ways, whose
+choice and reason are also the hint line the model is given (04 §5.5).
+
+## D-024 · 2026-09-27 · House ways: what presses first; houses rest (WP B7)
+
+**What.** The rules are tried in this order: the house's own answers to what presses (a Lannister answers a seizure by
+calling his banners; Dorne waits), then everyone's (relieve a siege, strike at a host in reach on good odds, raise men
+when an enemy is at the gates, answer a taken kinsman, answer the liege's call if dutiful, raise a host at war, carry
+the war to the nearest enemy holding, judge a prisoner by one's nature), then the house's calm ways, its lord's nature
+(ambitious, martial, cautious, dutiful), and everyone's calm (granaries before winter, send the levies home in peace,
+taxes when poor, dues when late, a gift to a cold liege, a feast or works when rich, an envoy to a friend's court).
+Every house rests between the same acts (a tourney ~300 days, a feast 90, taxes and gifts 120…). Every great house has
+ways of its own, and so do Frey, Bolton, Manderly, Dragonstone, the Watch and the free folk.
+
+**Why.** The mind suite (D-026) found the first trees letting a peacetime feast outrank a son's capture, lords making
+war on their own liege, and vassals with no way to answer a summons.
+
+## D-025 · 2026-09-27 · Which verbs minds may use now, and `answer_call` (WP B7)
+
+**What.** Schemes (`plant_spy`, `gather_secrets`) and `set_secrecy` inform only the player until each house keeps its own
+knowledge (B9); `send_letter` writes into the player's post until letters are things of their own (B10): minds do not
+use them yet (`mind: { allowed: false, until }`). New: `answer_call` — a sworn lord answers his liege's summons at once
+(his levies raised as a host serving the liege, riding for the muster — or the liege's seat when the call named none),
+rather than in his own time and temper; its code is the banners' own answer (`raiseForLiege` in `shared/vassals.js`).
+The player answers a summons at court, as before.
+
+## D-026 · 2026-09-27 · Liveliness, what the player hears, and the mind suite (WP B7)
+
+**What.** Q4 (09 §9): if fewer than three lords acted in a week, or none far from the player's country, the next in
+salience act by their ways taken at their word (`eager`: the rules without their chances). Until B9 the player hears of
+a mind's doings as the realm would: its public facts, its own house's, and what happens in its own country (`heard`);
+those become cards of the chronicle. The mind suite (`bench/suites/mind`, 04 §13) is 123 situations in nine kinds — a
+kinsman taken, a castle besieged, an enemy at the gates, a host idle in war, peace and full coffers, winter coming, an
+empty treasury, a prisoner in the cells, the liege's call — each with the responses in character, written from the
+books and the characters' natures. The house ways first scored 79 %; after the fixes of D-024 (and the `called`
+situations taught the new verb), 98 %. The model's gate is 85 % (the owner's run); CI holds the ways to ≥ 90 %, every
+kind ≥ 75 %, every choice lawful.
+
+## D-027 · 2026-09-27 · Engine fixes the minds found (WP B7)
+
+**What.** (1) A host that fought during a turn kept its banners' shares at their numbers before the battle (invariant 4
+broke in the soak): `settle` now rebalances shares first. (2) A host pursuing a party that was destroyed or folded into
+another kept following it until the next march: `settle` stops it. (3) The AI client canonicalised a reply before
+validating it, so an alias whose id the enum had dropped for a clearer name (`storms_end` → `baratheon_se`) failed the
+schema: replies are validated as written, then their names become ids. (4) "House Manderly begins Build warships at
+White Harbor at White Harbor" now reads "House Manderly begins works at White Harbor: build warships".

@@ -1,0 +1,10 @@
+{
+ "kind": "mind",
+ "note": "An option made unlawful by its numbers: a gift larger than the treasury is refused with the verb's own reason.",
+ "args": {
+  "actor": "walder_frey"
+ },
+ "reply": "{\"target\":\"hoster_tully\",\"host\":\"none\",\"leader\":\"none\",\"men\":0,\"gold\":9000000,\"choice\":\"none\",\"with\":\"\",\"public_face\":\"\",\"secret_aim\":\"\",\"line\":\"\",\"verb\":\"send_gift\"}",
+ "expect": "refuse",
+ "problem": "you cannot send gift so"
+}

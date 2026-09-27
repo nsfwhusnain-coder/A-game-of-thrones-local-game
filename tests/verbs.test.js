@@ -44,6 +44,7 @@ test('every card action of earlier versions and every kind of written order is a
 // params; `refuse` returns params (or changes the world) so that the verb must be refused, with the refusal's code.
 const CASES = {
   call_banners: { ok: () => ({ vassals: 'all', at: 'stark', ownLevies: 1000 }), no: () => [{ vassals: ['no_such_house'], at: 'stark' }, 'no_vassals'] },
+  answer_call: { house: 'umber', player: 'stark', ok: (s) => { applyChanges(s, [{ op: 'obligation', house: 'umber', levies: 'called', muster: 'stark' }]); return {}; }, no: () => [{}, 'not_called'] },
   raise_levies: { ok: () => ({ at: 'stark', men: 2000 }), no: () => [{ at: 'lannister', men: 2000 }, 'not_yours'] },
   march_host: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000), to: 'moat_cailin' }), no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 3000), to: 'the moon' }, 'no_place'] },
   attack_host: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000), to: 'party:' + host(s, 'foe', 'lannister', 'tully', 5000) }), no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 3000), to: 'party:' + host(s, 'h2', 'stark', 'stark', 500) }, 'own'] },
@@ -78,7 +79,7 @@ test('every verb has a case here', () => assert.deepEqual(Object.keys(VERBS).fil
 
 for (const [id, c] of Object.entries(CASES)) {
   test(`${id}: done, it tells a receipt and records its facts; refused, it says why and changes nothing`, () => {
-    const s = fresh(c.house); const house = c.house || 'stark';
+    const s = fresh(c.player || c.house); const house = c.house || 'stark';
     withRng(s, () => {
       const params = c.ok(s); s.facts = [];
       const r = perform(s, id, { house, params });
@@ -89,7 +90,7 @@ for (const [id, c] of Object.entries(CASES)) {
       if (id === 'answer_matter') assert.ok(s.facts.some((f) => f.kind === 'judgement'));
       assert.ok(s.facts.every((f) => f.cause?.type === 'order'), 'what the lord does is caused by his order');
     });
-    const t = fresh(c.house);
+    const t = fresh(c.player || c.house);
     withRng(t, () => {
       const out = c.no(t); const [params, code] = out;
       const before = JSON.stringify(t);

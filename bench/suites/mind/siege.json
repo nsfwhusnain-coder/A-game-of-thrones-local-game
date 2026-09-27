@@ -1,0 +1,567 @@
+{
+ "about": "siege: 12 situations",
+ "items": [
+  {
+   "id": "siege-tywin",
+   "actor": "tywin_lannister",
+   "player": "stark",
+   "situation": "At war with House Tully: its host is before the walls of Casterly Rock; the Lannister host of 6,000 stands at Lannisport.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of lannister and tully",
+     "attackers": [
+      "tully"
+     ],
+     "defenders": [
+      "lannister"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "tully",
+     "name": "The Host of House Tully",
+     "at": "lannister",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "lannister",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "lannister_bench_host",
+     "owner": "lannister",
+     "name": "The Host of House Lannister",
+     "at": "lannisport",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-hoster",
+   "actor": "hoster_tully",
+   "player": "stark",
+   "situation": "At war with House Lannister: its host is before the walls of Riverrun; the Tully host of 6,000 stands at Seagard.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of tully and lannister",
+     "attackers": [
+      "lannister"
+     ],
+     "defenders": [
+      "tully"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "lannister",
+     "name": "The Host of House Lannister",
+     "at": "tully",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "tully",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "tully_bench_host",
+     "owner": "tully",
+     "name": "The Host of House Tully",
+     "at": "mallister",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-balon",
+   "actor": "balon_greyjoy",
+   "player": "stark",
+   "situation": "At war with House Manderly: its host is before the walls of Pyke; the Greyjoy host of 6,000 stands at Ten Towers.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of greyjoy and manderly",
+     "attackers": [
+      "manderly"
+     ],
+     "defenders": [
+      "greyjoy"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "manderly",
+     "name": "The Host of House Manderly",
+     "at": "greyjoy",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "greyjoy",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "greyjoy_bench_host",
+     "owner": "greyjoy",
+     "name": "The Host of House Greyjoy",
+     "at": "harlaw",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-mace",
+   "actor": "mace_tyrell",
+   "player": "stark",
+   "situation": "At war with House Nymeros Martell: its host is before the walls of Highgarden; the Tyrell host of 6,000 stands at Goldengrove.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of tyrell and martell",
+     "attackers": [
+      "martell"
+     ],
+     "defenders": [
+      "tyrell"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "martell",
+     "name": "The Host of House Nymeros Martell",
+     "at": "tyrell",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "tyrell",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "tyrell_bench_host",
+     "owner": "tyrell",
+     "name": "The Host of House Tyrell",
+     "at": "rowan",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-doran",
+   "actor": "doran_martell",
+   "player": "stark",
+   "situation": "At war with House Tyrell: its host is before the walls of Sunspear; the Nymeros Martell host of 6,000 stands at Yronwood.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of martell and tyrell",
+     "attackers": [
+      "tyrell"
+     ],
+     "defenders": [
+      "martell"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "tyrell",
+     "name": "The Host of House Tyrell",
+     "at": "martell",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "martell",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "martell_bench_host",
+     "owner": "martell",
+     "name": "The Host of House Nymeros Martell",
+     "at": "yronwood",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies",
+    "wait"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-renly",
+   "actor": "renly_baratheon",
+   "player": "stark",
+   "situation": "At war with House Baratheon of Dragonstone: its host is before the walls of Storm's End; the Baratheon of Storm's End host of 6,000 stands at Evenfall Hall.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of baratheon_se and baratheon_ds",
+     "attackers": [
+      "baratheon_ds"
+     ],
+     "defenders": [
+      "baratheon_se"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "baratheon_ds",
+     "name": "The Host of House Baratheon of Dragonstone",
+     "at": "baratheon_se",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "baratheon_se",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "baratheon_se_bench_host",
+     "owner": "baratheon_se",
+     "name": "The Host of House Baratheon of Storm's End",
+     "at": "tarth",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-robert",
+   "actor": "robert_baratheon",
+   "player": "stark",
+   "situation": "At war with House Baratheon of Dragonstone: its host is before the walls of King's Landing; the Baratheon of King's Landing host of 6,000 stands at Rosby.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of baratheon and baratheon_ds",
+     "attackers": [
+      "baratheon_ds"
+     ],
+     "defenders": [
+      "baratheon"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "baratheon_ds",
+     "name": "The Host of House Baratheon of Dragonstone",
+     "at": "baratheon",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "baratheon",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "baratheon_bench_host",
+     "owner": "baratheon",
+     "name": "The Host of House Baratheon of King's Landing",
+     "at": "rosby",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-walder",
+   "actor": "walder_frey",
+   "player": "stark",
+   "situation": "At war with House Lannister: its host is before the walls of The Twins; the Frey host of 6,000 stands at Seagard.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of frey and lannister",
+     "attackers": [
+      "lannister"
+     ],
+     "defenders": [
+      "frey"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "lannister",
+     "name": "The Host of House Lannister",
+     "at": "frey",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "frey",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "frey_bench_host",
+     "owner": "frey",
+     "name": "The Host of House Frey",
+     "at": "mallister",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "raise_levies",
+    "wait"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-wyman",
+   "actor": "wyman_manderly",
+   "player": "stark",
+   "situation": "At war with House Greyjoy: its host is before the walls of White Harbor; the Manderly host of 6,000 stands at Castle Cerwyn.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of manderly and greyjoy",
+     "attackers": [
+      "greyjoy"
+     ],
+     "defenders": [
+      "manderly"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "greyjoy",
+     "name": "The Host of House Greyjoy",
+     "at": "manderly",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "manderly",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "manderly_bench_host",
+     "owner": "manderly",
+     "name": "The Host of House Manderly",
+     "at": "cerwyn",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-jason",
+   "actor": "jason_mallister",
+   "player": "stark",
+   "situation": "At war with House Greyjoy: its host is before the walls of Seagard; the Mallister host of 6,000 stands at Riverrun.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of mallister and greyjoy",
+     "attackers": [
+      "greyjoy"
+     ],
+     "defenders": [
+      "mallister"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "greyjoy",
+     "name": "The Host of House Greyjoy",
+     "at": "mallister",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "mallister",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "mallister_bench_host",
+     "owner": "mallister",
+     "name": "The Host of House Mallister",
+     "at": "tully",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-paxter",
+   "actor": "paxter_redwyne",
+   "player": "stark",
+   "situation": "At war with House Greyjoy: its host is before the walls of The Arbor; the Redwyne host of 6,000 stands at Highgarden.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of redwyne and greyjoy",
+     "attackers": [
+      "greyjoy"
+     ],
+     "defenders": [
+      "redwyne"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "greyjoy",
+     "name": "The Host of House Greyjoy",
+     "at": "redwyne",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "redwyne",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "redwyne_bench_host",
+     "owner": "redwyne",
+     "name": "The Host of House Redwyne",
+     "at": "tyrell",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  },
+  {
+   "id": "siege-eddard",
+   "actor": "eddard_stark",
+   "player": "lannister",
+   "situation": "At war with House Lannister: its host is before the walls of Winterfell; the Stark host of 6,000 stands at Moat Cailin.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of stark and lannister",
+     "attackers": [
+      "lannister"
+     ],
+     "defenders": [
+      "stark"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "besiegers",
+     "owner": "lannister",
+     "name": "The Host of House Lannister",
+     "at": "stark",
+     "men": 5000
+    },
+    {
+     "op": "holding",
+     "id": "stark",
+     "status": "besieged"
+    },
+    {
+     "op": "army_create",
+     "id": "stark_bench_host",
+     "owner": "stark",
+     "name": "The Host of House Stark",
+     "at": "moat_cailin",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "A lord relieves his own castle, or calls up men to."
+  }
+ ]
+}

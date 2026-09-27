@@ -32,6 +32,10 @@ from the character's nature takes its place (a captive's goal becomes *escape*; 
 
 ### 2.2 Behaviour trees (the no-model fallback, and the mock)
 
+> *Built in WP B7* (`engine/minds/houseways.js`; D-024): what presses first (the house's own answer, then everyone's),
+> then the calm ways of the house, the lord's nature and everyone; every great house and Frey, Bolton, Manderly,
+> Dragonstone, the Watch and the free folk have ways of their own. The full goal sets of §2.1 are WP D6.
+
 `engine/world/houseways.js` turns `data/voices.js HOUSE_WAYS` into executable trees: an ordered list of `(condition →
 verb)` rules per house and per archetype, e.g. for House Lannister:
 
@@ -204,6 +208,9 @@ the unknown. Server-side filtering ([03](03-architecture.md) §10): the client n
 - The ones on the player's lands can be pinned if they carry a Matter (a poaching case → a judgement).
 
 ## 9. Liveliness guarantees (Q4)
+
+> *Points 1, 2 and 4 hold from WP B7* (`server/minds.js`; D-026): three lords act each week, one far from the player; the
+> movements are the minds' own and the retinues'; no card says nothing happened. Point 3 (hooks) is the Director's (B12).
 
 Per 7-day segment, the engine ensures:
 

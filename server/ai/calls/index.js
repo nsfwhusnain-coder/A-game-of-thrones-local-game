@@ -2,5 +2,6 @@
 // contract test (tests/ai-contract.test.js) runs over every entry, so a new call is covered the moment it is added.
 import probe from './probe.js';
 import interpret from './interpret.js';
+import mind from './mind.js';
 
-export const CALLS = { probe, interpret };
+export const CALLS = { probe, interpret, mind };

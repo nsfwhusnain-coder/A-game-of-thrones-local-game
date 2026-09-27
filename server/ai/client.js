@@ -32,8 +32,10 @@ export function readReply(text, call, ctx, schema) {
   try { value = typeof text === 'object' ? text : JSON.parse(text); } catch {
     try { value = extractJson(text); } catch (e) { return { value: null, problems: [`unreadable: ${e.message}`] }; }
   }
-  if (ctx.canons) canonicalize(value, schema, ctx.canons);
+  // the reply is held to the schema the model was given (its enums hold the names it may write), then its names become
+  // ids for the checks and the game: an id the enum left out for a clearer name ("storms_end" for baratheon_se) is fine
   const problems = validate(value, schema);
+  if (!problems.length && ctx.canons) canonicalize(value, schema, ctx.canons);
   if (!problems.length && call.check) problems.push(...call.check(value, ctx));
   return { value, problems };
 }
@@ -51,7 +53,7 @@ export async function runCall(kind, state, args = {}, opts = {}) {
   const fall = (problems) => {
     let value; try { value = call.fallback(ctx, problems); } catch (e) { value = null; problems = [...problems, `fallback failed: ${e.message}`]; }
     record.via = 'fallback'; record.problems = problems; record.ms = Date.now() - t0;
-    return { value, via: 'fallback', problems, ms: record.ms, promptTokens: record.promptTokens || 0, model: null, record };
+    return withCtx({ value, via: 'fallback', problems, ms: record.ms, promptTokens: record.promptTokens || 0, model: null, record }, ctx);
   };
   try {
     ctx = call.context(state, args); schema = call.schema(ctx); messages = call.prompt(ctx);
@@ -69,7 +71,7 @@ export async function runCall(kind, state, args = {}, opts = {}) {
     if (!read.problems.length) {
       const via = provider === 'mock' ? 'mock' : String(r.model || '').startsWith('replay:') ? 'replay' : r.model === 'mock' ? 'mock' : 'model';
       record.via = via; record.ms = Date.now() - t0;
-      return { value: read.value, via, problems: [], ms: record.ms, promptTokens: record.promptTokens, model: r.model, record };
+      return withCtx({ value: read.value, via, problems: [], ms: record.ms, promptTokens: record.promptTokens, model: r.model, record }, ctx);
     }
     problems = read.problems;
     // one more try on a real model, told plainly what was wrong (04 §5.4); then the fallback
@@ -77,6 +79,10 @@ export async function runCall(kind, state, args = {}, opts = {}) {
   }
   return fall(problems);
 }
+
+// the call's context rides along (not enumerable: it holds the live state, and is never saved or logged) for callers
+// that turn the answer into something of the world's (a mind's answer into its intent)
+function withCtx(result, ctx) { Object.defineProperty(result, 'ctx', { value: ctx, enumerable: false }); return result; }
 
 /** A call's token budget (04 §2.5). */
 export const budgetOf = (kind) => CALL_DEFAULTS[kind]?.budget || { in: 4000, out: 600 };

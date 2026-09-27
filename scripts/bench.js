@@ -18,6 +18,11 @@
 //   npm run bench -- --suite interpret --holdout          # the orders the pre-parser was never tuned on
 //   npm run bench -- --suite interpret --reader model --record tests/fixtures/model/interpret
 //                                                         # keep the model's replies as replay fixtures for CI
+//
+// The mind suite (04 §13): 123 situations from the books, each with the responses in character
+//   npm run bench -- --suite mind                         # every situation put to the model's mind (the 85 % gate)
+//   npm run bench -- --suite mind --reader tree           # the house ways alone (no model)
+//   npm run bench -- --suite mind --record tests/fixtures/model/mind
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -27,6 +32,33 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, all) => (x.startsWith('--') ? [...a, [x.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true]] : a), []));
 
 if (args.suite === 'interpret') { await interpretBench(); process.exit(0); }
+if (args.suite === 'mind') { await mindBench(); process.exit(0); }
+async function mindBench() {
+  const { runMindSuite, mindReport } = await import('../bench/lib/mind.js');
+  const { runCall } = await import('../server/ai/client.js');
+  const { intentOf, default: call } = await import('../server/ai/calls/mind.js');
+  const { treeChoice } = await import('../public/js/engine/minds/houseways.js');
+  const { loadConfig } = await import('../server/llm.js');
+  const cfg = { ...loadConfig(), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.provider ? { provider: args.provider } : {}), ...(args.mock ? { provider: 'mock' } : {}) };
+  const reader = args.reader === 'tree' ? 'tree' : 'model';
+  const recordTo = typeof args.record === 'string' ? path.resolve(args.record) : null; let recorded = 0;
+  const read = reader === 'tree' ? (s, actor) => treeChoice(s, actor)
+    : async (s, actor) => {
+      const r = await runCall('mind', s, { actor }, { cfg, provider: cfg.provider, log: (kind, messages, reply) => {
+        if (!recordTo) return; fs.mkdirSync(recordTo, { recursive: true });
+        const fp = call.fingerprint(call.context(s, { actor }));
+        fs.writeFileSync(path.join(recordTo, `${actor}-${recorded++}.json`), JSON.stringify({ kind: 'mind', fingerprint: fp, model: cfg.model || 'unknown', note: `recorded by the bench, ${new Date().toISOString().slice(0, 10)}`, reply }, null, 1) + '\n');
+      } });
+      const it = r.value && intentOf(r.value, r.ctx);
+      return it ? { ...it, via: r.via } : { verb: 'wait', params: {}, via: r.via };
+    };
+  const who = reader === 'tree' ? 'the house ways' : `every situation to the model's mind — ${cfg.provider === 'mock' ? 'mock (the house ways through the call)' : cfg.model || '(server default)'}`;
+  console.log(`Mind suite — ${who}`);
+  const r = await runMindSuite(read, { only: typeof args.only === 'string' ? args.only.split(',') : null });
+  const text = mindReport(r, { reader: who }) + `\n_${new Date().toISOString().slice(0, 16)} · provider ${cfg.provider}${recordTo ? ` · ${recorded} replies recorded to ${path.relative(ROOT, recordTo)}` : ''}_\n`;
+  const out = path.join(ROOT, 'bench', `mind-${reader === 'tree' ? 'tree' : slugOf(cfg.provider === 'mock' ? 'mock' : cfg.model || 'model')}-${new Date().toISOString().slice(0, 10)}.md`);
+  fs.writeFileSync(out, text); console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`);
+}
 async function interpretBench() {
   const { runSuite, report, loadSuite } = await import('../bench/lib/interpret.js');
   const { interpretOrder } = await import('../server/orders/interpret.js');

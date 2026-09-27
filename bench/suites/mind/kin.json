@@ -1,0 +1,327 @@
+{
+ "about": "kin: 12 situations",
+ "items": [
+  {
+   "id": "kin-tywin",
+   "actor": "tywin_lannister",
+   "player": "stark",
+   "situation": "Tyrion Lannister is held a captive at The Eyrie, by House Arryn.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "tyrion_lannister",
+     "status": "imprisoned",
+     "loc": "arryn"
+    },
+    {
+     "op": "relation",
+     "a": "lannister",
+     "b": "arryn",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies",
+    "declare_war",
+    "march_host",
+    "attack_host"
+   ],
+   "note": "The bench of 2026-09-27 saw a model send a letter here: Tywin answers the seizure of his son with force (A Game of Thrones: Gregor burns the Riverlands)."
+  },
+  {
+   "id": "kin-hoster",
+   "actor": "hoster_tully",
+   "player": "stark",
+   "situation": "Edmure Tully is held a captive at Casterly Rock, by House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "edmure_tully",
+     "status": "imprisoned",
+     "loc": "lannister"
+    },
+    {
+     "op": "relation",
+     "a": "tully",
+     "b": "lannister",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies",
+    "declare_war",
+    "march_host"
+   ],
+   "note": "Family first: the Tullys hold their own."
+  },
+  {
+   "id": "kin-balon",
+   "actor": "balon_greyjoy",
+   "player": "stark",
+   "situation": "Asha Greyjoy is held a captive at Deepwood Motte, by House Glover.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "asha_greyjoy",
+     "status": "imprisoned",
+     "loc": "glover"
+    },
+    {
+     "op": "relation",
+     "a": "greyjoy",
+     "b": "glover",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies",
+    "declare_war",
+    "march_host"
+   ],
+   "note": "The iron price: Balon does not beg for his daughter."
+  },
+  {
+   "id": "kin-mace",
+   "actor": "mace_tyrell",
+   "player": "stark",
+   "situation": "Ser Loras Tyrell is held a captive at Casterly Rock, by House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "loras_tyrell",
+     "status": "imprisoned",
+     "loc": "lannister"
+    },
+    {
+     "op": "relation",
+     "a": "tyrell",
+     "b": "lannister",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies",
+    "declare_war",
+    "march_host",
+    "send_gift"
+   ],
+   "note": "Mace musters the Reach; he may also buy his son back."
+  },
+  {
+   "id": "kin-doran",
+   "actor": "doran_martell",
+   "player": "stark",
+   "situation": "Oberyn Martell is held a captive at King's Landing, by House Baratheon of King's Landing.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "oberyn_martell",
+     "status": "imprisoned",
+     "loc": "baratheon"
+    },
+    {
+     "op": "relation",
+     "a": "martell",
+     "b": "baratheon",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "wait",
+    "raise_levies",
+    "send_gift",
+    "send_person"
+   ],
+   "note": "Doran is patient: he gathers strength or bargains, and does not rush to war."
+  },
+  {
+   "id": "kin-walder",
+   "actor": "walder_frey",
+   "player": "stark",
+   "situation": "Ser Stevron Frey is held a captive at Riverrun, by House Tully.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "stevron_frey",
+     "status": "imprisoned",
+     "loc": "tully"
+    },
+    {
+     "op": "relation",
+     "a": "frey",
+     "b": "tully",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "wait",
+    "raise_levies",
+    "send_gift",
+    "set_tax"
+   ],
+   "note": "Walder has sons to spare and weighs the price."
+  },
+  {
+   "id": "kin-greatjon",
+   "actor": "greatjon_umber",
+   "player": "stark",
+   "situation": "Jon \"Smalljon\" Umber is held a captive at The Twins, by House Frey.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "smalljon_umber",
+     "status": "imprisoned",
+     "loc": "frey"
+    },
+    {
+     "op": "relation",
+     "a": "umber",
+     "b": "frey",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "raise_levies",
+    "declare_war",
+    "march_host"
+   ],
+   "note": "The Greatjon roars and marches."
+  },
+  {
+   "id": "kin-rickard",
+   "actor": "rickard_karstark",
+   "player": "stark",
+   "situation": "Harrion Karstark is held a captive at Casterly Rock, by House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "harrion_karstark",
+     "status": "imprisoned",
+     "loc": "lannister"
+    },
+    {
+     "op": "relation",
+     "a": "karstark",
+     "b": "lannister",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "raise_levies",
+    "declare_war",
+    "march_host"
+   ],
+   "note": "Rickard Karstark wants blood for his sons."
+  },
+  {
+   "id": "kin-stannis",
+   "actor": "stannis_baratheon",
+   "player": "stark",
+   "situation": "Ser Davos Seaworth is held a captive at King's Landing, by House Baratheon of King's Landing.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "davos_seaworth",
+     "status": "imprisoned",
+     "loc": "baratheon"
+    },
+    {
+     "op": "relation",
+     "a": "baratheon_ds",
+     "b": "baratheon",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "wait",
+    "raise_levies",
+    "call_banners",
+    "declare_war"
+   ],
+   "note": "Stannis would not trade the law for a smuggler — but Davos is his man."
+  },
+  {
+   "id": "kin-randyll",
+   "actor": "randyll_tarly",
+   "player": "stark",
+   "situation": "Dickon Tarly is held a captive at Dragonstone, by House Baratheon of Dragonstone.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "dickon_tarly",
+     "status": "imprisoned",
+     "loc": "baratheon_ds"
+    },
+    {
+     "op": "relation",
+     "a": "tarly",
+     "b": "baratheon_ds",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "raise_levies",
+    "declare_war",
+    "march_host"
+   ],
+   "note": "Randyll Tarly strikes hard and fast."
+  },
+  {
+   "id": "kin-eddard",
+   "actor": "eddard_stark",
+   "player": "lannister",
+   "situation": "Sansa Stark is held a captive at Casterly Rock, by House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "sansa_stark",
+     "status": "imprisoned",
+     "loc": "lannister"
+    },
+    {
+     "op": "relation",
+     "a": "stark",
+     "b": "lannister",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies",
+    "declare_war",
+    "send_person"
+   ],
+   "note": "The North remembers: Ned calls his banners for his daughter."
+  },
+  {
+   "id": "kin-lysa",
+   "actor": "lysa_arryn",
+   "player": "stark",
+   "situation": "Robert Arryn is held a captive at Casterly Rock, by House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "robert_arryn",
+     "status": "imprisoned",
+     "loc": "lannister"
+    },
+    {
+     "op": "relation",
+     "a": "arryn",
+     "b": "lannister",
+     "value": -45
+    }
+   ],
+   "acceptable": [
+    "wait",
+    "raise_levies",
+    "call_banners"
+   ],
+   "note": "Lysa hoards her knights behind the Bloody Gate; she may raise them, never send them."
+  }
+ ]
+}

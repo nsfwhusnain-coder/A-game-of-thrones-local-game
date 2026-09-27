@@ -1,0 +1,317 @@
+{
+ "about": "winter: 12 situations",
+ "items": [
+  {
+   "id": "winter-eddard",
+   "actor": "eddard_stark",
+   "player": "lannister",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "stark",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-roose",
+   "actor": "roose_bolton",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "bolton",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-wyman",
+   "actor": "wyman_manderly",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "manderly",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-greatjon",
+   "actor": "greatjon_umber",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "umber",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-rickard",
+   "actor": "rickard_karstark",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "karstark",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-hoster",
+   "actor": "hoster_tully",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "tully",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-tywin",
+   "actor": "tywin_lannister",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "lannister",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-mace",
+   "actor": "mace_tyrell",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "tyrell",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-lysa",
+   "actor": "lysa_arryn",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "arryn",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-walder",
+   "actor": "walder_frey",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "frey",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-jason",
+   "actor": "jason_mallister",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "mallister",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  },
+  {
+   "id": "winter-yohn",
+   "actor": "yohn_royce",
+   "player": "stark",
+   "situation": "Autumn has come, and the maesters say the winter will be long; the treasury holds 40,000 dragons.",
+   "setup": [
+    {
+     "op": "season",
+     "season": "autumn"
+    },
+    {
+     "op": "figure",
+     "house": "royce",
+     "field": "treasury",
+     "value": 40000
+    }
+   ],
+   "acceptable": [
+    "fund_works",
+    "wait",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A prudent lord fills his granaries; none makes war for it."
+  }
+ ]
+}

@@ -1132,7 +1132,7 @@ function applyOne(state, ch, ctx) {
       if (twin) throw new Error(`${twin.name} is already under way`);
       const p = { id: slug(ch.id || ch.name || 'project') + '_' + nextId(state, 'w'), house: hid, ...(ch.template ? { template: String(ch.template) } : {}), name: ch.name || 'Works', holding: hold, cost, remaining: cost, perMonth: cost / months, months, monthsLeft: months, effect: ch.effect || {}, status: 'active', started: date };
       state.projects.push(p);
-      note('works_begun', { actors: [lordOf(hid)], houses: [hid], place: hold, data: { project: p.id, name: p.name, cost, months }, text: `House ${state.houses[hid].name} begins ${p.name} at ${placeName(state, hold)}.` });
+      note('works_begun', { actors: [lordOf(hid)], houses: [hid], place: hold, data: { project: p.id, name: p.name, cost, months }, text: `House ${state.houses[hid].name} begins works at ${placeName(state, hold)}: ${String(p.name).replace(` at ${placeName(state, hold)}`, '').replace(/^./, (x) => x.toLowerCase())}.` }); // "…at White Harbor: build warships"
       return { op, text: `House ${state.houses[hid].name} begins: ${p.name} (${fmt(cost)} gd over ${months} moons)` };
     }
     case 'season': {

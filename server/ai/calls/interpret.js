@@ -153,7 +153,8 @@ export default {
     const hostEnum = buildEnum(new Map(hosts.flatMap((a) => [[a.id, a.id], [slug(a.name), a.id], [slug(a.name).replace(/^the_/, ''), a.id]])));
     const places = buildEnum(placeAliases(state));
     const houses = buildEnum(houseAliases(state));
-    const verbs = verbsFor(p);
+    // only what this house may do at all (answering a liege's call is a matter of the court for the player)
+    const verbs = verbsFor(p).filter((v) => !VERBS[v].who || VERBS[v].who(state, { house, verb: v, actor: lord?.id }));
     const sworn = Object.values(state.houses).filter((h) => h.liege === house);
     const prisoners = Object.values(state.characters).filter((c) => c.alive && /imprisoned|captive|hostage/.test(c.status || '') && (resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner === house));
     // the places the order most likely means: those it names, the lord's own, his lords' seats, the great seats

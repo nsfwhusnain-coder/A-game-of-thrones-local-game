@@ -1,0 +1,9 @@
+{
+ "kind": "mind",
+ "note": "Waiting is a choice: most weeks a lord governs or waits.",
+ "args": {
+  "actor": "tywin_lannister"
+ },
+ "reply": "{\"target\":\"none\",\"host\":\"none\",\"leader\":\"none\",\"men\":0,\"gold\":0,\"choice\":\"none\",\"with\":\"\",\"public_face\":\"\",\"secret_aim\":\"\",\"line\":\"Let them come to me.\",\"verb\":\"wait\"}",
+ "expect": "accept"
+}

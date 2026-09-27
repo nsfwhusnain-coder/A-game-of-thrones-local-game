@@ -178,6 +178,11 @@ and an impossible order. Examples use a different house than the player's to avo
 **When:** at the start of each jump segment ([03](03-architecture.md) §6.2). **Goal:** a salient character decides what
 they do next, *in character*, from what *they* know.
 
+> *Implemented in WP B7* — `engine/minds/{salience,options,houseways}.js`, `server/ai/calls/mind.js`, `server/minds.js`;
+> once per turn (six minds a week, on the turn's first day) until the jump of B11 runs them per segment. Departures:
+> DECISIONS D-022–D-026 (`wait` for `hold`; `host`, `gold`, `choice` in the schema; a refusal told back through the
+> client's retry; office-holders wait for verbs of their own).
+
 ### 5.1 Salience (who gets a mind call)
 
 `salientActors(ctx, seg)` scores every living head of house, regent, commander of a host, office-holder, and character

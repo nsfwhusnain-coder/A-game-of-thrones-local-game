@@ -34,6 +34,7 @@ import { emit, fact, asEvent, flush, redate, factById } from '../public/js/engin
 import { VERBS, perform, told, verbOfKind } from '../public/js/engine/actions/registry.js';
 import { carryOutOrders, readOrders, answerOrder, named, orderEvents, advanceMusters, ravenDays } from './orders.js';
 import { interpretOrder } from './orders/interpret.js';
+import { runMinds, knownTo } from './minds.js';
 import { parseOrder } from './orders/parse.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
@@ -264,7 +265,9 @@ async function askJsonInner(id, kind, messages, extra) {
 async function runSwarm(id, state, cfg, ctx) {
   const { span, chronicle, turnReason, engineEvents, dateFrom, applyCtx, applied, rejected } = ctx;
   const spanDays = spanOf(span).days;
-  const agents = agentsFor(cfg.swarm ?? 'full');
+  // with the realm's minds deciding for the other houses, the Hand — the old way they were moved, by change operations
+  // straight from a model — is not called (the non-negotiable: models propose, the engine resolves)
+  const agents = agentsFor(cfg.swarm ?? 'full').filter((a) => a !== 'hand' || !mindsBudget(cfg));
   const build = (agent, brief) => buildJumpPrompt(state, state.orders, span, chronicle, cfg, turnReason, { engineEvents, dateFrom, agent, brief });
 
   // No swarm: the old single question, unchanged.
@@ -321,6 +324,13 @@ async function runSwarm(id, state, cfg, ctx) {
 const AGENT_SOURCE = { hand: 'The doings of the realm', weaver: 'A custom of the realm', whisperer: 'Whispers and letters' };
 
 const consolidating = new Map(); // save id -> promise (memory is compressed in the background)
+/** Wait for a save's background work (the chronicle's consolidation, a receipt being read) to finish writing it. */
+export async function settled(id) {
+  await consolidating.get(id)?.catch(() => {});
+  await previewing.get(id)?.catch(() => {});
+}
+/** How many lords get a mind each week (config `minds`: 3 | 6 | 10, or "off" for the old Hand; 04 §5.1). */
+export const mindsBudget = (cfg) => (cfg.minds === 'off' || cfg.minds === false ? 0 : [3, 6, 10].includes(Number(cfg.minds)) ? Number(cfg.minds) : 6);
 
 // The receipt for written orders: read and tried on a copy of the world as soon as they are written (orders.js).
 // Each order is read by the rules, and by the model only when the rules cannot (orders/interpret.js); every model call
@@ -383,6 +393,13 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   let turnReason = null;
   if (!span || span === 'auto' || span === 'turn') { const n = nextTurnLength(state); span = `${n.days}d`; turnReason = n.reason; }
   const spanInfo = spanOf(span);
+  // ── THE REALM'S MINDS: the lords who matter this week decide one thing each, on its first day, through the same
+  // verbs as the player's orders (04 §5; server/minds.js). A turn longer than a week gives them a mind per week.
+  const minds = mindsBudget(cfg) ? await runMinds(state, {
+    budget: Math.min(18, mindsBudget(cfg) * Math.ceil(spanInfo.days / 7)), provider: cfg.provider, cfg,
+    log: (kind, messages, response) => logLLM(id, kind, messages, response),
+    known: ((recent) => (x) => knownTo(state, recent, x.house))(readFacts(id, { from: state.meta.turn - 1 })),
+  }).catch((e) => { console.warn('minds:', e.message); return { cards: [], record: [] }; }) : { cards: [], record: [] };
   state.meta.clock.to = day0 + spanInfo.days;
 
   const dateFrom = dateStr(state.meta.date);
@@ -443,7 +460,7 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   // lords on the road with their households: feasts, weddings, their liege's hall, the market towns
   vt.events.push(...retinueTick(state, spanInfo.days).events);
   vt.events.push(...deliverReplies(state));
-  const engineEvents = dayEngineEvents(state, [...deathEvents, ...foldAnswers(vt.events)], spanInfo.days);
+  const engineEvents = dayEngineEvents(state, [...deathEvents, ...minds.cards, ...foldAnswers(vt.events)], spanInfo.days);
   for (const a of Object.values(state.parties)) { delete a.bornDay; delete a.landed; }
   // ── THE STORY'S PART: the model writes the days around the engine's facts, and the rest of the realm's doings
   const applyCtx = { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days };
@@ -516,7 +533,7 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   // one date for every view (HUD, feed, reel, pins): day d of the period is the d-th day after it began — and the fact
   // behind each card falls on the same day as the card
   events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; e.date = dateStr(addDays(state.meta.date, e.day - spanInfo.days)); redate(state, e); });
-  const record = { carried, turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, ...(turnReason ? { until: turnReason } : {}), orders: state.orders, summary: stripForeignScript(String(obj.summary || '')), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
+  const record = { carried, ...(minds.record.length ? { minds: minds.record } : {}), turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, ...(turnReason ? { until: turnReason } : {}), orders: state.orders, summary: stripForeignScript(String(obj.summary || '')), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
   state.history.push(record);
   // the game reads back only the recent turns (and those the chronicle has not yet taken in); every turn is in turns/
   state.history = state.history.filter((t) => t.turn > state.meta.turn - KEEP_HISTORY || t.turn > (state.consolidatedThrough ?? 0));
