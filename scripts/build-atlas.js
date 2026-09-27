@@ -4,8 +4,9 @@
 // Run: node scripts/build-atlas.js
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'data-src/got-inspired-map');
 const load = (f) => JSON.parse(fs.readFileSync(path.join(SRC, f), 'utf8')).features;
 

@@ -30,6 +30,11 @@ import { AGENDAS } from '../public/data/agendas.js';
 import { whereabouts as whereNow } from '../public/js/shared/roads.js';
 import { ordersBlock } from './orders.js';
 
+// For the swarm: every agent's charge (at the end of the message) gives its own reply shape; the system prompt must not
+// contradict it, or the model writes the whole turn every time. Identical for every agent, so the prefix is still cached.
+const AGENT_FORMAT = `REPLY FORMAT — every message ends with your own charge (the Maester, the Hand, the Weaver, the Whisperer or the Chronicler) and the exact JSON shape that charge wants. Reply in THAT shape only: never the whole turn, never fields the charge does not ask for. One JSON object, nothing else.
+The player's own people and hosts move only by the player's orders; the engine tells when they arrive. Use only ids that exist in the tables. Never change the player's own allegiance or taxes.`;
+
 const CHANGE_SCHEMA = `CHANGE OPERATIONS (use exact ids from the tables; invent new snake_case ids only for new armies/characters):
 - {"op":"figure","house":ID,"field":"treasury|income|debt|levies|menAtArms|guard|ships|food","value":N or "delta":±N,"source":"who reported it"}
     treasury/debt/income in gold dragons; levies = men that could still be called; food = months of stores.
@@ -448,7 +453,7 @@ export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg, until 
     RULES,
     CHANGE_SCHEMA,
     JSON_RULES,
-    `OUTPUT FORMAT — reply with ONE JSON object and nothing else:
+    agent ? AGENT_FORMAT : `OUTPUT FORMAT — reply with ONE JSON object and nothing else:
 {${cfg.thinking === 'off' ? `
   "plan": ["up to 6 very short lines, decided before writing: what each house that matters does this period, and how the player's orders turn out"],` : ''}
   "summary": "2-4 paragraph narrative of this period focused on what the player would know or notice",

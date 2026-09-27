@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import https from 'node:https';
+import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 
 // Plain http(s) request: Node's fetch() aborts responses whose headers take >5 minutes,
 // which kills long generations on slow local models. This honours our own timeout instead.
@@ -53,7 +54,7 @@ function httpStream(url, body, headers, timeoutMs, onEvent) {
   });
 }
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG_PATH = path.join(ROOT, 'config.json');
 
 export const DEFAULT_CONFIG = {
@@ -68,7 +69,7 @@ export const DEFAULT_CONFIG = {
   timeoutSec: 1800,
   consolidateEvery: 5,                // consolidate turn history into the chronicle every N turns (Pax Historia style)
   keepRecentTurns: 4,                 // how many recent turns stay verbatim in the prompt
-  swarm: 'full',                      // 'full' = the five-agent council (Maester, Hand, Weaver, Whisperer, Bard); 'lean' = Hand + Bard only (faster); 'off' = one monolithic prompt, as it was
+  swarm: 'lean',                      // 'lean' = the Hand moves the realm, the Bard tells it (default: two calls a turn); 'full' = the five-agent council (Maester, Hand, Weaver, Whisperer, Bard; slow — ~5 calls a turn); 'off' = one monolithic prompt
   promptDetail: 'full',               // 'full' = every house & character each turn; 'lean' = only what's relevant (much faster on laptops)
   extraBody: {},                      // merged into the request body (e.g. {"top_p":0.9,"min_p":0.05})
   stream: true,                       // stream tokens so the game can show progress (thinking / writing)

@@ -21,7 +21,7 @@ function posAfter(state, a, d) {
 /** The next moment worth stopping for: { days, reason }. */
 export function nextTurnLength(state) {
   const p = state.meta.player; const today = dayNumber(state.meta.date); const cands = [];
-  const add = (days, reason) => { if (days >= 1 && days <= TURN_MAX) cands.push({ days: Math.round(days), reason }); };
+  const add = (days, reason, secret = false) => { if (days >= 1 && days <= TURN_MAX) cands.push({ days: Math.round(days), reason, secret }); };
   // the player's hosts and companies reach where they are going
   for (const a of Object.values(state.armies)) {
     if (!a.march || !commandable(state, a) || (a.serving && a.owner !== p && !/following/.test(a.status || ''))) continue;
@@ -65,7 +65,8 @@ export function nextTurnLength(state) {
   for (const t of THREADS) {
     const st = t.stages[state.plots?.stages?.[t.id] || 0]; if (!st || st.at <= month) continue;
     const y = Math.floor(st.at / 12), m = (st.at % 12) + 1;
-    add(dayNumber({ year: y, month: m, day: 1 }) - today, t.name);
+    // the turn may stop for it, but the player is never told what is coming: canon is a secret the world keeps
+    add(dayNumber({ year: y, month: m, day: 1 }) - today, 'word from across the realm', true);
   }
   // works finished
   for (const w of state.projects || []) if (w.house === p && w.status === 'active') add(Math.ceil((w.monthsLeft || 0) * 30), `${w.name} is finished`);
@@ -75,6 +76,6 @@ export function nextTurnLength(state) {
   // a moon-long turn only while the lord's own hosts or riders are on the road; otherwise the realm is looked at again soon
   const onTheRoad = Object.values(state.armies).some((a) => a.march && commandable(state, a) && !a.serving) || Object.values(state.characters).some((c) => c.alive && c.house === p && c.travel);
   const cap = onTheRoad ? TURN_MAX : TURN_QUIET + 3;
-  if (first.days > cap) return { days: TURN_QUIET, reason: `a quiet week (next: ${first.reason}, in ${first.days} days)` };
+  if (first.days > cap) { const known = cands.find((c) => !c.secret); return { days: TURN_QUIET, reason: known ? `a quiet week (next: ${known.reason}, in ${known.days} days)` : 'a quiet week' }; }
   return { days: Math.max(TURN_MIN, first.days), reason: first.reason };
 }

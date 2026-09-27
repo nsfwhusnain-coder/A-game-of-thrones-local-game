@@ -26,6 +26,21 @@ These patch the *existing* architecture; they are cheap and their tests carry ov
 | A10 | Pronouns from `sex`; nature tags from explicit scales for the 50 characters of [08](08-characters-politics.md) §2.3 | B-21, B-22 | S | `pronouns`, `natures` |
 | A11 | Canon dates reordered per [10](10-narrative-events.md) §4 in `plots.js` | B-19 | S | `canon-order` (old engine) |
 
+**Status of Phase A (2026-09-27, commit after `16dd483`, done and verified on the owner's PC with the live model):**
+A1 ✅ · A2 ✅ (103 tests green on Windows; `.github/workflows/ci.yml` added — confirm the first Actions run is green) ·
+A3 ✅ partial (the Bard gets only applied receipts; the shared system prompt no longer demands a full turn from agents;
+default `swarm: 'lean'`; plus an interim check that drops story events claiming arrivals the engine never recorded or
+retelling the engine's own news, and weekly folding of "answers the call" cards) · A4 ✅ · A5 ✅ (`obligations.join`;
+`tests/muster.test.js`) · A6 ✅ · A7 ✅ (arrival fires on arrival; `canonLock` on the progress) · A8 ⚠ partial (natives
+pass the Neck free; the King's progress pays no tolls; northern lords no longer pay "the price of the Wall"; **island
+contingents still march over water** — do the ships rule) · A9 ✅ · A10 ⚠ partial (engine text pronouns from
+`isFemale`; explicit natures for 58 principals in `public/data/natures.js` — extend to every persona) · A11 ❌ not done.
+
+Live check after the fixes (Qwen3.6-35B-A3B, 3 turns as Stark): turns 117–137 s (were 198–221 s); every vassal
+contingent followed the host to Moat Cailin; the King's progress refused redirection and walked the kingsroad; the
+story still invented some arrivals in turn 1 before the record check existed — **the record check is a stopgap; B8's
+validator is the real fix.**
+
 ## Phase B — The Truth Pipeline ([03](03-architecture.md), [04](04-ai-system.md))
 
 | WP | Title | Depends | Size | Acceptance |

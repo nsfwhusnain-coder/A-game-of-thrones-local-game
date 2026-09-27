@@ -5,9 +5,10 @@
 // Re-running skips sigils you already have. The images belong to their artists; they are not committed.
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { HOUSES } from '../public/data/houses.js';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'public', 'assets', 'sigils');
 fs.mkdirSync(OUT, { recursive: true });
 const INDEX = path.join(OUT, 'index.json');

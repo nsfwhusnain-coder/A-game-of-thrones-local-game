@@ -5,6 +5,7 @@ const isWoman = (c) => c.gender === 'f' || /\b(Lady|Queen|Princess|Septa|Daughte
 import { applyChanges, placePos, getRelation } from './world.js';
 import { marchDays, atWar } from './warfare.js';
 import { incapacity } from './regency.js';
+import { pronouns } from './people.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -101,18 +102,19 @@ export function vassalTick(state, days, touched = new Set()) {
             for (const c of riding) { c.loc = 'army:' + a.id; delete c.travel; }
           }
           const eta = a && musterPos ? marchDays(a, seatPos, musterPos).days : 0;
-          const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with him` : ''}${eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
+          const text = `${lordName} answers the call with ${men.toLocaleString()} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with ${pronouns(state.characters[v.lord]).him}` : ''}${eta ? `, and marches for ${state.holdings[ob.muster]?.name || 'the muster'} (~${eta} days)` : ''}.`;
           if (mine) events.push({ day: (a?.bornDay || 0) + 1, title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] });
         } else {
           ob.levies = 'answered';
-          if (mine) events.push({ title: `House ${v.name} answers — with little`, text: `${lordName} sends word that he has no men left to send.`, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
+          if (mine) events.push({ title: `House ${v.name} answers — with little`, text: `${lordName} sends word that ${pronouns(state.characters[v.lord]).he} has no men left to send.`, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
         }
       } else if (answer === 'delayed') {
-        const excuses = ['the harvest is not yet in', 'fever in the villages', 'the roads are flooded', 'his own borders are threatened', 'his knights are scattered at a tourney', 'he must first settle a quarrel with his neighbour'];
-        const text = `${lordName} writes that ${excuses[Math.floor(Math.random() * excuses.length)]}. He will come — later.`;
+        const P = pronouns(state.characters[v.lord]);
+        const excuses = ['the harvest is not yet in', 'fever in the villages', 'the roads are flooded', `${P.his} own borders are threatened`, `${P.his} knights are scattered at a tourney`, `${P.he} must first settle a quarrel with ${P.his} neighbour`];
+        const text = `${lordName} writes that ${excuses[Math.floor(Math.random() * excuses.length)]}. ${P.He} will come — later.`;
         if (mine) events.push({ title: `House ${v.name} delays`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
       } else {
-        const text = `${lordName} refuses the summons. His men will stay at home.`;
+        const text = `${lordName} refuses the summons. ${pronouns(state.characters[v.lord]).His} men will stay at home.`;
         const k = [v.id, v.liege].sort().join('|');
         state.relations[k] = { ...(state.relations[k] || {}), v: clamp((state.relations[k]?.v ?? 0) - 10, -100, 100) };
         if (mine) events.push({ title: `House ${v.name} refuses the call`, text, where: v.seat, importance: 4, type: 'war', houses: [v.id] });
@@ -210,25 +212,43 @@ export function answerRebel(state, [vid, how]) {
   return out;
 }
 
-/** Hosts that have reached their muster point join their liege's host there: one army on the map, many banners in it. */
+/** Hosts that have reached their muster point join their liege's host there: one army on the map, many banners in it.
+ *  A call to the banners names the host the lords are to join (`obligations.join`). Late banners join THAT host wherever
+ *  it has gone — marched on, or arrived somewhere else — so a muster never leaves an orphan host behind at the muster
+ *  point (the "they all muster up and stay there" bug). */
 export function gatherMusters(state) {
   const events = [];
+  const dist = (x, y) => Math.hypot(x.pos[0] - y.pos[0], x.pos[1] - y.pos[1]);
   // in the order they arrived, so the host grows day by day as the news says
   for (const a of Object.values(state.armies).sort((x, y) => (x.arriveDay || 99) - (y.arriveDay || 99))) {
     if (!a.serving || a.type === 'fleet' || !state.armies[a.id]) continue;
     const v = state.houses[a.owner]; const liegeId = a.serving; const liege = state.houses[liegeId];
     if (!v || !liege) continue;
+    const ob = v.obligations || {};
     const field = (x) => x.owner === liegeId && x.type !== 'fleet' && x.id !== a.id && !/garrison/i.test(x.status || '');
-    // the liege's great host has marched on from the muster: late banners follow it, and join it where they meet
-    const main = Object.values(state.armies).filter(field).sort((x, y) => y.men - x.men)[0];
-    const near = main && Math.hypot(main.pos[0] - a.pos[0], main.pos[1] - a.pos[1]) < 4;
-    if (main && !near && a.at && !main.at && main.march && (!v.obligations?.muster || a.at === v.obligations.muster)) { a.march = { to: 'army:' + main.id, since: state.meta.turn }; a.status = 'following the host'; a.at = null; continue; }
-    if (!near && (a.march || !a.at || (v.obligations?.muster && a.at !== v.obligations.muster))) continue;
-    let host = near ? main : Object.values(state.armies).find((x) => field(x) && x.at === a.at);
+    let host = null;
+    // the host this lord was called to join, wherever it is now
+    const grand = ob.join && state.armies[ob.join] && field(state.armies[ob.join]) ? state.armies[ob.join] : null;
+    if (grand) {
+      if (dist(grand, a) >= 4) {
+        if (String(a.march?.to) !== 'army:' + grand.id) { a.march = { to: 'army:' + grand.id, since: state.meta.turn }; a.status = 'following the host'; a.at = null; a.dest = grand.pos; a.destName = grand.name; }
+        continue;
+      }
+      host = grand;
+    } else {
+      // no host named yet (or it is gone): the old rule — the liege's great host if it is here, else the one at the muster
+      const main = Object.values(state.armies).filter(field).sort((x, y) => y.men - x.men)[0];
+      const near = main && dist(main, a) < 4;
+      if (main && !near && a.at && !main.at && main.march && (!ob.muster || a.at === ob.muster)) { a.march = { to: 'army:' + main.id, since: state.meta.turn }; a.status = 'following the host'; a.at = null; continue; }
+      if (!near && (a.march || !a.at || (ob.muster && a.at !== ob.muster))) continue;
+      host = near ? main : Object.values(state.armies).find((x) => field(x) && x.at === a.at);
+    }
     if (!host) {
       const id = `${liegeId}_banners_${a.at}`.replace(/[^a-z0-9_]/g, '');
       host = state.armies[id] = { id, owner: liegeId, name: `The Banners of ${liege.name}`, commander: a.commander, at: a.at, pos: [...a.pos], dest: null, men: 0, type: 'army', composition: 'Levies and knights of the sworn houses', status: 'mustered', morale: a.morale ?? 70, supply: a.supply ?? 80, asOf: a.asOf };
     }
+    // from now on every lord called to this muster joins this host, wherever it goes
+    if (ob.muster) for (const o of Object.values(state.houses)) if (o.liege === liegeId && o.obligations?.muster === ob.muster && !(o.obligations.join && state.armies[o.obligations.join])) o.obligations.join = host.id;
     host.units = addUnits(unitsOf(state, host), unitsOf(state, a));
     const total = host.men + a.men;
     host.morale = Math.round(((host.morale ?? 70) * host.men + (a.morale ?? 70) * a.men) / Math.max(1, total));

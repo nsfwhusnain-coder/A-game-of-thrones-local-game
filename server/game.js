@@ -2,11 +2,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplies } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
-import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers } from './agents.js';
+import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
 import { chokepointToll, roadCongestion } from '../public/js/shared/chokepoints.js';
 import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
@@ -26,7 +27,7 @@ import * as court from './court.js';
 import { carryOutOrders, readOrdersByRule, executeActions, named, startWorks, commandable, previewOrders, orderEvents, raiseLevies, callBanners, advanceMusters, ravenDays } from './orders.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const SAVES = process.env.WC_SAVES || path.join(ROOT, 'saves');
 fs.mkdirSync(SAVES, { recursive: true });
 
@@ -184,6 +185,11 @@ async function runSwarm(id, state, cfg, ctx) {
 
   const briefs = [];
   const say = (s) => { if (s) briefs.push(s); };
+  // The Bard is told only what truly happened: the Maester's facts, the engine's receipts for what the Hand and the
+  // Whisperer managed to do, and the whispers — never the Hand's intentions, some of which the engine refused.
+  // (It used to be told the plan, and narrated lords arriving who never set out.)
+  const bardBriefs = [];
+  const tell = (s) => { if (s) bardBriefs.push(s); };
   let last = null; let bard = null; let bardErr = null;
   // what the Hand and the Whisperer actually managed to do, told to the Bard as plain fact
   const doneHere = [];
@@ -191,7 +197,7 @@ async function runSwarm(id, state, cfg, ctx) {
   for (let i = 0; i < agents.length; i++) {
     const agent = agents[i];
     const isBard = agent === 'bard';
-    const brief = briefs.join('\n\n');
+    const brief = (isBard ? bardBriefs : briefs).join('\n\n');
     const r = await askJson(id, 'jump', build(agent, brief), cfg, {
       spanDays,
       streamText: isBard, // only the chronicle is worth streaming to the player
@@ -211,10 +217,11 @@ async function runSwarm(id, state, cfg, ctx) {
       const told = applyChanges(state, ops, { ...applyCtx, source: AGENT_SOURCE[agent] || applyCtx.source, mayInvent: agent === 'weaver' });
       applied.push(...told.applied); rejected.push(...told.rejected);
       doneHere.push(...told.applied);
+      tell(briefFromApplied(told.applied, `WHAT ${agent === 'whisperer' ? 'MOVED IN SECRET' : 'THE GREAT HOUSES TRULY DID'} THESE DAYS (the engine's record: tell these — and no march, arrival, battle or meeting that is not here or in WHAT THE ENGINE HAS ALREADY SET DOWN)`));
     }
-    if (agent === 'maester') say(briefFromMaester(obj));
+    if (agent === 'maester') { say(briefFromMaester(obj)); tell(briefFromMaester(obj)); }
     if (agent === 'hand') say(briefFromPlan(obj));
-    if (agent === 'whisperer') say(briefFromWhispers(obj));
+    if (agent === 'whisperer') { say(briefFromWhispers(obj)); tell(briefFromWhispers(obj)); }
   }
 
   // The Bard is told what happened, not what was decided: the engine's own receipts.
@@ -411,6 +418,9 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   }));
   // the story sometimes writes the same event twice: tell it once
   for (let k = events.length - 1; k > 0; k--) if (events.slice(0, k).some((x) => x.title === events[k].title && x.text === events[k].text)) events.splice(k, 1);
+  // the chronicle may not tell what the engine did not do (a lord arriving who is still on the road), nor tell again
+  // what the engine has already told (every banner that answered)
+  { const kept = trueToTheRecord(state, events, engineEvents); rejected.push(...kept.dropped); events.length = 0; events.push(...kept.events); }
   // every order the lord gave has its event, told first on its day
   events.push(...orderEvents(state, state.orders, events));
   events.push(...engineEvents);
@@ -643,14 +653,41 @@ function dayEngineEvents(state, evs, days) {
 // Sworn lords answering the call on the same day are one piece of news, not a flood of cards
 function foldAnswers(evs) {
   const out = []; const byDay = new Map();
-  for (const e of evs) { if (/^House .+ answers the call$/.test(e.title || '')) { const k = e.day || 0; byDay.set(k, [...(byDay.get(k) || []), e]); } else out.push(e); }
-  for (const [day, g] of byDay) {
+  // a week's answers are one piece of news (a 23-day turn once carried 31 cards, most of them "House X answers the call")
+  for (const e of evs) { if (/^House .+ answers the call$/.test(e.title || '')) { const k = Math.floor(((e.day || 1) - 1) / 7); byDay.set(k, [...(byDay.get(k) || []), e]); } else out.push(e); }
+  for (const [, g] of byDay) {
+    const day = Math.min(...g.map((e) => e.day || 1));
     if (g.length < 2) { out.push(...g); continue; }
-    const parts = g.map((e) => { const m = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men(, .+? riding with him)?.*?\(~(\d+) days\)/); return m ? `${m[1]}${m[3] ? ` with ${m[3].replace(/^, | riding with him$/g, '')}` : ''} (${m[2]} men, ~${m[4]} days away)` : e.title.replace(/ answers the call$/, ''); });
+    const parts = g.map((e) => { const m = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men(, .+? riding with (?:him|her))?.*?\(~(\d+) days\)/); return m ? `${m[1]}${m[3] ? ` with ${m[3].replace(/^, | riding with (him|her)$/g, '')}` : ''} (${m[2]} men, ~${m[4]} days away)` : e.title.replace(/ answers the call$/, ''); });
     const men = g.reduce((a, e) => a + (Number(String(e.text).match(/with ([\d,]+) men/)?.[1]?.replace(/,/g, '')) || 0), 0);
     out.push({ ...g[0], day, title: `${g.length} lords answer the call — ${men.toLocaleString('en-GB')} men on the march`, text: `${parts.join('; ')}.`, houses: [...new Set(g.flatMap((e) => e.houses || []))], importance: 3 });
   }
   return out;
+}
+// The story model's events are checked against the engine's record before they reach the chronicle:
+//  - a story event that tells again what an engine event already told (a banner answering, a host joining, a crossing)
+//    is dropped: the engine's own card says it with the true numbers;
+//  - a story event that has a lord or host of the player's realm ARRIVE, JOIN or MUSTER when the engine recorded no such
+//    arrival this turn is dropped: the map would contradict it. (docs/gdd/04-ai-system.md §6.4 is the full validator.)
+export function trueToTheRecord(state, events, engineEvents) {
+  const p = state.meta.player; const dropped = [];
+  const realm = Object.values(state.houses).filter((h) => h.id !== p && h.liege === p);
+  const namesOf = (h) => [h.name, state.characters[h.lord]?.name].filter(Boolean).map((n) => n.toLowerCase()).filter((n) => n.length > 3);
+  const engineText = engineEvents.map((e) => `${e.title} ${e.text}`.toLowerCase());
+  const ARRIVE = /\b(arriv\w*|reach(es|ed)?|rides? into|rode into|join(s|ed)?|assembl\w*|mustered|gathered at|gathers at)\b/i;
+  const REPEAT = /\b(answers? the call|raises? \d|delays?|joins?|crosse[sd]|passes the neck)\b/i;
+  const told = (h, re) => engineText.some((x) => namesOf(h).some((n) => x.includes(n)) && re.test(x));
+  const kept = events.filter((e) => {
+    const tl = `${e.title} ${e.text} ${e.details || ''}`.toLowerCase();
+    const named = realm.filter((h) => namesOf(h).some((n) => tl.includes(n)));
+    if (REPEAT.test(e.title) && named.some((h) => told(h, REPEAT))) { dropped.push({ change: { op: 'event', title: e.title }, reason: 'the engine already told it' }); return false; }
+    if (ARRIVE.test(e.title) || ARRIVE.test(e.text)) {
+      const unrecorded = named.filter((h) => !told(h, /(join|reach|arriv|cross)/));
+      if (unrecorded.length) { dropped.push({ change: { op: 'event', title: e.title }, reason: `no such arrival in the record (${unrecorded.map((h) => h.name).join(', ')})` }); return false; }
+    }
+    return true;
+  });
+  return { events: kept, dropped };
 }
 // Answers to letters written from an audience land when their raven does: the letter reaches the inbox, the
 // conversation, and the timeline, and what the writer promised takes effect then — not the day it was asked.

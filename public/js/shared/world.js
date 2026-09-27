@@ -170,6 +170,8 @@ function seedIntel(state) {
 
 /** Bring older saves up to date with new world features. */
 export function migrateState(state) {
+  // the King's progress keeps to its road in older saves too (the story may not redirect it)
+  if (state.armies?.royal_progress && !state.armies.royal_progress.canonLock) state.armies.royal_progress.canonLock = 'kings_ride';
   // Saves from the first, hand-drawn map: carry every position onto the atlas
   if ((state.meta.mapVersion || 1) < MAP_VERSION) {
     const canon = new Map([...HOUSES.filter((h) => h.seat && !h.landless).map((h) => [h.id, h.pos]), ...EXTRA_HOLDINGS.map((e) => [e[0], [e[2], e[3]]])]);
@@ -523,6 +525,9 @@ function applyOne(state, ch, ctx) {
         const hh = state.houses[hid]; let capped = '';
         if (f === 'levies' && hh.levyCap) { const cap = Math.round(hh.levyCap * 1.3); if (v > cap) { v = cap; capped = ' (capped at what the land can bear)'; } }
         if ((f === 'menAtArms' || f === 'ships' || f === 'guard') && src !== 'Muster rolls') { const cap = Math.round((Number(cur.v) || 0) * 1.5 + ({ ships: 12, menAtArms: 400, guard: 60 }[f])); if (v > cap) { v = cap; capped = ' (capped: such growth takes time)'; } }
+        // the story may not empty a lord's muster rolls or barracks at a stroke: only raising men (the engine) or
+        // war does that. A reported fall is limited to a quarter in one turn (the model once set Bolton's 5,000 to 0).
+        if (ctx.protectPlayer && (f === 'levies' || f === 'menAtArms') && v < (Number(cur.v) || 0) * 0.75) { v = Math.round((Number(cur.v) || 0) * 0.75); capped = ' (limited: men are not lost at a stroke without a battle)'; }
         const old = cur.v;
         state.houses[hid].figures[f] = { v, asOf: date, src: ch.source || src, confidence: ch.confidence || 'reported' };
         out.push(`${state.houses[hid].name} ${FIGURE_LABELS[f]}: ${fmt(old)} → ${fmt(v)}${capped}`);
@@ -560,6 +565,8 @@ function applyOne(state, ch, ctx) {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
       const a = state.armies[id];
       if (ctx.protectPlayer && (a.owner === state.meta.player || a.serving === state.meta.player)) throw new Error(`only you move ${a.name}`);
+      // a party the great story depends on (the King's progress) keeps to its road; only the engine's beats turn it
+      if (ctx.protectPlayer && a.canonLock) throw new Error(`${a.name} keeps to its road`);
       const foe = String(ch.to || '').replace(/^army:/, ''); const target = state.armies[foe] || state.armies[findArmy(state, foe) || ''];
       if (target && target.id !== a.id) { a.march = { to: 'army:' + target.id, since: state.meta.turn }; a.at = null; a.status = ch.status || 'marching'; return { op, text: `${a.name} marches against ${target.name}` }; }
       const dest = resolvePlaceId(ch.to); if (!dest || !placePos(dest, state.holdings)) throw new Error('unknown destination ' + ch.to);
@@ -571,6 +578,7 @@ function applyOne(state, ch, ctx) {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
       const a = state.armies[id];
       if (ctx.protectPlayer && (a.owner === state.meta.player || a.serving === state.meta.player) && !ctx.mayMove?.includes(a.commander)) throw new Error(`only you move ${a.name}`);
+      if (ctx.protectPlayer && a.canonLock) throw new Error(`${a.name} keeps to its road`);
       const dest = posOf(state, ch.to);
       if (!dest) throw new Error('unknown destination ' + ch.to);
       const p = clamp(num(ch.progress) ?? 1, 0, 1);
@@ -675,6 +683,9 @@ function applyOne(state, ch, ctx) {
     case 'army_update': case 'fleet_update': {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army ' + (ch.army || ch.id));
       const a = state.armies[id]; const out = [];
+      // the player's hosts are the player's and the engine's: the story may not count, move or re-label them
+      if (ctx.protectPlayer && commandable(state, a)) throw new Error(`only you and the engine change ${a.name}`);
+      if (ctx.protectPlayer && a.canonLock) throw new Error(`${a.name} is the engine's to move and count`);
       const men = num(ch.men), d = num(ch.delta);
       if (men !== null || d !== null) {
         const old = a.men; let nv = Math.max(0, Math.round(men ?? a.men + d));
@@ -694,7 +705,8 @@ function applyOne(state, ch, ctx) {
       }
       if (num(ch.ships) !== null) { a.ships = num(ch.ships); out.push(`ships ${a.ships}`); }
       for (const k of ['morale', 'supply']) if (num(ch[k]) !== null) { a[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${a[k]}`); }
-      if (ch.status) { a.status = ch.status; out.push(ch.status); }
+      // a host on the march is marching: the story may not relabel what the engine is doing with it
+      if (ch.status && !(ctx.protectPlayer && a.march)) { a.status = String(ch.status).slice(0, 60); out.push(a.status); }
       // a host is never handed to a name the world does not know: an unresolvable commander is refused, not stored
       if (ch.commander) { const cm = findChar(state, ch.commander); if (!cm) throw new Error('unknown commander ' + ch.commander); if (!state.characters[cm].alive) throw new Error(`${state.characters[cm].name} is dead and cannot command`); a.commander = cm; out.push(`${state.characters[cm].name} takes command`); }
       if (ch.owner) { const o = findHouse(state, ch.owner); if (o) { a.owner = o; out.push('changes allegiance to ' + state.houses[o].name); } }

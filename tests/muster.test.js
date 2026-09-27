@@ -1,0 +1,51 @@
+// The owner's complaint, as a test: "when you call the troops, they all muster up and they kind of stay there".
+// Whole turns on the mock model, no server: call the banners, march the host before the lords arrive, and check that the
+// banners join the host wherever it has gone instead of forming a second host at the muster point.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+process.env.WC_PROVIDER = 'mock';
+process.env.WC_SAVES = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-muster-'));
+const game = await import('../server/game.js');
+
+test.after(() => fs.rmSync(process.env.WC_SAVES, { recursive: true, force: true }));
+
+test('the banners join the host wherever it has gone: one host, no camp left at the muster', async () => {
+  const { id, state } = game.newGame('agot_298', 'stark');
+  const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
+  game.act(id, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 4000 });
+  let s = game.loadState(id);
+  const host = Object.values(s.armies).find((a) => a.owner === 'stark' && a.at === 'stark' && !/garrison/i.test(a.status || ''));
+  assert.ok(host, 'the lord\'s own levies stand at Winterfell');
+  assert.ok(vassals.every((v) => s.houses[v].obligations.join === host.id), 'every called lord is told to join that host');
+  // the host marches before a single lord has answered
+  game.act(id, { kind: 'march', army: host.id, to: 'moat_cailin' });
+  for (let i = 0; i < 6; i++) await game.advance(id, { span: '10d' });
+  s = game.loadState(id);
+  // no second host left standing at the muster point (the Hand's own household riding south with the King is another
+  // matter, and may well be on the road by now)
+  const left = Object.values(s.armies).filter((a) => a.owner === 'stark' && a.id !== host.id && a.type !== 'fleet' && a.at === 'stark' && !/garrison/i.test(a.status || ''));
+  assert.deepEqual(left.map((a) => a.name), [], 'no host left behind at Winterfell');
+  assert.ok(!Object.values(s.armies).some((a) => /^The Banners of/.test(a.name)), 'no orphan "Banners of" host');
+  const joined = Object.keys(s.armies[host.id].contingents || {});
+  assert.ok(joined.length >= 3, `the lords' men have joined the host (${joined.join(', ')})`);
+  // anyone still on the road is making for the host itself, not for the empty muster point
+  for (const a of Object.values(s.armies).filter((x) => x.serving === 'stark')) assert.equal(String(a.march?.to), 'army:' + host.id, `${a.name} follows the host`);
+});
+
+test('the chronicle may not have a lord arrive whom the engine has still on the road, nor retell the engine\'s news', () => {
+  const s = game.loadState(game.newGame('agot_298', 'stark').id);
+  const engine = [{ title: 'House Umber joins The Host of Winterfell', text: '3,800 men under the Umber banner join The Host of Winterfell at Winterfell.', houses: ['umber'] }];
+  const story = [
+    { title: 'The Manderlys arrive', text: 'Ser Wylis Manderly rode into Winterfell with five hundred men.', houses: ['manderly'] },
+    { title: 'The Greatjon arrives, loud as ever', text: 'Jon Umber rode into Winterfell with his men.', houses: ['umber'] },
+    { title: 'House Umber answers the call', text: 'The Greatjon answers with his host.', houses: ['umber'] },
+    { title: 'Melisandre burns the old gods', text: 'On Dragonstone the red woman lit a fire.', houses: ['baratheon_ds'] },
+  ];
+  const { events, dropped } = game.trueToTheRecord(s, story, engine);
+  assert.deepEqual(events.map((e) => e.title), ['The Greatjon arrives, loud as ever', 'Melisandre burns the old gods']);
+  assert.equal(dropped.length, 2);
+});

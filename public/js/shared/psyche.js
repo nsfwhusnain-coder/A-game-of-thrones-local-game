@@ -1,3 +1,4 @@
+import { pronouns } from './people.js';
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 // THE TOLL A WAR TAKES ON A MIND
 //
@@ -139,7 +140,7 @@ export function psycheTick(state, days) {
     if (band !== wasBand && (c.house === player || c.id === state.houses?.[player]?.lord || isKnownTo(state, c, player))) {
       const line = BAND_TEXT[band]?.(c);
       if (line) events.push({
-        title: `${c.name} is not himself`.replace('himself', c.gender === 'f' ? 'herself' : 'himself'),
+        title: `${c.name} is not ${pronouns(c).himself}`,
         text: line, where: placeOf(state, c), importance: c.house === player ? 3 : 2, type: 'court', houses: [c.house], mind: true,
       });
     }
@@ -148,7 +149,7 @@ export function psycheTick(state, days) {
       const liege = state.houses?.[c.house]?.liege;
       if (liege && Math.random() < 0.25 * (days / 30)) {
         c.loyalty = clamp((c.loyalty ?? 50) - 2, -100, 100);
-        applied.push({ op: 'psyche', text: `${c.name} trusts ${state.houses[liege].name} a little less than he did` });
+        applied.push({ op: 'psyche', text: `${c.name} trusts ${state.houses[liege].name} a little less than ${pronouns(c).he} did` });
       }
     }
     if (c.stress > 85 && Math.random() < 0.12 * (days / 30)) {
@@ -170,9 +171,9 @@ const bandOf = (v) => (v >= 85 ? 'breaking' : v >= 65 ? 'fraying' : v >= 40 ? 's
 export const stressBand = (c) => bandOf(c.stress ?? 0);
 
 const BAND_TEXT = {
-  weary: (c) => `${c.name} has the look of a man who has not slept well in some time.`,
+  weary: (c) => `${c.name} has the look of a ${pronouns(c).man} who has not slept well in some time.`,
   strained: (c) => `${c.name} is short with the servants, and twice this moon has left the table before the meal was done.`,
-  fraying: (c) => `${c.name} snaps at those who bring him news, and the household has learned not to bring it at all.`,
+  fraying: (c) => `${c.name} snaps at those who bring ${pronouns(c).him} news, and the household has learned not to bring it at all.`,
   breaking: (c) => `${c.name} is spoken of in low voices: the shaking hands, the wine at breakfast, the long silences in the middle of a sentence.`,
 };
 
@@ -198,10 +199,10 @@ export function mindLine(c) {
   const bits = [];
   if (b === 'weary') bits.push('tired, and shows it');
   if (b === 'strained') bits.push('under strain: curt, distracted, sleeping badly');
-  if (b === 'fraying') bits.push('fraying: quick to anger, slow to hear counsel, drinking more than he did');
+  if (b === 'fraying') bits.push(`fraying: quick to anger, slow to hear counsel, drinking more than ${pronouns(c).he} did`);
   if (b === 'breaking') bits.push('close to breaking: shaking hands, black moods, decisions made and unmade in a day');
   if (p >= 70) bits.push('trusts almost no one, and reads treason into courtesies');
-  else if (p >= 45) bits.push('has grown suspicious, and keeps his own counsel');
+  else if (p >= 45) bits.push(`has grown suspicious, and keeps ${pronouns(c).his} own counsel`);
   return bits.join('; ');
 }
 

@@ -10,6 +10,7 @@
 // The prompt then tells the model the outcome and the manner; the server holds the model to the outcome
 // (a refusal cannot sign a pact; an agreement is recorded even if the model forgets).
 import { personaFor } from '../../data/histories.js';
+import { natureOf } from '../../data/natures.js';
 import { DEMEANOURS, REGION_SPEECH } from '../../data/demeanours.js';
 import { disposition } from './diplomacy.js';
 import { realmTotals } from './world.js';
@@ -45,6 +46,9 @@ export function temperament(c) {
     vengeance: /vengeance|revenge/.test(sw),
     strength: /strength|boldness|courage|victory/.test(sw),
   };
+  // the principal characters' natures are written down (data/natures.js): those numbers win over the prose reading
+  const N = natureOf(c.id);
+  if (N) return { courage: N.courage, pride: N.pride, wits: N.wits, guile: N.guile, volatility: N.temper, warmth: N.warmth, stubborn: N.stubbornness, honesty: N.honesty, ambition: N.ambition, piety: N.piety, sway, persona: P };
   return { courage, pride, wits, guile, volatility, warmth, stubborn, sway, persona: P };
 }
 
@@ -271,8 +275,10 @@ export function natureTags(T) {
   tags.push(T.courage >= 0.9 ? 'fearless' : T.courage >= 0.7 ? 'brave' : T.courage <= 0.2 ? 'craven' : T.courage <= 0.4 ? 'cautious' : null);
   tags.push(T.pride >= 0.9 ? 'arrogant' : T.pride >= 0.75 ? 'proud' : T.pride <= 0.25 ? 'humble' : null);
   tags.push(T.wits >= 0.9 ? 'brilliant' : T.wits >= 0.65 ? 'shrewd' : T.wits <= 0.25 ? 'dim' : null);
-  tags.push(T.guile >= 0.9 ? 'a schemer' : T.guile >= 0.7 ? 'cunning' : T.guile <= 0.15 ? 'honest' : null);
-  tags.push(T.volatility >= 0.8 ? 'hot-tempered' : T.volatility <= 0.2 ? 'cold-blooded' : null);
+  tags.push(T.guile >= 0.9 ? 'a schemer' : T.guile >= 0.7 ? 'cunning' : (T.honesty == null ? T.guile <= 0.15 : false) ? 'honest' : null);
+  if (T.honesty != null) tags.push(T.honesty >= 0.8 ? 'honest' : T.honesty <= 0.2 ? 'deceitful' : null);
+  // calm is not cruel: only the calm AND cold are cold-blooded
+  tags.push(T.volatility >= 0.8 ? 'hot-tempered' : T.volatility <= 0.2 ? (T.warmth <= 0.3 ? 'cold-blooded' : 'even-tempered') : null);
   tags.push(T.warmth >= 0.75 ? 'warm' : T.warmth <= 0.2 ? 'unfriendly' : null);
   tags.push(T.stubborn >= 0.75 ? 'stubborn' : T.stubborn <= 0.3 ? 'pliable' : null);
   const sway = Object.keys(T.sway).filter((k) => T.sway[k]);

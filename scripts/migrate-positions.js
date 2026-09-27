@@ -5,10 +5,11 @@
 // public/data/warp.js (the control points, so old saves can be migrated at load time).
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { HOUSES, EXTRA_HOLDINGS, PLACE_ALIASES } from '../public/data/houses.js';
 import { LOCATIONS, LAND, LAKES, WORLD } from '../public/data/atlas.js';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const norm = (s) => String(s || '').toLowerCase().replace(/[’']/g, '').replace(/\(.*?\)/g, '').replace(/\b(the|castle|of|keep)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
 const locIndex = new Map();
 for (const l of LOCATIONS) { const k = norm(l.name); if (!locIndex.has(k) || (l.size || 0) > (locIndex.get(k).size || 0)) locIndex.set(k, l); }

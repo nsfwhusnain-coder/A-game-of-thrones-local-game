@@ -2,11 +2,12 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { loadConfig, saveConfig, listModels, chat } from './llm.js';
 import * as game from './game.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
 const PORT = Number(process.env.PORT || 3298);
 const HOST = process.env.HOST || '127.0.0.1';

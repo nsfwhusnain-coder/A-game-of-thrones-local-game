@@ -194,7 +194,13 @@ export function chokepointToll(state, army, from, to, days) {
   const out = { days: 0, losses: 0, morale: 0, gold: 0, events: [], met: [] };
   if (!army || army.type === 'fleet' || !from || !to) return out;
   const bite = seasonBite(state);
+  // the King's progress rides the realm by right; the crannogmen live in the Neck; the lords of the North (Skagos and
+  // the Bay of Seals among them) come south by sea or by their own roads, never over the Wall (a straight-line quirk
+  // of the old routing charged Skagos's lords "the price of the Wall")
+  const home = state.houses?.[army.owner];
+  const native = (cp) => army.canonLock || (cp.id === 'the_neck' && (army.owner === 'reed' || home?.liege === 'reed')) || (cp.id === 'the_wall' && army.owner !== 'free_folk' && home?.region === 'north');
   for (const { cp, at } of crossings(from, to)) {
+    if (native(cp)) continue;
     const leave = hasLeave(state, army, cp);
     // a host passes cheaply if it has leave, or if it crosses at the gate itself and no one bars it
     const gated = !!leave || (atTheGate(state, cp, at) && !cp.clans && !gateBars(state, army, cp));

@@ -2,8 +2,9 @@
 // work offline. Without it, the browser downloads the same files from Hugging Face on first use and caches them.
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 const REPO = 'onnx-community/Kokoro-82M-v1.0-ONNX';
-const OUT = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'public', 'models', REPO);
+const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'models', REPO);
 const VOICES = ['af_heart', 'af_bella', 'af_nicole', 'af_sarah', 'af_sky', 'af_nova', 'af_river', 'af_kore', 'af_aoede', 'af_jessica', 'af_alloy',
   'am_adam', 'am_echo', 'am_eric', 'am_fenrir', 'am_liam', 'am_michael', 'am_onyx', 'am_puck',
   'bf_alice', 'bf_emma', 'bf_isabella', 'bf_lily', 'bm_daniel', 'bm_fable', 'bm_george', 'bm_lewis'];

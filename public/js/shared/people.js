@@ -6,6 +6,13 @@ export function isFemale(c) {
   return FEMALE.has(c.id) || /\b(lady|queen|princess|spearwife|septa|maid|daughter|wife|mother|widow|khaleesi)\b/i.test(c.title || '');
 }
 
+/** Pronouns for the engine's own text, so Lady Mormont is not written "he". */
+export function pronouns(c) {
+  return isFemale(c)
+    ? { he: 'she', He: 'She', him: 'her', his: 'her', His: 'Her', himself: 'herself', man: 'woman', lord: 'lady' }
+    : { he: 'he', He: 'He', him: 'him', his: 'his', His: 'His', himself: 'himself', man: 'man', lord: 'lord' };
+}
+
 const NO_INHERIT = /night'?s watch|maester|kingsguard|septon|septa|silent sister|recruit/i;
 function canInherit(c, houseId) {
   if (!c || !c.alive) return false;

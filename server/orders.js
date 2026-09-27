@@ -466,7 +466,7 @@ export function foldInto(state, host, other) {
   for (const [v, n] of Object.entries(other.contingents || {})) host.contingents = { ...(host.contingents || {}), [v]: ((host.contingents || {})[v] || 0) + n };
   if (other.composition && !String(host.composition || '').includes(other.composition)) host.composition = [host.composition, other.composition].filter(Boolean).join('; ');
   for (const c of Object.values(state.characters)) if (c.loc === 'army:' + other.id) c.loc = 'army:' + host.id;
-  for (const h of Object.values(state.houses)) if (h.obligations?.host === other.id) h.obligations.host = host.id;
+  for (const h of Object.values(state.houses)) { if (h.obligations?.host === other.id) h.obligations.host = host.id; if (h.obligations?.join === other.id) h.obligations.join = host.id; }
   delete state.armies[other.id];
 }
 /** Call up the house's own levies at one of its holdings — into the host already standing there, if there is one. */
@@ -496,6 +496,7 @@ export function raiseLevies(state, { at, men, commander, name, to, immediate }) 
     if (cmd) { cmd.loc = 'army:' + id; delete cmd.travel; }
     out.push(`${fmtN(first)} levies muster at ${hold.name} as ${host.name}${n > first ? `; ${fmtN(n - first)} more are mustering from the fields` : ''}${cmd ? ` under ${cmd.name}` : ''} (${unitsText(state, host)})`);
   }
+  for (const v of Object.values(state.houses)) if (v.liege === p && v.obligations?.muster === place && ['called', 'delayed', 'answered'].includes(v.obligations.levies) && !(v.obligations.join && state.armies[v.obligations.join])) v.obligations.join = host.id;
   if (n < Math.round(Number(men) || 0)) out.push(`only ${fmtN(n)} could be found of the ${fmtN(Math.round(Number(men)))} asked for`);
   const dest = to && destination(state, to);
   if (dest && dest !== place) { host.march = { to: dest, since: state.meta.turn }; host.status = 'marching'; host.at = null; out.push(`${host.name} marches for ${placeName(state, dest)}`); }
@@ -522,7 +523,9 @@ export function callBanners(state, { vassals, at }) {
   const list = vassals === 'all' || !Array.isArray(vassals) || !vassals.length ? all : all.filter((h) => vassals.some((v) => slug(v) === h.id || String(v).toLowerCase().includes(h.name.toLowerCase())));
   if (!list.length) throw new Error('no sworn lord to summon');
   const muster = resolvePlaceId(at) || destination(state, at) || me.seat;
-  for (const v of list) v.obligations = { ...(v.obligations || {}), levies: 'called', muster, calledDays: 0 };
+  // the host already standing at the muster (the lord's own levies) is the one the banners join, wherever it later goes
+  const join = fieldHostAt(state, p, muster)?.id || null;
+  for (const v of list) v.obligations = { ...(v.obligations || {}), levies: 'called', muster, calledDays: 0, join };
   return [`The banners are called: ${list.length} sworn house${list.length > 1 ? 's' : ''} summoned to muster at ${placeName(state, muster)} (${list.slice(0, 8).map((v) => v.name).join(', ')}${list.length > 8 ? '…' : ''}); each answers in their own time and temper`];
 }
 /** Bring hosts at one place together under one banner. */
