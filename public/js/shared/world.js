@@ -756,7 +756,7 @@ function applyOne(state, ch, ctx) {
     case 'character': case 'character_update': {
       const cid = findChar(state, ch.id || ch.character); if (!cid) throw new Error('unknown character ' + (ch.id || ch.character));
       const c = state.characters[cid]; const out = [];
-      if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
+      if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; c.diedTurn = state.meta?.turn ?? 0; c.cause = ch.cause || c.cause || null; out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
       if (ch.loc || ch.location || ch.with) {
         const raw = ch.with || ch.loc || ch.location;
         const army = findArmy(state, String(raw).replace(/^army:/, ''));

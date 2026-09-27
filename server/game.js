@@ -7,6 +7,8 @@ import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidateP
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers } from './agents.js';
+import { chokepointToll } from '../public/js/shared/chokepoints.js';
+import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
 import { nextTurnLength } from '../public/js/shared/turns.js';
@@ -307,7 +309,23 @@ export async function advance(id, { span = 'auto', orders } = {}) {
     }
     const dest = placePos(to, state.holdings); if (!dest) { delete a.march; continue; }
     const m = marchDays(a, a.pos, dest);
-    const f = Math.min(1, left / Math.max(1, m.days));
+    let f = Math.min(1, left / Math.max(1, m.days));
+    // ── What lies in the way ────────────────────────────────────────────────────────────────
+    // The Neck, the Green Fork, the Bloody Gate, the Golden Tooth, the passes into Dorne: a host
+    // that must cross one of these pays in days, in men and in heart, unless it has leave.
+    const legEnd = [a.pos[0] + (dest[0] - a.pos[0]) * f, a.pos[1] + (dest[1] - a.pos[1]) * f];
+    const toll = chokepointToll(state, a, a.pos, legEnd, left);
+    if (toll.met.length) {
+      if (toll.losses) a.men = Math.max(0, a.men - toll.losses);
+      if (toll.morale) a.morale = Math.max(0, Math.round((a.morale ?? 70) - toll.morale));
+      if (toll.days) f = Math.min(1, Math.max(0, (left - toll.days)) / Math.max(1, m.days)); // days spent in the bogs are days not marched
+      if (toll.gold) { // the Freys keep a bridge, not a charity
+        const hh = state.houses[a.owner]; const fr = state.houses.frey;
+        if (hh?.figures?.treasury && fr?.figures?.treasury) { hh.figures.treasury.v = Math.max(0, hh.figures.treasury.v - toll.gold); fr.figures.treasury.v += toll.gold; }
+      }
+      for (const e of toll.events) vt.events.push({ day: Math.max(1, Math.round(born + (a.arriveDay ? a.arriveDay - born : left) * 0.6)), importance: a.owner === state.meta.player ? Math.max(3, e.importance) : e.importance, ...e });
+      for (const mt of toll.met) applied.push({ op: 'chokepoint', text: `${a.name} at ${mt.name}: ${mt.gated ? 'passed' : 'forced the crossing'}${mt.lost ? `, ${mt.lost.toLocaleString('en-GB')} men lost` : ''}${mt.days ? `, ${mt.days} days` : ''}` });
+    }
     const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to, progress: f, status: a.party ? (f >= 1 ? (a.party.returning ? 'home again' : `at ${placeName(state, to)}, ${a.party.why.replace(/^to |^for /, '')}`) : a.status) : f >= 1 ? 'arrived' : 'marching' }]);
     applied.push(...mv.applied);
     if (f >= 1) {
@@ -346,6 +364,10 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   // Who rules where the head of a house cannot: regencies begin, hold and end, and cost the house its vassals' patience
   const rg = regencyTick(state, spanInfo.days);
   vt.events.push(...rg.events); applied.push(...rg.applied);
+  // What a war does to the men who fight it and the lords who order it: stress and mistrust, told
+  // only as behaviour — a lord who cannot sleep, a hand that shakes, treason read into a courtesy
+  const ps = psycheTick(state, spanInfo.days);
+  vt.events.push(...ps.events); applied.push(...ps.applied);
   // lords on the road with their households: feasts, weddings, their liege's hall, the market towns
   vt.events.push(...retinueTick(state, spanInfo.days).events);
   vt.events.push(...deliverReplies(state));

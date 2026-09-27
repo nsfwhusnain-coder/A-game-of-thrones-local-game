@@ -12,6 +12,8 @@ import {
 } from '../public/js/shared/world.js';
 import { estimateTokens } from './llm.js';
 import { describeRules } from '../public/js/shared/rules.js';
+import { mindsDigest } from '../public/js/shared/psyche.js';
+import { chokepointDigest } from '../public/js/shared/chokepoints.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom, marchDays } from '../public/js/shared/warfare.js';
 import { unitsText } from '../public/js/shared/units.js';
@@ -250,6 +252,8 @@ export function playerSheet(state) {
   lines.push('Holdings: ' + holdings.map((x) => `${x.id} (${x.status}, unrest ${x.unrest}, prosperity ${x.prosperity}${x.garrison != null ? ', garrison ' + x.garrison : ''})`).join('; '));
   const chars = Object.values(state.characters).filter((c) => c.house === p && c.alive);
   lines.push('Members & retainers: ' + chars.map((c) => `${c.name} [${c.id}]${c.status !== 'free' ? ' (' + c.status + ')' : ''} @${placeName(state, c.loc)}`).join('; '));
+  const minds = mindsDigest(state, p);
+  if (minds) lines.push(minds);
   const live = describeRules(state, p);
   if (live.length) lines.push('CUSTOMS OF THIS REALM that you yourself wrote into the world (they are settled every moon; honour them in the story, change or end them when the story says so):\n' + live.map((x) => '  ' + x).join('\n'));
   const letters = (state.ravens || []).slice(0, 5);
@@ -476,6 +480,8 @@ Only use ids that exist in the tables below. Change only what the story justifie
     engineEvents?.length ? `WHAT THE ENGINE HAS ALREADY SET DOWN FOR THESE DAYS — true, and already in the chronicle as written; do NOT write them again. Write around them: what led to them, what people said and did about them, what they set in motion; and the rest of the realm's doings. Never contradict them (who arrived where, and on which day).\n${engineEvents.filter((e) => !e.bg).slice(0, 30).map((e) => `- day ${e.day}: ${e.title} — ${String(e.text || '').slice(0, 180)}`).join('\n')}` : '',
     ordersBlock(state, orders),
     (state.storyThreads || []).length ? 'THREADS THE PLAYER FOLLOWS (update them in "threads")\n' + state.storyThreads.map((t) => `- ${t.title}: ${t.last}`).join('\n') : '',
+    // the Maester is given the true matrix of hard places, so grounding is quoted, not invented
+    agent === 'maester' ? 'THE HARD PLACES OF WESTEROS (engine truth: these prices are real and are charged whether or not you mention them)\n' + chokepointDigest(state) : '',
     greatMatters(state),
     todaysBeats(state, span.days),
     // The charge comes LAST so that every agent of the swarm shares the same prompt prefix and the

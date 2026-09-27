@@ -744,3 +744,113 @@ test('a rule that runs away is stopped, not allowed to hang the turn', () => {
   assert.equal(run(compile('2 ** 999999'), scopeFor(s)), 0); // no Infinity in the ledger
   assert.throws(() => compile('1' + ' + 1'.repeat(400)), RuleError); // and no formula long enough to stall a turn
 });
+
+// ── Geography that bites: the hard places of Westeros ──
+import { crossings, chokepointToll, roadWarnings, hasLeave, CHOKEPOINTS } from '../public/js/shared/chokepoints.js';
+
+const host = (owner, men = 12000) => ({ id: 'h', owner, name: 'A host', men, morale: 70, type: 'army' });
+
+test('the roads of Westeros cross the places they should, and no others', () => {
+  const s = fresh();
+  const names = (a, b) => crossings(s.holdings[a].pos, s.holdings[b].pos).map((c) => c.cp.id).sort();
+  assert.deepEqual(names('stark', 'tully'), ['green_fork', 'the_neck']); // south out of the North
+  assert.deepEqual(names('baratheon', 'arryn'), ['bloody_gate']);        // into the Vale by land
+  assert.deepEqual(names('lannister', 'tully'), ['golden_tooth']);
+  assert.deepEqual(names('baratheon', 'martell'), ['princes_pass']);
+  assert.deepEqual(names('baratheon', 'tully'), []);  // the riverlands are open country
+  assert.deepEqual(names('stark', 'umber'), []);      // and so is the North itself
+});
+
+test('the Neck is kind to Starks and cruel to everyone else', () => {
+  const s = fresh();
+  const from = s.holdings.stark.pos, to = s.holdings.tully.pos;
+  const north = chokepointToll(s, host('stark'), from, to, 40);
+  const lion = chokepointToll(s, host('lannister'), to, from, 40); // marching the other way, uninvited
+  const neckN = north.met.find((m) => m.id === 'the_neck');
+  const neckL = lion.met.find((m) => m.id === 'the_neck');
+  assert.equal(neckN.gated, true, 'Moat Cailin is Stark-held');
+  assert.equal(neckL.gated, false, 'a Lannister host has no leave');
+  assert.ok(neckL.lost > neckN.lost * 3, 'the bogs eat an unwelcome host');
+  assert.ok(lion.days > north.days);
+});
+
+test('the crannogmen will guide a friend through the bogs', () => {
+  const s = fresh();
+  s.holdings.moat_cailin.owner = 'bolton'; // no longer the player's gate
+  const a = host('tully');
+  assert.equal(hasLeave(s, a, CHOKEPOINTS.find((c) => c.id === 'the_neck')), null);
+  s.relations['reed|tully'] = { v: 45 };
+  assert.equal(hasLeave(s, a, CHOKEPOINTS.find((c) => c.id === 'the_neck')), 'guides');
+});
+
+test('the Freys charge for their bridge, and the gold changes hands', () => {
+  const s = fresh();
+  const cp = CHOKEPOINTS.find((c) => c.id === 'green_fork');
+  const a = host('stark', 10000);
+  const t = chokepointToll(s, a, s.holdings.stark.pos, s.holdings.tully.pos, 40);
+  assert.ok(t.gold >= (10000 / 1000) * cp.toll.perThousand * 0.9, 'a host of ten thousand pays for ten thousand');
+});
+
+test('winter doubles what a mountain costs', () => {
+  const s = fresh();
+  const summer = chokepointToll(s, host('lannister'), s.holdings.baratheon.pos, s.holdings.arryn.pos, 40);
+  s.world.season = 'winter';
+  const winter = chokepointToll(s, host('lannister'), s.holdings.baratheon.pos, s.holdings.arryn.pos, 40);
+  assert.ok(winter.losses > summer.losses && winter.days > summer.days);
+});
+
+test('a fleet does not care about mountain passes', () => {
+  const s = fresh();
+  const t = chokepointToll(s, { ...host('greyjoy'), type: 'fleet' }, s.holdings.stark.pos, s.holdings.tully.pos, 40);
+  assert.equal(t.met.length, 0);
+});
+
+test('a lord is told what the road will cost before he takes it', () => {
+  const s = fresh();
+  const w = roadWarnings(s, host('lannister'), s.holdings.lannister.pos, s.holdings.arryn.pos);
+  assert.ok(w.some((x) => /Bloody Gate|Mountains of the Moon/.test(x)), w.join(' | '));
+});
+
+// ── The toll a war takes on a mind ──
+import { psycheTick, stressors, mindLine, stressBand, mindsDigest } from '../public/js/shared/psyche.js';
+
+test('peace and home leave a man steady', () => {
+  const s = fresh();
+  for (let i = 0; i < 6; i++) psycheTick(s, 30);
+  const ned = s.characters.eddard_stark;
+  assert.equal(stressBand(ned), 'steady');
+  assert.equal(mindLine(ned), '');
+});
+
+test('captivity, war and a dead child wear a man down', () => {
+  const s = fresh();
+  const c = s.characters.eddard_stark;
+  c.status = 'imprisoned';
+  s.wars.push({ name: 'The war', status: 'active', attackers: ['lannister'], defenders: ['stark'] });
+  const why = stressors(s, c, 30).map((x) => x.why);
+  assert.ok(why.includes('a captive'));
+  assert.ok(why.some((w) => /war/.test(w)));
+  for (let i = 0; i < 6; i++) psycheTick(s, 30);
+  assert.ok((c.stress ?? 0) > 50, `expected a worn man, got ${c.stress}`);
+  assert.ok(/strain|fraying|breaking/.test(mindLine(c)), mindLine(c));
+});
+
+test('the numbers never reach the player: the model is given behaviour, not figures', () => {
+  const s = fresh();
+  const c = s.characters.eddard_stark;
+  c.stress = 72; c.paranoia = 80;
+  const d = mindsDigest(s, 'stark');
+  assert.ok(/fraying/.test(d));
+  assert.ok(!/72|80/.test(d), 'a stress score must never be written into a prompt');
+});
+
+test('a mind that is breaking is felt by the house, not reported as a stat', () => {
+  const s = fresh();
+  const c = s.characters.eddard_stark;
+  c.stress = 40;
+  c.status = 'imprisoned';
+  let events = [];
+  for (let i = 0; i < 3 && !events.some((e) => e.mind); i++) events = psycheTick(s, 30).events;
+  assert.ok(events.some((e) => e.mind), 'the household should notice');
+  assert.ok(events.every((e) => !/\bstress\b|\d\d\/100/.test(e.text)));
+});
