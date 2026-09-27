@@ -155,13 +155,14 @@ test('a great castle is not stormed in a moon; a siege starves it in time', () =
 });
 
 // ── Orders read by rule: spelled-out numbers ──
-import { wordNumber } from '../server/orders.js';
+import { numbersIn } from '../server/orders/parse.js';
 test('dictated numbers are read: "ten men", "a hundred riders", "two hundred and fifty men"', () => {
-  assert.equal(wordNumber('Ride to Oldtown with ten men.'), 10);
-  assert.equal(wordNumber('take a hundred riders'), 100);
-  assert.equal(wordNumber('two hundred and fifty men'), 250);
-  assert.equal(wordNumber('a score of knights'), 20);
-  assert.equal(wordNumber('send men north'), null);
+  const first = (t) => numbersIn(t)[0]?.n ?? null;
+  assert.equal(first('Ride to Oldtown with ten men.'), 10);
+  assert.equal(first('take a hundred riders'), 100);
+  assert.equal(first('two hundred and fifty men'), 250);
+  assert.equal(first('a score of knights'), 20);
+  assert.equal(first('send men north'), null);
 });
 
 // ── Fog of war ──
@@ -205,20 +206,26 @@ test('a losing war tempts the schemers first: the Boltons treat with the enemy l
 });
 
 // ── Orders: the sworn hosts answering the call are the player's to command ──
-import { executeActions, commandable, carryOutOrders, raiseLevies } from '../server/orders.js';
+import { commandable, carryOutOrders, readOrders, carryOut, raiseLevies } from '../server/orders.js';
+import { interpretOrder } from '../server/orders/interpret.js';
+// orders read by the rules alone (what the game does on the mock), and a reading as a model would give it
+const byRule = (s) => (text) => interpretOrder(s, text, { provider: 'rules' });
+const asRead = (actions, extra = {}) => async () => ({ actions, letter: null, clarify: null, story: !actions.length, via: 'model', ...extra });
+const said = (o) => (o.receipt || []).map((l) => l.text).join(' ');
 test('"march the whole host to Moat Cailin" sends the sworn hosts on the road there too', async () => {
   const s = fresh();
   apply(s, [{ op: 'army_create', id: 'hb', owner: 'bolton', name: 'Host of House Bolton', at: 'bolton', men: 4000 }]);
   s.houses.bolton.obligations = { levies: 'answered', host: 'hb', muster: 'stark' };
   assert.ok(commandable(s, s.parties.hb));
   s.orders = [{ id: 'o1', text: 'Raise the whole host and march to Moat Cailin.' }];
-  await carryOutOrders(s, async () => ({ actions: [{ op: 'raise', order: 1, at: 'stark', men: 3000, to: 'Moat Cailin' }], story: [] }));
+  await carryOutOrders(s, asRead([{ verb: 'raise_levies', params: { at: 'stark', men: 3000, to: 'moat_cailin' } }]));
   assert.equal(s.parties.hb.march?.to, 'moat_cailin');
   assert.ok(Object.values(s.parties).some((a) => a.owner === 'stark' && a.march?.to === 'moat_cailin'));
 });
-test('an order against a house marches on its seat', () => {
+test('an order against a house marches on its seat', async () => {
   const s = fresh(); apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'Host', at: 'stark', men: 5000 }]);
-  executeActions(s, [{ op: 'march', order: 1, army: 'the army', to: 'the Lannisters' }]);
+  s.orders = [{ id: 'o1', text: 'Attack the Lannisters with the host.' }];
+  await carryOutOrders(s, byRule(s));
   assert.equal(s.parties.nh.march?.to, 'lannister');
 });
 
@@ -257,13 +264,12 @@ test('someone the story moves far away rides there instead of appearing', () => 
   const t = s.characters.tyrion_lannister;
   assert.notEqual(t.loc, 'nights_watch'); assert.equal(rideTo(s, 'tyrion_lannister'), 'nights_watch');
 });
-test('an order sends only the one it names, and only with men if it asks for them', () => {
+test('an order sends only the one it names, and only with men if it asks for them', async () => {
   const s = fresh(); const guard = s.houses.stark.figures.menAtArms.v;
   s.orders = [{ id: 'o1', text: 'Ser Rodrik is to garrison Winterfell and drill the levies.' }, { id: 'o2', text: 'Send Jon north to the Wall.' }];
-  const res = executeActions(s, [{ op: 'travel', order: 1, character: 'robb_stark', to: 'Winterfell', men: 400 }, { op: 'travel', order: 2, character: 'jon_snow', to: 'the wall', men: 50 }], s.orders);
-  assert.match(res[1][0], /does not name Robb/);
-  assert.equal(rideOf(s, s.characters.robb_stark), null);
-  assert.equal(s.houses.stark.figures.menAtArms.v, guard);
+  await carryOutOrders(s, byRule(s));
+  assert.equal(rideOf(s, s.characters.robb_stark), null); assert.equal(rideOf(s, s.characters.rodrik_cassel), null);
+  assert.equal(s.houses.stark.figures.menAtArms.v, guard, 'no one took men');
   assert.equal(rideTo(s, 'jon_snow'), 'nights_watch');
   assert.ok(named(s, s.characters.catelyn_stark, 'Send my wife to Riverrun'));
   assert.ok(!named(s, s.characters.arya_stark, 'Send Jon to the Wall'));
@@ -308,11 +314,11 @@ test('chronicle facts are the engine\'s record, dated by turn', () => {
   assert.match(f, /House Umber answers the call/);
   assert.doesNotMatch(f, /could not|Stark–Umber|Whispers/);
 });
-test('an order to garrison and drill hires no one', () => {
+test('an order to garrison and drill hires no one', async () => {
   const s = fresh(); const gold = s.houses.stark.figures.treasury.v;
   s.orders = [{ id: 'o1', text: 'Order Ser Rodrik to garrison Winterfell, drill the levies and count our stores for winter.' }, { id: 'o2', text: 'Recruit two hundred men-at-arms at Winterfell.' }];
-  const res = executeActions(s, [{ op: 'recruit', order: 1, at: 'Winterfell', men: 1200 }, { op: 'recruit', order: 2, at: 'Winterfell', men: 200 }], s.orders);
-  assert.match(res[1][0], /does not ask for men/);
+  await carryOutOrders(s, byRule(s));
+  assert.equal(s.orders[0].result, undefined, 'the first is left to the story');
   assert.equal(s.houses.stark.figures.treasury.v, gold - 200 * 9);
 });
 test('council: each answer is bound to the advisor who gave it', () => {
@@ -320,19 +326,19 @@ test('council: each answer is bound to the advisor who gave it', () => {
   const r = readReplies('{"replies":[{"speaker":"Vayon","text":"The stores are counted."},{"speaker":"maester_luwin","text":"The letters are read."},{"speaker":"","text":"*Ser Rodrik tugs his whiskers.* The gates are watched."}]}', P, 'vayon_poole');
   assert.deepEqual(r.replies.map((x) => x.speaker), ['vayon_poole', 'luwin', 'rodrik_cassel']);
 });
-test('a raven order sends a letter, not a rider', () => {
-  const s = fresh();
+test('a raven order sends a letter, not a rider', async () => {
+  const s = fresh(); s.post = [];
   s.orders = [{ id: 'o1', text: 'Have Vayon send a discreet raven to the Eyrie about Jon Arryn\'s last days.' }];
-  const res = executeActions(s, [{ op: 'travel', order: 1, character: 'vayon_poole', to: 'The Eyrie', men: 0 }], s.orders);
-  assert.match(res[1][0], /letter/);
+  await carryOutOrders(s, byRule(s));
+  assert.match(s.orders[0].result.join(' '), /raven flies to Lysa Arryn/);
   assert.equal(rideOf(s, s.characters.vayon_poole), null);
 });
 test('a letter is tracked: in flight, delivered, answered', async () => {
-  const { postLetters } = await import('../server/orders.js');
   const { postTick, underway } = await import('../public/js/shared/errands.js');
   const { addDays } = await import('../public/js/shared/world.js');
   const s = fresh(); s.post = [];
-  postLetters(s, [{ id: 'o1', text: 'Send a discreet raven to Lady Lysa Arryn at the Eyrie about Jon Arryn\'s last days.' }]);
+  s.orders = [{ id: 'o1', text: 'Send a discreet raven to Lady Lysa Arryn at the Eyrie about Jon Arryn\'s last days.' }];
+  await carryOutOrders(s, byRule(s));
   assert.equal(s.post.length, 1); assert.equal(s.post[0].to, 'lysa_arryn'); assert.equal(s.post[0].status, 'in flight');
   assert.ok(underway(s).some((x) => x.kind === 'raven'));
   s.meta.date = addDays(s.meta.date, s.post[0].days); postTick(s); assert.equal(s.post[0].status, 'delivered');
@@ -340,22 +346,41 @@ test('a letter is tracked: in flight, delivered, answered', async () => {
   assert.equal(s.post[0].status, 'answered');
 });
 test('an order\'s receipt changes nothing, and the turn does what it said', async () => {
-  const { previewOrders } = await import('../server/orders.js');
-  const s = fresh(); const guard = s.houses.stark.figures.menAtArms.v;
+  const s = fresh(); const guard = s.houses.stark.figures.menAtArms.v; const dice = [...s.meta.rngState || []];
   s.orders = [{ id: 'o1', text: 'Send Jory Cassel to King\'s Landing with twenty men.' }];
-  const ask = async () => ({ actions: [{ op: 'travel', order: 1, character: 'jory_cassel', to: "King's Landing", men: 20 }], story: [] });
-  await previewOrders(s, ask);
-  assert.match(s.orders[0].preview[0], /Jory Cassel rides for King's Landing with 20 men/);
+  await readOrders(s, asRead([{ verb: 'send_person', params: { character: 'jory_cassel', to: 'baratheon', men: 20 } }]));
+  assert.match(said(s.orders[0]), /Jory Cassel rides for King's Landing with 20 men/);
   assert.equal(s.characters.jory_cassel.loc, 'stark'); assert.equal(s.houses.stark.figures.menAtArms.v, guard);
-  await carryOutOrders(s, async () => { throw new Error('the model is not asked again'); });
+  assert.deepEqual(s.meta.rngState || [], dice, 'the receipt rolled the copy\'s dice, not the save\'s');
+  await carryOutOrders(s, async () => { throw new Error('the order is not read again'); });
   assert.ok(String(s.characters.jory_cassel.loc).startsWith('party:'));
   assert.match(s.orders[0].result[0], /rides for King's Landing/);
 });
-test('an action the model left without its "op" is still carried out', async () => {
-  const { planOrders } = await import('../server/orders.js');
+test('each receipt is tried after the orders above it: the second march of one host is told where it will be', async () => {
+  const s = fresh(); apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'The Host', at: 'stark', men: 3000 }]);
+  const gold = s.houses.stark.figures.treasury.v;
+  s.orders = [{ id: 'a', text: 'Recruit two hundred men-at-arms at Winterfell.' }, { id: 'b', text: 'Spend sixty million gold dragons to buy the Iron Throne from King Robert.' }, { id: 'c', text: 'Pray for the old gods to keep us.' }];
+  await readOrders(s, byRule(s));
+  assert.equal(s.orders[0].receipt[0].ok, true);
+  assert.equal(s.orders[1].receipt[0].ok, false); assert.match(said(s.orders[1]), /treasury holds/);
+  assert.equal(s.orders[2].receipt[0].ok, 'story');
+  assert.equal(s.houses.stark.figures.treasury.v, gold, 'reading spends nothing');
+});
+test('a question the rules must ask is answered with a chip, and the answer is done', async () => {
+  const { answerOrder } = await import('../server/orders.js');
   const s = fresh();
-  const acts = await planOrders(s, [{ text: 'Send Jory Cassel to Castle Black with fifty men.' }], async () => ({ actions: [{ order: 1, character: 'jory_cassel', to: 'Castle Black', men: 50 }], story: [] }));
-  assert.equal(acts[0].op, 'travel');
+  s.orders = [{ id: 'a', text: 'Hire sellswords at Winterfell.' }, { id: 'b', text: 'Send someone to the Wall.' }];
+  await readOrders(s, byRule(s));
+  assert.equal(s.orders[0].receipt[0].ok, 'ask'); assert.match(said(s.orders[0]), /How many men/);
+  assert.ok(answerOrder(s.orders[0], 1)); // 200 men
+  assert.equal(s.orders[0].parsed.actions[0].params.men, 200); assert.equal(s.orders[0].chosen, '200 men');
+  assert.match(s.orders[1].parsed.clarify.question, /Who should go/);
+  const k = s.orders[1].parsed.clarify.options.findIndex((o) => o.patch.character === 'rodrik_cassel');
+  assert.ok(answerOrder(s.orders[1], k));
+  await readOrders(s, byRule(s));
+  assert.match(said(s.orders[0]), /\b200\b/); assert.equal(s.orders[0].receipt[0].ok, true); assert.match(said(s.orders[1]), /Rodrik Cassel sets out for Castle Black/);
+  await carryOutOrders(s, async () => { throw new Error('answered orders are not read again'); });
+  assert.equal(rideTo(s, 'rodrik_cassel'), 'nights_watch');
 });
 test('the story cannot empty the player\'s treasury', () => {
   const s = fresh(); const gold = s.houses.stark.figures.treasury.v;
@@ -367,12 +392,13 @@ test('the story cannot empty the player\'s treasury', () => {
 test('raising levies where a host stands joins it; banners and merge from plain orders', async () => {
   const s = fresh();
   s.orders = [{ id: 'o1', text: 'Assemble the men of the North at Winterfell as the Northern Host under Robb.' }];
-  const res = executeActions(s, [{ op: 'raise', order: 1, at: 'stark', men: 3000, name: 'The Northern Host', commander: 'robb_stark' }, { op: 'raise', order: 1, at: 'stark', men: 1000 }, { vassals: 'all', order: 1, at: 'Winterfell' }], s.orders);
+  const { lines } = carryOut(s, s.orders[0], { actions: [{ verb: 'raise_levies', params: { at: 'stark', men: 3000, name: 'The Northern Host', commander: 'robb_stark', immediate: true } }, { verb: 'raise_levies', params: { at: 'stark', men: 1000 } }, { verb: 'call_banners', params: { vassals: 'all', at: 'stark' } }] });
   const hosts = Object.values(s.parties).filter((a) => a.owner === 'stark' && a.at === 'stark' && a.kind === 'host');
-  assert.equal(hosts.length, 1); assert.equal(hosts[0].men, 4000); assert.equal(hosts[0].name, 'The Northern Host');
+  assert.equal(hosts.length, 1); assert.equal(hosts[0].name, 'The Northern Host');
+  assert.equal(hosts[0].men + (hosts[0].muster?.remaining || 0), 4000, 'one host: those in camp and those still walking in');
   assert.equal(s.characters.robb_stark.loc, 'party:' + hosts[0].id);
   assert.equal(s.houses.umber.obligations.levies, 'called');
-  assert.match(res[1].join(' '), /join The Northern Host, now 4,000 men under Robb Stark/);
+  assert.match(lines.map((l) => l.text).join(' '), /join The Northern Host, now [\d,]+ men under Robb Stark/);
 });
 test('every order has its event, first, even when the story forgot it', async () => {
   const { orderEvents } = await import('../server/orders.js');
@@ -383,23 +409,15 @@ test('every order has its event, first, even when the story forgot it', async ()
   assert.equal(extra.length, 2); assert.ok(told[0].mine);
   assert.match(extra[0].title, /The banners are called/); assert.match(extra[1].title, /Eddard Stark's command comes to nothing/); assert.match(extra[1].text, /not enough gold/);
 });
-test('a plain order in lower case still raises the host and calls the banners', async () => {
-  const { planOrders } = await import('../server/orders.js');
+test('the Pax order, in lower case and misspelt: banners called and the Northern Host raised at Winterfell', async () => {
   const s = fresh();
-  const o = [{ id: 'o', text: 'assemeble the men of the north at winterfell and create a great northern host of all able body men and boys' }];
-  const acts = await planOrders(s, o, async () => ({ actions: [], story: [1] }));
-  const res = executeActions(s, acts, o);
-  assert.ok(acts.some((a) => a.op === 'raise'), JSON.stringify(acts));
-  assert.match(res[1].join(' '), /levies muster at Winterfell/);
-});
-test('the Pax order: banners called and the Northern Host raised at Winterfell', async () => {
-  const { planOrders } = await import('../server/orders.js');
-  const s = fresh();
-  const o = [{ id: 'o', text: 'assemeble the men of the north at winterfell and create a great northern host of all able body men and boys' }];
-  const acts = await planOrders(s, o, async () => ({ actions: [], story: [1] }));
-  executeActions(s, acts, o);
+  s.orders = [{ id: 'o', text: 'assemeble the men of the north at winterfell and create a great northern host of all able body men and boys' }];
+  await carryOutOrders(s, byRule(s));
+  assert.equal(s.orders[0].parsed.via, 'rules', 'the rules read it whole: no model needed');
+  assert.match(s.orders[0].result.join(' '), /levies muster at Winterfell/);
   assert.equal(s.houses.umber.obligations.levies, 'called');
-  assert.ok(Object.values(s.parties).some((a) => a.owner === 'stark' && a.name === 'The Northern Host' && a.men > 10000));
+  const host = Object.values(s.parties).find((a) => a.owner === 'stark' && a.name === 'The Northern Host');
+  assert.ok(host && host.men + (host.muster?.remaining || 0) > 10000, 'every able man is called up (most still walking in)');
 });
 
 // ── From the 20-day run on the live model ──
@@ -408,8 +426,8 @@ test('gold an order cannot pay is refused before anything is done', async () => 
   assert.equal(goldIn('Spend sixty million gold dragons to buy the Iron Throne'), 60e6);
   assert.equal(goldIn('offer 2,000 dragons'), 2000);
   const s = fresh(); s.orders = [{ id: 'o', text: 'Spend sixty million gold dragons to buy the Iron Throne from King Robert.' }];
-  const res = executeActions(s, [], s.orders);
-  assert.match(res[1][0], /treasury holds 60,000 dragons, not 60,000,000/);
+  await carryOutOrders(s, asRead([{ verb: 'send_gift', params: { to: 'robert_baratheon', gold: 60e6 } }]));
+  assert.match(s.orders[0].result[0], /could not be done: the treasury holds 60,000 dragons, not 60,000,000/i);
 });
 test('an untagged story event that tells an order becomes its event (no duplicate)', async () => {
   const { orderEvents } = await import('../server/orders.js');
@@ -418,18 +436,10 @@ test('an untagged story event that tells an order becomes its event (no duplicat
   const extra = orderEvents(s, [{ id: 'a', text: 'Send Jory Cassel to Moat Cailin with fifty men.', result: ['Jory Cassel rides for Moat Cailin with 50 men (detached from Winterfell Household)'] }], told);
   assert.equal(extra.length, 0); assert.equal(told[0].orderId, 'a');
 });
-test('a model action under another name is still done; unknown ones fall to the rules', async () => {
-  const { planOrders } = await import('../server/orders.js');
-  const s = fresh();
-  const acts = await planOrders(s, [{ text: 'Fund the expansion of the granaries at Winterfell.' }], async () => ({ actions: [{ op: 'project', order: 1, name: 'granaries', at: 'stark' }] }));
-  assert.equal(acts[0].op, 'works');
-  const acts2 = await planOrders(s, [{ text: 'Fund the expansion of the granaries at Winterfell.' }], async () => ({ actions: [{ op: 'pray', order: 1 }] }));
-  assert.ok(acts2.some((a) => a.op === 'works'));
-});
 test('a letter to "Lord Commander Mormont" is addressed to Jeor', async () => {
-  const { postLetters } = await import('../server/orders.js');
   const s = fresh(); s.post = [];
-  postLetters(s, [{ id: 'o', text: 'Send a raven to Lord Commander Mormont asking what the Watch needs.' }]);
+  s.orders = [{ id: 'o', text: 'Send a raven to Lord Commander Mormont asking what the Watch needs.' }];
+  await carryOutOrders(s, byRule(s));
   assert.equal(s.post[0]?.to, 'jeor_mormont');
 });
 test('banners arriving after the host has marched follow it and join it — no second army', async () => {
@@ -446,24 +456,23 @@ test('banners arriving after the host has marched follow it and join it — no s
   assert.equal(Object.values(s.parties).filter((a) => a.owner === 'stark' && /Banners/.test(a.name)).length, 0);
 });
 test('works ordered in words are begun — and a second time refused with the reason', async () => {
-  const { planOrders } = await import('../server/orders.js');
-  const s = fresh(); const o = [{ id: 'a', text: 'Fund the expansion of the granaries at Winterfell.' }];
-  const ask = async () => ({ actions: [{ order: 1, template: 'granaries', at: 'stark' }] });
-  assert.match(executeActions(s, await planOrders(s, o, ask), o)[1][0], /Work begins: Fill and expand the granaries at Winterfell/);
-  assert.match(executeActions(s, await planOrders(s, o, ask), o)[1][0], /could not be done: .*already under way/);
+  const s = fresh();
+  s.orders = [{ id: 'a', text: 'Fund the expansion of the granaries at Winterfell.' }];
+  await carryOutOrders(s, byRule(s));
+  assert.match(s.orders[0].result[0], /Work begins: Fill and expand the granaries at Winterfell/);
+  s.orders = [{ id: 'b', text: 'Fund the expansion of the granaries at Winterfell.' }];
+  await carryOutOrders(s, byRule(s));
+  assert.match(s.orders[0].result[0], /could not be done: .*already under way/);
 });
-test('every kind of order action is carried out by the engine', () => {
+test('every kind of order is read by the rules and carried out by the engine', async () => {
   const s = fresh(); apply(s, [{ op: 'army_create', id: 'h1', owner: 'stark', name: 'Host A', at: 'stark', men: 1000 }, { op: 'army_create', id: 'h2', owner: 'stark', name: 'Host B', at: 'stark', men: 500 }]);
-  const kinds = [
-    { op: 'travel', character: 'jon_snow', to: 'Castle Black' }, { op: 'march', army: 'h1', to: 'Moat Cailin' }, { op: 'recruit', at: 'Winterfell', men: 100 },
-    { op: 'hire', role: 'spymaster', at: 'Winterfell' }, { op: 'appoint', character: 'rodrik_cassel', role: 'captain' }, { op: 'banners', vassals: 'all', at: 'Winterfell' },
-    { op: 'works', template: 'rookery', at: 'stark' }, { op: 'feast' }, { op: 'tourney' }, { op: 'raise', at: 'stark', men: 2000 },
-  ];
-  const orders = kinds.map((k, i) => ({ id: 'o' + i, text: 'Send Jon Snow, recruit men, hire, appoint Rodrik, call the banners, feast.' }));
-  const res = executeActions(s, kinds.map((k, i) => ({ ...k, order: i + 1 })), orders);
-  kinds.forEach((k, i) => assert.ok(res[i + 1]?.length && !/^could not/.test(res[i + 1][0]), `${k.op}: ${JSON.stringify(res[i + 1])}`));
-  const m = executeActions(s, [{ op: 'merge', order: 1 }], [{ text: 'Join the hosts at Winterfell into one.' }]);
-  assert.match(m[1][0], /are joined into/);
+  const texts = ['Send Jon Snow to Castle Black.', 'March Host A to Moat Cailin.', 'Recruit a hundred men-at-arms at Winterfell.', 'Hire a spymaster at Winterfell.', 'Appoint Ser Rodrik captain of the guard.', 'Call the banners to Winterfell.', 'Build a rookery at Winterfell.', 'Hold a feast.', 'Hold a tourney.', 'Raise two thousand levies at Winterfell.'];
+  s.orders = texts.map((text, i) => ({ id: 'o' + i, text }));
+  await carryOutOrders(s, byRule(s));
+  s.orders.forEach((o) => { assert.equal(o.parsed.via, 'rules', o.text); assert.ok(o.result?.length && !o.result.some((l) => /^could not/.test(l)), `${o.text}: ${JSON.stringify(o.result)}`); });
+  s.orders = [{ id: 'm', text: 'Join the hosts at Winterfell into one.' }];
+  await carryOutOrders(s, byRule(s));
+  assert.match(s.orders[0].result[0], /are joined into/);
 });
 test('a refused order is told once, and nothing of it happens elsewhere', async () => {
   const { orderEvents } = await import('../server/orders.js');
@@ -471,12 +480,12 @@ test('a refused order is told once, and nothing of it happens elsewhere', async 
   orderEvents(s, [{ id: 'a', text: 'Spend sixty million dragons.', result: ['could not be done: the treasury holds 60,000 dragons, not 60,000,000'] }], told);
   assert.equal(told.length, 1); assert.equal(told[0].title, 'The treasurer laughs');
 });
-test('an order that names a leader puts them at the head of the host', () => {
+test('an order that names a leader puts them at the head of the host', async () => {
   const s = fresh(); apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'The Northern Host', at: 'stark', men: 16000 }]);
-  const o = [{ text: 'Robb is to march the Northern Host to Moat Cailin.' }];
-  const r = executeActions(s, [{ op: 'march', order: 1, army: 'nh', to: 'Moat Cailin' }], o);
+  s.orders = [{ id: 'o', text: 'Robb is to march the Northern Host to Moat Cailin.' }];
+  await carryOutOrders(s, byRule(s));
   assert.equal(s.parties.nh.commander, 'robb_stark'); assert.equal(s.characters.robb_stark.loc, 'party:nh');
-  assert.match(r[1][0], /16,000 men under Robb Stark\) marches for Moat Cailin/);
+  assert.match(s.orders[0].result[0], /16,000 men under Robb Stark\) marches for Moat Cailin/);
 });
 test('an engine-written order headline is one short sentence', async () => {
   const { orderEvents } = await import('../server/orders.js');
@@ -487,14 +496,14 @@ test('an engine-written order headline is one short sentence', async () => {
 
 // ── What hosts are made of ──
 import { unitsOf, unitsText, mounted } from '../public/js/shared/units.js';
-test('a host knows its knights, riders, foot and archers — through merges and losses', () => {
+test('a host knows its knights, riders, foot and archers — through merges and losses', async () => {
   const s = fresh();
-  executeActions(s, [{ op: 'raise', order: 1, at: 'stark', men: 2000, name: 'The Northern Host' }], [{ text: 'Raise the Northern Host.' }]);
+  carryOut(s, { text: 'Raise the Northern Host.' }, { actions: [{ verb: 'raise_levies', params: { at: 'stark', men: 2000, name: 'The Northern Host', immediate: true } }] });
   const h = Object.values(s.parties).find((a) => a.name === 'The Northern Host');
   const u = unitsOf(s, h); assert.equal(u.knights + u.horse + u.foot + u.archers, 2000); assert.ok(u.foot > u.horse);
   apply(s, [{ op: 'army_create', id: 'mh', owner: 'manderly', name: 'Host of House Manderly', at: 'stark', men: 1000, composition: 'Levies of House Manderly' }]);
   s.parties.mh.serving = 'stark';
-  executeActions(s, [{ op: 'merge', order: 1 }], [{ text: 'Join the hosts.' }]);
+  carryOut(s, { text: 'Join the hosts.' }, { actions: [{ verb: 'merge_hosts', params: {} }] });
   assert.equal(Object.values(unitsOf(s, h)).reduce((a, b) => a + b, 0), 3000);
   h.men = 1500; assert.equal(Object.values(unitsOf(s, h)).reduce((a, b) => a + b, 0), 1500);
   assert.match(unitsText(s, h), /foot/);
@@ -537,7 +546,7 @@ test('a turn runs until the next thing that matters', () => {
   const s = fresh();
   const q = nextTurnLength(s); assert.ok(q.days >= 1 && q.days <= 30, JSON.stringify(q));
   apply(s, [{ op: 'army_create', id: 'nh', owner: 'stark', name: 'The Northern Host', at: 'stark', men: 5000 }]);
-  executeActions(s, [{ op: 'march', order: 1, army: 'nh', to: 'Moat Cailin' }], [{ text: 'March to Moat Cailin.' }]);
+  carryOut(s, { text: 'March to Moat Cailin.' }, { actions: [{ verb: 'march_host', params: { army: 'nh', to: 'moat_cailin' } }] });
   const t = nextTurnLength(s);
   assert.match(t.reason, /reaches Moat Cailin|The King rides north/);
   // the turn runs to the day the host arrives: its road is ~27.1 days, so it is there on the 28th
@@ -901,8 +910,8 @@ test('an empty question returns nothing rather than noise', () => {
 test('north of the Wall resolves beyond the Wall, never Winterfell or Casterly Rock', () => {
   const s = fresh();
   const army = Object.values(s.parties).find((a) => a.owner === 'stark' && a.kind !== 'fleet'); // Winterfell's own garrison
-  const result = executeActions(s, [{ op: 'march', order: 1, army: army.id, to: 'north of the Wall' }], [{ text: 'March north of the Wall.' }]);
-  assert.match(result[1][0], /Hardhome/);
+  const { lines } = carryOut(s, { text: 'March north of the Wall.' }, { actions: [{ verb: 'march_host', params: { army: army.id, to: 'north of the Wall' } }] });
+  assert.match(lines[0].text, /Hardhome/);
   assert.equal(s.parties[army.id].march.to, 'hardhome');
 });
 

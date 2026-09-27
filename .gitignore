@@ -7,7 +7,10 @@ config.json
 public/assets/sigils/
 relay/
 public/models/
-bench/
+# bench reports stay on the machine that ran them (the owner pastes them into a PR); the suites and the scorer are code
+bench/*
+!bench/suites/
+!bench/lib/
 playtest/
 
 # your soundtrack stays on your machine (see public/music/README.txt)

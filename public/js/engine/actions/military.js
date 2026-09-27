@@ -167,6 +167,7 @@ export const MILITARY = [
     id: 'march_host', family: 'military', label: 'March a host',
     params: { army: 'party:own', to: 'place', commander: 'character:own?', intent: 'text?' },
     legal: (state, i) => {
+      if (!i.params.army) return { code: 'no_host', text: 'You have no host in the field to march: raise your levies or call the banners first.' };
       const a = hostOf(state, i); if (!a) return { code: 'not_yours', text: 'That host is not yours to command.' };
       const cmd = i.params.commander && state.characters[i.params.commander];
       if (cmd && (!cmd.alive || cmd.house !== i.house || /imprisoned|captive/.test(cmd.status || ''))) return { code: 'commander', text: `${cmd.name} cannot lead ${a.name}.` };

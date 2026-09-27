@@ -18,6 +18,8 @@ const SNAP = path.join(ROOT, 'tests', '__snapshots__', 'prompts');
 const ADV = path.join(ROOT, 'tests', 'fixtures', 'model', 'adversarial');
 const world = () => createInitialState('agot_298', 'stark', { seed: 298 });
 const dead = { ...loadConfig(), provider: 'openai', baseUrl: 'http://127.0.0.1:9/v1', timeoutSec: 3 };
+// a snapshot shows the schema's shape; an enum of the whole world's names is shown by its first members and its size
+const brief = (x) => (Array.isArray(x) ? x.map(brief) : x && typeof x === 'object' ? Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === 'enum' && v.length > 30 ? [...v.slice(0, 12), `… ${v.length} members`] : brief(v)])) : x);
 
 // strict mode: every object says additionalProperties:false and requires every property; no private keys on the wire
 function strict(schema, at = '$') {
@@ -40,7 +42,7 @@ for (const [kind, call] of Object.entries(CALLS)) {
     const ctx = call.context(state, args); const messages = call.prompt(ctx);
     const tokens = estimateTokens(messages.map((m) => m.content).join('\n'));
     assert.ok(tokens <= budgetOf(kind).in, `${kind}: prompt ${tokens} tokens, budget ${budgetOf(kind).in}`);
-    const text = messages.map((m) => `### ${m.role.toUpperCase()}\n${m.content}`).join('\n\n') + `\n\n### SCHEMA\n${JSON.stringify(wire(call.schema(ctx)), null, 1)}\n`;
+    const text = messages.map((m) => `### ${m.role.toUpperCase()}\n${m.content}`).join('\n\n') + `\n\n### SCHEMA\n${JSON.stringify(brief(wire(call.schema(ctx))), null, 1)}\n`;
     const file = path.join(SNAP, `${kind}.txt`);
     if (process.env.UPDATE_SNAPSHOTS === '1' || !fs.existsSync(file)) { fs.mkdirSync(SNAP, { recursive: true }); fs.writeFileSync(file, text); }
     assert.equal(text.replace(/\r\n/g, '\n'), fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n'), `the ${kind} prompt changed: review it, then run UPDATE_SNAPSHOTS=1 npm test`);
@@ -59,11 +61,11 @@ test('adversarial replies: each is accepted or refused as its fixture says, and 
   for (const f of files) {
     const fx = JSON.parse(fs.readFileSync(path.join(ADV, f), 'utf8'));
     const call = CALLS[fx.kind]; assert.ok(call, `${f}: unknown call ${fx.kind}`);
-    const state = world(); const ctx = call.context(state, call.fixtureArgs?.(state) || {});
+    const state = world(); const ctx = call.context(state, fx.args || call.fixtureArgs?.(state) || {});
     const { value, problems } = readReply(fx.reply, call, ctx, call.schema(ctx));
     if (fx.expect === 'accept') {
       assert.deepEqual(problems, [], `${f}: ${problems.join('; ')}`);
-      for (const [k, v] of Object.entries(fx.canonical || {})) assert.equal(value[k], v, `${f}: ${k}`);
+      for (const [k, v] of Object.entries(fx.canonical || {})) assert.deepEqual(k.split('.').reduce((x, key) => x?.[key], value), v, `${f}: ${k}`);
     } else {
       assert.ok(problems.length, `${f}: should have been refused`);
       if (fx.problem) assert.ok(problems.some((p) => p.includes(fx.problem)), `${f}: ${problems.join('; ')}`);

@@ -308,6 +308,17 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .order .t { display: block; }
 .receipt { font-size: 0.78rem; color: var(--gold2); margin-top: 0.15rem; }
 .receipt .bad { color: #e0786a; }
+/* a receipt line: its mark (✓ ⚠ ✗ ?), then what will be done */
+.receipt .rl { display: flex; gap: 0.35rem; align-items: baseline; line-height: 1.35; }
+.receipt .rl .mk { flex: 0 0 0.8rem; text-align: center; font-weight: 700; }
+.receipt .rl.good .mk { color: #8fc07a; }
+.receipt .rl.warn { color: #e2b25a; }
+.receipt .rl.ask { color: var(--text); font-style: italic; }
+.receipt .rl.story { color: var(--muted); }
+.receipt .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.3rem 0 0.1rem 1.15rem; }
+.receipt .chip { font: inherit; font-size: 0.76rem; padding: 0.12rem 0.55rem; border-radius: 999px; border: 1px solid var(--gold2); background: rgba(201, 164, 74, 0.08); color: var(--gold2); cursor: pointer; }
+.receipt .chip:hover { background: rgba(201, 164, 74, 0.2); color: var(--gold); }
+.receipt .chip:disabled { opacity: 0.5; cursor: wait; }
 .errands-chip { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); color: var(--text); font-size: 0.78rem; padding: 0.2rem 0.6rem; border-radius: 999px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
 .errands-chip:hover { border-color: var(--gold); }
 .errand { display: flex; gap: 0.6rem; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
@@ -677,7 +688,8 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .drawer-open { left: 0.8rem; right: auto; }
 .drawer-body { flex: 1; min-height: 0; }
 #drawer #command { position: static; left: auto; right: auto; bottom: auto; max-width: none; min-width: 0; border-top: 1px solid var(--line2); padding: 0.5rem 0.6rem 0.6rem; background: rgba(0,0,0,0.22); gap: 0.4rem; }
-#drawer #command .orders { max-height: 11rem; }
+/* the orders are the heart of the turn: with their receipts they may take up to ~40% of the height (the chronicle scrolls) */
+#drawer #command .orders { max-height: min(40vh, 24rem); }
 #drawer #command .cmd-row { display: flex; gap: 0.35rem; align-items: stretch; }
 #drawer #command textarea { flex: 1; min-height: 2.6rem; resize: none; }
 #drawer.hidden ~ .mapmodes, .drawer.hidden ~ .mapmodes { right: 0.8rem; }

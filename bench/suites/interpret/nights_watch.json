@@ -1,0 +1,792 @@
+{
+ "house": "nights_watch",
+ "about": "Jeor Mormont, Lord Commander, at Castle Black; three hundred rangers stand ready there under Benjen Stark.",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "the_rangers",
+   "owner": "nights_watch",
+   "name": "The Rangers",
+   "at": "nights_watch",
+   "men": 300,
+   "commander": "benjen_stark"
+  }
+ ],
+ "items": [
+  {
+   "id": "nights_watch-01",
+   "text": "Send Benjen Stark beyond the Wall with six rangers.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "benjen_stark",
+       "to": "hardhome",
+       "men": 6
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-02",
+   "text": "Send Yoren to King's Landing to find recruits.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "yoren",
+       "to": "baratheon"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-03",
+   "text": "Qhorin Halfhand is to hold the Shadow Tower.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "nights_watch-04",
+   "text": "Send Ser Alliser Thorne to King's Landing.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "alliser_thorne",
+       "to": "baratheon"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-05",
+   "text": "Write to King Robert asking for men.",
+   "expect": {
+    "letter": "robert_baratheon"
+   }
+  },
+  {
+   "id": "nights_watch-06",
+   "text": "Send a raven to Lord Eddard Stark at Winterfell.",
+   "expect": {
+    "letter": "eddard_stark"
+   }
+  },
+  {
+   "id": "nights_watch-07",
+   "text": "Send a raven to Winterfell asking for grain.",
+   "expect": {
+    "letter": "eddard_stark"
+   }
+  },
+  {
+   "id": "nights_watch-08",
+   "text": "Raise the levies at Castle Black.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "nights_watch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-09",
+   "text": "Send the rangers to the Fist of the First Men.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "the_rangers",
+       "to": "fist_first_men"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-10",
+   "text": "March the rangers to Hardhome.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "the_rangers",
+       "to": "hardhome"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-11",
+   "text": "Halt the rangers.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "halt_host",
+      "params": {
+       "army": "the_rangers"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-12",
+   "text": "Hire a hundred men at Mole's Town.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "at": "moles_town",
+       "men": 100
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-13",
+   "text": "Repair the walls of Castle Black.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "walls",
+       "holding": "nights_watch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-14",
+   "text": "Build a stable at Castle Black.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "stables",
+       "holding": "nights_watch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-15",
+   "text": "Send Donal Noye to Eastwatch.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "donal_noye",
+       "to": "eastwatch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-16",
+   "text": "Make Bowen Marsh my steward.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "bowen_marsh",
+       "role": "steward"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-17",
+   "text": "Appoint Qhorin Halfhand commander of the Shadow Tower.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "qhorin_halfhand",
+       "role": "commander"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-18",
+   "text": "Send Grenn and Pyp to Eastwatch.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "grenn",
+       "to": "eastwatch"
+      }
+     },
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "pyp",
+       "to": "eastwatch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-19",
+   "text": "Send Eddison Tollett to the Shadow Tower.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "eddison_tollett",
+       "to": "shadow_tower"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-20",
+   "text": "I will ride to the Fist of the First Men myself.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "jeor_mormont",
+       "to": "fist_first_men"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-21",
+   "text": "Send a ranging party beyond the Wall.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "the_rangers",
+       "to": "hardhome"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-22",
+   "text": "Plant spies among the free folk.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "plant_spy",
+      "params": {
+       "house": "free_folk"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-23",
+   "text": "Find out Mance Rayder's secrets.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "gather_secrets",
+      "params": {
+       "house": "free_folk"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-24",
+   "text": "Hold a feast for the brothers.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hold_feast",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-25",
+   "text": "The Night's Watch takes no part in the wars of the realm.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "nights_watch-26",
+   "text": "Train the new recruits hard.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "nights_watch-27",
+   "text": "Hire two hundred men at Castle Black.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "at": "nights_watch",
+       "men": 200
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-28",
+   "text": "Send Waymar Royce to Craster's Keep with three rangers.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "waymar_royce",
+       "to": "crasters_keep",
+       "men": 3
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-29",
+   "text": "Recall Benjen Stark.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "recall_rider",
+      "params": {
+       "character": "benjen_stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-30",
+   "text": "Disband the rangers.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "disband_host",
+      "params": {
+       "army": "the_rangers"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-31",
+   "text": "Send a raven to the Eyrie for men.",
+   "expect": {
+    "letter": "lysa_arryn"
+   }
+  },
+  {
+   "id": "nights_watch-32",
+   "text": "Ask Lord Tywin for recruits by letter.",
+   "expect": {
+    "letter": "tywin_lannister"
+   }
+  },
+  {
+   "id": "nights_watch-33",
+   "text": "Send Yoren with twenty men to Winterfell.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "yoren",
+       "to": "stark",
+       "men": 20
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-34",
+   "text": "Take the rangers north to Craster's Keep.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "the_rangers",
+       "to": "crasters_keep"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-35",
+   "text": "Go north.",
+   "expect": {
+    "clarify": true
+   }
+  },
+  {
+   "id": "nights_watch-36",
+   "text": "Winter is coming.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "nights_watch-37",
+   "text": "Have Ser Denys Mallister reinforce Castle Black with fifty men.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "denys_mallister",
+       "to": "nights_watch",
+       "men": 50
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-38",
+   "text": "Send Cotter Pyke to Castle Black.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "cotter_pyke",
+       "to": "nights_watch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-39",
+   "text": "Lower the taxes.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "low"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-40",
+   "text": "Send Qhorin to Castle Black with a hundred men.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "qhorin_halfhand",
+       "to": "nights_watch",
+       "men": 100
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-h01",
+   "text": "Benjen, take fifty rangers to the Fist of the First Men.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "benjen_stark",
+       "to": "fist_first_men",
+       "men": 50
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-h02",
+   "text": "The rangers are to march to Craster's Keep.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "the_rangers",
+       "to": "crasters_keep"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-h03",
+   "text": "Write to the Eyrie asking for men for the Wall.",
+   "expect": {
+    "letter": "lysa_arryn"
+   }
+  },
+  {
+   "id": "nights_watch-h04",
+   "text": "Send Pyp to the Shadow Tower.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "pyp",
+       "to": "shadow_tower"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-h05",
+   "text": "Recruit a hundred men at Mole's Town.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "at": "moles_town",
+       "men": 100
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-h06",
+   "text": "Repair the stables at Castle Black.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "stables",
+       "holding": "nights_watch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-h07",
+   "text": "Tell King Robert the dead walk.",
+   "expect": {
+    "letter": "robert_baratheon"
+   }
+  },
+  {
+   "id": "nights_watch-h08",
+   "text": "Make Donal Noye master-at-arms.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "donal_noye",
+       "role": "master_at_arms"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-h09",
+   "text": "Pray to the old gods.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "nights_watch-h10",
+   "text": "Send Yoren to Winterfell with ten men.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "yoren",
+       "to": "stark",
+       "men": 10
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-x01",
+   "text": "Benjen, take the rangers beyond the Wall to the Fist of the First Men.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "the_rangers",
+       "to": "fist_first_men"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-x02",
+   "text": "Send Yoren south to recruit men for the Watch.",
+   "expect": {
+    "clarify": true
+   }
+  },
+  {
+   "id": "nights_watch-x03",
+   "text": "Ser Alliser should take twenty men and ride to Eastwatch.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "alliser_thorne",
+       "to": "eastwatch",
+       "men": 20
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-x04",
+   "text": "Double the watch on the Wall.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "nights_watch-x05",
+   "text": "Write to King Robert asking for more men.",
+   "expect": {
+    "letter": "robert_baratheon"
+   }
+  },
+  {
+   "id": "nights_watch-y01",
+   "text": "Send Grenn and Pyp to the Shadow Tower.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "grenn",
+       "to": "shadow_tower"
+      }
+     },
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "pyp",
+       "to": "shadow_tower"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-y02",
+   "text": "Appoint Ser Alliser Thorne master-at-arms.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "alliser_thorne",
+       "role": "master_at_arms"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-y03",
+   "text": "Write to Lord Stark at Winterfell that his brother is missing.",
+   "expect": {
+    "letter": "eddard_stark"
+   }
+  },
+  {
+   "id": "nights_watch-y04",
+   "text": "Send the rangers to Eastwatch-by-the-Sea.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "the_rangers",
+       "to": "eastwatch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-y05",
+   "text": "Declare war on the free folk.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "free_folk"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

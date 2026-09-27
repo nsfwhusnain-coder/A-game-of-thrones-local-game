@@ -1,0 +1,10 @@
+{
+ "kind": "interpret",
+ "note": "A raven is not a rider: \"have Vayon send a raven\" never puts Vayon on the road.",
+ "args": {
+  "text": "Have Vayon send a discreet raven to the Eyrie about Jon Arryn's last days."
+ },
+ "reply": "{\"actions\":[{\"verb\":\"send_person\",\"who\":\"vayon_poole\",\"subject\":\"none\",\"at\":\"none\",\"to\":\"the_eyrie\",\"person\":\"none\",\"houses\":[],\"men\":0,\"gold\":0,\"choice\":\"none\",\"note\":\"\"}],\"clarify\":{\"needed\":false,\"question\":\"\",\"options\":[]}}",
+ "expect": "refuse",
+ "problem": "that is a letter"
+}

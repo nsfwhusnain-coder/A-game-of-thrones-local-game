@@ -90,6 +90,11 @@ canonicalize(obj, maps)           // alias → id in place
 **When:** each time the player adds or edits a command (planning phase), and when they answer a matter "in their own
 words". **Goal:** turn free text into 0–4 legal intents plus a receipt, or ask one clarifying question.
 
+> *Implemented in WP B6* — the pre-parser `server/orders/parse.js`; the call `server/ai/calls/interpret.js`; the flow
+> (rules → model → fallback) `server/orders/interpret.js`; readings, receipts and answers in `server/orders.js`
+> (`readOrders`, `carryOut`, `answerOrder`, `carryOutOrders`); the suite `bench/suites/interpret` (275 orders) and its
+> hold-out. Departures: DECISIONS D-016–D-021. "Answer a matter in their own words" still goes through `answer_matter`.
+
 ### 4.1 Two stages
 
 1. **Deterministic pre-parse** (`server/orders/parse.js`, grown from `readOrdersByRule` in `server/orders.js`):
@@ -120,6 +125,11 @@ Turn the order into actions. If it cannot be done with the actions allowed, say 
 ```
 
 ### 4.3 Schema
+
+> *As built (D-016):* one flat action record serves every verb — `verb, who, subject, at, to, person, houses[], men,
+> gold, choice, note` — because the registry's verbs need more than `who/subject/to/men` (a house for war and spies, a
+> sum for a gift, an office, a tax level, a verdict). `choice` is one enum of every verb's small words (checked against
+> the verb's own); `who` holds the house's people and the wards it keeps, `person` everyone living.
 
 ```json
 {
@@ -518,6 +528,13 @@ Injected into Mind, Director, Audience and Interpreter prompts (one paragraph ea
 | `latency` | a scripted 7-day jump | wall-clock by phase | Q3 |
 
 A judge model scores voice (optional, offline, any capable model). Reports go to `bench/<date>-<model>.md`.
+
+> *`interpret` built in WP B6* (D-019): 275 orders (55 × Stark, Lannister, Mallister, Night's Watch, Greyjoy) in
+> `bench/suites/interpret`, and a hold-out of 25 in `bench/suites/interpret-holdout`; `bench/lib/interpret.js` scores
+> them (exact, params, clarify, receipts, and how many the pre-parser reads alone and how many of those are right).
+> `npm run bench -- --suite interpret [--reader rules|model] [--holdout] [--record <dir>]` writes
+> `bench/interpret-<reader>-<model>-<date>.md`. CI gates the pre-parser (≥ 95 % on the suite, ≥ 80 % on the hold-out,
+> ≥ 60 % read alone at ≥ 98 % precision, every action with a receipt) and the mock through the whole call path.
 
 ## 14. Building and testing without a model (the implementing agent's situation)
 

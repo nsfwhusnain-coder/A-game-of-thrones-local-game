@@ -1,0 +1,80 @@
+{
+ "house": "greyjoy",
+ "about": "Balon Greyjoy at Pyke, the Iron Fleet at anchor, three thousand ironborn ready under Victarion; Theon a ward at Winterfell. (hold-out: orders written apart from the pre-parser, and never tuned against)",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "ironborn_host",
+   "owner": "greyjoy",
+   "name": "The Ironborn",
+   "at": "greyjoy",
+   "men": 3000,
+   "commander": "victarion_greyjoy"
+  },
+  {
+   "op": "character",
+   "id": "victarion_greyjoy",
+   "with": "ironborn_host"
+  }
+ ],
+ "items": [
+  {
+   "id": "greyjoy-z01",
+   "text": "Euron, take the Silence to Lannisport.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "the_silence",
+       "to": "lannisport"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-z02",
+   "text": "Aeron is to preach in the villages.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "greyjoy-z03",
+   "text": "Raise the Iron Fleet and sail for Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "iron_fleet",
+       "to": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-z04",
+   "text": "Write to Lord Stark demanding my son's return.",
+   "expect": {
+    "letter": "eddard_stark"
+   }
+  },
+  {
+   "id": "greyjoy-z05",
+   "text": "Declare war on the North.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "stark"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

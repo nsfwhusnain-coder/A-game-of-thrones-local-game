@@ -64,6 +64,7 @@ route('GET', '/api/games/:id', (req, p) => game.loadState(p.id));
 route('DELETE', '/api/games/:id', (req, p) => { game.deleteSave(p.id); return { ok: true }; });
 route('POST', '/api/games/:id/orders', async (req, p) => ({ orders: game.setOrders(p.id, (await readBody(req)).orders) }));
 route('POST', '/api/games/:id/orders/preview', async (req, p) => game.previewOrderPlans(p.id));
+route('POST', '/api/games/:id/orders/:oid/answer', async (req, p) => game.answerOrderQuestion(p.id, p.oid, (await readBody(req)).option));
 route('POST', '/api/games/:id/advance', async (req, p) => game.advance(p.id, await readBody(req)));
 // undo (docs/gdd/03-architecture.md §11): how far back the glass can turn, and turning it
 route('GET', '/api/games/:id/undo', (req, p) => { const st = game.loadState(p.id); return { depth: game.undoDepth(p.id, st), ironman: !!st.meta.settings?.ironman, turn: st.meta.turn }; });

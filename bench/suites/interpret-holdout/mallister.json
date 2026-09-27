@@ -1,0 +1,75 @@
+{
+ "house": "mallister",
+ "about": "Jason Mallister at Seagard, a sworn house of Riverrun; eight hundred of his men stand at Seagard under Patrek. (hold-out: orders written apart from the pre-parser, and never tuned against)",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "seagard_host",
+   "owner": "mallister",
+   "name": "The Seagard Host",
+   "at": "mallister",
+   "men": 800,
+   "commander": "patrek_mallister"
+  }
+ ],
+ "items": [
+  {
+   "id": "mallister-z01",
+   "text": "Close Seagard's gates and let no one in.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "mallister-z02",
+   "text": "Patrek should take a hundred riders to hunt the ironborn raiders along the coast.",
+   "expect": {
+    "clarify": true
+   }
+  },
+  {
+   "id": "mallister-z03",
+   "text": "Send five hundred dragons to Lord Walder as a wedding gift.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_gift",
+      "params": {
+       "to": "walder_frey",
+       "gold": 500
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-z04",
+   "text": "Hire a maester for Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_officer",
+      "params": {
+       "role": "maester"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-z05",
+   "text": "March our host to Riverrun and put it at Lord Tully's command.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "seagard_host",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

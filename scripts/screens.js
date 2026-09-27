@@ -69,6 +69,33 @@ const SCENARIOS = {
       await page.waitForSelector('#toasts .toast');
     } };
   },
+  // written orders read when they are written (WP B6): each with its receipt — ✓ done, ⚠ done with a warning, ✗ refused
+  // and why — and the one question the steward must ask, with its answers as chips
+  async orders() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+    await api(`/games/${id}/act`, { verb: 'raise_levies', params: { at: 'stark', men: 4000, name: 'The Host of Winterfell', commander: 'robb_stark' } });
+    await api(`/games/${id}/orders`, { orders: [
+      { id: 'o1', text: 'Send Jory Cassel to Moat Cailin with fifty men.' },
+      { id: 'o2', text: 'Robb, march the host to the Twins.' },
+      { id: 'o3', text: 'Raise twenty thousand more levies at Winterfell.' },
+      { id: 'o4', text: 'Hire sellswords at Winterfell.' },
+      { id: 'o5', text: 'Send someone to the Wall.' },
+      { id: 'o6', text: 'Spend sixty million gold dragons to buy the Iron Throne from King Robert.' },
+      { id: 'o7', text: 'Write to Lord Tully at Riverrun.' },
+    ] });
+    await api(`/games/${id}/orders/preview`, {});
+    return { id, focus: [state.holdings.stark.pos[0], state.holdings.stark.pos[1] + 120], dist: 900, page: async (page) => { await page.waitForSelector('.receipt .chip'); await page.evaluate(() => { const o = document.querySelector('#orders'); o.scrollTop = o.scrollHeight; }); } };
+  },
+  // …and the questions answered by a click: two hundred sellswords, and Ser Rodrik rides for the Wall
+  async answered() {
+    const g = await SCENARIOS.orders();
+    return { ...g, page: async (page) => {
+      // (the second size opens the same game, its questions already answered)
+      await page.waitForSelector('.receipt .rl');
+      for (const [o, k] of [['o4', 1], ['o5', 0]]) if (await page.$(`.chip[data-answer="${o}"]`)) { await page.click(`.chip[data-answer="${o}"][data-k="${k}"]`); await page.waitForSelector(`.chip[data-answer="${o}"]`, { state: 'detached' }); }
+      await page.evaluate(() => { const o = document.querySelector('#orders'); o.scrollTop = o.scrollHeight; });
+    } };
+  },
   // beginning a chronicle, ironman or not (WP B3)
   async begin() {
     return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); } };

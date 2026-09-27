@@ -1,0 +1,10 @@
+{
+ "kind": "interpret",
+ "note": "A march with no host named cannot be done by the engine: the check asks again rather than guessing.",
+ "args": {
+  "text": "Take the host to Moat Cailin."
+ },
+ "reply": "{\"actions\":[{\"verb\":\"march_host\",\"who\":\"none\",\"subject\":\"none\",\"at\":\"none\",\"to\":\"moat_cailin\",\"person\":\"none\",\"houses\":[],\"men\":0,\"gold\":0,\"choice\":\"none\",\"note\":\"\"}],\"clarify\":{\"needed\":false,\"question\":\"\",\"options\":[]}}",
+ "expect": "refuse",
+ "problem": "needs subject"
+}

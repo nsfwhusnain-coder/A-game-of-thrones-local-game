@@ -1,0 +1,10 @@
+{
+ "kind": "interpret",
+ "note": "Men go only if the order asks for them.",
+ "args": {
+  "text": "Send Jon north to the Wall."
+ },
+ "reply": "{\"actions\":[{\"verb\":\"send_person\",\"who\":\"jon_snow\",\"subject\":\"none\",\"at\":\"none\",\"to\":\"castle_black\",\"person\":\"none\",\"houses\":[],\"men\":50,\"gold\":0,\"choice\":\"none\",\"note\":\"\"}],\"clarify\":{\"needed\":false,\"question\":\"\",\"options\":[]}}",
+ "expect": "refuse",
+ "problem": "asks for no men"
+}

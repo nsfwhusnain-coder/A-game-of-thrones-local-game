@@ -11,7 +11,7 @@ import { CHARACTERS } from '../data/characters.js';
 import { briefFor } from '../data/briefs.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
-import { app, $, $$, esc, fmt, api, doVerb, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
+import { app, $, $$, esc, fmt, api, doVerb, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, answerOrder, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
@@ -272,6 +272,18 @@ async function chooseUndo() {
 }
 
 // ───── orders ─────
+// An order's receipt (docs/gdd/04-ai-system.md §4.4): what the turn will do, line by line — ✓ done, ⚠ done with a
+// warning, ✗ refused and why — or the one question the steward must ask, with its answers to choose from.
+const MARK = { true: '✓', warn: '⚠', false: '✗', ask: '?', story: '·' };
+const TONE = { true: 'good', warn: 'warn', false: 'bad', ask: 'ask', story: 'story' };
+const READER = { rules: 'Read by your steward', model: 'Read by your maester', replay: 'Read by your maester (recorded)', mock: 'Read by your steward', fallback: 'Your maester could not read it; your steward did' };
+function receiptHtml(o) {
+  const q = o.parsed?.clarify;
+  const lines = (o.receipt || []).map((l) => `<div class="rl ${TONE[l.ok] || 'good'}"><span class="mk">${MARK[l.ok] || '✓'}</span><span>${esc(l.text)}</span></div>`).join('');
+  const chips = q?.options?.length ? `<div class="chips">${q.options.map((op, k) => `<button class="chip" data-answer="${o.id}" data-k="${k}">${esc(op.label)}</button>`).join('')}</div>` : q ? '<div class="rl story"><span class="mk"></span><span>Say it in the order’s words, and it will be read again.</span></div>' : '';
+  const chosen = o.chosen ? `<div class="rl story"><span class="mk">↳</span><span>You answered: ${esc(o.chosen)}</span></div>` : '';
+  return `<div class="receipt" title="${esc(READER[o.parsed?.via] || '')}">${lines}${chosen}${chips}</div>`;
+}
 function renderOrders() {
   const s = app.state;
   const moving = underway(s); const last = s.history.at(-1); const lastOut = (last?.orders || []).map((o) => orderOutcome(o, s));
@@ -279,10 +291,11 @@ function renderOrders() {
   const chip = moving.length || lastOut.length ? `<button class="errands-chip" data-action="errands">${icon('hourglass', 'tg-ico')} ${moving.length} under way${lastOut.length ? ` · last turn: ${lastOut.length - failed} carried out${failed ? `, <b>${failed} failed</b>` : ''}` : ''}</button>` : '';
   $('#orders').innerHTML = chip + s.orders.map((o, i) => {
     const st = o.status || 'queued'; const done = st !== 'queued';
-    const receipt = done || o.auto ? '' : o.planFor === o.text && o.preview ? `<div class="receipt">${o.preview.map((l) => `<div class="${/^could not/i.test(l) ? 'bad' : ''}">→ ${esc(l.replace(/^could not be done: /i, 'Cannot: '))}</div>`).join('')}</div>` : '<div class="receipt muted"><i>Your steward reads the order…</i></div>';
+    const receipt = done || o.auto ? '' : o.parsedFor === o.text && o.receipt ? receiptHtml(o) : '<div class="receipt muted"><i>Your steward reads the order…</i></div>';
     return `<div class="order ${o.auto ? 'auto' : ''} st-${st}"><span class="n">${i + 1}.</span><div class="grow"><span class="t" ${done ? '' : 'contenteditable="true"'} data-oid="${o.id}">${esc(o.text)}</span>${receipt}</div><span class="ost ${st}" title="${esc((o.result || []).join('; '))}">${STATUS_LABEL[st]}</span>${done ? '' : `<button data-del-order="${o.id}" title="Remove">✕</button>`}</div>`;
   }).join('');
   $$('[data-del-order]').forEach((b) => b.onclick = () => { s.orders = s.orders.filter((o) => o.id !== b.dataset.delOrder); saveOrders(); renderOrders(); });
+  $$('[data-answer]').forEach((b) => b.onclick = () => { b.disabled = true; answerOrder(b.dataset.answer, Number(b.dataset.k)); });
   $$('.order .t').forEach((el) => el.onblur = () => { const o = s.orders.find((x) => x.id === el.dataset.oid); if (o && o.text !== el.textContent.trim()) { o.text = el.textContent.trim(); saveOrders(); renderOrders(); } });
 }
 const orderInput = $('#order-input');

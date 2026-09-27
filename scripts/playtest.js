@@ -52,11 +52,12 @@ for (let t = 1; t <= turns; t++) {
   }
   if (step.orders) {
     game.setOrders(id, [...game.loadState(id).orders, ...step.orders.map((text, k) => ({ id: `t${t}o${k}`, text }))]);
-    try { const pv = await game.previewOrderPlans(id); for (const o of pv.orders.filter((x) => x.preview)) log(`- receipt: ${o.text.slice(0, 60)} → ${o.preview.join('; ')}`); } catch (e) { log(`- receipt FAILED: ${e.message}`); }
+    const MARK = { true: '✓', warn: '⚠', false: '✗', ask: '?', story: '·' };
+    try { const pv = await game.previewOrderPlans(id); for (const o of pv.orders.filter((x) => x.receipt)) log(`- receipt (${o.parsed?.via || '?'}): ${o.text.slice(0, 60)} → ${o.receipt.map((l) => `${MARK[l.ok] || '✓'} ${l.text}`).join('; ')}`); } catch (e) { log(`- receipt FAILED: ${e.message}`); }
   }
   if (args.read) await new Promise((res) => setTimeout(res, Number(args.read) * 1000)); // the player reads the day's news
   const t0 = Date.now();
-  let r; try { r = await game.advance(id, { span: args.fixed || 'auto', orders: game.loadState(id).orders.filter((o) => o.auto || o.planFor || /^t\d+o\d+$/.test(o.id)).concat(step.orders && !game.loadState(id).orders.some((o) => /^t\d+o\d+$/.test(o.id)) ? step.orders.map((text, k) => ({ id: `t${t}o${k}`, text })) : []) }); } catch (e) { log(`- ADVANCE FAILED: ${e.message}`); continue; }
+  let r; try { r = await game.advance(id, { span: args.fixed || 'auto', orders: game.loadState(id).orders.filter((o) => o.auto || o.parsedFor || /^t\d+o\d+$/.test(o.id)).concat(step.orders && !game.loadState(id).orders.some((o) => /^t\d+o\d+$/.test(o.id)) ? step.orders.map((text, k) => ({ id: `t${t}o${k}`, text })) : []) }); } catch (e) { log(`- ADVANCE FAILED: ${e.message}`); continue; }
   const tr = r.turn; const u = tr.usage || {};
   log(`- ${tr.dateFrom} → ${tr.date}${tr.until ? ` (until ${tr.until})` : ''} · ${((Date.now() - t0) / 1000).toFixed(0)}s · prompt ${u.prompt_tokens ?? '?'} (cached ${u.prompt_tokens_details?.cached_tokens ?? '?'}) · reply ${u.completion_tokens ?? '?'}${tr.salvaged ? ' · SALVAGED' : ''}`);
   if (step.orders) for (const c of tr.carried || []) log(`- carried out: ${c.order} → ${c.result.join('; ')}`);

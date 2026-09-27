@@ -1,0 +1,7 @@
+{
+ "kind": "interpret",
+ "fingerprint": "stark|bring_three_thousand_spears_to_white_harbor",
+ "model": "hand-written",
+ "note": "Hand-written in the shape a model answers (not a recording): the rules would march the whole host of four thousand; the reading asked for is three thousand new levies.",
+ "reply": "{\"actions\":[{\"verb\":\"raise_levies\",\"who\":\"none\",\"subject\":\"none\",\"at\":\"winterfell\",\"to\":\"white_harbor\",\"person\":\"none\",\"houses\":[],\"men\":3000,\"gold\":0,\"choice\":\"none\",\"note\":\"\"}],\"clarify\":{\"needed\":false,\"question\":\"\",\"options\":[]}}"
+}
