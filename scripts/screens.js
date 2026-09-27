@@ -2,7 +2,7 @@
 // SwiftShader, so it runs on a machine without a GPU). Each scenario sets a game up over the same API the browser uses,
 // opens it (?game=<id>), points the camera and shoots at both sizes.
 //
-//   node scripts/screens.js [scenario …]        → visual-out/<scenario>-<w>x<h>.png   (default: all scenarios)
+//   node scripts/screens.js [scenario …]        → visual-out/<scenario>-<w>x<h>.jpg   (default: all scenarios)
 //
 // Playwright is a dev tool, never a runtime dependency: `npm i --no-save playwright`, or a global install.
 import { spawn, execSync } from 'node:child_process';
@@ -63,8 +63,8 @@ async function main() {
         await page.waitForFunction(() => window.__wc?.map && document.querySelector('#map-loading')?.classList.contains('hidden'), null, { timeout: 240000, polling: 500 });
         if (focus) await page.evaluate(([p, d]) => window.__wc.map.flyTo(p, d), [focus, dist]);
         await page.waitForTimeout(4000);
-        const file = path.join(OUT, `${name}-${w}x${h}.png`);
-        await page.screenshot({ path: file });
+        const file = path.join(OUT, `${name}-${w}x${h}.jpg`); // JPEG: small enough to commit beside a pull request
+        await page.screenshot({ path: file, type: 'jpeg', quality: 82 });
         console.log(`${file}${errors.length ? `  (page errors: ${errors.join(' | ')})` : ''}`);
         await page.close();
       }
