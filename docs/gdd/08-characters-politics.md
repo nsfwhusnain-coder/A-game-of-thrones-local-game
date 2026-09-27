@@ -255,6 +255,11 @@ kept/broken by the liege, victories/defeats. Temper bands: devoted ≥ 70, dutif
 
 ## 12. Diplomacy, court and intrigue verbs
 
+> *In the registry since WP B4* (`engine/actions/{court,diplomacy,movement}.js`): `send_letter` (a raven by order),
+> `declare_war`, `grant_holding`, `appoint_office`, `judge_prisoner` (release, ransom, the Wall, the axe),
+> `hold_feast`, `hold_tourney`, `send_gift`, `plant_spy`, `gather_secrets`, `answer_matter`, and the journeys
+> `send_person` and `recall_rider`. Envoys, proposals and the rest come with B10 and phase D.
+
 | Verb | Params | Legal when | Resolution |
 |---|---|---|---|
 | `send_letter` | to, body intent, proposal? | a rookery at the sender's location or a rider | a `Letter`; reply generated on arrival ([04](04-ai-system.md) §8.2) |

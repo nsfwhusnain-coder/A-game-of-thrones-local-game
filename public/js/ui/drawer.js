@@ -59,7 +59,7 @@ export function wireDecisions(root, { onAllDone, onDecided } = {}) {
     if (own && !note.trim()) return;
     card.classList.add('busy'); $$('.dec-opt, .dec-custom', card).forEach((x) => { x.disabled = true; x.classList.toggle('chosen', x === b); });
     try {
-      const r = await api(`/games/${app.saveId}/act`, { body: own ? { kind: 'decide', decision: b.dataset.decId, custom: note } : { kind: 'decide', decision: b.dataset.decId, option: Number(b.dataset.opt), note } });
+      const r = await api(`/games/${app.saveId}/act`, { body: { verb: 'answer_matter', params: own ? { decision: b.dataset.decId, custom: note } : { decision: b.dataset.decId, option: Number(b.dataset.opt), note } } });
       // acknowledge the choice where it was made, then fold the card away
       const label = own ? note.trim() : b.childNodes[0]?.textContent || b.textContent;
       const title = card.querySelector('.dec-title')?.textContent || '';

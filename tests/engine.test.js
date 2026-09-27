@@ -540,7 +540,8 @@ test('a turn runs until the next thing that matters', () => {
   executeActions(s, [{ op: 'march', order: 1, army: 'nh', to: 'Moat Cailin' }], [{ text: 'March to Moat Cailin.' }]);
   const t = nextTurnLength(s);
   assert.match(t.reason, /reaches Moat Cailin|The King rides north/);
-  assert.ok(t.days <= marchDays(s.parties.nh, s.parties.nh.pos, s.holdings.moat_cailin.pos).days);
+  // the turn runs to the day the host arrives: its road is ~27.1 days, so it is there on the 28th
+  assert.ok(t.days <= marchDays(s.parties.nh, s.parties.nh.pos, s.holdings.moat_cailin.pos).days + 1, JSON.stringify(t));
   s.pendingReplies = [{ char: 'lysa_arryn', arrivesDay: (s.meta.date.year * 360 + (s.meta.date.month - 1) * 30 + s.meta.date.day - 1) + 1, changes: [] }];
   assert.equal(nextTurnLength(s).days, 1);
 });
@@ -908,7 +909,7 @@ test('north of the Wall resolves beyond the Wall, never Winterfell or Casterly R
 test('a large levy call starts a camp and the men arrive over days', () => {
   const s = fresh();
   const before = s.houses.stark.figures.levies.v;
-  const lines = raiseLevies(s, { at: 'stark', men: 20000, name: 'The Northern Host', immediate: false });
+  const { lines } = raiseLevies(s, { at: 'stark', men: 20000, name: 'The Northern Host', immediate: false });
   const host = Object.values(s.parties).find((a) => a.name === 'The Northern Host');
   assert.ok(host.muster.remaining > 0, lines.join(' '));
   assert.ok(host.men < 20000);

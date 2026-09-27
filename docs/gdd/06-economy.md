@@ -220,6 +220,9 @@ Kept simple and legible; no full goods simulation.
 
 ## 9. Economy verbs
 
+> *In the registry since WP B4* (`engine/actions/economy.js`): `set_tax`, `set_dues`, `fund_works`, `cancel_works`,
+> `hire_men` (men-at-arms or sellswords), `hire_officer`, `send_gift`. Grain, loans, ransoms and embargoes come with C1.
+
 | Verb | Params | Legal when | Cost / effect |
 |---|---|---|---|
 | `set_tax` | level | head of house | rents share; unrest ±; vassal opinion ± (existing `TAX_LEVELS`) |

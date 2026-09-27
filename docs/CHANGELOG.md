@@ -3,6 +3,24 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B4: every action is a verb, with a receipt (WP B4)
+
+- **Every action you take has one definition, and tells you what it did.** Marching a host, raising levies, calling
+  the banners, sending someone on the road, taxes, dues, works, hiring, gifts, offices, grants, feasts, tourneys,
+  judgements, answering a matter, declaring war, spies and letters are all "verbs" now: each checks whether it can be
+  done, does it, records what happened, and answers with a receipt — "The Host of Winterfell (4,000 men) marches for
+  Moat Cailin — ~487 miles, ~27 days". The toasts you see after a card's button are those receipts.
+- **A refusal says why, in the world's words**, and changes nothing: "Jon Snow is at sea, and can turn only when the
+  ship makes port", "Fill and expand the granaries at Winterfell is already under way", "You are already at war with
+  House Lannister" (declaring the same war twice is now refused rather than silently ignored).
+- Written orders go through the same verbs as the buttons, so an order and a click can no longer do different things.
+- A host you order to march stays at its castle, its road already drawn, until the turn walks it — as before on the
+  cards, and now for written orders too.
+- Under the hood, the verbs work for any house, not only yours: the lords' own minds (WP B7) will act through them.
+- Owner to verify: raise levies and march them from the Military window — the toast is the receipt, with miles and days;
+  try to fund the same works twice — the second is refused with its reason; write "Send Jon Snow to Castle Black" and
+  end the turn — the order's result line is the same receipt.
+
 ## 2026-09-27 — B3: facts are the history; undo goes back ten turns (WP B3)
 
 - **Undo goes further back.** The ↶ button now asks how far: the last turn, or up to the last ten. The world returns to

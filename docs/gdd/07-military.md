@@ -372,6 +372,10 @@ by score and natures. A war with no fighting for 6 moons becomes a *cold war* (n
 
 ## 12. Military verbs
 
+> *In the registry since WP B4* (`engine/actions/military.js`): `call_banners`, `raise_levies`, `march_host` (and
+> `attack_host` for a march on a host), `halt_host`, `merge_hosts`, `disband_host`, `set_secrecy`; `declare_war` is in
+> `diplomacy.js`. The others come with the war systems of phase C.
+
 | Verb | Params | Who | Legal when | Resolution |
 |---|---|---|---|---|
 | `call_banners` | vassals, at, scope, name, commander | a liege | has vassals; not at war with them | §3 |

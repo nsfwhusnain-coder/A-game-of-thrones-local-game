@@ -256,3 +256,26 @@ the march where the ship was. Now a traveller aboard ship cannot be turned until
 that reason); a re-aim that finds no road leaves the old journey standing; and a traveller who can go no further on the
 water is set down at the nearest port. The soak prints each game's seed and takes `--seed`, so a failure it finds can
 be played again exactly.
+
+## D-015 · 2026-09-27 · The verb registry as built (WP B4)
+
+**What.** `public/js/engine/actions/` holds the registry (`registry.js`) and one module per family: `military.js`
+(`call_banners`, `raise_levies`, `march_host`, `attack_host`, `halt_host`, `merge_hosts`, `disband_host`,
+`set_secrecy`), `movement.js` (`send_person`, `recall_rider`), `economy.js` (`set_tax`, `set_dues`, `fund_works`,
+`cancel_works`, `hire_men`, `hire_officer`, `send_gift`), `court.js` (`appoint_office`, `grant_holding`, `hold_feast`,
+`hold_tourney`, `judge_prisoner`, `answer_matter`) and `diplomacy.js` (`declare_war`, `plant_spy`, `gather_secrets`,
+`send_letter`). A verb is `{ id, family, label, params, who?, legal, cost?, start, receipt, said?, facts, mind }` as in
+03 §7; an intent is `{ verb, actor, house, params, source }`. `perform()` checks, does and tells: a refusal (`{ code,
+text }`, in the world's words) changes nothing; what is done records its facts with the intent's source as their cause.
+Every card action (`POST /act`, now `{ verb, params }`; the old `{ kind, … }` still maps) and every kind of written
+order (`executeActions`) goes through a verb; `server/court.js` is gone, its acts are verbs. The order-reading rules
+(who the order names, whether men go, whether it is a letter after all) stay in `server/orders.js`, in front of the verb.
+
+**Departures.** `said()` is added to the verb: the order line the story model is told (the old `addOrder` texts), until
+the jump of WP B11 retires the story model's reading of orders. The verbs take the house from the intent, so the minds
+of B7 can use them for any lord; the old helpers assumed the player. Journeys and hiring still go through their ops in
+`world.js` (`travel`, `recruit`, `hire`), the one place those are done for the story as well. A march no longer clears
+the host's place: it is at its castle, with its road planned, until the turn walks it.
+
+**Why.** One definition per action is what lets the interpreter (B6) and the minds (B7) choose among real actions, the
+engine resolve them the same way whoever chose, and every order get its receipt.

@@ -6,13 +6,12 @@ import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplies } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
-import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding, rideOf, sendHome } from '../public/js/shared/world.js';
-import { ref, isRef, partyAt, partyOf, membersOf, disband, together, sworn, settle as settleParty } from '../public/js/engine/parties.js';
-import { planRoute } from '../public/js/engine/movement.js';
+import { createInitialState, migrateState, applyChanges, placeName, addDays, dateStr, spanOf, resolvePlaceId, dayNumber, findChar } from '../public/js/shared/world.js';
+import { partyOf, together } from '../public/js/engine/parties.js';
 import { settleWorld } from '../public/js/engine/state/settle.js';
 import { validate } from '../public/js/engine/state/validate.js';
 import { marchTick } from '../public/js/shared/marches.js';
-import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
+import { settle, initEconomy, seasonTick } from '../public/js/shared/economy.js';
 import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
 import { random } from '../public/js/engine/rng.js';
 import { nextId } from '../public/js/engine/ids.js';
@@ -22,7 +21,6 @@ import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
 import { nextTurnLength } from '../public/js/shared/turns.js';
-import { marchDays } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
 import { worldTick, THREADS } from '../public/js/shared/plots.js';
@@ -33,8 +31,8 @@ import { treacheryTick } from '../public/js/shared/treachery.js';
 import { regencyTick } from '../public/js/shared/regency.js';
 import { outcomeFor, standing } from '../public/js/shared/standing.js';
 import { emit, fact, asEvent, flush, redate, factById } from '../public/js/engine/facts/log.js';
-import * as court from './court.js';
-import { carryOutOrders, readOrdersByRule, executeActions, named, startWorks, commandable, previewOrders, orderEvents, raiseLevies, callBanners, advanceMusters, ravenDays } from './orders.js';
+import { VERBS, perform, told, verbOfKind } from '../public/js/engine/actions/registry.js';
+import { carryOutOrders, readOrdersByRule, executeActions, named, previewOrders, orderEvents, advanceMusters, ravenDays } from './orders.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -830,13 +828,14 @@ export function editState(id, patch) {
   return { ...res, state };
 }
 
-// Direct actions that take effect immediately in the ledger (and are told to the simulator as orders).
+// Direct actions from the cards: each is a verb of the registry (engine/actions/registry.js) — its checks, its cost, what
+// it does and its receipt — settled here and now, and told to the story model as an order already carried out.
+// The body is `{ verb, params }`; the cards of earlier versions sent `{ kind, … }`, which maps to the same verbs.
 export function act(id, body) {
   const state = loadState(id);
   return withDice(state, () => actWith(id, state, body));
 }
 function actWith(id, state, body) {
-  const p = state.meta.player; const me = state.houses[p];
   // an order may carry a note for the simulator only (what the ledger already settled), never shown to the player
   // status: 'done' — the engine settled it here and now (the story narrates it, never repeats it); 'underway' —
   // set in motion, to finish in time (a march); none — a written order the turn will carry out
@@ -845,157 +844,16 @@ function actWith(id, state, body) {
     const n = [note, note.startsWith('[Already') ? '' : settled].filter(Boolean).join(' ');
     state.orders.push({ id: nextId(state, 'o'), text, auto: true, ...(n ? { note: n } : {}), ...(status ? { status, executed: true, result: result ? [result] : [text] } : {}) });
   };
-  let result = {};
-  const cause = { type: 'order', ref: `act:${body.kind}` }; // the lord's own hand, settled on the spot
-  switch (body.kind) {
-    case 'tax': {
-      if (!TAX_LEVELS[body.level]) throw httpError(400, 'bad tax level');
-      applyChanges(state, [{ op: 'tax', house: p, level: body.level }], { cause });
-      addOrder(`Proclaim ${TAX_LEVELS[body.level].label.toLowerCase()} taxes across my lands and on my vassals' dues.`, '', 'done');
-      break;
-    }
-    case 'project': {
-      let w; try { w = startWorks(state, body.template, body.holding); } catch (e) { throw httpError(409, e.message); }
-      addOrder(`Fund works: ${w.name} (${w.cost} gold dragons over ${w.months} moons).`, '', 'done', `Work begins: ${w.name}`);
-      break;
-    }
-    case 'dues': {
-      if (!me.liege) throw httpError(400, 'you owe dues to no one');
-      if (!['paying', 'late', 'withholding'].includes(body.status)) throw httpError(400, 'bad status');
-      const was = me.obligations?.tribute;
-      me.obligations = { ...(me.obligations || {}), tribute: body.status };
-      const lg = state.houses[me.liege];
-      if (was !== body.status) emit(state, 'tax_changed', { actors: [me.lord, lg.lord], houses: [p, lg.id], data: { dues: body.status, was: was || null, liege: lg.id }, cause, text: `House ${me.name} ${body.status === 'paying' ? 'pays its dues to' : body.status === 'late' ? 'is late with its dues to' : 'withholds its dues from'} House ${lg.name}.` });
-      addOrder(body.status === 'paying' ? `Pay my dues to House ${lg.name} in full.` : body.status === 'late' ? `Delay my dues to House ${lg.name}; send excuses and small sums.` : `Withhold all dues from House ${lg.name}.`, '', 'done');
-      break;
-    }
-    case 'cancel_project': {
-      const pr = state.projects.find((x) => x.id === body.project && x.house === p); if (!pr) throw httpError(404, 'no project');
-      pr.status = 'cancelled';
-      break;
-    }
-    case 'call_banners': {
-      const vassals = (body.vassals || []).filter((v) => state.houses[v]?.liege === p);
-      if (!vassals.length) throw httpError(400, 'choose at least one vassal');
-      const muster = resolvePlaceId(body.at) || me.seat;
-      const called = callBanners(state, { vassals, at: muster, cause });
-      if (Number(body.ownLevies) >= 50) { try { called.push(...raiseLevies(state, { at: muster, men: body.ownLevies, cause })); } catch (e) { called.push(`could not raise your own levies: ${e.message}`); } }
-      const at = state.holdings[muster] ? state.holdings[muster].name : state.holdings[me.seat]?.name;
-      addOrder(`CALL THE BANNERS: I summon ${vassals.map((v) => 'House ' + state.houses[v].name).join(', ')} to muster their levies at ${at}${body.deadline ? ' within ' + body.deadline : ''}.${body.note ? ' ' + body.note : ''} Raise my own levies as well${body.ownLevies ? ` (${body.ownLevies} men)` : ''}.`, '', 'underway', called.join('; '));
-      break;
-    }
-    case 'decide': {
-      const d = (state.decisions || []).find((x) => x.id === body.decision && x.status === 'pending');
-      if (!d) throw httpError(404, 'no such decision');
-      const opt = d.options[Number(body.option)]; if (!opt && !body.custom) throw httpError(400, 'bad option');
-      d.status = 'decided'; d.choice = opt ? opt.label : String(body.custom).slice(0, 500); d.note = body.note ? String(body.note).slice(0, 500) : ''; d.decidedTurn = state.meta.turn;
-      let settled = [];
-      emit(state, 'judgement', { actors: [me.lord, d.from], houses: [p], place: d.where || me.seat || null, data: { matter: d.id, choice: d.choice }, cause, text: `${state.characters[me.lord]?.name || `House ${me.name}`} decides: ${d.title} — ${d.choice}.` });
-      if (opt?.fx) { settled = applyPetitionFx(state, opt.fx, dateStr(state.meta.date)); d.effects = settled; }
-      addOrder(`DECISION — ${d.title}: I choose "${d.choice}".${d.note ? ' ' + d.note : ''}`, settled.length ? `[Already settled by the ledger, do not apply again: ${settled.join('; ')}. Narrate how people react.]` : '', settled.length ? 'done' : null);
-      if (settled.length) result.effects = settled;
-      break;
-    }
-    case 'appoint': {
-      const ROLES = { steward: 'Steward', maester: 'Maester', master_at_arms: 'Master-at-arms', captain: 'Captain of the guard', spymaster: 'Master of whisperers', commander: 'Commander', castellan: 'Castellan' };
-      const c = state.characters[body.character]; if (!c || !c.alive) throw httpError(404, 'no such person');
-      if (!ROLES[body.role]) throw httpError(400, 'bad office');
-      for (const o of Object.values(state.characters)) if (o.house === p && o.id !== c.id && o.roles?.includes(body.role) && body.role !== 'commander') o.roles = o.roles.filter((r) => r !== body.role);
-      c.roles = [...new Set([...(c.roles || []), body.role])];
-      if (c.house !== p) { c.memories = [...(c.memories || []), `Appointed ${ROLES[body.role]} of House ${me.name}.`]; }
-      c.opinion = Math.min(100, (c.opinion || 0) + 10);
-      emit(state, 'office_granted', { actors: [c.id, me.lord], houses: [p, c.house], data: { office: body.role }, cause, text: `${c.name} is named ${ROLES[body.role]} of House ${me.name}.` });
-      addOrder(`Appoint ${c.name} as ${ROLES[body.role]} of House ${me.name}.`, '', 'done');
-      break;
-    }
-    case 'grant': {
-      const h = state.holdings[body.holding]; if (!h || h.owner !== p) throw httpError(400, 'you can only grant your own holdings');
-      if (h.id === me.seat) throw httpError(400, 'you cannot give away your own seat');
-      const to = state.houses[body.house]; if (!to || to.liege !== p) throw httpError(400, 'you can only grant lands to your sworn vassals');
-      applyChanges(state, [{ op: 'holding', id: h.id, owner: to.id, note: `Granted by House ${me.name} to House ${to.name}` }, { op: 'relation', a: p, b: to.id, delta: 20, reason: `Granted ${h.name}` }], { cause });
-      const lord = to.lord && state.characters[to.lord]; if (lord) { lord.opinion = Math.min(100, (lord.opinion || 0) + 20); lord.loyalty = Math.min(100, (lord.loyalty || 60) + 15); }
-      addOrder(`Grant ${h.name} and its lands to House ${to.name} for their loyal service.`, '', 'done');
-      break;
-    }
-    case 'raise': {
-      let lines; try { lines = raiseLevies(state, { at: body.at, men: body.men, commander: body.commander, name: body.name, cause }); } catch (e) { throw httpError(400, e.message); }
-      addOrder(`Raise ${Math.round(Number(body.men) || 0)} of my own levies at ${placeName(state, body.at || me.seat)}${body.name ? ` as "${body.name}"` : ''}.`, '', 'done', lines.join('; '));
-      result.summary = lines.join('; ');
-      break;
-    }
-    case 'disband': {
-      const a = state.parties[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
-      const owner = state.houses[a.owner];
-      // the sworn houses take their own men home
-      let others = 0;
-      const swornMen = sworn(a).reduce((x, [, y]) => x + y, 0);
-      const scale = swornMen > a.men ? a.men / swornMen : 1; // losses fall on every banner alike
-      for (const [vid, men] of sworn(a)) {
-        const v = state.houses[vid]; if (!v) continue; const back = Math.round(men * scale * 0.9); others += men * scale;
-        v.figures.levies = { ...(v.figures.levies || {}), v: (Number(v.figures.levies?.v) || 0) + back };
-        v.obligations = { ...(v.obligations || {}), levies: 'not_called' }; delete v.obligations.host;
-        for (const c of membersOf(state, a)) if (c.house === vid) sendHome(state, c, v.seat); // each lord rides home with his men
-      }
-      const home = Math.round(a.kind === 'fleet' ? 0 : Math.max(0, a.men - others) * 0.9);
-      // the rest get down where the host stands (yours) or ride home (a sworn host released from service)
-      if (a.owner !== p) for (const c of membersOf(state, a)) sendHome(state, c, owner.seat);
-      emit(state, 'host_disbanded', { actors: [a.commander], houses: [a.owner, a.serving], place: a.at || null, pos: a.pos, data: { party: a.id, name: a.name, men: a.men, why: a.owner === p ? 'disbanded' : 'released from service' }, cause });
-      disband(state, a);
-      if (home) applyChanges(state, [{ op: 'figure', house: a.owner, field: 'levies', delta: home, source: 'Men sent home' }]);
-      if (a.owner !== p) { owner.obligations = { ...(owner.obligations || {}), levies: 'not_called' }; delete owner.obligations.host; }
-      addOrder(`${a.owner === p ? 'Disbanded' : 'Released from service'} ${a.name}; the men go home to their fields.`, '', 'done');
-      break;
-    }
-    // take back what is under way: a rider turns for home, a host halts where it stands
-    case 'recall': {
-      if (body.character) {
-        const c = state.characters[body.character]; const ride = c && rideOf(state, c); if (!ride || c.house !== p) throw httpError(400, 'no one of yours is on that road');
-        const home = ride.from || me.seat;
-        const r = applyChanges(state, [{ op: 'travel', character: c.id, to: home }], { source: 'Your orders', cause });
-        if (!r.applied.length) throw httpError(409, r.rejected[0]?.reason || 'they cannot turn back');
-        addOrder(`Recall ${c.name}: turn back for ${placeName(state, home)}.`, '', 'underway', r.applied[0].text);
-        result.summary = r.applied[0].text; break;
-      }
-      const a = state.parties[body.army]; if (!a || !commandable(state, a) || !a.march) throw httpError(400, 'that host is not marching');
-      delete a.march; a.route = null; settleParty(state, a);
-      const near = placeName(state, nearestHolding(state, a.pos));
-      emit(state, 'turned_back', { actors: [a.commander], houses: [a.owner], pos: a.pos, data: { party: a.id, halted: true }, cause, text: `${a.name} halts near ${near}.` });
-      addOrder(`${a.name} halts and holds where it stands, near ${near}.`, '', 'done'); result.summary = `${a.name} halts near ${near}.`; break;
-    }
-    case 'march': {
-      const a = state.parties[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
-      if (isRef(body.to)) {
-        const foe = partyAt(state, body.to); if (!foe) throw httpError(400, 'no such host');
-        const m = marchDays(a, a.pos, foe.pos, state);
-        a.march = { to: ref(foe.id), since: state.meta.turn }; planRoute(state, a, foe.pos, ref(foe.id), { toName: foe.name }); settleParty(state, a);
-        emit(state, 'set_out', { actors: [a.commander], houses: [a.owner, foe.owner], pos: a.pos, data: { party: a.id, against: foe.id, days: m.days }, cause });
-        addOrder(`${a.name} marches to attack ${foe.name} (House ${state.houses[foe.owner]?.name}, ~${foe.men} men), ~${m.days} days away${body.intent ? ' — ' + body.intent : ''}.`, '[The engine will fight this battle when the hosts meet; narrate the approach.]', 'underway');
-        break;
-      }
-      const to = resolvePlaceId(body.to) || body.to; body.to = to;
-      const dest = placePos(to, state.holdings); if (!dest) throw httpError(400, 'unknown destination');
-      const m = marchDays(a, a.pos, dest, state);
-      // the road is planned now, so the map shows the way it will take (engine/movement.js); over the sea, it takes ship
-      a.march = { to: body.to, since: state.meta.turn }; planRoute(state, a, dest, body.to, { toName: placeName(state, body.to) }); settleParty(state, a);
-      emit(state, 'set_out', { actors: [a.commander], houses: [a.owner], pos: a.pos, data: { party: a.id, to: body.to, days: m.days }, cause });
-      addOrder(`${a.name} marches on ${placeName(state, body.to)} (~${m.miles} miles, ~${m.days} days)${body.intent ? ' — ' + body.intent : ''}.`, '', 'underway');
-      break;
-    }
-    case 'order': {
-      addOrder(String(body.text || '').slice(0, 2000));
-      break;
-    }
-    // the lord's own acts, settled at once (server/court.js)
-    case 'gift': case 'feast': case 'tourney': case 'judge': case 'declare_war': case 'scheme': case 'secrecy': {
-      let r;
-      try { r = body.kind === 'gift' ? court.gift(state, body) : body.kind === 'feast' ? court.feast(state) : body.kind === 'tourney' ? court.tourney(state) : body.kind === 'judge' ? court.judge(state, body) : body.kind === 'scheme' ? court.scheme(state, { house: body.house, kind: body.kind2 }) : body.kind === 'secrecy' ? court.secrecy(state, body) : court.declareWar(state, body); } catch (e) { throw httpError(e.status || 400, e.message); }
-      addOrder(r.text, r.note || '', 'done', r.summary); result.summary = r.summary;
-      break;
-    }
-    default: throw httpError(400, 'unknown action');
-  }
+  if (body.kind === 'order') { addOrder(String(body.text || '').slice(0, 2000)); saveState(id, state); return { state }; } // words, for the turn to read
+  const verb = body.verb || verbOfKind(body);
+  if (!VERBS[verb]) throw httpError(400, 'unknown action');
+  const { kind, kind2, verb: _, params: given, ...rest } = body;
+  const r = perform(state, verb, { params: given || rest, source: { type: 'order', ref: `act:${verb}` } });
+  if (!r.ok) throw httpError(409, r.refusal.text);
+  const said = VERBS[verb].said?.(state, r.intent, r.done);
+  if (said) addOrder(said.text, said.note || '', said.status ?? null, said.status ? told(r) : null);
   saveState(id, state);
-  return { state, ...result };
+  return { state, receipt: r.receipt, summary: told(r), ...(r.done?.effects?.length ? { effects: r.done.effects } : {}) };
 }
 
 export async function council(id, members, message) {

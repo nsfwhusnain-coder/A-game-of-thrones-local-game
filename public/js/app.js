@@ -11,7 +11,7 @@ import { CHARACTERS } from '../data/characters.js';
 import { briefFor } from '../data/briefs.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
-import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
+import { app, $, $$, esc, fmt, api, doVerb, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
@@ -303,9 +303,7 @@ function finishPick(hid) {
   if (!hid) return;
   const a = app.state.parties[pk.id]; const hd = app.state.holdings[hid];
   const hostile = hd.owner !== app.state.meta.player && app.map.atWarWith(hd.owner);
-  api(`/games/${app.saveId}/act`, { body: { kind: 'march', army: a.id, to: hid, intent: hostile ? 'lay siege and take it' : '' } })
-    .then((r) => { app.setState(r.state); toast(`${a.name} marches on ${hd.name}. The route is on the map.`); app.map.flash(hd.pos); })
-    .catch((e) => toast(e.message, true));
+  doVerb('march_host', { army: a.id, to: hid, intent: hostile ? 'lay siege and take it' : '' }, { after: () => app.map.flash(hd.pos) });
 }
 
 // march against another host: the engine fights the battle when they meet
@@ -314,9 +312,7 @@ function finishPickArmy(aid) {
   const a = app.state.parties[pk.id]; const foe = app.state.parties[aid];
   if (!a || !foe || foe.id === a.id) return;
   if (foe.owner === app.state.meta.player || !app.map.atWarWith(foe.owner)) { toast(`You are not at war with House ${app.state.houses[foe.owner]?.name}. Declare it first, or march to a place.`, true); return; }
-  api(`/games/${app.saveId}/act`, { body: { kind: 'march', army: a.id, to: ref(foe.id), intent: 'bring them to battle' } })
-    .then((r) => { app.setState(r.state); toast(`${a.name} marches to attack ${foe.name}.`); app.map.flash(foe.pos); })
-    .catch((e) => toast(e.message, true));
+  doVerb('attack_host', { army: a.id, to: ref(foe.id), intent: 'bring them to battle' }, { after: () => app.map.flash(foe.pos) });
 }
 
 // ───── tooltip ─────
@@ -412,7 +408,7 @@ function showErrands() {
   const stop = (m) => (m.kind === 'ride' ? `<button class="btn small" data-recall-char="${m.id}" title="Turn back for where they set out">Call back</button>` : m.kind === 'march' ? `<button class="btn small" data-recall-army="${m.id}" title="Stop and hold where it stands">Halt</button>` : '');
   const rows = moving.map((m) => `<div class="errand"><span class="ei">${icon(ICON[m.kind])}</span><div class="grow"><b>${esc(m.who)}</b> <span class="muted">${esc(m.text)}</span></div><span class="ed">${m.days ? `~${m.days} ${m.days === 1 ? 'day' : 'days'}` : '—'}</span>${stop(m)}</div>`).join('') || '<div class="muted">Nothing of yours is on the road or being built.</div>';
   const outs = (last?.orders || []).map((o) => { const r = orderOutcome(o, s); return `<div class="errand"><span class="ost ${r.status}">${STATUS_LABEL[r.status]}</span><div class="grow">${esc(o.text)}${r.lines.length ? `<div class="muted" style="font-size:0.8rem">${r.lines.map(esc).join(' · ')}</div>` : ''}</div></div>`; }).join('');
-  const recall = async (body) => { try { const r = await api(`/games/${app.saveId}/act`, { body: { kind: 'recall', ...body } }); app.setState(r.state); if (r.summary) toast(r.summary); showErrands(); } catch (e) { toast(e.message, true); } };
+  const recall = (params) => doVerb(params.character ? 'recall_rider' : 'halt_host', params, { after: showErrands });
   setTimeout(() => {
     $$('[data-recall-char]').forEach((b) => b.onclick = () => recall({ character: b.dataset.recallChar }));
     $$('[data-recall-army]').forEach((b) => b.onclick = () => recall({ army: b.dataset.recallArmy }));
