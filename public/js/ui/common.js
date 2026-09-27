@@ -4,6 +4,7 @@ import { sigilSrc, bannerURL } from '../sigils.js';
 import { portraitLazy } from './portrait.js';
 import { placeName, getRelation, fmt } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
+import { statusText } from '../engine/parties.js';
 
 export const app = {
   saveId: null, state: null, map: null, win: null, winArg: null, sheet: null, drawerTab: 'feed', chatWith: null, council: null,
@@ -60,8 +61,8 @@ export function houseRow(h, extra = '') {
 export function armyRow(a) {
   const s = app.state; const h = s.houses[a.owner];
   const cmd = a.commander ? s.characters[a.commander]?.name || a.commander : 'no commander';
-  const where = a.at ? placeName(s, a.at) : `marching to ${a.destName || '?'}`;
-  return `<div class="row clickable" data-army="${a.id}">${sig(h)}<div class="grow"><div class="title">${a.type === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</div><div class="sub">${a.owner === s.meta.player ? '' : '~'}${fmt(a.men)} men${a.ships ? ' · ' + a.ships + ' ships' : ''} · ${esc(cmd)} · ${esc(where)}</div>${meter(a.morale, '#c9a44a')}</div></div>`;
+  const where = statusText(s, a); // what it is doing, in the engine's words (engine/parties.js)
+  return `<div class="row clickable" data-army="${a.id}">${sig(h)}<div class="grow"><div class="title">${a.kind === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</div><div class="sub">${a.owner === s.meta.player ? '' : '~'}${fmt(a.men)} men${a.ships ? ' · ' + a.ships + ' ships' : ''} · ${esc(cmd)} · ${esc(where)}</div>${meter(a.morale, '#c9a44a')}</div></div>`;
 }
 export function md(text) {
   const lines = esc(text).split('\n'); let html = ''; let inList = false;

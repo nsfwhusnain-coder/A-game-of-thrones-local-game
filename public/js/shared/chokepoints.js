@@ -192,7 +192,7 @@ const seasonBite = (state) => (state.world?.season === 'winter' ? 1.6 : state.wo
  */
 export function chokepointToll(state, army, from, to, days) {
   const out = { days: 0, losses: 0, morale: 0, gold: 0, events: [], met: [] };
-  if (!army || army.type === 'fleet' || !from || !to) return out;
+  if (!army || army.kind === 'fleet' || !from || !to) return out;
   const bite = seasonBite(state);
   // the King's progress rides the realm by right; the crannogmen live in the Neck; the lords of the North (Skagos and
   // the Bay of Seals among them) come south by sea or by their own roads, never over the Wall (a straight-line quirk

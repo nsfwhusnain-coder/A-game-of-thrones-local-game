@@ -7,6 +7,7 @@
 // The engine owns this: it decides when a regency begins and ends, who takes it, and what it costs the house
 // in the eyes of its vassals. The story model is told the result and narrates around it.
 import { isFemale } from './people.js';
+import { placeOf } from '../engine/parties.js';
 
 export const MAJORITY = 16; // the age at which a lord is held fit to rule in his own right
 
@@ -48,7 +49,7 @@ export function chooseRegent(state, houseId) {
   if (uncles.length) return uncles.sort((a, b) => skill(b) - skill(a))[0];
   const kin = all.filter((c) => adult(c) && ofHouse(c) && c.id !== lord.id && !(c.roles || []).includes('ward'));
   if (kin.length) return kin.sort((a, b) => skill(b) - skill(a))[0];
-  const sworn = all.filter((c) => adult(c) && c.alive && c.loc === h.seat && (c.roles || []).some((r) => ['castellan', 'steward', 'maester', 'commander'].includes(r)));
+  const sworn = all.filter((c) => adult(c) && c.alive && placeOf(state, c) === h.seat && (c.roles || []).some((r) => ['castellan', 'steward', 'maester', 'commander'].includes(r)));
   return sworn.sort((a, b) => skill(b) - skill(a))[0] || null;
 }
 

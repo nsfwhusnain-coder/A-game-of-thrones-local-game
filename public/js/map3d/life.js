@@ -111,10 +111,10 @@ export class LivingMap {
     }
 
     // ── hosts: outriders sweeping ahead, and men slipping away behind ──
-    for (const a of Object.values(state.armies || {})) {
-      if (a.type === 'fleet') continue;
+    for (const a of Object.values(state.parties || {})) {
+      if (a.kind === 'fleet' || a.kind === 'rider') continue;
       if ((a.men || 0) > 2500) {
-        const ahead = a.dest || a.pos;
+        const ahead = a.route?.path?.at(-1) || a.pos;
         for (let i = 0; i < (a.men > 12000 ? 3 : 2); i++) want(`scout:${a.id}:${i}`, 'outrider', a.pos, [ahead[0] + Math.cos(i * 2.4) * 26, ahead[1] + Math.sin(i * 2.4) * 26], { loop: true, spread: i });
       }
       if ((a.morale ?? 70) < 45 || (a.supply ?? 80) < 30) {
@@ -147,7 +147,7 @@ export class LivingMap {
   }
   placePos(state, id) {
     if (!id) return null;
-    if (String(id).startsWith('army:')) return state.armies?.[String(id).slice(5)]?.pos || null;
+    const pid = String(id).match(/^(?:party|army):(.+)$/)?.[1]; if (pid) return state.parties?.[pid]?.pos || null;
     return state.holdings?.[id]?.pos || null;
   }
 

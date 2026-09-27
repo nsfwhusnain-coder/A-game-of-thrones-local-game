@@ -33,15 +33,16 @@ test('orders: receipt, then the turn does it; halt and call back work over the w
   assert.match(by.c.preview.join(' '), /raven flies to Lysa Arryn/);
   const r = await api(`/games/${id}/advance`, { span: '1d', orders: pv.orders });
   const s = r.state;
-  const co = Object.values(s.armies).find((a) => a.commander === 'jory_cassel');
+  const co = Object.values(s.parties).find((a) => a.commander === 'jory_cassel');
   // fifty set out; the road may take a few (outlaws, a flood) — the order happened, with the men it asked for
   assert.ok(co.men > 0 && co.men <= 50, `Jory rides with his company (${co.men} men)`);
-  assert.equal(s.characters.jon_snow.travel?.to, 'nights_watch');
+  const rideTo = (st, cid) => Object.values(st.parties).find((x) => x.kind === 'rider' && x.commander === cid)?.march?.to;
+  assert.equal(rideTo(s, 'jon_snow'), 'nights_watch');
   assert.equal(s.post[0].toName, 'Lysa Arryn');
   const h = await api(`/games/${id}/act`, { kind: 'recall', army: co.id });
-  assert.equal(h.state.armies[co.id].march, undefined);
+  assert.equal(h.state.parties[co.id].march, undefined);
   const b = await api(`/games/${id}/act`, { kind: 'recall', character: 'jon_snow' });
-  assert.equal(b.state.characters.jon_snow.travel?.to, 'stark');
+  assert.equal(rideTo(b.state, 'jon_snow'), 'stark');
 });
 
 test('works: one path, and a duplicate is refused with its reason', async () => {

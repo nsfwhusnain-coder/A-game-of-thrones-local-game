@@ -5,6 +5,7 @@
 import { evaluateRules } from './rules.js';
 import { RESOURCES, REGION_PROFILE, HOLDING_RESOURCES, POPULATION, POPULATION_DEFAULTS, TRIBUTE_SHARE, TAX_LEVELS, RESOURCE_VALUE } from '../../data/economy.js';
 import { random } from '../engine/rng.js';
+import { forces } from '../engine/parties.js';
 
 const MINES = new Set(['gold', 'silver', 'iron']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -96,9 +97,9 @@ export function holdingYield(state, h) {
 }
 
 export function armyUpkeep(a) {
-  if (a.type === 'fleet') {
+  if (a.kind === 'fleet') {
     const reavers = /ironborn|reaver|longship/i.test(a.composition || '') ? 0.45 : 1; // ironborn crews live off the sea and the iron price
-    return ((a.ships || 0) * 12 + a.men * 0.1) * reavers * (a.status === 'anchored' ? 0.8 : 1); // crews fish, trade and raid between wars
+    return ((a.ships || 0) * 12 + a.men * 0.1) * reavers * (a.at && !a.march ? 0.8 : 1); // crews fish, trade and raid between wars
   }
   // Levies are the lord's own smallfolk, called from their fields and fed from his stores: they cost bread (the
   // food stores, and fields left untended) and a little coin for carts, spears and shoes — not wages. Sworn
@@ -107,7 +108,7 @@ export function armyUpkeep(a) {
   const sworn = Object.values(a.contingents || {}).reduce((x, y) => x + y, 0);
   const own = Math.max(0, a.men - Math.min(a.men, sworn));
   const paid = /men-at-arms|household|knights|guard|gold cloak/i.test(a.composition || '') && !/levies/i.test(a.composition || '');
-  return own * (sell ? 1.1 : paid ? 0.22 : 0.04) * (a.status === 'garrison' ? 0.5 : 1);
+  return own * (sell ? 1.1 : paid ? 0.22 : 0.04) * (a.kind === 'garrison' ? 0.5 : 1);
 }
 
 function houseHoldings(state, id) { return Object.values(state.holdings).filter((x) => x.owner === id); }
@@ -126,7 +127,7 @@ export function project(state, houseId) {
     const exp = st === 'paying' ? vg * share * tax.income : st === 'reduced' ? vg * share * tax.income * 0.5 : st === 'late' ? vg * share * 0.4 : 0;
     tribute += exp; vassals.push({ id: v.id, expected: Math.round(exp), status: st });
   }
-  const armies = Object.values(state.armies).filter((a) => a.owner === houseId);
+  const armies = forces(state).filter((a) => a.owner === houseId);
   const upkeep = armies.reduce((s, a) => s + armyUpkeep(a), 0);
   const alms = almsFor(state).find((x) => x.id === houseId)?.amount || 0;
   const household = (house.figures.menAtArms?.v || 0) * (houseId === 'nights_watch' ? 0.12 : 0.38) + (house.figures.guard?.v || 0) * 0.6 + alms;
@@ -204,7 +205,7 @@ export function settle(state, days) {
   for (const house of Object.values(state.houses)) {
     const L = ledgers[house.id]; const f = house.figures;
     if (['tribe', 'exile', 'company'].includes(house.rank)) { house.ledger = []; continue; } // they live by raid, patron or contract — the story decides
-    const armies = Object.values(state.armies).filter((a) => a.owner === house.id);
+    const armies = forces(state).filter((a) => a.owner === house.id);
     const upkeep = armies.reduce((s, a) => s + armyUpkeep(a), 0) * months;
     if (upkeep) L.lines.push({ kind: 'expense', label: 'Hosts & fleets in the field', amount: Math.round(upkeep), detail: armies.map((a) => ({ label: a.name, amount: Math.round(armyUpkeep(a) * months) })) });
     const household = ((f.menAtArms?.v || 0) * (house.id === 'nights_watch' ? 0.12 : 0.38) + (f.guard?.v || 0) * 0.6) * months; // sworn brothers take no wages
@@ -260,7 +261,7 @@ export function settle(state, days) {
     const hs = houseHoldings(state, house.id);
     const nomad = ['tribe', 'company', 'exile'].includes(house.rank);
     const pop = hs.reduce((s, h) => s + h.population, 0) / 10000;
-    const soldiers = armies.filter((a) => a.type !== 'fleet').reduce((s, a) => s + a.men, 0) / 10000;
+    const soldiers = armies.filter((a) => a.kind !== 'fleet').reduce((s, a) => s + a.men, 0) / 10000;
     const cons = Math.max(0.05, pop * 0.9 + soldiers * 1.3);
     const prod = hs.reduce((s, h) => { const r = h.resources || {}; return s + (h.population / 10000) * ((r.grain || 0) * 0.8 + (r.fish || 0) * 0.5 + (r.horses || 0) * 0.1 + 0.45) * holdingFactor(state, h) * seasonFood(state, h.region) * rnd(0.8, 1.15); }, 0);
     const levyDrain = Math.min(0.35, soldiers / Math.max(0.01, pop) * 3); // men in the field don't till fields
@@ -288,12 +289,12 @@ export function settle(state, days) {
       const short = Math.min(1, -stores / Math.max(0.01, cons * months)); // share of needs unmet
       for (const h of hs) { h.population = Math.round(h.population * (1 - 0.03 * short * months)); h.unrest = clamp(Math.round(h.unrest + 10 * short * months), 0, 100); h.prosperity = clamp(Math.round(h.prosperity - 3 * short * months), 0, 100); }
       let deserted = 0;
-      for (const a of armies) if (a.type !== 'fleet') { const d = Math.round(a.men * 0.08 * short * months); a.men -= d; deserted += d; a.morale = clamp((a.morale ?? 70) - 10 * short, 0, 100); }
+      for (const a of armies) if (a.kind !== 'fleet') { const d = Math.round(a.men * 0.08 * short * months); a.men -= d; deserted += d; a.morale = clamp((a.morale ?? 70) - 10 * short, 0, 100); }
       notes.push({ house: house.id, text: `Famine in the lands of House ${house.name}: the old and the young die first, the villages riot${deserted ? `, and ${deserted.toLocaleString()} hungry soldiers desert` : ''}.`, important: true });
     }
 
     // levies regenerate toward what the land can bear
-    const raised = armies.filter((a) => a.type !== 'fleet' && !/garrison/i.test(a.status || '')).reduce((s, a) => s + a.men, 0);
+    const raised = armies.filter((a) => !['fleet', 'garrison'].includes(a.kind)).reduce((s, a) => s + a.men, 0);
     const popNow = hs.reduce((a, h) => a + h.population, 0);
     const condition = hs.length ? hs.reduce((a, h) => a + clamp(h.prosperity / 60, 0.3, 1.3) * (1 - h.unrest / 200) * h.population, 0) / Math.max(1, popNow) : 0;
     const potential = (house.levyCap || 0) * (popNow / (house.popBase || popNow || 1)) * condition;

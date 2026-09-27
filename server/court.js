@@ -5,6 +5,7 @@ import { applyChanges, vassalsOf, realmOf, getRelation } from '../public/js/shar
 import { temperament } from '../public/js/shared/temperament.js';
 import { exposePlot } from '../public/js/shared/treachery.js';
 import { random, shuffle } from '../public/js/engine/rng.js';
+import { partyOf } from '../public/js/engine/parties.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = (a) => a[Math.floor(random() * a.length)];
@@ -79,7 +80,7 @@ export function judge(state, { character, verdict }) {
   const p = state.meta.player; const me = state.houses[p];
   const c = state.characters[character];
   if (!c?.alive || !/imprisoned|captive|hostage/.test(c.status || '')) throw new CourtError('There is no such prisoner.');
-  const heldBy = String(c.loc || '').startsWith('army:') ? state.armies[String(c.loc).slice(5)]?.owner : state.holdings[c.loc]?.owner;
+  const heldBy = partyOf(state, c)?.owner || state.holdings[c.loc]?.owner;
   if (heldBy !== p && state.houses[heldBy]?.liege !== p) throw new CourtError(`${c.name} is not your prisoner.`);
   const h = state.houses[c.house]; const lordOfHouse = h?.lord === c.id || (c.roles || []).includes('heir');
   const ch = []; let summary;
@@ -142,7 +143,7 @@ export function scheme(state, { house, kind }) {
       if (target) { applyChanges(state, [{ op: 'character', id: target.id, revealSecret: true }]); return { text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} learned ${target.name}'s secret: ${target.secret}. Only the player knows. Narrate nothing of it openly.]`, summary: `${who} brings you ${target.name}'s secret: ${target.secret}` }; }
       return { text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} found nothing worth the gold.]`, summary: `${who} dug, and found nothing House ${h.name} hides that you did not know.` };
     }
-    state.intel = state.intel || { armies: {}, spies: {} }; state.intel.spies[house] = state.meta.turn;
+    state.intel = state.intel || { parties: {}, spies: {} }; state.intel.spies[house] = state.meta.turn;
     if (h.liege === p) { const found = exposePlot(state, house); return { text: `[SECRET] Plant spies in the household of House ${h.name}.`, note: `[Already done: ${who} has eyes in House ${h.name}. Finding: ${found}]`, summary: `${who} has eyes in House ${h.name}. ${found}` }; }
     return { text: `[SECRET] Plant spies in the household of House ${h.name}.`, note: `[Already done: ${who} has eyes in House ${h.name}; the player now sees their hosts.]`, summary: `${who} has placed eyes in House ${h.name}. Their hosts will be known to you wherever they march.` };
   }
@@ -156,7 +157,7 @@ export function scheme(state, { house, kind }) {
 // How a host marches: openly, in secret, or behind a feint (fog of war — the story model is told what the other
 // houses believe, and they act on it; shared/intel.js)
 export function secrecy(state, { army, mode, to }) {
-  const p = state.meta.player; const a = state.armies[army];
+  const p = state.meta.player; const a = state.parties[army];
   if (!a || a.owner !== p) throw new CourtError('Not your host.');
   const pn = (id) => state.holdings[id]?.name || id;
   if (mode === 'open') { delete a.secrecy; delete a.feint; return { text: `${a.name} marches openly, banners flying.`, note: '', summary: `${a.name} marches openly.` }; }

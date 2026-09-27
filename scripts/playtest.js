@@ -36,7 +36,7 @@ const script = {
 for (let t = 1; t <= turns; t++) {
   const step = script[t] || {};
   log(`\n## Turn ${t}`);
-  for (const a0 of step.act || []) { const a = a0.army === '@jory' ? { ...a0, army: Object.values(game.loadState(id).armies).find((x) => x.commander === 'jory_cassel')?.id } : a0; try { const r = await game.act(id, a); log(`- act ${a.kind}: ${r.summary || 'done'}`); } catch (e) { log(`- act ${a.kind} FAILED: ${e.message}`); } }
+  for (const a0 of step.act || []) { const a = a0.army === '@jory' ? { ...a0, army: Object.values(game.loadState(id).parties).find((x) => x.commander === 'jory_cassel')?.id } : a0; try { const r = await game.act(id, a); log(`- act ${a.kind}: ${r.summary || 'done'}`); } catch (e) { log(`- act ${a.kind} FAILED: ${e.message}`); } }
   for (const [who, line] of step.talk || []) {
     const t0 = Date.now();
     try { const r = await game.talk(id, who, line); log(`- **audience ${who}** (${((Date.now() - t0) / 1000).toFixed(0)}s, engine: ${r.stance?.verdict || '—'}, ${r.stance?.mood}) ← "${line}"\n  > ${String(r.reply).replace(/\s+/g, ' ')}${r.applied?.length ? `\n  applied: ${r.applied.map((x) => x.text).join('; ')}` : ''}`); } catch (e) { log(`- audience ${who} FAILED: ${e.message}`); }
@@ -68,11 +68,11 @@ for (let t = 1; t <= turns; t++) {
   const s2 = game.loadState(id); const h = s2.houses[house];
   log(`- whereabouts: ${['robb_stark', 'sansa_stark', 'arya_stark', 'jon_snow', 'jory_cassel', 'rodrik_cassel'].map((c) => `${c.split('_')[0]} ${whereabouts(s2, s2.characters[c]).text}`).join(' · ')} · guard ${h.figures.menAtArms?.v}`);
   if (s2.post?.length) log(`- post: ${s2.post.map((x) => `${x.toName} ${x.status}`).join(', ')}`);
-  log(`- hosts: ${Object.values(s2.armies).filter((a) => a.owner === house).map((a) => `${a.name} ${a.men}${a.march ? ' →' + a.march.to : ''}`).join(', ')}`);
+  log(`- hosts: ${Object.values(s2.parties).filter((a) => a.owner === house).map((a) => `${a.name} ${a.men}${a.march ? ' →' + a.march.to : ''}`).join(', ')}`);
   const works = (s2.projects || []).filter((x) => x.house === house && x.status === 'active'); if (works.length) log(`- works: ${works.map((x) => x.name).join(', ')}`);
   for (const x of s2.ravens.filter((x) => !seenRavens.has(x.id))) { seenRavens.add(x.id); log(`- raven from ${x.fromName}: ${x.text.replace(/\s+/g, ' ').slice(0, 140)}`); }
   const out2 = (tr.orders || []).map((o) => `${o.text.slice(0, 50)} → ${orderOutcome(o, s2).status}`); if (out2.length) log(`- order statuses: ${out2.join(' | ')}`);
-  log(`- state: treasury ${Math.round(h.figures.treasury.v)} · food ${h.figures.food.v} · levies ${h.figures.levies.v} · hosts ${Object.values(s2.armies).filter((a) => a.owner === house).map((a) => `${a.name} ${a.men}`).join(', ') || 'none'} · pending decisions ${(s2.decisions || []).filter((d) => d.status === 'pending').map((d) => d.title).join(' | ') || 'none'}`);
+  log(`- state: treasury ${Math.round(h.figures.treasury.v)} · food ${h.figures.food.v} · levies ${h.figures.levies.v} · hosts ${Object.values(s2.parties).filter((a) => a.owner === house).map((a) => `${a.name} ${a.men}`).join(', ') || 'none'} · pending decisions ${(s2.decisions || []).filter((d) => d.status === 'pending').map((d) => d.title).join(' | ') || 'none'}`);
 }
 const dir = path.join(ROOT, 'playtest'); fs.mkdirSync(dir, { recursive: true });
 const file = path.join(dir, `${house}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.md`);

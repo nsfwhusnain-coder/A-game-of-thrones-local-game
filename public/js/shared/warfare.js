@@ -1,12 +1,13 @@
 // The war room: grounds battles, sieges and marches in numbers so outcomes stay consistent.
 // The simulator still decides what happens — this tells it (and the player) what is *likely*.
 import { realmOf, placeName } from './world.js';
-import { mounted } from './units.js';
 import { roadWarnings } from './chokepoints.js';
 
 import { MILES_PER_UNIT } from "../../data/geography.js"; // ~1.85 miles per game unit on the atlas
 export { MILES_PER_UNIT };
-import { SPEED } from '../../data/balance.js'; // miles per day, by class
+import { ROAD_FACTOR } from '../../data/balance.js';
+import { estimate, paceOf, daysLeft } from '../engine/movement.js';
+import { forces } from '../engine/parties.js';
 
 export function atWar(state, a, b) {
   if (!a || !b || a === b) return false;
@@ -35,11 +36,12 @@ export function battleOdds(state, att, def, { fort = 0, terrain = 1 } = {}) {
   return { attacker: Math.round(p * 100), sa: Math.round(sa), sd: Math.round(sd) };
 }
 
-export function marchDays(a, from, to) {
-  const d = Math.hypot(to[0] - from[0], to[1] - from[1]) * MILES_PER_UNIT * 1.12;
-  const sp = a.type === 'fleet' ? SPEED.fleet : (mounted(null, a) || (/horse|cavalry|screamer|rider/i.test(a.composition || '') && !a.units)) && a.men < 8000 ? SPEED.horse : SPEED.foot;
-  const slow = (a.men > 15000 ? 0.8 : 1) * (a.secrecy === 'hidden' ? 0.85 : 1); // by night and off the roads is slower
-  return { miles: Math.round(d), days: Math.max(1, Math.round(d / (sp * slow))) };
+export function marchDays(a, from, to, state = null) {
+  // the way the engine would really go (engine/movement.js); a straight line only where no way is known
+  const e = from && to ? estimate(state, a, from, to) : null;
+  if (e) return e;
+  const d = Math.hypot(to[0] - from[0], to[1] - from[1]) * MILES_PER_UNIT * ROAD_FACTOR;
+  return { miles: Math.round(d), days: Math.max(1, Math.round(d / paceOf(state, a))) };
 }
 
 /** Months a besieged holding can hold out: food, garrison and walls. */
@@ -59,7 +61,7 @@ export function siegeEstimate(state, holding, besiegers) {
 /** A textual war-room report for the prompt and the UI. */
 export function warRoom(state) {
   const lines = [];
-  const armies = Object.values(state.armies);
+  const armies = forces(state);
   // armies in contact
   const seen = new Set();
   for (const a of armies) for (const b of armies) {
@@ -72,22 +74,22 @@ export function warRoom(state) {
   }
   // sieges & threatened holdings
   for (const h of Object.values(state.holdings)) {
-    const bes = armies.filter((a) => a.type !== 'fleet' && atWar(state, a.owner, h.owner) && Math.hypot(a.pos[0] - h.pos[0], a.pos[1] - h.pos[1]) < 12);
+    const bes = armies.filter((a) => a.kind !== 'fleet' && atWar(state, a.owner, h.owner) && Math.hypot(a.pos[0] - h.pos[0], a.pos[1] - h.pos[1]) < 12);
     if (!bes.length && h.status !== 'besieged') continue;
     if (!bes.length) { lines.push(`${h.name} is marked besieged but no enemy host is near it — the siege should be lifted.`); continue; }
     const est = siegeEstimate(state, h, bes);
     lines.push(`SIEGE of ${h.name} (${h.owner}, walls ${h.fort}/6, garrison ~${est.garrison}) by ${bes.map((a) => `${a.name} ${a.men}`).join(', ')}: can hold ~${est.months} moons on its stores; ${est.storm}.`);
   }
   // marches under way
-  for (const a of armies.filter((x) => x.dest)) {
-    const m = marchDays(a, a.pos, a.dest);
+  for (const a of armies.filter((x) => x.march && x.route)) {
+    const r = a.route; const end = r.path.at(-1);
     // geography is not negotiable: what the road makes them pay is stated before they walk it
-    const road = a.type === 'fleet' ? [] : roadWarnings(state, a, a.pos, a.dest);
-    lines.push(`MARCH: ${a.name} → ${a.destName || 'destination'}: ~${m.miles} miles, ~${m.days} more days.${road.length ? ` ON THE WAY — ${road.join(' ')}` : ''}`);
+    const road = a.kind === 'fleet' ? [] : roadWarnings(state, a, a.pos, end);
+    lines.push(`MARCH: ${a.name} → ${r.toName || 'destination'}: ~${Math.round(r.miles * (1 - r.done / Math.max(0.001, r.days)))} miles, ~${Math.max(1, Math.round(daysLeft(a)))} more days.${road.length ? ` ON THE WAY — ${road.join(' ')}` : ''}`);
   }
   // guidance on distances for the player's hosts
   const p = state.meta.player;
-  for (const a of armies.filter((x) => x.owner === p && x.type !== 'fleet' && x.men > 500)) {
+  for (const a of armies.filter((x) => x.owner === p && x.kind !== 'fleet' && x.men > 500)) {
     const foes = armies.filter((b) => atWar(state, a.owner, b.owner) && b.men > 300)
       .map((b) => ({ b, m: marchDays(a, a.pos, b.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
     if (foes.length) lines.push(`${a.name} (${a.men}): nearest enemies — ${foes.map(({ b, m }) => `${b.name} ${b.men} at ${b.at ? placeName(state, b.at) : 'the field'} (~${m.days} days' march; odds if attacking ~${battleOdds(state, a, b).attacker}%)`).join('; ')}.`);

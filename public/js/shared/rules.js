@@ -204,7 +204,7 @@ export function houseScope(state, house, { months = 1, luck = 1, gross = 0 } = {
   const f = house.figures || {};
   const num = (x) => Number(x) || 0;
   const holds = Object.values(state.holdings).filter((h) => h.owner === house.id);
-  const armies = Object.values(state.armies).filter((a) => a.owner === house.id);
+  const armies = Object.values(state.parties).filter((a) => a.owner === house.id);
   const avg = (fn) => (holds.length ? holds.reduce((s, h) => s + fn(h), 0) / holds.length : 0);
   const wars = (state.wars || []).filter((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].includes(house.id));
   const season = state.world?.season || 'summer';

@@ -37,13 +37,13 @@ for (const id of Object.keys(PERSONAS)) {
 }
 for (const sc of Object.values(SCENARIOS)) {
   const st = createInitialState(sc.id, 'stark');
-  for (const a of Object.values(st.armies)) {
+  for (const a of Object.values(st.parties)) {
     if (!a.at) bad(`scenario ${sc.id}: army ${a.id} has no location`);
     if (a.commander && !charIds.has(a.commander)) bad(`army ${a.id}: unknown commander ${a.commander}`);
   }
   for (const [a, b] of sc.relations) if (!houseIds.has(a) || !houseIds.has(b)) bad(`relation ${a}-${b}: unknown house`);
   for (const c of Object.values(st.characters)) if (!['m', 'f'].includes(c.sex)) bad(`scenario ${sc.id}: ${c.id} has no sex`);
-  console.log(`scenario ${sc.id}: ${Object.keys(st.houses).length} houses, ${Object.keys(st.holdings).length} holdings, ${Object.keys(st.characters).length} characters, ${Object.keys(st.armies).length} armies`);
+  console.log(`scenario ${sc.id}: ${Object.keys(st.houses).length} houses, ${Object.keys(st.holdings).length} holdings, ${Object.keys(st.characters).length} characters, ${Object.keys(st.parties).length} armies`);
 }
 console.log(problems ? `${problems} problem(s)` : '✔ data OK');
 process.exit(problems ? 1 : 0);

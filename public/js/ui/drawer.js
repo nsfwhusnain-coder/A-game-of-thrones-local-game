@@ -8,6 +8,7 @@ import { THREADS } from '../shared/plots.js';
 import { briefFor } from '../../data/briefs.js';
 import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices, prepareSpeech, beginScene, sceneToken } from './voice.js';
 import { temperament, natureTags, VERDICT_LABEL, moodWord } from '../shared/temperament.js';
+import { together as sameSpot } from '../engine/parties.js';
 
 export function setDrawer(tab) { app.drawerTab = tab; renderDrawer(); }
 export function renderDrawer() {
@@ -193,7 +194,7 @@ function renderAudience(body) {
   }
   const h = s.houses[c.house]; const log = s.chats[c.id] || [];
   const p = s.meta.player; const me = s.characters[player().lord];
-  const together = me && me.loc === c.loc;
+  const together = me && sameSpot(app.state, me, c);
   const mood = s.moods?.[c.id]; const closed = !!(mood?.closed && mood.turn === s.meta.turn);
   const quick = c.house === p ? ['How many men can we field?', 'What is in the treasury, and what do we owe?', 'How full are the granaries?', 'Which of my lords can I trust?', 'What news?'] : ['What news from your lands?', 'What do you want?', 'I propose an alliance between our houses.', 'Will you trade with us?', 'I offer you 1,000 gold dragons for your friendship.', 'Swear fealty to me.'];
   body.innerHTML = `<div class="chat">

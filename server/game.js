@@ -5,11 +5,12 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplies } from './llm.js';
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
-import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
+import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding, rideOf, sendHome } from '../public/js/shared/world.js';
+import { ref, isRef, partyAt, partyOf, membersOf, disband, together, settle as settleParty } from '../public/js/engine/parties.js';
+import { planRoute } from '../public/js/engine/movement.js';
+import { marchTick } from '../public/js/shared/marches.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
-import { chokepointToll, roadCongestion } from '../public/js/shared/chokepoints.js';
-import { needsShips, planVoyage, retarget, sail } from '../public/js/shared/sea.js';
 import { random } from '../public/js/engine/rng.js';
 import { nextId } from '../public/js/engine/ids.js';
 import { withDice } from './dice.js';
@@ -18,7 +19,7 @@ import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
 import { nextTurnLength } from '../public/js/shared/turns.js';
-import { marchDays, MILES_PER_UNIT } from '../public/js/shared/warfare.js';
+import { marchDays } from '../public/js/shared/warfare.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
 import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
 import { worldTick, THREADS } from '../public/js/shared/plots.js';
@@ -266,7 +267,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
 }
 async function advanceWith(id, state, cfg, { span, orders }) {
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o.text) })).filter((o) => o.text.trim()); }
-  for (const a of Object.values(state.armies)) { delete a.motion; delete a.arriveDay; }
+  for (const a of Object.values(state.parties)) { delete a.motion; delete a.arriveDay; }
   const chronicle = readChronicle(id);
   // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
   // so they truly happen; the story model is told what was done and narrates what follows.
@@ -307,89 +308,14 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   const vt = vassalTick(state, spanInfo.days, touched);
   applied.push(...vt.applied);
   vt.events.push(...advanceMusters(state, spanInfo.days));
-  // Marching orders the story didn't resolve: the engine walks the host along at marching pace
+  // Every party with somewhere to be walks its planned road, day by day: hosts, fleets, households, riders
+  // (shared/marches.js over engine/movement.js). A host raised during the turn sets out on the day it was raised.
   const turnStart = dayNumber(state.meta.date) - spanInfo.days;
-  for (const a of Object.values(state.armies)) {
-    if (!a.march || a.movedTurn === state.meta.turn) continue;
-    const order = a.march.to; // read before the move: arriving clears the march order
-    // when in the turn this host is on the road (the map replays it in step with the story's days)
-    // a host raised during the turn (a lord answering on day 9) sets out that day, and marches only the days left
-    let born = Math.min(spanInfo.days - 1, Math.max(0, a.bornDay || 0));
-    // The sea is no road: a host bound for another island or shore takes ship — its own, or ships its realm sends — or
-    // waits on the shore and says why (shared/sea.js). It walks again only from where it lands, and pays no toll at sea.
-    if (a.type !== 'fleet') {
-      const goal = String(order).startsWith('army:') ? state.armies[String(order).slice(5)]?.pos : placePos(order, state.holdings);
-      if (a.sea && a.sea.for !== String(order) && a.sea.phase !== 'sailing') { if (goal && needsShips(a.pos, goal) && a.sea.phase !== 'to_port') retarget(state, a, goal, String(order)); else delete a.sea; } // a new order: the same ships, a new landing
-      if (!a.sea && goal && needsShips(a.pos, goal)) planVoyage(state, a, goal, String(order), turnStart + born);
-      if (a.sea && a.sea.phase !== 'to_port') {
-        const r = sail(state, a, { turnStart, span: spanInfo.days, from: born, mine: a.owner === state.meta.player || a.serving === state.meta.player });
-        vt.events.push(...r.events); applied.push(...r.lines);
-        if (!r.done || r.used >= spanInfo.days) { a.movedTurn = state.meta.turn; continue; }
-        born = r.used;
-      }
-    }
-    const to = a.sea?.phase === 'to_port' ? a.sea.port.id : order; // an inland host marches to its port first
-    const left = Math.max(1, spanInfo.days - born);
-    { const tgt = String(to).startsWith('army:') ? state.armies[String(to).slice(5)]?.pos : placePos(to, state.holdings); const md = tgt ? marchDays(a, a.pos, tgt).days : left; a.motion = { start: a.landed ? a.landed.from : born / spanInfo.days, end: Math.min(1, (born + md) / Math.max(1, spanInfo.days)), from: a.landed ? a.landed.start : [...a.pos], ...(a.landed ? { sea: a.landed.path } : {}) }; a.arriveDay = md <= left ? born + md : null; }
-    // a host may be ordered against another host: it follows it wherever it goes, and the engine fights them when they meet
-    if (String(to).startsWith('army:')) {
-      const foe = state.armies[String(to).slice(5)];
-      if (!foe) { delete a.march; a.status = 'holding'; continue; }
-      const m = marchDays(a, a.pos, foe.pos); const f = Math.min(1, left / Math.max(1, m.days));
-      a.pos = [a.pos[0] + (foe.pos[0] - a.pos[0]) * f, a.pos[1] + (foe.pos[1] - a.pos[1]) * f]; a.dest = foe.pos; a.destName = foe.name; a.at = null; a.status = f >= 1 ? 'engaging' : 'pursuing'; a.movedTurn = state.meta.turn;
-      if (f >= 1) delete a.march;
-      continue;
-    }
-    const dest = placePos(to, state.holdings); if (!dest) { delete a.march; continue; }
-    const m = marchDays(a, a.pos, dest);
-    let f = Math.min(1, left / Math.max(1, m.days));
-    // ── What lies in the way ────────────────────────────────────────────────────────────────
-    // The Neck, the Green Fork, the Bloody Gate, the Golden Tooth, the passes into Dorne: a host
-    // that must cross one of these pays in days, in men and in heart, unless it has leave.
-    const legEnd = [a.pos[0] + (dest[0] - a.pos[0]) * f, a.pos[1] + (dest[1] - a.pos[1]) * f];
-    const jam = roadCongestion(state, a.pos, legEnd); // refugees, wrecked villages, a countryside on the move
-    if (jam > 0.02) f = Math.max(0, f * (1 - jam));
-    const toll = chokepointToll(state, a, a.pos, legEnd, left);
-    if (toll.met.length) {
-      if (toll.losses) a.men = Math.max(0, a.men - toll.losses);
-      if (toll.morale) a.morale = Math.max(0, Math.round((a.morale ?? 70) - toll.morale));
-      if (toll.days) f = Math.min(1, Math.max(0, (left - toll.days)) / Math.max(1, m.days)); // days spent in the bogs are days not marched
-      if (toll.gold) { // the Freys keep a bridge, not a charity
-        const hh = state.houses[a.owner]; const fr = state.houses.frey;
-        if (hh?.figures?.treasury && fr?.figures?.treasury) { hh.figures.treasury.v = Math.max(0, hh.figures.treasury.v - toll.gold); fr.figures.treasury.v += toll.gold; }
-      }
-      for (const e of toll.events) vt.events.push({ day: Math.max(1, Math.round(born + (a.arriveDay ? a.arriveDay - born : left) * 0.6)), importance: a.owner === state.meta.player ? Math.max(3, e.importance) : e.importance, ...e });
-      for (const mt of toll.met) applied.push({ op: 'chokepoint', text: `${a.name} at ${mt.name}: ${mt.gated ? 'passed' : 'forced the crossing'}${mt.lost ? `, ${mt.lost.toLocaleString('en-GB')} men lost` : ''}${mt.days ? `, ${mt.days} days` : ''}` });
-    }
-    const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to, progress: f, status: a.party ? (f >= 1 ? (a.party.returning ? 'home again' : `at ${placeName(state, to)}, ${a.party.why.replace(/^to |^for /, '')}`) : a.status) : f >= 1 ? 'arrived' : 'marching' }]);
-    applied.push(...mv.applied);
-    if (f >= 1 && a.sea?.phase === 'to_port') { // at the port: the voyage begins (it sails from the next day on)
-      const goal = String(order).startsWith('army:') ? state.armies[String(order).slice(5)]?.pos : placePos(order, state.holdings);
-      delete a.sea; if (goal) planVoyage(state, a, goal, String(order), turnStart + Math.min(spanInfo.days, a.arriveDay || spanInfo.days));
-      continue;
-    }
-    if (f >= 1) {
-      // those riding with the host have arrived too
-      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id && c.alive && c.id !== a.commander) c.loc = to;
-      const cmd = state.characters[a.commander]; if (cmd && cmd.loc === 'army:' + a.id) cmd.loc = to;
-      if (a.owner === state.meta.player) vt.events.push({ day: a.arriveDay || spanInfo.days, title: `${a.name} reaches ${placeName(state, to)}`, text: `${a.name} (${a.men.toLocaleString()} men) has arrived at ${placeName(state, to)}.`, where: to, importance: 2, type: 'war', houses: [a.owner] });
-      delete a.march;
-    }
-  }
+  const mt = marchTick(state, { span: spanInfo.days, turnStart });
+  vt.events.push(...mt.events); applied.push(...mt.applied);
   // The road is not safe: outlaws, foragers, floods and snow — and now and then a friend
   const rd = roadEncounters(state, spanInfo.days);
   vt.events.push(...rd.events); applied.push(...rd.applied);
-  // Riders on the road: characters travelling alone arrive when their days are spent
-  for (const c of Object.values(state.characters)) {
-    if (!c.travel || !c.alive) continue;
-    const inDays = Math.max(1, Math.ceil(c.travel.left)); c.travel.left -= spanInfo.days;
-    if (c.travel.left <= 0) {
-      const to = c.travel.to; const already = c.loc === to; delete c.travel; c.loc = to;
-      if (already) continue; // a journey to where one already is ends quietly: an arrival is told once
-      applied.push({ op: 'character', text: `${c.name} arrives at ${placeName(state, to)}` });
-      if (c.house === state.meta.player) vt.events.push({ day: Math.min(spanInfo.days, inDays), title: `${c.name} reaches ${placeName(state, to)}`, text: `${c.name} has arrived at ${placeName(state, to)} on the orders of ${state.characters[state.houses[state.meta.player].lord]?.name || 'the lord'}.`, where: to, importance: 2, type: 'court', houses: [c.house] });
-    }
-  }
   // Oaths are weighed: tempted lords treat with the enemy in secret, and the desperate turn their cloaks
   const tr = treacheryTick(state, spanInfo.days);
   vt.events.push(...tr.events); applied.push(...tr.applied);
@@ -412,7 +338,7 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   vt.events.push(...retinueTick(state, spanInfo.days).events);
   vt.events.push(...deliverReplies(state));
   const engineEvents = dayEngineEvents(state, [...deathEvents, ...foldAnswers(vt.events)], spanInfo.days);
-  for (const a of Object.values(state.armies)) { delete a.bornDay; delete a.landed; }
+  for (const a of Object.values(state.parties)) { delete a.bornDay; delete a.landed; }
   // ── THE STORY'S PART: the model writes the days around the engine's facts, and the rest of the realm's doings
   const applyCtx = { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days };
   let { obj, raw, error, text } = await runSwarm(id, state, cfg, {
@@ -649,8 +575,7 @@ async function talkWith(id, state, cfg, charId, message) {
   changes = holdToVerdict(state, c, stance, changes);
   // far away, this is a letter: it flies for days, and the answer flies back — and only then does it count
   const lord = state.characters[lordId];
-  const together = lord && !lord.travel && !c.travel && lord.loc === c.loc;
-  if (!together) {
+  if (!together(state, lord, c)) {
     const days = ravenDays(state, lord, c); const today = dayNumber(state.meta.date);
     const back = addDays(state.meta.date, days * 2);
     state.post = state.post || [];
@@ -677,7 +602,7 @@ async function talkWith(id, state, cfg, charId, message) {
 // The engine's events keep the day they happened; those it cannot date fall where their place's news fell (a host's
 // arrival), else spread through the days
 function dayEngineEvents(state, evs, days) {
-  const arrived = new Map(Object.values(state.armies).filter((a) => a.arriveDay && a.at).map((a) => [a.at, a.arriveDay]));
+  const arrived = new Map(Object.values(state.parties).filter((a) => a.arriveDay && a.at).map((a) => [a.at, a.arriveDay]));
   for (const e of evs) {
     if (e.day) { e.day = Math.max(1, Math.min(days, Math.round(e.day))); continue; }
     e.day = (e.where && arrived.get(e.where)) || 1 + Math.floor(random() * days);
@@ -736,7 +661,7 @@ function deliverReplies(state) {
     if (entry) { delete entry.pending; entry.date = dateStr(state.meta.date); entry.applied = res.applied.map((a) => a.text); }
     state.ravens.unshift({ id: nextId(state, 'r'), day: today, from: c.id, fromName: c.name, to: lordId, text: String(r.text).replace(/\*[^*]*\*/g, '').trim(), date: dateStr(state.meta.date), read: false });
     const first = String(r.text).replace(/\*[^*]*\*/g, ' ').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s/)[0] || '';
-    const whence = String(c.loc || '').startsWith('army:') ? `the camp of ${state.armies[c.loc.slice(5)]?.name || 'a host'}` : placeName(state, c.loc);
+    const pp = partyOf(state, c); const whence = pp ? (pp.kind === 'rider' ? 'the road' : `the camp of ${pp.name}`) : placeName(state, c.loc);
     events.push({ title: `${c.name} answers ${state.characters[lordId]?.name || 'the lord'}`, text: `A raven from ${whence}: “${first.slice(0, 220)}”${res.applied.length ? ` — ${res.applied.map((a) => a.text).join('; ')}` : ''}`, where: resolvePlaceId(c.loc) || null, importance: 3, type: 'diplomacy', houses: [p, c.house], mine: true, day: 1 });
   }
   state.pendingReplies = keep;
@@ -864,7 +789,7 @@ function actWith(id, state, body) {
       break;
     }
     case 'disband': {
-      const a = state.armies[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
+      const a = state.parties[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
       const owner = state.houses[a.owner];
       // the sworn houses take their own men home
       let others = 0;
@@ -874,11 +799,12 @@ function actWith(id, state, body) {
         const v = state.houses[vid]; if (!v) continue; const back = Math.round(men * scale * 0.9); others += men * scale;
         v.figures.levies = { ...(v.figures.levies || {}), v: (Number(v.figures.levies?.v) || 0) + back };
         v.obligations = { ...(v.obligations || {}), levies: 'not_called' }; delete v.obligations.host;
-        for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id && c.house === vid) c.loc = v.seat;
+        for (const c of membersOf(state, a)) if (c.house === vid) sendHome(state, c, v.seat); // each lord rides home with his men
       }
-      const home = Math.round(a.type === 'fleet' ? 0 : Math.max(0, a.men - others) * 0.9);
-      for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id) c.loc = a.owner === p ? (a.at || me.seat) : owner.seat;
-      delete state.armies[a.id];
+      const home = Math.round(a.kind === 'fleet' ? 0 : Math.max(0, a.men - others) * 0.9);
+      // the rest get down where the host stands (yours) or ride home (a sworn host released from service)
+      if (a.owner !== p) for (const c of membersOf(state, a)) sendHome(state, c, owner.seat);
+      disband(state, a);
       if (home) applyChanges(state, [{ op: 'figure', house: a.owner, field: 'levies', delta: home, source: 'Men sent home' }]);
       if (a.owner !== p) { owner.obligations = { ...(owner.obligations || {}), levies: 'not_called' }; delete owner.obligations.host; }
       addOrder(`${a.owner === p ? 'Disbanded' : 'Released from service'} ${a.name}; the men go home to their fields.`, '', 'done');
@@ -887,31 +813,32 @@ function actWith(id, state, body) {
     // take back what is under way: a rider turns for home, a host halts where it stands
     case 'recall': {
       if (body.character) {
-        const c = state.characters[body.character]; if (!c || c.house !== p || !c.travel) throw httpError(400, 'no one of yours is on that road');
-        const home = c.travel.fromPlace || me.seat;
+        const c = state.characters[body.character]; const ride = c && rideOf(state, c); if (!ride || c.house !== p) throw httpError(400, 'no one of yours is on that road');
+        const home = ride.from || me.seat;
         const r = applyChanges(state, [{ op: 'travel', character: c.id, to: home }], { source: 'Your orders' });
         if (!r.applied.length) throw httpError(409, r.rejected[0]?.reason || 'they cannot turn back');
         addOrder(`Recall ${c.name}: turn back for ${placeName(state, home)}.`, '', 'underway', r.applied[0].text);
         result.summary = r.applied[0].text; break;
       }
-      const a = state.armies[body.army]; if (!a || !commandable(state, a) || !a.march) throw httpError(400, 'that host is not marching');
-      delete a.march; a.dest = null; a.destName = null; a.status = 'holding';
+      const a = state.parties[body.army]; if (!a || !commandable(state, a) || !a.march) throw httpError(400, 'that host is not marching');
+      delete a.march; a.route = null; settleParty(state, a);
       const near = placeName(state, nearestHolding(state, a.pos));
       addOrder(`${a.name} halts and holds where it stands, near ${near}.`, '', 'done'); result.summary = `${a.name} halts near ${near}.`; break;
     }
     case 'march': {
-      const a = state.armies[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
-      if (String(body.to).startsWith('army:')) {
-        const foe = state.armies[String(body.to).slice(5)]; if (!foe) throw httpError(400, 'no such host');
-        const m = marchDays(a, a.pos, foe.pos);
-        a.march = { to: 'army:' + foe.id, since: state.meta.turn }; a.dest = foe.pos; a.destName = foe.name; a.at = null; a.status = 'pursuing';
+      const a = state.parties[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
+      if (isRef(body.to)) {
+        const foe = partyAt(state, body.to); if (!foe) throw httpError(400, 'no such host');
+        const m = marchDays(a, a.pos, foe.pos, state);
+        a.march = { to: ref(foe.id), since: state.meta.turn }; planRoute(state, a, foe.pos, ref(foe.id), { toName: foe.name }); settleParty(state, a);
         addOrder(`${a.name} marches to attack ${foe.name} (House ${state.houses[foe.owner]?.name}, ~${foe.men} men), ~${m.days} days away${body.intent ? ' — ' + body.intent : ''}.`, '[The engine will fight this battle when the hosts meet; narrate the approach.]', 'underway');
         break;
       }
       const to = resolvePlaceId(body.to) || body.to; body.to = to;
       const dest = placePos(to, state.holdings); if (!dest) throw httpError(400, 'unknown destination');
-      const m = marchDays(a, a.pos, dest);
-      a.march = { to: body.to, since: state.meta.turn }; a.dest = dest; a.destName = placeName(state, body.to); a.at = null; a.status = 'marching';
+      const m = marchDays(a, a.pos, dest, state);
+      // the road is planned now, so the map shows the way it will take (engine/movement.js); over the sea, it takes ship
+      a.march = { to: body.to, since: state.meta.turn }; planRoute(state, a, dest, body.to, { toName: placeName(state, body.to) }); settleParty(state, a);
       addOrder(`${a.name} marches on ${placeName(state, body.to)} (~${m.miles} miles, ~${m.days} days)${body.intent ? ' — ' + body.intent : ''}.`, '', 'underway');
       break;
     }

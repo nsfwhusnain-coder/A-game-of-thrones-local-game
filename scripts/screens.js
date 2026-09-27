@@ -47,7 +47,7 @@ const SCENARIOS = {
     await api(`/games/${id}/act`, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 4000 });
     for (let t = 0; t < 14; t++) {
       const { state: s } = await api(`/games/${id}/advance`, { span: '7d' });
-      const ship = Object.values(s.armies).find((a) => ['crowl', 'mormont'].includes(a.owner) && a.sea?.phase === 'sailing');
+      const ship = Object.values(s.parties).find((a) => ['crowl', 'mormont'].includes(a.owner) && a.sea?.phase === 'sailing');
       if (ship) return { id, focus: ship.pos, dist: 260 };
     }
     throw new Error('no island host set sail in 14 weeks');

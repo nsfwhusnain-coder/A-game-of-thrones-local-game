@@ -504,7 +504,7 @@ export function armyFigureCount(men) { return Math.max(1, Math.min(18, Math.roun
 export function buildArmy(army, house) {
   const g = new THREE.Group();
   const color = house?.color || '#888';
-  if (army.type === 'fleet') {
+  if (army.kind === 'fleet') {
     const n = Math.max(1, Math.min(7, Math.round(Math.log2((army.ships || 1) + 1) * 1.3)));
     const hullM = mat('#5a3a22'); const sailM = new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, roughness: 0.9, flatShading: true });
     for (let i = 0; i < n; i++) {

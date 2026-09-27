@@ -7,7 +7,8 @@ import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, banne
 import { PathGrid, pathLength, pointAlong } from './pathfind.js';
 import { makeNoise } from '../map/noise.js';
 import { openPins } from '../shared/pins.js';
-import { riderPos } from '../shared/roads.js';
+import { forces, isForce } from '../engine/parties.js';
+import { stretch } from '../engine/movement.js';
 import { viewOfArmies, ageText } from '../shared/intel.js';
 import { LivingMap } from './life.js';
 
@@ -424,26 +425,27 @@ export class MapScene {
       l.el.innerHTML = `<span class="flag"></span><b>~${fmt(v.men)}</b>`;
       l.el.title = `Unconfirmed: a host of ~${fmt(v.men)} reported ${ageText(v.age)} (${v.source})`; this.ghostLabels.push(l);
     }
-    for (const [id, rec] of this.armyObjs) if (!s.armies[id]) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); if (rec.trail) this.scene.remove(rec.trail); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.armyObjs.delete(id); }
-    for (const a of Object.values(s.armies)) {
+    for (const [id, rec] of this.armyObjs) if (!s.parties[id] || !isForce(s.parties[id])) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); if (rec.trail) this.scene.remove(rec.trail); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.armyObjs.delete(id); }
+    for (const a of forces(s)) { // riders are drawn as riders (syncRiders), not as hosts
       const owner = s.houses[a.owner];
       let rec = this.armyObjs.get(a.id);
       // a host at sea is carried by ships: it is drawn as its fleet, on the water (shared/sea.js)
-      const atSea = a.type !== 'fleet' && a.sea?.phase === 'sailing';
-      const sig = `${a.owner}|${a.type}|${armyFigureCount(a.men)}|${a.ships || 0}|${a.composition}|${atSea ? 'sea' : ''}`;
+      const atSea = a.kind !== 'fleet' && a.sea?.phase === 'sailing';
+      const sig = `${a.owner}|${a.kind}|${armyFigureCount(a.men)}|${a.ships || 0}|${a.composition}|${atSea ? 'sea' : ''}`;
       if (!rec || rec.sig !== sig) {
         const oldPos = rec?.pos;
         if (rec) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); }
-        const group = buildArmy(atSea ? { ...a, type: 'fleet', ships: a.sea.ships || 1 } : a, owner); this.scene.add(group);
+        const group = buildArmy(atSea ? { ...a, kind: 'fleet', ships: a.sea.ships || 1 } : a, owner); this.scene.add(group);
         rec = { group, sig, pos: oldPos || (a.motion?.from ? [...a.motion.from] : [...a.pos]), anim: null, route: null, label: this.addLabel('', [0, 0, 0], 'army', { army: a.id }) };
         this.armyObjs.set(a.id, rec);
       }
-      const mode = a.type === 'fleet' || atSea ? 'sea' : 'land';
+      const mode = a.kind === 'fleet' || atSea ? 'sea' : 'land';
       rec.atSea = atSea;
       if (rec.pos[0] !== a.pos[0] || rec.pos[1] !== a.pos[1]) {
-        // a voyage this turn follows the sea lane the engine planned, then the road from the beach
-        const sea = a.motion?.sea;
-        const path = sea?.length > 1 ? this.voyagePath(sea, rec.pos, a.pos, atSea) : this.grid.find(rec.pos, a.pos, mode);
+        // the ground the engine walked this turn (engine/movement.js: the roads, the sea lane, the road from the beach);
+        // anything else that moved it (a battle, a new host) is drawn along the terrain as before
+        const walked = a.motion?.path?.length > 1 ? a.motion.path : null;
+        const path = walked ? [rec.pos, ...walked.slice(1)] : this.grid.find(rec.pos, a.pos, mode);
         // during the turn's replay the march follows the day counter (reelF), not the clock
         rec.anim = this.reelHold ? { path, scrub: true, start: a.motion?.start ?? 0, end: a.motion?.end ?? 1 } : { path, t0: performance.now(), dur: 1800 + Math.min(2500, pathLength(path) * 4) };
         // the road it took stays drawn behind it until it moves again: where it went, and where it stopped
@@ -452,17 +454,15 @@ export class MapScene {
       } else if (rec.trail && rec.trailTurn !== s.meta.turn) { this.scene.remove(rec.trail); rec.trail = null; }
       rec.pos = [...a.pos];
       if (rec.route) { this.scene.remove(rec.route); rec.route = null; }
-      if (a.dest) {
-        // bound over the sea: the lane to the landing, then the road on
-        const v = a.type !== 'fleet' && a.sea?.path?.length > 1 && a.sea.phase !== 'to_port' ? a.sea : null;
-        const path = v ? [...this.voyagePath(v.path, a.pos, v.landing, true), ...this.grid.find(v.landing, a.dest, 'land').slice(1)] : this.grid.find(a.pos, a.dest, mode);
-        rec.route = this.routeMesh(path, a.owner === s.meta.player ? '#f6e27a' : this.atWarWith(a.owner) ? '#ff5a44' : '#e8e0d0');
+      const ahead = this.roadAhead(a);
+      if (ahead) {
+        rec.route = this.routeMesh(ahead, a.owner === s.meta.player ? '#f6e27a' : this.atWarWith(a.owner) ? '#ff5a44' : '#e8e0d0');
         this.scene.add(rec.route);
       }
       const v = view.get(a.id); rec.view = v || null;
       rec.group.visible = v?.known === 'seen'; rec.label.hidden = !v;
       if (v?.known === 'reported' && rec.route) { this.scene.remove(rec.route); rec.route = null; }
-      const men = a.type === 'fleet' ? `${a.ships || '?'} ships` : fmt(v?.known === 'reported' ? v.men : a.men);
+      const men = a.kind === 'fleet' ? `${a.ships || '?'} ships` : fmt(v?.known === 'reported' ? v.men : a.men);
       const cmd = a.commander && v?.known === 'seen' ? s.characters[a.commander]?.name : '';
       // unconfirmed: a plain grey plate with the rumoured count; confirmed: the house's colours and who leads it
       rec.label.el.innerHTML = v?.known === 'reported'
@@ -494,21 +494,26 @@ export class MapScene {
     });
     const g = this.ribbon(path, 0.7, m, 0.5); g.renderOrder = 2; return g;
   }
-  // The way a host crosses the sea: from where it stands along the lane the engine planned (shared/sea.js), ending at
-  // `to` if it is still at sea, else at the landing and on by road.
-  voyagePath(sea, from, to, stillAtSea) {
-    const near = (p) => { let bi = 0, bd = Infinity; sea.forEach((q, i) => { const d = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2; if (d < bd) { bd = d; bi = i; } }); return bi; };
-    const i0 = near(from);
-    if (stillAtSea) { const i1 = Math.max(i0, near(to)); return [from, ...sea.slice(i0 + 1, i1 + 1), to]; }
-    return [from, ...sea.slice(i0 + 1), ...this.grid.find(sea[sea.length - 1], to, 'land').slice(1)];
+  // The road still ahead of a party, as the engine planned it: its route from where it stands (engine/movement.js),
+  // or — for a host waiting for ships or at sea — the sea lane to its landing (shared/sea.js) and the land beyond.
+  roadAhead(a) {
+    if (!a.march) return null;
+    const v = a.kind !== 'fleet' && a.sea?.path?.length > 1 && a.sea.phase !== 'to_port' ? a.sea : null;
+    if (v) {
+      const near = (p) => { let bi = 0, bd = Infinity; v.path.forEach((q, i) => { const d = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2; if (d < bd) { bd = d; bi = i; } }); return bi; };
+      const goal = this.state.parties[String(a.march.to).replace(/^party:/, '')]?.pos || this.state.holdings[a.march.to]?.pos;
+      return [a.pos, ...v.path.slice(near(a.pos) + 1), ...(goal ? this.grid.find(v.landing, goal, 'land').slice(1) : [])];
+    }
+    if (!a.route?.path?.length) return null;
+    return stretch(a.route, a.route.done, a.route.days);
   }
-  routeMesh(path, color) {
+  routeMesh(path, color, width = 1.1) {
     const m = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, uniforms: { uTime: this.waterUniforms.uTime, uColor: { value: new THREE.Color(color) } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: 'uniform float uTime; uniform vec3 uColor; varying vec2 vUv; void main(){ float dash = step(0.45, fract(vUv.x * 0.12 - uTime * 0.6)); float edge = smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.75, vUv.y); gl_FragColor = vec4(uColor, dash * edge * 0.95); }',
     });
-    const g = this.ribbon(path, 1.1, m, 0.6);
+    const g = this.ribbon(path, width, m, 0.6);
     const end = path.at(-1), prev = path.at(-2) || path[0];
     const cone = new THREE.Mesh(new THREE.ConeGeometry(2.2, 5, 4), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 }));
     const ang = Math.atan2(end[1] - prev[1], end[0] - prev[0]);
@@ -536,24 +541,28 @@ export class MapScene {
       this.eventPins.push(lbl);
     }
   }
-  // People riding alone: yours always, and the great lords of the realm when they take to the road
+  // People riding alone (rider parties): yours always, and the great lords of the realm when they take to the road
   syncRiders() {
-    this.riderWas = Object.fromEntries((this.riderLabels || []).map((l) => [l.data.char, l.to || [l.pos.x, l.pos.z]]));
     for (const l of this.riderLabels || []) l.el.remove();
     this.labels = this.labels.filter((l) => !(this.riderLabels || []).includes(l));
-    this.riderLabels = [];
+    for (const r of this.riderRoutes || []) this.scene.remove(r);
+    this.riderLabels = []; this.riderRoutes = [];
     const s = this.state; const p = s.meta.player;
-    for (const c of Object.values(s.characters)) {
-      if (!c.alive || !c.travel) continue;
+    for (const r of Object.values(s.parties)) {
+      const c = s.characters[r.commander];
+      if (r.kind !== 'rider' || !c?.alive) continue;
       const mine = c.house === p;
-      if (!mine && !(c.roles || []).some((r) => ['lord', 'ruler', 'heir', 'council'].includes(r))) continue;
-      const pos = riderPos(s, c); if (!pos) continue;
-      const dest = s.holdings[c.travel.to]?.name || '';
+      if (!mine && !(c.roles || []).some((x) => ['lord', 'ruler', 'heir', 'council'].includes(x))) continue;
+      const pos = r.pos; if (!pos) continue;
       const lbl = this.addLabel(`🐎 ${c.name.replace(/^(Ser|Lord|Lady|Maester) /, '').split(' ')[0]}`, [pos[0], this.groundAt(pos[0], pos[1]) + 4, pos[1]], `rider${mine ? ' mine' : ''}`, { char: c.id });
-      // during the replay, riders ride from where they were to where they are now
-      const was = this.riderWas?.[c.id]; if (was && this.reelHold) { lbl.from = was; lbl.to = pos; }
-      lbl.el.title = `${c.name}, riding for ${dest} (~${Math.max(0, Math.round(c.travel.left))} days left)`;
+      // during the replay, riders ride the road they really rode this turn, day by day
+      if (this.reelHold && r.motion?.path?.length > 1) { lbl.path = r.motion.path; lbl.span = [r.motion.start || 0, r.motion.end ?? 1]; }
+      const left = r.route ? Math.max(1, Math.round(r.route.days - r.route.done + (r.delay || 0))) : 0;
+      lbl.el.title = `${c.name}, riding for ${r.route?.toName || s.holdings[r.march?.to]?.name || ''}${left ? ` (~${left} days left${r.route?.sea ? ', part of it by ship' : ''})` : ''}`;
       this.riderLabels.push(lbl);
+      // your own riders' roads are drawn, faint and thin
+      const ahead = mine && r.route ? stretch(r.route, r.route.done, r.route.days) : null;
+      if (ahead?.length > 1) { const m = this.routeMesh(ahead, '#f6e27a', 0.55); this.scene.add(m); this.riderRoutes.push(m); }
     }
   }
   // Canonical places that are not holdings: ruins (the Nightfort, Oldstones, Castamere), abandoned Wall castles,
@@ -627,7 +636,8 @@ export class MapScene {
     const placed = []; const armyBoxes = []; const nameBoxes = [];
     // realm labels: size scales with realm and zoom, largest first to avoid collisions
     for (const l of this.labels) {
-      if (l.from) { const f = this.reelHold ? clamp(this.reelF ?? 0, 0, 1) : 1; const x = l.from[0] + (l.to[0] - l.from[0]) * f, z = l.from[1] + (l.to[1] - l.from[1]) * f; l.pos.set(x, this.groundAt(x, z) + 4, z); if (f >= 1 && !this.reelHold) l.from = null; }
+      if (l.path) { const f = this.reelHold ? clamp(((this.reelF ?? 0) - l.span[0]) / Math.max(0.02, l.span[1] - l.span[0]), 0, 1) : 1; const [x, z] = pointAlong(l.path, f); l.pos.set(x, this.groundAt(x, z) + 4, z); if (f >= 1 && !this.reelHold) l.path = null; }
+      else if (l.from) { const f = this.reelHold ? clamp(this.reelF ?? 0, 0, 1) : 1; const x = l.from[0] + (l.to[0] - l.from[0]) * f, z = l.from[1] + (l.to[1] - l.from[1]) * f; l.pos.set(x, this.groundAt(x, z) + 4, z); if (f >= 1 && !this.reelHold) l.from = null; }
       v.copy(l.pos).project(this.camera);
       const vis = v.z < 1 && v.x > -1.2 && v.x < 1.2 && v.y > -1.2 && v.y < 1.2;
       let show = vis; let scale = 1;
@@ -846,7 +856,7 @@ export class MapScene {
     const now = performance.now();
     const stacks = new Map();
     for (const [id, rec] of this.armyObjs) {
-      const a = this.state?.armies[id]; if (!a) continue;
+      const a = this.state?.parties[id]; if (!a) continue;
       let p = rec.view?.known === 'reported' ? rec.view.pos : a.pos, heading = null;
       if (rec.view?.known === 'reported') rec.anim = null;
       if (rec.anim) {
@@ -855,7 +865,7 @@ export class MapScene {
         if (t >= 1) rec.anim = null;
       }
       // a host resting at a castle camps before its gates, not inside the keep
-      if (!rec.anim && a.type !== 'fleet' && !rec.atSea) {
+      if (!rec.anim && a.kind !== 'fleet' && !rec.atSea) {
         for (const st of this.settlements.values()) {
           const rr = (st.radius || 0) * st.group.scale.x; if (!rr) continue;
           const dx = p[0] - st.group.position.x, dz = p[1] - st.group.position.z;
@@ -867,11 +877,11 @@ export class MapScene {
       const idx = stacks.get(key) || 0; stacks.set(key, idx + 1);
       if (idx) { const ang = idx * 2.1; const r = 5 * rec.group.scale.x; p = [p[0] + Math.cos(ang) * r, p[1] + Math.sin(ang) * r]; }
 
-      const y = a.type === 'fleet' || rec.atSea ? WATER_LEVEL + Math.sin(time * 1.3 + id.length) * 0.15 : this.groundAt(p[0], p[1]);
+      const y = a.kind === 'fleet' || rec.atSea ? WATER_LEVEL + Math.sin(time * 1.3 + id.length) * 0.15 : this.groundAt(p[0], p[1]);
       rec.group.position.set(p[0], y, p[1]);
       if (heading !== null) rec.group.rotation.y = -heading + Math.PI / 2;
       // a marching host strides: the files rise and fall and sway a little; at rest they stand still
-      const marching = !!rec.anim && a.type !== 'fleet' && !rec.atSea;
+      const marching = !!rec.anim && a.kind !== 'fleet' && !rec.atSea;
       for (const m of rec.group.children) if (m.isInstancedMesh) { m.position.y = marching ? Math.abs(Math.sin(time * 7 + m.id)) * 0.09 : 0; m.rotation.z = marching ? Math.sin(time * 3.5) * 0.02 : 0; }
       rec.label.pos.set(p[0], y + 6 * rec.group.scale.x, p[1]);
     }
