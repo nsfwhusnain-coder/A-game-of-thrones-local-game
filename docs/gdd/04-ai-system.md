@@ -73,6 +73,9 @@ Cause: the model began writing `"the` (thinking *the_wall*), and under the gramm
 5. For people, include both `firstname_lastname` and the usual short form (`ned`, `lord_eddard`, `the_greatjon`).
 6. A post-check maps every alias to its canonical id before validation.
 
+*Implemented in WP B5* (`server/ai/schema.js`, [DECISIONS.md#D-006](DECISIONS.md)): `buildEnum` applies rules 1–3 and
+6; the Castle Black holding's id in this world is `nights_watch`, with `castle_black`, `the_wall` and `wall` as aliases.
+
 ### 3.2 Schema builder API
 
 ```js
@@ -529,7 +532,8 @@ misbehaves. Three providers make that possible (`server/ai/providers/`):
 | **`replay`** (new) | Replays recorded real-model replies from `tests/fixtures/model/<kind>/*.json` by matching a **context fingerprint** (call kind + a hash of the salient fields). Unmatched calls fall through to `mock`. | Regression tests that exercise the real model's quirks (prefix pitfall, CJK leak, over-long strings, wrong-but-legal choices) |
 | **`openai`** (exists) | Any OpenAI-compatible server (llama.cpp via llama-swap on the owner's PC). Sends `response_format: json_schema`. | The owner |
 
-Contract every AI call must satisfy (enforced by `tests/ai-contract.test.js`):
+Contract every AI call must satisfy (enforced by `tests/ai-contract.test.js`; *implemented in WP B5*, each call a
+module in `server/ai/calls/`, run by `server/ai/client.js`):
 
 1. A JSON schema builder, a context builder, a prompt builder, a validator, a **mock implementation**, and a fallback.
 2. The mock's output validates against the same schema the real model receives.

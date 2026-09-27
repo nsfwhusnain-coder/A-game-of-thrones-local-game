@@ -1,0 +1,7 @@
+{
+  "kind": "probe",
+  "note": "What every model wrote on 2026-09-27 when `the_wall` was not a member and the only member starting with `the` was `the_twins`: the grammar forced it. The check must refuse it.",
+  "reply": "{\"place\": \"the_twins\", \"words\": \"Winter is Coming\"}",
+  "expect": "reject",
+  "problem": "not to the Wall"
+}

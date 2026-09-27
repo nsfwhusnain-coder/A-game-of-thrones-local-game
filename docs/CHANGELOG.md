@@ -3,6 +3,19 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B5: every model call constrained, checked and never fatal (WP B5)
+
+- **Settings → Test connection** now tells you what matters about your model server: whether it enforces a JSON schema
+  (llama.cpp does), and whether "the Wall" is understood as Castle Black — the pitfall that sent Jon to the Twins in
+  the bench of 2026-09-27. It also warns when calls are routed to different models (each switch is a model swap).
+- Under the hood, `server/ai/` is the new way every model call will be made: a schema from the live world (every name
+  people use is allowed, no name can be mistaken for another), a check of the reply, one retry that says what was wrong,
+  and a fallback — never an error in the middle of a turn. Mock and recorded-reply providers let all of it be tested
+  without a model. The calls themselves (orders, minds, the narrator, audiences) move onto it in the next packages.
+- Stray Chinese characters from Qwen ("Lord Um伯") no longer reach the chronicle, audiences or the council.
+- Owner to verify: Settings → Test connection against llama-swap: expect "JSON schema enforced: yes" and "The Wall
+  understood as Castle Black: yes"; paste the result if not.
+
 ## 2026-09-27 — B1: the engine's own dice (WP B1)
 
 - **Every game has its own dice.** Everything the engine decides by chance — who answers the banners, a road's outlaws,

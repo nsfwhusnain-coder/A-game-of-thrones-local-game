@@ -131,7 +131,8 @@ export async function chat(messages, opts = {}) {
   }
   // Cut off mid-answer: ask it to continue where it stopped (up to twice) and stitch the pieces
   let text = r.content;
-  for (let k = 0; k < 2 && r.finish === 'length' && opts.json && text.includes('{'); k++) {
+  // (not for a grammar-constrained reply: a continuation would start the grammar over)
+  for (let k = 0; k < 2 && !opts.noContinue && r.finish === 'length' && opts.json && text.includes('{'); k++) {
     opts.onProgress?.({ phase: 'continuing', note: 'the reply was long; asking the model to finish it', ms: Date.now() - t0 });
     const cont = [...messages, { role: 'assistant', content: text }, { role: 'user', content: 'Your reply was cut off. Continue EXACTLY where it stopped: output only the remaining characters of the same JSON object (no repetition, no preamble, no code fences).' }];
     r = await rawChat(cont, cfg, { ...opts, thinking: 'off', maxTokens: answerTokens }, t0);
@@ -171,11 +172,12 @@ async function rawChatOnce(messages, cfg, opts, t0) {
     temperature: opts.temperature ?? cfg.temperature,
     max_tokens: opts.maxTokens,
     stream: cfg.stream !== false,
-    ...(cfg.model ? { model: cfg.model } : { model: 'local-model' }),
+    ...(opts.model || cfg.model ? { model: opts.model || cfg.model } : { model: 'local-model' }),
     ...(cfg.jsonMode && opts.json ? { response_format: { type: 'json_object' } } : {}),
     ...templateKwargs(cfg, opts),
     ...(cfg.stream !== false ? { stream_options: { include_usage: true }, return_progress: true } : {}),
     ...(cfg.extraBody || {}),
+    ...(opts.body || {}), // a call's own fields: response_format json_schema, id_slot, cache_prompt (server/ai/)
   };
   const headers = cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {};
   if (body.stream) {

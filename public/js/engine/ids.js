@@ -6,7 +6,7 @@
 // for constrained model calls (server/ai/schema.js) read them; the prefix rule below keeps a grammar from forcing a
 // model that began to write "the…" into the only member that starts that way (the bench's `the_wall` → `the_twins`).
 import { HOUSES, PLACE_ALIASES } from '../../data/houses.js';
-import { JUNCTIONS, PLACE_NAMES } from '../../data/geography.js';
+import { JUNCTIONS, PLACE_NAMES, PLACE_ALIAS_OF } from '../../data/geography.js';
 import { PERSON_ALIASES } from '../../data/aliases.js';
 
 export const slug = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
@@ -32,7 +32,14 @@ export function placeAliases(state) {
     put(map, 'the_' + slug(h.name).replace(/^the_/, ''), h.id);
   }
   for (const [alias, id] of Object.entries(PLACE_ALIASES)) if (state.holdings?.[id]) { put(map, alias, id); put(map, alias.replace(/^the_/, ''), id); put(map, 'the_' + alias.replace(/^the_/, ''), id); }
-  for (const id of Object.keys(JUNCTIONS)) { put(map, id, id); for (const v of variants(PLACE_NAMES[id] || id)) put(map, v, id); }
+  // the atlas's named places; one standing on a castle is that castle, and a place's second id is its first
+  const holdings = Object.values(state.holdings || {});
+  const canonOf = (id) => {
+    const [x, y] = JUNCTIONS[id]; const h = holdings.find((q) => Math.hypot(q.pos[0] - x, q.pos[1] - y) < 4);
+    return h ? h.id : PLACE_ALIAS_OF[id] || id;
+  };
+  for (const id of Object.keys(JUNCTIONS)) if (canonOf(id) === id) put(map, id, id);
+  for (const id of Object.keys(JUNCTIONS)) { const c = canonOf(id); put(map, id, c); for (const v of variants(PLACE_NAMES[id] || id)) put(map, v, c); }
   return map;
 }
 /** Every name of every living person: id, name, name without "Ser", bynames in quotes, the table of known bynames. */

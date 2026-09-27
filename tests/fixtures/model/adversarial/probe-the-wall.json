@@ -1,0 +1,7 @@
+{
+  "kind": "probe",
+  "note": "The bench's order B, 2026-09-27: told Jon should go to the Wall, a model that writes the natural name `the_wall` must land on Castle Black on the Wall (the holding `nights_watch`), because `the_wall` is an enum member of its own.",
+  "reply": "{\"place\": \"the_wall\", \"words\": \"Winter is Coming\"}",
+  "expect": "accept",
+  "canonical": { "place": "nights_watch" }
+}
