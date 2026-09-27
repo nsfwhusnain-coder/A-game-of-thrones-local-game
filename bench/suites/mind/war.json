@@ -1,0 +1,405 @@
+{
+ "about": "war: 12 situations",
+ "items": [
+  {
+   "id": "war-tywin",
+   "actor": "tywin_lannister",
+   "player": "stark",
+   "situation": "At war with House Tully; a host of 9,000 stands idle at Casterly Rock.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of lannister and tully",
+     "attackers": [
+      "tully"
+     ],
+     "defenders": [
+      "lannister"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "lannister_bench_host",
+     "owner": "lannister",
+     "name": "The Host of House Lannister",
+     "at": "lannister",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-hoster",
+   "actor": "hoster_tully",
+   "player": "stark",
+   "situation": "At war with House Lannister; a host of 9,000 stands idle at Riverrun.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of tully and lannister",
+     "attackers": [
+      "lannister"
+     ],
+     "defenders": [
+      "tully"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "tully_bench_host",
+     "owner": "tully",
+     "name": "The Host of House Tully",
+     "at": "tully",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies",
+    "wait"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-balon",
+   "actor": "balon_greyjoy",
+   "player": "stark",
+   "situation": "At war with House Manderly; a host of 9,000 stands idle at Pyke.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of greyjoy and manderly",
+     "attackers": [
+      "manderly"
+     ],
+     "defenders": [
+      "greyjoy"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "greyjoy_bench_host",
+     "owner": "greyjoy",
+     "name": "The Host of House Greyjoy",
+     "at": "greyjoy",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "raise_levies",
+    "call_banners"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-mace",
+   "actor": "mace_tyrell",
+   "player": "stark",
+   "situation": "At war with House Nymeros Martell; a host of 9,000 stands idle at Highgarden.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of tyrell and martell",
+     "attackers": [
+      "martell"
+     ],
+     "defenders": [
+      "tyrell"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "tyrell_bench_host",
+     "owner": "tyrell",
+     "name": "The Host of House Tyrell",
+     "at": "tyrell",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "call_banners",
+    "raise_levies",
+    "wait"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-doran",
+   "actor": "doran_martell",
+   "player": "stark",
+   "situation": "At war with House Tyrell; a host of 9,000 stands idle at Sunspear.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of martell and tyrell",
+     "attackers": [
+      "tyrell"
+     ],
+     "defenders": [
+      "martell"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "martell_bench_host",
+     "owner": "martell",
+     "name": "The Host of House Nymeros Martell",
+     "at": "martell",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "wait",
+    "march_host",
+    "raise_levies",
+    "call_banners"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-renly",
+   "actor": "renly_baratheon",
+   "player": "stark",
+   "situation": "At war with House Baratheon of Dragonstone; a host of 9,000 stands idle at Storm's End.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of baratheon_se and baratheon_ds",
+     "attackers": [
+      "baratheon_ds"
+     ],
+     "defenders": [
+      "baratheon_se"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "baratheon_se_bench_host",
+     "owner": "baratheon_se",
+     "name": "The Host of House Baratheon of Storm's End",
+     "at": "baratheon_se",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-stannis",
+   "actor": "stannis_baratheon",
+   "player": "stark",
+   "situation": "At war with House Baratheon of King's Landing; a host of 9,000 stands idle at Dragonstone.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of baratheon_ds and baratheon",
+     "attackers": [
+      "baratheon"
+     ],
+     "defenders": [
+      "baratheon_ds"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "baratheon_ds_bench_host",
+     "owner": "baratheon_ds",
+     "name": "The Host of House Baratheon of Dragonstone",
+     "at": "baratheon_ds",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "raise_levies",
+    "call_banners"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-greatjon",
+   "actor": "greatjon_umber",
+   "player": "stark",
+   "situation": "At war with House Greyjoy; a host of 9,000 stands idle at Last Hearth.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of umber and greyjoy",
+     "attackers": [
+      "greyjoy"
+     ],
+     "defenders": [
+      "umber"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "umber_bench_host",
+     "owner": "umber",
+     "name": "The Host of House Umber",
+     "at": "umber",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-rickard",
+   "actor": "rickard_karstark",
+   "player": "stark",
+   "situation": "At war with House Lannister; a host of 9,000 stands idle at Karhold.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of karstark and lannister",
+     "attackers": [
+      "lannister"
+     ],
+     "defenders": [
+      "karstark"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "karstark_bench_host",
+     "owner": "karstark",
+     "name": "The Host of House Karstark",
+     "at": "karstark",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-randyll",
+   "actor": "randyll_tarly",
+   "player": "stark",
+   "situation": "At war with House Baratheon of Dragonstone; a host of 9,000 stands idle at Horn Hill.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of tarly and baratheon_ds",
+     "attackers": [
+      "baratheon_ds"
+     ],
+     "defenders": [
+      "tarly"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "tarly_bench_host",
+     "owner": "tarly",
+     "name": "The Host of House Tarly",
+     "at": "tarly",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-gregor",
+   "actor": "gregor_clegane",
+   "player": "stark",
+   "situation": "At war with House Tully; a host of 9,000 stands idle at Clegane's Keep.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of clegane and tully",
+     "attackers": [
+      "tully"
+     ],
+     "defenders": [
+      "clegane"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "clegane_bench_host",
+     "owner": "clegane",
+     "name": "The Host of House Clegane",
+     "at": "clegane",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  },
+  {
+   "id": "war-eddard",
+   "actor": "eddard_stark",
+   "player": "lannister",
+   "situation": "At war with House Lannister; a host of 9,000 stands idle at Winterfell.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of stark and lannister",
+     "attackers": [
+      "lannister"
+     ],
+     "defenders": [
+      "stark"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "stark_bench_host",
+     "owner": "stark",
+     "name": "The Host of House Stark",
+     "at": "stark",
+     "men": 9000
+    }
+   ],
+   "acceptable": [
+    "march_host",
+    "attack_host",
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "At war, a host that sits idle eats its own lands."
+  }
+ ]
+}

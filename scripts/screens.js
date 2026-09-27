@@ -96,6 +96,18 @@ const SCENARIOS = {
       await page.evaluate(() => { const o = document.querySelector('#orders'); o.scrollTop = o.scrollHeight; });
     } };
   },
+  // the realm's minds (WP B7): a week passes, and the lords of the realm act by their own lights — the chronicle tells
+  // what the North would hear of it
+  async minds() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 11 });
+    await api(`/games/${id}/advance`, { span: '7d', orders: [] });
+    const { turn } = await api(`/games/${id}/advance`, { span: '7d', orders: [] });
+    const said = (turn.events || []).filter((e) => e.mind).map((e) => e.title);
+    return { id, focus: state.holdings.baratheon.pos, dist: 1400, page: async (page) => {
+      // the week's news from the realm's minds, brought into view in the chronicle
+      await page.evaluate((titles) => { const el = [...document.querySelectorAll('#drawer-body *')].find((x) => x.children.length < 4 && titles.some((t) => (x.textContent || '').includes(t.slice(0, 24)))); el?.scrollIntoView({ block: 'start' }); }, said);
+    } };
+  },
   // beginning a chronicle, ironman or not (WP B3)
   async begin() {
     return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); } };

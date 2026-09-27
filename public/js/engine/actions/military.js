@@ -7,6 +7,7 @@ import { planRoute } from '../movement.js';
 import { marchDays } from '../../shared/warfare.js';
 import { unitsOf, unitsFor, addUnits, unitsText } from '../../shared/units.js';
 import { emit } from '../facts/log.js';
+import { raiseForLiege } from '../../shared/vassals.js';
 
 const fmtN = (n) => Math.round(n).toLocaleString('en-GB');
 const lordName = (state, house) => state.characters[state.houses[house]?.lord]?.name || `House ${state.houses[house]?.name}`;
@@ -145,6 +146,21 @@ export const MILITARY = [
     receipt: (state, i, done) => lines(done),
     said: (state, i, done) => ({ status: 'underway', text: `CALL THE BANNERS: I summon ${done.vassals.map((v) => 'House ' + state.houses[v].name).join(', ')} to muster their levies at ${placeName(state, done.muster)}${i.params.deadline ? ' within ' + i.params.deadline : ''}.${i.params.note ? ' ' + i.params.note : ''}${Number(i.params.ownLevies) >= 50 ? ` Raise my own levies as well (${i.params.ownLevies} men).` : ''}` }),
     facts: ['levies_called'], mind: { allowed: true },
+  },
+  {
+    // a sworn lord answers his liege's summons at once, rather than in his own time and temper (shared/vassals.js);
+    // the player answers a summons as a matter of the court
+    id: 'answer_call', family: 'military', label: 'Answer your liege\'s call',
+    params: {},
+    who: (state, i) => i.house !== state.meta.player,
+    legal: (state, i) => {
+      const v = state.houses[i.house]; const ob = v?.obligations;
+      if (!v?.liege || !['called', 'delayed'].includes(ob?.levies)) return { code: 'not_called', text: 'No liege has called your banners.' };
+      return null;
+    },
+    start: (state, i) => raiseForLiege(state, state.houses[i.house], { cause: i.source }),
+    receipt: (state, i, d) => [{ ok: d.men > 0 ? true : 'warn', text: d.text }],
+    facts: ['call_answered', 'host_formed', 'set_out'], mind: { allowed: true },
   },
   {
     id: 'raise_levies', family: 'military', label: 'Raise the levies',
@@ -288,7 +304,7 @@ export const MILITARY = [
     },
     receipt: (state, i, d) => [{ ok: true, text: d.summary }],
     said: (state, i, d) => ({ status: 'done', text: d.text, note: d.note }),
-    facts: ['rumour'], mind: { allowed: true },
+    facts: ['rumour'], mind: { allowed: false, until: 'B9' } /* secrecy is about what other houses know of a host (WP B9) */,
   },
 ];
 export { lordName };

@@ -58,7 +58,9 @@ const intrigue = (kind, label) => ({
   start: (state, i) => scheme(state, i.house, { house: i.params.house, kind }, i.source),
   receipt: (state, i, d) => [{ ok: d.caught ? false : d.found ? true : 'warn', text: d.summary }],
   said: (state, i, d) => ({ status: 'done', text: d.text, note: d.note }),
-  facts: kind === 'secrets' ? ['secret_revealed', 'scheme_discovered'] : ['scheme_discovered'], mind: { allowed: true },
+  // a lord's spies bring what they learn to *his* house: until each house has its own knowledge (WP B9) a scheme can
+  // only inform the player, so only the player schemes
+  facts: kind === 'secrets' ? ['secret_revealed', 'scheme_discovered'] : ['scheme_discovered'], mind: { allowed: false, until: 'B9' },
 });
 
 export const DIPLOMACY = [
@@ -105,6 +107,7 @@ export const DIPLOMACY = [
       return { post: id, to: c.name, days };
     },
     receipt: (state, i, d) => [{ ok: true, text: `A raven flies to ${d.to} (~${d.days} ${d.days === 1 ? 'day' : 'days'}).`, eta: d.days }],
-    facts: ['letter_sent'], mind: { allowed: true },
+    // the post is the player's letters; lords write to each other when letters are their own things (WP B10)
+    facts: ['letter_sent'], mind: { allowed: false, until: 'B10' },
   },
 ];

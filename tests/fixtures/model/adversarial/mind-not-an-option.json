@@ -1,0 +1,10 @@
+{
+ "kind": "mind",
+ "note": "A choice that is not one of the options offered (a gift to someone not listed) is refused, and the model told so.",
+ "args": {
+  "actor": "tywin_lannister"
+ },
+ "reply": "{\"target\":\"casterly_rock\",\"host\":\"none\",\"leader\":\"none\",\"men\":0,\"gold\":1000,\"choice\":\"none\",\"with\":\"\",\"public_face\":\"\",\"secret_aim\":\"\",\"line\":\"\",\"verb\":\"send_gift\"}",
+ "expect": "refuse",
+ "problem": "is not one of your options"
+}

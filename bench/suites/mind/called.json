@@ -1,0 +1,242 @@
+{
+ "about": "called: 12 situations",
+ "items": [
+  {
+   "id": "called-walder",
+   "actor": "walder_frey",
+   "player": "stark",
+   "situation": "House Tully has called its banners to Riverrun.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "frey",
+     "levies": "called",
+     "muster": "tully"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "wait",
+    "raise_levies",
+    "set_tax",
+    "hold_feast",
+    "send_gift"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-roose",
+   "actor": "roose_bolton",
+   "player": "stark",
+   "situation": "House Stark has called its banners to Winterfell.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "bolton",
+     "levies": "called",
+     "muster": "stark"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies",
+    "wait"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-wyman",
+   "actor": "wyman_manderly",
+   "player": "stark",
+   "situation": "House Stark has called its banners to Winterfell.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "manderly",
+     "levies": "called",
+     "muster": "stark"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies",
+    "fund_works",
+    "wait"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-greatjon",
+   "actor": "greatjon_umber",
+   "player": "stark",
+   "situation": "House Stark has called its banners to Winterfell.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "umber",
+     "levies": "called",
+     "muster": "stark"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-rickard",
+   "actor": "rickard_karstark",
+   "player": "stark",
+   "situation": "House Stark has called its banners to Winterfell.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "karstark",
+     "levies": "called",
+     "muster": "stark"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-jason",
+   "actor": "jason_mallister",
+   "player": "stark",
+   "situation": "House Tully has called its banners to Riverrun.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "mallister",
+     "levies": "called",
+     "muster": "tully"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-tytos",
+   "actor": "tytos_blackwood",
+   "player": "stark",
+   "situation": "House Tully has called its banners to Riverrun.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "blackwood",
+     "levies": "called",
+     "muster": "tully"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-jonos",
+   "actor": "jonos_bracken",
+   "player": "stark",
+   "situation": "House Tully has called its banners to Riverrun.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "bracken",
+     "levies": "called",
+     "muster": "tully"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-randyll",
+   "actor": "randyll_tarly",
+   "player": "stark",
+   "situation": "House Tyrell has called its banners to Highgarden.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "tarly",
+     "levies": "called",
+     "muster": "tyrell"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-mathis",
+   "actor": "mathis_rowan",
+   "player": "stark",
+   "situation": "House Tyrell has called its banners to Highgarden.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "rowan",
+     "levies": "called",
+     "muster": "tyrell"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies",
+    "wait"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-damon",
+   "actor": "damon_marbrand",
+   "player": "stark",
+   "situation": "House Lannister has called its banners to Casterly Rock.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "marbrand",
+     "levies": "called",
+     "muster": "lannister"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  },
+  {
+   "id": "called-yohn",
+   "actor": "yohn_royce",
+   "player": "stark",
+   "situation": "House Arryn has called its banners to The Eyrie.",
+   "setup": [
+    {
+     "op": "obligation",
+     "house": "royce",
+     "levies": "called",
+     "muster": "arryn"
+    }
+   ],
+   "acceptable": [
+    "answer_call",
+    "raise_levies",
+    "wait"
+   ],
+   "note": "A vassal answers his liege (answer_call: his levies raised and marched to the muster) — or, if he is a Frey, takes his time."
+  }
+ ]
+}

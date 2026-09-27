@@ -3,6 +3,31 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B7: the lords of the realm think for themselves (WP B7)
+
+- **Every week, the lords who matter decide something.** The King, the great lords, a lord whose castle is besieged or
+  whose son has been taken, a commander with an enemy in reach — scored by rank, by what has just happened to them and
+  by how near they are to you — each chooses one thing to do: call their banners, raise levies, march, give battle,
+  relieve a siege, answer their liege's call, judge a prisoner, fill their granaries, hold a feast or a tourney, send a
+  gift or an envoy, set their taxes — or wait. What they do happens through the same actions as your own orders, so it
+  is real: hosts appear and march on the map, and the chronicle tells you what your house would hear of it.
+- **They act in character.** With a model running, each of the six most salient lords thinks with it, given what they
+  know, what they want, their nature and their house's ways, and may only choose among what they can lawfully do now.
+  Without a model (or when it fails), each house follows its own ways: Tywin answers the seizure of his son by calling
+  his banners; Doran Martell waits; Walder Frey is late to every war; Lysa keeps her knights behind the Bloody Gate; an
+  honourable vassal answers his liege at once. At peace, lords govern, build and feast — they do not call their banners.
+- **The realm is never idle:** at least three lords act each week, one of them far from your own country.
+- The old way the other houses were moved (a model writing changes straight into the world) is retired while minds are
+  on. `config.json` `"minds": 3 | 6 | 10 | "off"` sets how many lords think with the model each week (default 6).
+- Fixes found on the way: a host that fought kept the wrong count of its banners' men; a host could keep chasing an army
+  that no longer existed; a reply naming a place by a name the model was offered could be refused ("Storm's End");
+  works in the chronicle read "begins Build warships at White Harbor at White Harbor".
+- For the owner: `npm run bench -- --suite mind` measures your model on 123 situations from the books (the gate is 85 %
+  in character); `--reader tree` shows the house ways alone.
+- Owner to verify: begin a Stark game and end three turns of a week — the chronicle tells of other lords' doings
+  (a tourney in King's Landing, works at White Harbor, lords answering calls); open the save's `turns/` files: each has
+  `minds`, who decided what and how. With your model running, `llm-log.jsonl` holds the `mind` calls.
+
 ## 2026-09-27 — B6: your orders are read when you write them (WP B6)
 
 - **Each order gets its receipt as soon as you write it**, line by line: ✓ what will be done ("Jory Cassel rides for

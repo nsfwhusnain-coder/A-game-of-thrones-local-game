@@ -1,0 +1,384 @@
+{
+ "about": "threat: 12 situations",
+ "items": [
+  {
+   "id": "threat-tywin",
+   "actor": "tywin_lannister",
+   "player": "stark",
+   "situation": "At war with House Tully, whose host of 6,000 is camped before Casterly Rock; House Lannister has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of lannister and tully",
+     "attackers": [
+      "tully"
+     ],
+     "defenders": [
+      "lannister"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "tully",
+     "name": "The Host of House Tully",
+     "at": "lannister",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-hoster",
+   "actor": "hoster_tully",
+   "player": "stark",
+   "situation": "At war with House Lannister, whose host of 6,000 is camped before Riverrun; House Tully has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of tully and lannister",
+     "attackers": [
+      "lannister"
+     ],
+     "defenders": [
+      "tully"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "lannister",
+     "name": "The Host of House Lannister",
+     "at": "tully",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-mace",
+   "actor": "mace_tyrell",
+   "player": "stark",
+   "situation": "At war with House Nymeros Martell, whose host of 6,000 is camped before Highgarden; House Tyrell has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of tyrell and martell",
+     "attackers": [
+      "martell"
+     ],
+     "defenders": [
+      "tyrell"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "martell",
+     "name": "The Host of House Nymeros Martell",
+     "at": "tyrell",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-lysa",
+   "actor": "lysa_arryn",
+   "player": "stark",
+   "situation": "At war with House Lannister, whose host of 6,000 is camped before The Eyrie; House Arryn has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of arryn and lannister",
+     "attackers": [
+      "lannister"
+     ],
+     "defenders": [
+      "arryn"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "lannister",
+     "name": "The Host of House Lannister",
+     "at": "arryn",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-renly",
+   "actor": "renly_baratheon",
+   "player": "stark",
+   "situation": "At war with House Baratheon of Dragonstone, whose host of 6,000 is camped before Storm's End; House Baratheon of Storm's End has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of baratheon_se and baratheon_ds",
+     "attackers": [
+      "baratheon_ds"
+     ],
+     "defenders": [
+      "baratheon_se"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "baratheon_ds",
+     "name": "The Host of House Baratheon of Dragonstone",
+     "at": "baratheon_se",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-stannis",
+   "actor": "stannis_baratheon",
+   "player": "stark",
+   "situation": "At war with House Baratheon of King's Landing, whose host of 6,000 is camped before Dragonstone; House Baratheon of Dragonstone has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of baratheon_ds and baratheon",
+     "attackers": [
+      "baratheon"
+     ],
+     "defenders": [
+      "baratheon_ds"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "baratheon",
+     "name": "The Host of House Baratheon of King's Landing",
+     "at": "baratheon_ds",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "call_banners",
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-roose",
+   "actor": "roose_bolton",
+   "player": "stark",
+   "situation": "At war with House Greyjoy, whose host of 6,000 is camped before The Dreadfort; House Bolton has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of bolton and greyjoy",
+     "attackers": [
+      "greyjoy"
+     ],
+     "defenders": [
+      "bolton"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "greyjoy",
+     "name": "The Host of House Greyjoy",
+     "at": "bolton",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-greatjon",
+   "actor": "greatjon_umber",
+   "player": "stark",
+   "situation": "At war with House Greyjoy, whose host of 6,000 is camped before Last Hearth; House Umber has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of umber and greyjoy",
+     "attackers": [
+      "greyjoy"
+     ],
+     "defenders": [
+      "umber"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "greyjoy",
+     "name": "The Host of House Greyjoy",
+     "at": "umber",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-tytos",
+   "actor": "tytos_blackwood",
+   "player": "stark",
+   "situation": "At war with House Bracken, whose host of 6,000 is camped before Raventree Hall; House Blackwood has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of blackwood and bracken",
+     "attackers": [
+      "bracken"
+     ],
+     "defenders": [
+      "blackwood"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "bracken",
+     "name": "The Host of House Bracken",
+     "at": "blackwood",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-jonos",
+   "actor": "jonos_bracken",
+   "player": "stark",
+   "situation": "At war with House Blackwood, whose host of 6,000 is camped before Stone Hedge; House Bracken has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of bracken and blackwood",
+     "attackers": [
+      "blackwood"
+     ],
+     "defenders": [
+      "bracken"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "blackwood",
+     "name": "The Host of House Blackwood",
+     "at": "bracken",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-randyll",
+   "actor": "randyll_tarly",
+   "player": "stark",
+   "situation": "At war with House Baratheon of Dragonstone, whose host of 6,000 is camped before Horn Hill; House Tarly has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of tarly and baratheon_ds",
+     "attackers": [
+      "baratheon_ds"
+     ],
+     "defenders": [
+      "tarly"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "baratheon_ds",
+     "name": "The Host of House Baratheon of Dragonstone",
+     "at": "tarly",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "raise_levies"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  },
+  {
+   "id": "threat-leyton",
+   "actor": "leyton_hightower",
+   "player": "stark",
+   "situation": "At war with House Greyjoy, whose host of 6,000 is camped before The Hightower; House Hightower has no host in the field.",
+   "setup": [
+    {
+     "op": "war",
+     "status": "start",
+     "name": "War of hightower and greyjoy",
+     "attackers": [
+      "greyjoy"
+     ],
+     "defenders": [
+      "hightower"
+     ]
+    },
+    {
+     "op": "army_create",
+     "id": "raiders",
+     "owner": "greyjoy",
+     "name": "The Host of House Greyjoy",
+     "at": "hightower",
+     "men": 6000
+    }
+   ],
+   "acceptable": [
+    "raise_levies",
+    "hire_men"
+   ],
+   "note": "An enemy at the gates and no host: raise one."
+  }
+ ]
+}

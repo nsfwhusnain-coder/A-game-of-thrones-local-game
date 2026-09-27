@@ -1,0 +1,655 @@
+{
+ "about": "peace: 26 situations",
+ "items": [
+  {
+   "id": "peace-tywin",
+   "actor": "tywin_lannister",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Lannister holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "lannister",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-hoster",
+   "actor": "hoster_tully",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Tully holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "tully",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-balon",
+   "actor": "balon_greyjoy",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Greyjoy holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "greyjoy",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-lysa",
+   "actor": "lysa_arryn",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Arryn holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "arryn",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-robert",
+   "actor": "robert_baratheon",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Baratheon of King's Landing holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "baratheon",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-renly",
+   "actor": "renly_baratheon",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Baratheon of Storm's End holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "baratheon_se",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-stannis",
+   "actor": "stannis_baratheon",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Baratheon of Dragonstone holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "baratheon_ds",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-mace",
+   "actor": "mace_tyrell",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Tyrell holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "tyrell",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-doran",
+   "actor": "doran_martell",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Nymeros Martell holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "martell",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-walder",
+   "actor": "walder_frey",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Frey holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "frey",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-roose",
+   "actor": "roose_bolton",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Bolton holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "bolton",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-wyman",
+   "actor": "wyman_manderly",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Manderly holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "manderly",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-greatjon",
+   "actor": "greatjon_umber",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Umber holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "umber",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-rickard",
+   "actor": "rickard_karstark",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Karstark holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "karstark",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-jason",
+   "actor": "jason_mallister",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Mallister holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "mallister",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-tytos",
+   "actor": "tytos_blackwood",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Blackwood holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "blackwood",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-jonos",
+   "actor": "jonos_bracken",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Bracken holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "bracken",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-randyll",
+   "actor": "randyll_tarly",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Tarly holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "tarly",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-paxter",
+   "actor": "paxter_redwyne",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Redwyne holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "redwyne",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-leyton",
+   "actor": "leyton_hightower",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Hightower holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "hightower",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-mathis",
+   "actor": "mathis_rowan",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Rowan holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "rowan",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-damon",
+   "actor": "damon_marbrand",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Marbrand holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "marbrand",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-yohn",
+   "actor": "yohn_royce",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Royce holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "royce",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-anya",
+   "actor": "anya_waynwood",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Waynwood holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "waynwood",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-eddard",
+   "actor": "eddard_stark",
+   "player": "lannister",
+   "situation": "The realm is at peace; the treasury of House Stark holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "stark",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  },
+  {
+   "id": "peace-gregor",
+   "actor": "gregor_clegane",
+   "player": "stark",
+   "situation": "The realm is at peace; the treasury of House Clegane holds 60,000 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "clegane",
+     "field": "treasury",
+     "value": 60000
+    }
+   ],
+   "acceptable": [
+    "hold_feast",
+    "hold_tourney",
+    "fund_works",
+    "wait",
+    "send_gift",
+    "send_person",
+    "hire_men",
+    "set_tax"
+   ],
+   "note": "At peace a lord governs, builds, feasts or waits — he does not call his banners or make war."
+  }
+ ]
+}

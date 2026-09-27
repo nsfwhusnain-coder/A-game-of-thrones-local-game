@@ -1,0 +1,257 @@
+{
+ "about": "poor: 12 situations",
+ "items": [
+  {
+   "id": "poor-robert",
+   "actor": "robert_baratheon",
+   "player": "stark",
+   "situation": "The treasury of House Baratheon of King's Landing holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "baratheon",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-balon",
+   "actor": "balon_greyjoy",
+   "player": "stark",
+   "situation": "The treasury of House Greyjoy holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "greyjoy",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-walder",
+   "actor": "walder_frey",
+   "player": "stark",
+   "situation": "The treasury of House Frey holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "frey",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-roose",
+   "actor": "roose_bolton",
+   "player": "stark",
+   "situation": "The treasury of House Bolton holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "bolton",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-greatjon",
+   "actor": "greatjon_umber",
+   "player": "stark",
+   "situation": "The treasury of House Umber holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "umber",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-rickard",
+   "actor": "rickard_karstark",
+   "player": "stark",
+   "situation": "The treasury of House Karstark holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "karstark",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-jason",
+   "actor": "jason_mallister",
+   "player": "stark",
+   "situation": "The treasury of House Mallister holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "mallister",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-tytos",
+   "actor": "tytos_blackwood",
+   "player": "stark",
+   "situation": "The treasury of House Blackwood holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "blackwood",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-jonos",
+   "actor": "jonos_bracken",
+   "player": "stark",
+   "situation": "The treasury of House Bracken holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "bracken",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-randyll",
+   "actor": "randyll_tarly",
+   "player": "stark",
+   "situation": "The treasury of House Tarly holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "tarly",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-mathis",
+   "actor": "mathis_rowan",
+   "player": "stark",
+   "situation": "The treasury of House Rowan holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "rowan",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  },
+  {
+   "id": "poor-gregor",
+   "actor": "gregor_clegane",
+   "player": "stark",
+   "situation": "The treasury of House Clegane holds 1,500 dragons.",
+   "setup": [
+    {
+     "op": "figure",
+     "house": "clegane",
+     "field": "treasury",
+     "value": 1500
+    }
+   ],
+   "acceptable": [
+    "set_tax",
+    "wait",
+    "set_dues",
+    "disband_host"
+   ],
+   "note": "Nothing costly: a poor lord taxes, delays his dues, or waits."
+  }
+ ]
+}

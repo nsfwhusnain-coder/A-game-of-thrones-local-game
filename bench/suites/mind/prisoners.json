@@ -1,0 +1,252 @@
+{
+ "about": "prisoners: 13 situations",
+ "items": [
+  {
+   "id": "prisoner-tywin",
+   "actor": "tywin_lannister",
+   "player": "stark",
+   "situation": "Edmure Tully is a prisoner in the cells of Casterly Rock; there is no war with House Tully.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "edmure_tully",
+     "status": "imprisoned",
+     "loc": "lannister"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-hoster",
+   "actor": "hoster_tully",
+   "player": "stark",
+   "situation": "Ser Jaime Lannister is a prisoner in the cells of Riverrun; there is no war with House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "jaime_lannister",
+     "status": "imprisoned",
+     "loc": "tully"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-lysa",
+   "actor": "lysa_arryn",
+   "player": "stark",
+   "situation": "Tyrion Lannister is a prisoner in the cells of The Eyrie; there is no war with House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "tyrion_lannister",
+     "status": "imprisoned",
+     "loc": "arryn"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-mace",
+   "actor": "mace_tyrell",
+   "player": "stark",
+   "situation": "Renly Baratheon is a prisoner in the cells of Highgarden; there is no war with House Baratheon of Storm's End.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "renly_baratheon",
+     "status": "imprisoned",
+     "loc": "tyrell"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-doran",
+   "actor": "doran_martell",
+   "player": "stark",
+   "situation": "Ser Gregor Clegane is a prisoner in the cells of Sunspear; there is no war with House Clegane.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "gregor_clegane",
+     "status": "imprisoned",
+     "loc": "martell"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-walder",
+   "actor": "walder_frey",
+   "player": "stark",
+   "situation": "Edmure Tully is a prisoner in the cells of The Twins; there is no war with House Tully.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "edmure_tully",
+     "status": "imprisoned",
+     "loc": "frey"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-roose",
+   "actor": "roose_bolton",
+   "player": "stark",
+   "situation": "Ser Jaime Lannister is a prisoner in the cells of The Dreadfort; there is no war with House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "jaime_lannister",
+     "status": "imprisoned",
+     "loc": "bolton"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-greatjon",
+   "actor": "greatjon_umber",
+   "player": "stark",
+   "situation": "Mance Rayder is a prisoner in the cells of Last Hearth; there is no war with House The Free Folk.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "mance_rayder",
+     "status": "imprisoned",
+     "loc": "umber"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-eddard",
+   "actor": "eddard_stark",
+   "player": "lannister",
+   "situation": "Ser Jaime Lannister is a prisoner in the cells of Winterfell; there is no war with House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "jaime_lannister",
+     "status": "imprisoned",
+     "loc": "stark"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-tywin",
+   "actor": "tywin_lannister",
+   "player": "stark",
+   "situation": "Robb Stark is a prisoner in the cells of Casterly Rock; there is no war with House Stark.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "robb_stark",
+     "status": "imprisoned",
+     "loc": "lannister"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-doran",
+   "actor": "doran_martell",
+   "player": "stark",
+   "situation": "Ser Loras Tyrell is a prisoner in the cells of Sunspear; there is no war with House Tyrell.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "loras_tyrell",
+     "status": "imprisoned",
+     "loc": "martell"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-hoster",
+   "actor": "hoster_tully",
+   "player": "stark",
+   "situation": "Tyrion Lannister is a prisoner in the cells of Riverrun; there is no war with House Lannister.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "tyrion_lannister",
+     "status": "imprisoned",
+     "loc": "tully"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  },
+  {
+   "id": "prisoner-mace",
+   "actor": "mace_tyrell",
+   "player": "stark",
+   "situation": "Oberyn Martell is a prisoner in the cells of Highgarden; there is no war with House Nymeros Martell.",
+   "setup": [
+    {
+     "op": "character",
+     "id": "oberyn_martell",
+     "status": "imprisoned",
+     "loc": "tyrell"
+    }
+   ],
+   "acceptable": [
+    "judge_prisoner",
+    "wait"
+   ],
+   "note": "A prisoner of a house at peace is judged — freed, ransomed, sent to the Wall — or kept waiting."
+  }
+ ]
+}

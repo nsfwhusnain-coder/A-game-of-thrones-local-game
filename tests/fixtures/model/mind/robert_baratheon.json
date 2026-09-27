@@ -1,0 +1,7 @@
+{
+ "kind": "mind",
+ "fingerprint": "robert_baratheon|call_banners,raise_levies,send_person,set_tax,fund_works,hire_men,send_gift,hold_feast,hold_tourney,wait",
+ "model": "hand-written",
+ "note": "A bad answer (a march with no host to march): the check refuses it, and the King's ways decide.",
+ "reply": "{\"target\":\"casterly_rock\",\"host\":\"none\",\"leader\":\"none\",\"men\":0,\"gold\":0,\"choice\":\"none\",\"with\":\"\",\"public_face\":\"\",\"secret_aim\":\"\",\"line\":\"\",\"verb\":\"march_host\"}"
+}
