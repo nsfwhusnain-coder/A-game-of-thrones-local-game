@@ -31,10 +31,13 @@ A1 ✅ · A2 ✅ (104 tests; GitHub Actions green on windows-latest and ubuntu-l
 A3 ✅ partial (the Bard gets only applied receipts; the shared system prompt no longer demands a full turn from agents;
 default `swarm: 'lean'`; plus an interim check that drops story events claiming arrivals the engine never recorded or
 retelling the engine's own news, and weekly folding of "answers the call" cards) · A4 ✅ · A5 ✅ (`obligations.join`;
-`tests/muster.test.js`) · A6 ✅ · A7 ✅ (arrival fires on arrival; `canonLock` on the progress) · A8 ⚠ partial (natives
+`tests/muster.test.js`) · A6 ✅ · A7 ✅ (arrival fires on arrival; `canonLock` on the progress) · A8 ✅ (natives
 pass the Neck free; the King's progress pays no tolls; northern lords no longer pay "the price of the Wall"; **island
-contingents still march over water** — do the ships rule) · A9 ✅ · A10 ⚠ partial (engine text pronouns from
-`isFemale`; explicit natures for 58 principals in `public/data/natures.js` — extend to every persona) · A11 ❌ not done.
+hosts take ship** — own ships, boats making trips, or the realm's ships fetching them — on sea lanes from the shared
+geography `engine/geo.js`, and land where the goal is soonest reached: `tests/sea.test.js`, DECISIONS D-001) · A9 ✅ ·
+A10 ✅ (`sex` on every character; written scales and sway for all 120 personas; archetypes for everyone else, no prose
+read: `tests/people.test.js`, D-003) · A11 ✅ (canon threads in the windows and order of 10 §4, the Red Wedding before
+the Purple Wedding: `tests/canon.test.js`, D-002).
 
 Live check after the fixes (Qwen3.6-35B-A3B, 3 turns as Stark): turns 117–137 s (were 198–221 s); every vassal
 contingent followed the host to Moat Cailin; the King's progress refused redirection and walked the kingsroad; the

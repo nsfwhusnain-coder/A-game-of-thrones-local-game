@@ -1,0 +1,78 @@
+# Design decisions
+
+> Every place where the implementation departs from, extends or corrects this GDD: date, what, why, what it replaces.
+> Newest last. Referenced from the GDD sections they touch as `DECISIONS.md#<id>`.
+
+---
+
+## D-001 · 2026-09-27 · The sea is a real place for the engine (WP A8)
+
+**What.** `public/js/engine/geo.js` rasterises the atlas's land and lake polygons (the same ones the map is drawn from)
+into a 4-unit grid (~7 miles a cell): landmasses are the 4-connected land regions, the sea is the largest connected
+body of water. It answers *which landmass is this point on* and *the shortest way by water* (Dijkstra, no corner-cutting
+over land; legs simplified only while they stay on open water). `public/js/shared/sea.js` uses it for the current
+engine's rule that **a host bound for another landmass takes ship**:
+
+- the landing is the stretch of the target's coast that gets the men there soonest (days at sea at 60 mi/day — 90 for
+  ironborn longships — plus days marching on at 18 mi/day): Skagos lands near Last Hearth rather than sailing round to
+  White Harbor; Bear Island lands near Deepwood Motte;
+- transport is, in order of speed: the house's **own ships** (100 men a ship); **a few boats making trips** (each extra
+  trip costs a round voyage); **ships the realm sends** (the liege, the liege's liege or a fellow vassal with enough
+  hulls, whose ships must first sail from their port to fetch the men); or **none**, and the host waits on the shore
+  and the player is told why;
+- a host at sea pays no road tolls, and walks again only from where it lands.
+
+Island lords were given small fleets in the scenario (`public/data/scenarios.js`, marked *inferred* where the books give
+no number): the ironborn lords' longships, Bear Island 6, the Shield Islands 5 each, Celtigar 10, the Three Sisters 8,
+Fair Isle 6, Tarth and Estermont 4. House Crowl of Skagos has none, so its men wait for White Harbor's ships.
+
+**Why.** The GDD's A8 asked for "a simple rule: contingents from island seats wait for transport or use their own ships".
+A rule that only knows island *seats* breaks for any other crossing (a mainland host ordered to Pyke, a khalasar sent
+to Westeros, a contingent following a host that has crossed), and straight lines cannot tell a strait from an isthmus.
+One geography that the engine and the map share fixes the whole class, and it is the first piece of the server-side
+routing WP B2 asks for (`movement.js` builds on `geo.js`).
+
+**Replaces.** The straight-line march over water; the "price of the Wall" paid by men from Skagos (B-11).
+
+## D-002 · 2026-09-27 · Canon dates: the books' order is binding, the dates are the game's (WP A11)
+
+**What.** The canon threads of `public/js/shared/plots.js` now fall inside the windows of 10 §4 and in the books'
+order (tested in `tests/canon.test.js`). 10 §3.1 said *298 AC: … the Green Fork, the Whispering Wood, the Camps, Robb
+crowned* and *299 AC: Ned executed (early)* in the same breath, while §4 makes Robb's crowning follow Ned's execution
+(W6 "after J1"). The section is corrected: in the game, which begins on the 1st day of the 8th moon with the King's
+progress still at the Twins, the end of *A Game of Thrones* (Ned's execution, the Whispering Wood, Robb crowned) falls
+in the first moons of 299 AC; the conventional reconstruction (A Wiki of Ice and Fire) dates those to 298 AC.
+
+**Why.** A royal progress that walks ten miles a day cannot reach Winterfell, return to King's Landing and hold a
+tourney before the Hand's arrest in the five moons of 298 left after the start. Keeping the order and letting the
+dates follow the world's real travel times is what "canon is a current, not a rail" (10 §1) means.
+
+**Also.** The wights beat (N2) no longer waits for the "cold" threat meter to reach 35 (it grew 0.5 a moon in summer
+and could not arrive in its window): under Canon gravity the dead rise at Castle Black early in 299 while Jeor Mormont
+lives.
+
+## D-003 · 2026-09-27 · Natures: written numbers for personas, archetypes read trait words (WP A10)
+
+**What.** Every persona (120) has explicit scales and an explicit *sway* list in `public/data/natures.js`; a check and a
+test fail if one is missing. Everyone else is played by `public/data/archetypes.js`: the role's archetype, the house's
+country leaning it by a point or two, the character's **written trait words** applied through a fixed table
+(`brave` +2 courage, `cruel` −3 warmth…), and a deterministic ±1 nudge per scale from the id. `temperament()` no
+longer reads any prose. Tags are a pure reading of the scales plus *dutiful* when duty sways them. Every character has
+`sex` (`'m' | 'f'`) as data (`WOMEN` in `data/characters.js`, the ancestors in `data/families.js`); saves from before
+are migrated from the data.
+
+**Why.** 08 §2.2 says archetypes "by role, region and rank … never from regex". The authored trait words of the roster
+(`'cold, patient, calculating, ruthless'` for Roose Bolton) are data written from the books, one word per property; a
+table lookup over them is not the prose-regex that made Eddard "cunning" (B-21), and ignoring them would throw away
+book knowledge for the ~190 characters without a persona. The ±2 variation of the GDD became ±1 (the half of a ±2
+nudge, rounded) so that two archetype characters differ without contradicting their written traits.
+
+## D-004 · 2026-09-27 · Screenshots are a script, and a save can be opened by URL
+
+**What.** `scripts/screens.js` starts the server on the mock provider, sets a named scenario up over the HTTP API,
+opens it in Chromium (Playwright, SwiftShader WebGL) and writes `visual-out/<scenario>-<w>x<h>.png` at 1920×1080 and
+1366×768. The client opens `/?game=<id>` straight into that game, and `/?dev` exposes the page's state as
+`window.__wc` for scripts. Playwright stays a dev tool (global install or `npm i --no-save playwright`).
+
+**Why.** CLAUDE.md requires screenshots at both sizes for every UI change; a script makes that one command and is the
+seed of `scripts/visual.js` (WP F9).

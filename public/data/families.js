@@ -1,7 +1,9 @@
 // Lineages, marriages, ancestors, appearance and CK3-style skills.
 
 // Dead ancestors & notable dead (so family trees have roots). Same shape as CHARACTERS.
-const D = (id, name, house, title, born, died, extra = {}) => ({ id, name, house, title, age: died - born, born, died, loc: null, roles: ['family'], traits: extra.traits || '', bio: extra.bio || '', alive: false, ...extra });
+// the women of the family trees (sex is data: docs/gdd/03-architecture.md §3.2)
+const MOTHERS = new Set(['lyarra_stark', 'lyanna_stark', 'minisa_whent', 'joanna_lannister', 'cassana_estermont', 'rhaella_targaryen', 'elia_martell', 'rhaenys_targaryen', 'alannys_harlaw', 'mellario']);
+const D = (id, name, house, title, born, died, extra = {}) => ({ id, name, house, sex: MOTHERS.has(id) ? 'f' : 'm', title, age: died - born, born, died, loc: null, roles: ['family'], traits: extra.traits || '', bio: extra.bio || '', alive: false, ...extra });
 export const ANCESTORS = [
   D('rickard_stark', 'Rickard Stark', 'stark', 'Lord of Winterfell', 230, 282, { bio: 'Burned alive by the Mad King.' }),
   D('lyarra_stark', 'Lyarra Stark', 'stark', 'Lady of Winterfell', 245, 267),

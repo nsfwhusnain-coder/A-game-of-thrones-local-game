@@ -8,6 +8,7 @@
 //  • Threats that grow with time: the free folk massing, the cold beyond the Wall, the Iron Bank's patience.
 //  • Opportunities: the world state throws up openings the player must answer in time, or lose.
 import { applyChanges } from './world.js';
+import { pronouns } from './people.js';
 import { happenings } from './happenings.js';
 
 const ym = (d) => d.year * 12 + (d.month - 1);
@@ -136,7 +137,7 @@ export const THREADS = [
   {
     id: 'the_imp', name: 'The Imp taken', stages: [
       {
-        id: 'seized', at: YM(298, 12), needs: (s) => free(s, 'catelyn_stark') && free(s, 'tyrion_lannister') && flag(s, 'cat_south') === true && !inWar(s, 'stark', 'lannister'),
+        id: 'seized', at: YM(298, 11), needs: (s) => free(s, 'catelyn_stark') && free(s, 'tyrion_lannister') && flag(s, 'cat_south') === true && !inWar(s, 'stark', 'lannister'),
         fire: (s) => ({
           events: [ev('Seized at the crossroads', 'At the inn at the crossroads, Catelyn Stark calls on the knights of her father\'s bannermen to seize Tyrion Lannister for the attempted murder of her son. He is carried off to the Eyrie to stand before her sister.', 'crossroads_inn', 5, 'intrigue', ['stark', 'tully', 'lannister', 'arryn'])],
           changes: [{ op: 'character', id: 'tyrion_lannister', status: 'imprisoned', loc: 'arryn' }, { op: 'character', id: 'catelyn_stark', loc: 'arryn' }, { op: 'relation', a: 'lannister', b: 'stark', delta: -30 }, { op: 'relation', a: 'lannister', b: 'tully', delta: -25 }],
@@ -154,7 +155,7 @@ export const THREADS = [
         }),
       },
       {
-        id: 'burning', at: YM(299, 1), needs: (s) => flag(s, 'riverlands_burn') && alive(s, 'gregor_clegane') && !inWar(s, 'lannister', 'tully'),
+        id: 'burning', at: YM(298, 12), needs: (s) => flag(s, 'riverlands_burn') && alive(s, 'gregor_clegane') && !inWar(s, 'lannister', 'tully'),
         fire: (s) => {
           const out = {
             events: [ev('Fire in the Riverlands', 'Men with no banners — but everyone knows the Mountain — burn Sherrer, the Mummer\'s Ford and a score of villages across the Riverlands. Edmure Tully calls his banners; Lord Tywin gathers a host at Casterly Rock.', 'riverrun', 5, 'war', ['lannister', 'tully', 'clegane'])],
@@ -180,7 +181,7 @@ export const THREADS = [
   {
     id: 'last_hunt', name: 'The King\'s last hunt', stages: [
       {
-        id: 'boar', at: YM(299, 2), needs: (s) => alive(s, 'robert_baratheon') && s.characters.robert_baratheon.status !== 'imprisoned',
+        id: 'boar', at: YM(298, 12), needs: (s) => alive(s, 'robert_baratheon') && s.characters.robert_baratheon.status !== 'imprisoned',
         fire: (s) => {
           if (plays(s, 'baratheon')) {
             return {
@@ -204,7 +205,7 @@ export const THREADS = [
         },
       },
       {
-        id: 'coup', at: YM(299, 2), needs: (s) => !alive(s, 'robert_baratheon') && free(s, 'eddard_stark') && at(s, 'eddard_stark', 'baratheon') && alive(s, 'cersei_lannister'),
+        id: 'coup', at: YM(298, 12), needs: (s) => !alive(s, 'robert_baratheon') && free(s, 'eddard_stark') && at(s, 'eddard_stark', 'baratheon') && alive(s, 'cersei_lannister'),
         fire: (s) => {
           if (plays(s, 'stark')) {
             return {
@@ -229,7 +230,7 @@ export const THREADS = [
         },
       },
       {
-        id: 'banners', at: YM(299, 3), needs: (s) => flag(s, 'ned_seized') && !inWar(s, 'stark', 'lannister') && s.houses.stark?.lord && alive(s, s.houses.stark.lord),
+        id: 'banners', at: YM(299, 1), needs: (s) => flag(s, 'ned_seized') && !inWar(s, 'stark', 'lannister') && s.houses.stark?.lord && alive(s, s.houses.stark.lord),
         fire: (s) => {
           const out = {
             events: [ev('The North calls its banners', `${C(s, 'robb_stark')?.alive ? 'Robb Stark, fifteen years old,' : 'Winterfell'} calls the banners of the North. The lords come: Umber, Karstark, Bolton, Glover, Mormont, Manderly. Eighteen thousand men march for Moat Cailin.`, 'stark', 5, 'war', ['stark', 'lannister'])],
@@ -240,7 +241,7 @@ export const THREADS = [
         },
       },
       {
-        id: 'brothers', at: YM(299, 4), needs: (s) => !alive(s, 'robert_baratheon') && (alive(s, 'renly_baratheon') || alive(s, 'stannis_baratheon')),
+        id: 'brothers', at: YM(299, 2), needs: (s) => !alive(s, 'robert_baratheon') && (alive(s, 'renly_baratheon') || alive(s, 'stannis_baratheon')),
         fire: (s) => {
           const ch = []; const ev_ = [];
           if (alive(s, 'renly_baratheon') && !plays(s, 'baratheon_se')) { ch.push({ op: 'character', id: 'renly_baratheon', title: 'King Renly, First of His Name', loc: 'tyrell' }, { op: 'pact', type: 'alliance', a: 'baratheon_se', b: 'tyrell', terms: 'Renly weds Margaery; the Reach crowns him' }); ev_.push('At Highgarden, Renly Baratheon weds Margaery Tyrell and is crowned king, with the whole power of the Reach and the Stormlands behind him.'); }
@@ -254,7 +255,7 @@ export const THREADS = [
   {
     id: 'crown_justice', name: 'The King\'s justice', stages: [
       {
-        id: 'baelors_sept', at: YM(299, 4), grace: 6, needs: (s) => alive(s, 'eddard_stark') && s.characters.eddard_stark.status === 'imprisoned' && at(s, 'eddard_stark', 'baratheon') && alive(s, 'joffrey_baratheon'),
+        id: 'baelors_sept', at: YM(299, 2), grace: 3, needs: (s) => alive(s, 'eddard_stark') && s.characters.eddard_stark.status === 'imprisoned' && at(s, 'eddard_stark', 'baratheon') && alive(s, 'joffrey_baratheon'),
         fire: (s) => {
           if (plays(s, 'baratheon', 'lannister')) {
             return {
@@ -283,7 +284,7 @@ export const THREADS = [
   {
     id: 'king_in_north', name: 'The King in the North', stages: [
       {
-        id: 'crowned', at: YM(299, 5), grace: 8, needs: (s) => (!alive(s, 'eddard_stark') || s.characters.eddard_stark.house === 'nights_watch') && inWar(s, 'stark', 'lannister') && s.houses.stark?.liege,
+        id: 'crowned', at: YM(299, 3), grace: 6, needs: (s) => (!alive(s, 'eddard_stark') || s.characters.eddard_stark.house === 'nights_watch') && inWar(s, 'stark', 'lannister') && s.houses.stark?.liege,
         fire: (s) => {
           const lord = s.characters[s.houses.stark.lord];
           if (plays(s, 'stark')) {
@@ -302,7 +303,7 @@ export const THREADS = [
             };
           }
           return {
-            events: [ev('The King in the North', `At Riverrun the northern lords lay their swords before ${lord?.name || 'the Stark'} and proclaim him King in the North, as his forefathers were before Aegon came. The river lords kneel with them.`, 'tully', 5, 'court', ['stark', 'tully'])],
+            events: [ev('The King in the North', `At Riverrun the northern lords lay their swords before ${lord?.name || 'the Stark'} and proclaim ${lord ? pronouns(lord).him : 'him'} ${lord && pronouns(lord).he === 'she' ? 'Queen' : 'King'} in the North, as ${lord ? pronouns(lord).his : 'his'} forefathers were before Aegon came. The river lords kneel with them.`, 'tully', 5, 'court', ['stark', 'tully'])],
             changes: [{ op: 'liege', house: 'stark', liege: null }, ...(lord ? [{ op: 'character', id: lord.id, title: 'King in the North' }] : []), ...(s.houses.tully && !plays(s, 'tully') ? [{ op: 'liege', house: 'tully', liege: 'stark' }] : [])],
           };
         },
@@ -312,7 +313,7 @@ export const THREADS = [
   {
     id: 'five_kings', name: 'The War of the Five Kings', stages: [
       {
-        id: 'twins', at: YM(299, 4), grace: 4, needs: (s) => inWar(s, 'stark', 'lannister') && alive(s, 'walder_frey') && s.houses.stark?.lord && alive(s, s.houses.stark.lord),
+        id: 'twins', at: YM(299, 2), grace: 3, needs: (s) => inWar(s, 'stark', 'lannister') && alive(s, 'walder_frey') && s.houses.stark?.lord && alive(s, s.houses.stark.lord),
         fire: (s) => {
           if (plays(s, 'stark')) {
             return {
@@ -334,7 +335,7 @@ export const THREADS = [
       },
       {
         // the player's own battles are fought by the engine where their hosts are, never scripted for them
-        id: 'whispering_wood', at: YM(299, 5), grace: 4, needs: (s) => inWar(s, 'stark', 'lannister') && free(s, 'jaime_lannister') && !plays(s, 'lannister', 'stark', 'tully'),
+        id: 'whispering_wood', at: YM(299, 3), grace: 3, needs: (s) => inWar(s, 'stark', 'lannister') && free(s, 'jaime_lannister') && !plays(s, 'lannister', 'stark', 'tully'),
         fire: (s) => {
           const win = Math.random() < (plays(s, 'stark') ? 0.6 : 0.7);
           return win
@@ -343,14 +344,14 @@ export const THREADS = [
         },
       },
       {
-        id: 'shadow', at: YM(299, 8), grace: 3, needs: (s) => alive(s, 'renly_baratheon', 'stannis_baratheon', 'melisandre') && /king/i.test(s.characters.renly_baratheon.title || '') && /king/i.test(s.characters.stannis_baratheon.title || '') && !plays(s, 'baratheon_se', 'baratheon_ds'),
+        id: 'shadow', at: YM(299, 6), grace: 2, needs: (s) => alive(s, 'renly_baratheon', 'stannis_baratheon', 'melisandre') && /king/i.test(s.characters.renly_baratheon.title || '') && /king/i.test(s.characters.stannis_baratheon.title || '') && !plays(s, 'baratheon_se', 'baratheon_ds'),
         fire: () => ({
           events: [ev('A shadow in the king\'s tent', 'On the eve of battle outside Storm\'s End, King Renly is slain in his own tent by a shadow with his brother\'s face, before the eyes of Catelyn Stark and Brienne of Tarth. By dawn the stormlords have gone over to Stannis; the Tyrells ride home.', 'baratheon_se', 5, 'intrigue', ['baratheon_se', 'baratheon_ds', 'tyrell'])],
           changes: [{ op: 'character', id: 'renly_baratheon', alive: false, cause: 'slain by a shadow in his tent' }, { op: 'pact', type: 'alliance', a: 'baratheon_se', b: 'tyrell', status: 'ended' }],
         }),
       },
       {
-        id: 'blackwater', at: YM(299, 10), grace: 3, needs: (s) => alive(s, 'stannis_baratheon', 'joffrey_baratheon') && /king/i.test(s.characters.stannis_baratheon.title || '') && !plays(s, 'baratheon', 'baratheon_ds'),
+        id: 'blackwater', at: YM(299, 9), grace: 1, needs: (s) => alive(s, 'stannis_baratheon', 'joffrey_baratheon') && /king/i.test(s.characters.stannis_baratheon.title || '') && !plays(s, 'baratheon', 'baratheon_ds'),
         fire: (s) => {
           const lanTyrell = alive(s, 'tywin_lannister') && !alive(s, 'renly_baratheon');
           if (lanTyrell) {
@@ -360,14 +361,7 @@ export const THREADS = [
         },
       },
       {
-        id: 'purple_wedding', at: YM(300, 3), grace: 4, needs: (s) => alive(s, 'joffrey_baratheon', 'olenna_tyrell') && free(s, 'joffrey_baratheon') && /king/i.test(s.characters.joffrey_baratheon.title || '') && (s.pacts || []).some((p) => p.status !== 'ended' && [p.a, p.b].includes('tyrell') && [p.a, p.b].includes('lannister')) && !plays(s, 'baratheon'),
-        fire: () => ({
-          events: [ev('The Purple Wedding', 'At his wedding feast King Joffrey chokes on pigeon pie and wine, clawing at his throat, and dies purple-faced in his mother\'s arms. Cersei screams that Tyrion poisoned him. Tommen, eight years old, is king.', 'baratheon', 5, 'intrigue', ['baratheon', 'lannister', 'tyrell'])],
-          changes: [{ op: 'character', id: 'joffrey_baratheon', alive: false, cause: 'poisoned at his wedding feast' }, { op: 'character', id: 'tyrion_lannister', status: 'imprisoned', loc: 'baratheon', note: 'Accused of poisoning the King.' }],
-        }),
-      },
-      {
-        id: 'red_wedding', at: YM(300, 6), grace: 2, needs: (s) => flag(s, 'frey_pact') && !plays(s, 'stark') && alive(s, 'walder_frey', 'roose_bolton') && s.houses.stark?.lord && alive(s, s.houses.stark.lord) && inWar(s, 'stark', 'lannister') && Math.random() < 0.7,
+        id: 'red_wedding', at: YM(299, 11), grace: 3, needs: (s) => flag(s, 'frey_pact') && !plays(s, 'stark') && alive(s, 'walder_frey', 'roose_bolton') && s.houses.stark?.lord && alive(s, s.houses.stark.lord) && inWar(s, 'stark', 'lannister') && Math.random() < 0.7,
         fire: (s) => {
           const lord = s.houses.stark.lord;
           return {
@@ -376,16 +370,23 @@ export const THREADS = [
           };
         },
       },
+      {
+        id: 'purple_wedding', at: YM(300, 2), grace: 1, needs: (s) => alive(s, 'joffrey_baratheon', 'olenna_tyrell') && free(s, 'joffrey_baratheon') && /king/i.test(s.characters.joffrey_baratheon.title || '') && (s.pacts || []).some((p) => p.status !== 'ended' && [p.a, p.b].includes('tyrell') && [p.a, p.b].includes('lannister')) && !plays(s, 'baratheon'),
+        fire: () => ({
+          events: [ev('The Purple Wedding', 'At his wedding feast King Joffrey chokes on pigeon pie and wine, clawing at his throat, and dies purple-faced in his mother\'s arms. Cersei screams that Tyrion poisoned him. Tommen, eight years old, is king.', 'baratheon', 5, 'intrigue', ['baratheon', 'lannister', 'tyrell'])],
+          changes: [{ op: 'character', id: 'joffrey_baratheon', alive: false, cause: 'poisoned at his wedding feast' }, { op: 'character', id: 'tyrion_lannister', status: 'imprisoned', loc: 'baratheon', note: 'Accused of poisoning the King.' }],
+        }),
+      },
     ],
   },
   {
     id: 'the_wall', name: 'Beyond the Wall', stages: [
       {
-        id: 'benjen', at: YM(298, 10), needs: (s) => free(s, 'benjen_stark'),
+        id: 'benjen', at: YM(298, 11), needs: (s) => free(s, 'benjen_stark'),
         fire: () => ({ events: [ev('A ranger overdue', 'Benjen Stark, First Ranger of the Night\'s Watch, rode beyond the Wall with six men to look for Ser Waymar Royce. Weeks later his horse comes back to Castle Black without him.', 'nights_watch', 3, 'court', ['nights_watch', 'stark'])], changes: [{ op: 'character', id: 'benjen_stark', status: 'missing', loc: 'beyond the Wall', note: 'Vanished ranging beyond the Wall.' }] }),
       },
       {
-        id: 'wights', at: YM(299, 6), grace: 12, needs: (s) => (s.plots?.threats?.others || 0) >= 35 && alive(s, 'jeor_mormont'),
+        id: 'wights', at: YM(299, 1), grace: 2, needs: (s) => alive(s, 'jeor_mormont'), // canon: the dead rise at Castle Black early in 299 (GDD 10 §4.8 N2), whatever the threat reads
         fire: () => ({ events: [ev('The dead come to Castle Black', 'Two rangers\' bodies, found in the haunted forest and carried back, rise in the night and kill a brother in the Lord Commander\'s tower. They burn only with fire. Lord Commander Mormont resolves to lead a great ranging beyond the Wall.', 'nights_watch', 5, 'court', ['nights_watch'])], changes: [{ op: 'character', id: 'jeor_mormont', note: 'Saw the dead walk in his own tower.' }], flags: { dead_walk: true } }),
       },
     ],
@@ -400,14 +401,14 @@ export const THREADS = [
         }),
       },
       {
-        id: 'golden_crown', at: YM(299, 2), needs: (s) => alive(s, 'viserys_targaryen', 'khal_drogo') && !plays(s, 'targaryen'),
+        id: 'golden_crown', at: YM(298, 11), needs: (s) => alive(s, 'viserys_targaryen', 'khal_drogo') && !plays(s, 'targaryen'),
         fire: () => ({
           events: [ev('A crown for a king', 'In Vaes Dothrak, Viserys Targaryen draws a sword in the sacred city and threatens his sister. Khal Drogo gives him the golden crown he demanded: a pot of molten gold, poured over his head. "He was no dragon," says Daenerys. "Fire cannot kill a dragon."', 'dothraki', 4, 'court', ['targaryen', 'dothraki'])],
           changes: [{ op: 'character', id: 'viserys_targaryen', alive: false, cause: 'crowned with molten gold by Khal Drogo' }, { op: 'character', id: 'daenerys_targaryen', title: 'Princess of Dragonstone, Khaleesi' }],
         }),
       },
       {
-        id: 'hatching', at: YM(299, 6), needs: (s) => alive(s, 'daenerys_targaryen') && !flag(s, 'dragons_hatched'),
+        id: 'hatching', at: YM(299, 1), needs: (s) => alive(s, 'daenerys_targaryen') && !flag(s, 'dragons_hatched'),
         fire: (s) => ({
           events: [ev('Dragons', 'Rumour runs from the Dothraki sea to the Free Cities, and nobody believes it: a silver-haired queen walked into a funeral pyre and came out unburned, with three living dragons at her breast.', 'dothraki', 5, 'court', ['targaryen'])],
           changes: [...(alive(s, 'khal_drogo') ? [{ op: 'character', id: 'khal_drogo', alive: false, cause: 'a festering wound' }] : []), { op: 'character', id: 'daenerys_targaryen', title: 'Mother of Dragons, the Unburnt', note: 'Hatched three dragons in Drogo\'s pyre.' }],
@@ -419,7 +420,7 @@ export const THREADS = [
   {
     id: 'ironborn', name: 'The Old Way', stages: [
       {
-        id: 'crown', at: YM(299, 7), needs: (s) => alive(s, 'balon_greyjoy') && !plays(s, 'greyjoy') && (s.wars || []).some((w) => w.status !== 'ended' && w.attackers.concat(w.defenders).includes('stark')),
+        id: 'crown', at: YM(299, 4), needs: (s) => alive(s, 'balon_greyjoy') && !plays(s, 'greyjoy') && (s.wars || []).some((w) => w.status !== 'ended' && w.attackers.concat(w.defenders).includes('stark')),
         fire: () => ({
           events: [ev('The King of the Isles and the North', 'With the wolves in the south, Balon Greyjoy crowns himself on Pyke and launches the Iron Fleet at the undefended North. "We do not sow." Ironborn longships are sighted off the Stony Shore.', 'greyjoy', 5, 'war', ['greyjoy', 'stark'])],
           changes: [{ op: 'character', id: 'balon_greyjoy', title: 'King of the Iron Islands and the North' }, { op: 'war', id: 'ironborn_reaving', name: 'The Ironborn Reaving', attackers: ['greyjoy'], defenders: ['stark'], reason: 'The Old Way' }],
@@ -551,10 +552,10 @@ function opportunity(s, raidAt) {
     const heir = s.characters[child.lord];
     opts.push({
       id: 'wardship_' + child.id, title: `The wardship of ${heir.name}`, from: null,
-      text: `${heir.name} is lord of ${child.name} at ${heir.age}. Someone must guard the child and his lands until he comes of age — and whoever holds the wardship holds the house.`,
+      text: `${heir.name} is ${pronouns(heir).lord} of ${child.name} at ${heir.age}. Someone must guard the child and ${pronouns(heir).his} lands until ${pronouns(heir).he} comes of age — and whoever holds the wardship holds the house.`,
       options: [
-        { label: 'Take the child into your household', hint: 'A loyal house for a generation', fx: [{ rel: [child.id, 15] }, { loyalty: [heir.id, 20] }, { ops: [{ op: 'character', id: heir.id, loc: me.seat, note: 'A ward in the household of his liege.' }] }] },
-        { label: 'Name a castellan to rule for him', hint: 'Order kept; the household resents it', fx: [{ rel: [child.id, -5] }, { gold: 800 }] },
+        { label: 'Take the child into your household', hint: 'A loyal house for a generation', fx: [{ rel: [child.id, 15] }, { loyalty: [heir.id, 20] }, { ops: [{ op: 'character', id: heir.id, loc: me.seat, note: `A ward in the household of ${pronouns(heir).his} liege.` }] }] },
+        { label: `Name a castellan to rule for ${pronouns(heir).him}`, hint: 'Order kept; the household resents it', fx: [{ rel: [child.id, -5] }, { gold: 800 }] },
         { label: 'Leave the mother to rule', hint: 'Their business', fx: [{ rel: [child.id, 5] }] },
       ],
     });
@@ -567,20 +568,22 @@ function opportunity(s, raidAt) {
 }
 
 // ── The turn ──
-export function worldTick(state, days) {
-  const s = state;
-  s.plots = s.plots || {};
-  s.plots.stages = s.plots.stages || {};
-  s.plots.flags = s.plots.flags || {};
-  s.plots.threats = s.plots.threats || { free_folk: 30, others: 12, iron_bank: 20, winter: 20 };
+/**
+ * The great threads move one stage at a time, each when its month has come and the world still fits it; a stage the
+ * world no longer fits lapses after its grace (in months). Returns what fired: { events, changes, decisions, fired }.
+ * Exported so the canon order can be tested on its own (tests/canon.test.js).
+ */
+export function advanceThreads(s, threads = THREADS) {
+  s.plots = s.plots || {}; s.plots.stages = s.plots.stages || {}; s.plots.flags = s.plots.flags || {};
   const now = ym(s.meta.date);
-  const events = []; const changes = []; const decisions = [];
-  for (const t of THREADS) {
+  const events = []; const changes = []; const decisions = []; const fired = [];
+  for (const t of threads) {
     const i = s.plots.stages[t.id] || 0; const st = t.stages[i];
     if (!st || now < st.at) continue;
     if (!st.needs(s)) { if (now > st.at + (st.grace ?? 3)) s.plots.stages[t.id] = i + 1; continue; } // the world moved on
     const r = st.fire(s);
     s.plots.stages[t.id] = i + 1;
+    fired.push(`${t.id}.${st.id}`);
     if (!r) continue;
     events.push(...(r.events || []));
     if (r.post) { applyChanges(s, r.changes || [], { source: 'The ravens' }); r.post(s); } else changes.push(...(r.changes || []));
@@ -588,6 +591,16 @@ export function worldTick(state, days) {
     if (r.decision) decisions.push(r.decision);
     (s.plots.log = s.plots.log || []).push({ thread: t.id, stage: st.id, turn: s.meta.turn, date: s.meta.date && `${s.meta.date.month}/${s.meta.date.year}`, title: r.events?.[0]?.title || t.name });
   }
+  return { events, changes, decisions, fired };
+}
+
+export function worldTick(state, days) {
+  const s = state;
+  s.plots = s.plots || {};
+  s.plots.stages = s.plots.stages || {};
+  s.plots.flags = s.plots.flags || {};
+  s.plots.threats = s.plots.threats || { free_folk: 30, others: 12, iron_bank: 20, winter: 20 };
+  const { events, changes, decisions } = advanceThreads(s);
   const th = threatTick(s, days); events.push(...(th.events || [])); changes.push(...(th.changes || []));
   const ch = churn(s, days); for (const e of ch.events) e.bg = true; events.push(...ch.events); changes.push(...ch.changes);
   // and the thousand small lives of the realm, from the books

@@ -1,8 +1,8 @@
 // Explicit natures for the principal characters, from the books (docs/gdd/08-characters-politics.md §2.3).
 // Each scale is 0–10: courage, wits, guile, pride, temper, warmth, stubbornness, honesty, ambition, piety.
-// These override the natures that shared/temperament.js otherwise reads out of prose by keyword — a method that
-// once made Eddard Stark "cunning, cold-blooded and unfriendly" because his history says he "struggles to see lies
-// in others" and is "cold when angered". Everyone listed here is played by these numbers.
+// Every persona of data/histories.js has a row (a test fails if one is missing); everyone else takes an archetype's
+// nature (data/archetypes.js). Nothing is read out of prose: that method once made Eddard Stark "cunning, cold-blooded
+// and unfriendly" because his history says he "struggles to see lies in others" and is "cold when angered".
 export const NATURE_KEYS = ['courage', 'wits', 'guile', 'pride', 'temper', 'warmth', 'stubbornness', 'honesty', 'ambition', 'piety'];
 
 export const NATURES = {
@@ -63,10 +63,118 @@ export const NATURES = {
   khal_drogo:           [10, 6, 1, 9, 7, 5, 8, 9, 5, 5],
   melisandre:           [7, 9, 7, 7, 2, 3, 9, 5, 6, 10],
   davos_seaworth:       [7, 7, 3, 2, 2, 8, 7, 10, 1, 3],
+
+  // Everyone else with a persona in data/histories.js, read from the books once and written down here (WP A10)
+  //                     cou wit gui pri tem war stu hon amb pie
+  rodrik_cassel:        [8, 6, 1, 5, 5, 6, 7, 9, 1, 5],
+  luwin:                [4, 9, 2, 2, 1, 8, 4, 9, 1, 2],
+  jory_cassel:          [8, 5, 1, 4, 4, 6, 6, 9, 2, 4],
+  janos_slynt:          [2, 4, 6, 7, 6, 3, 4, 1, 7, 2],
+  bran_stark:           [7, 7, 1, 4, 3, 8, 6, 8, 3, 5],
+  rickon_stark:         [7, 2, 0, 5, 8, 6, 8, 7, 1, 2],
+  vayon_poole:          [3, 6, 1, 2, 2, 6, 5, 9, 1, 5],
+  smalljon_umber:       [9, 3, 1, 7, 8, 6, 6, 8, 3, 4],
+  galbart_glover:       [7, 6, 2, 4, 3, 5, 6, 8, 2, 5],
+  howland_reed:         [8, 9, 6, 2, 2, 7, 7, 8, 1, 7],
+  barbrey_dustin:       [6, 8, 7, 7, 7, 2, 8, 3, 6, 3],
+  alliser_thorne:       [7, 6, 4, 8, 8, 1, 8, 5, 5, 3],
+  qhorin_halfhand:      [10, 8, 4, 4, 2, 4, 9, 8, 1, 3],
+  yoren:                [7, 6, 2, 2, 5, 5, 6, 8, 1, 2],
+  cotter_pyke:          [8, 6, 2, 7, 7, 3, 7, 7, 4, 1],
+  tormund:              [9, 7, 2, 7, 6, 9, 6, 7, 3, 2],
+  ygritte:              [9, 6, 2, 7, 7, 7, 8, 8, 2, 3],
+  craster:              [5, 5, 6, 6, 7, 1, 8, 3, 3, 6],
+  val:                  [8, 7, 5, 7, 3, 5, 8, 7, 3, 2],
+  tommen_baratheon:     [3, 5, 1, 2, 1, 9, 3, 8, 1, 5],
+  myrcella_baratheon:   [6, 7, 2, 3, 2, 8, 5, 8, 2, 5],
+  ilyn_payne:           [8, 4, 1, 6, 3, 1, 7, 7, 1, 2],
+  meryn_trant:          [3, 3, 4, 6, 7, 1, 5, 3, 4, 2],
+  boros_blount:         [2, 3, 3, 6, 5, 3, 3, 3, 3, 2],
+  gendry:               [7, 5, 1, 6, 5, 5, 8, 9, 2, 2],
+  selyse_florent:       [5, 4, 4, 7, 6, 2, 8, 6, 5, 10],
+  cortnay_penrose:      [9, 7, 2, 7, 3, 5, 10, 9, 2, 5],
+  brienne_tarth:        [9, 6, 1, 5, 4, 6, 9, 10, 2, 6],
+  beric_dondarrion:     [8, 7, 2, 6, 3, 7, 6, 9, 3, 5],
+  lancel_lannister:     [4, 4, 3, 6, 5, 5, 3, 4, 5, 6],
+  addam_marbrand:       [8, 7, 2, 6, 3, 7, 6, 8, 3, 4],
+  stevron_frey:         [5, 7, 4, 5, 3, 4, 6, 6, 5, 4],
+  black_walder_frey:    [7, 6, 7, 7, 8, 1, 7, 2, 7, 2],
+  lothar_frey:          [4, 9, 9, 5, 2, 3, 7, 2, 6, 3],
+  tytos_blackwood:      [7, 7, 2, 7, 3, 6, 8, 9, 2, 7],
+  jonos_bracken:        [7, 4, 4, 7, 8, 4, 7, 5, 5, 5],
+  jason_mallister:      [8, 7, 2, 7, 4, 5, 8, 8, 3, 5],
+  robert_arryn:         [1, 2, 1, 9, 9, 3, 7, 5, 1, 1],
+  nestor_royce:         [5, 6, 5, 6, 3, 4, 5, 5, 7, 4],
+  anya_waynwood:        [6, 8, 5, 7, 3, 5, 7, 7, 4, 5],
+  lyn_corbray:          [9, 7, 7, 9, 7, 2, 7, 2, 7, 2],
+  willas_tyrell:        [5, 9, 2, 3, 2, 8, 5, 8, 2, 5],
+  garlan_tyrell:        [8, 7, 3, 5, 3, 8, 6, 8, 3, 5],
+  leyton_hightower:     [5, 9, 5, 6, 2, 5, 7, 6, 3, 6],
+  paxter_redwyne:       [6, 7, 5, 7, 3, 5, 6, 6, 4, 5],
+  samwell_tarly:        [2, 9, 1, 2, 1, 9, 4, 9, 1, 5],
+  mathis_rowan:         [7, 6, 2, 5, 3, 7, 6, 8, 3, 5],
+  arianne_martell:      [7, 7, 7, 8, 6, 7, 7, 4, 8, 3],
+  quentyn_martell:      [6, 5, 2, 3, 3, 6, 6, 8, 3, 4],
+  areo_hotah:           [9, 4, 1, 3, 3, 4, 8, 9, 0, 4],
+  ellaria_sand:         [6, 7, 5, 6, 6, 7, 6, 6, 3, 3],
+  obara_sand:           [9, 4, 2, 7, 9, 3, 8, 7, 4, 2],
+  anders_yronwood:      [7, 7, 6, 8, 3, 2, 8, 5, 7, 4],
+  gerold_dayne:         [9, 8, 8, 9, 5, 1, 7, 2, 7, 1],
+  aeron_greyjoy:        [9, 4, 1, 7, 8, 3, 10, 8, 4, 10],
+  rodrik_harlaw:        [6, 9, 2, 6, 2, 5, 7, 8, 2, 3],
+  dagmer_cleftjaw:      [9, 7, 3, 5, 6, 5, 8, 7, 2, 6],
+  syrio_forel:          [10, 9, 3, 7, 2, 7, 6, 8, 2, 3],
+  jon_connington:       [7, 8, 6, 9, 3, 2, 9, 6, 6, 3],
+  harry_strickland:     [3, 7, 5, 4, 2, 6, 5, 4, 5, 2],
+  denys_mallister:      [7, 7, 3, 6, 2, 6, 7, 9, 2, 5],
+  bowen_marsh:          [4, 5, 2, 5, 4, 3, 8, 7, 3, 4],
+  wendel_manderly:      [7, 5, 1, 4, 3, 8, 6, 8, 2, 7],
+  robett_glover:        [7, 7, 4, 4, 3, 5, 6, 7, 3, 5],
+  donella_hornwood:     [6, 7, 2, 6, 3, 6, 7, 8, 2, 5],
+};
+
+// What moves each of them (GDD 08 §2.1): gold, flattery, fear, duty, honour, family, power, vengeance, love, faith, safety,
+// strength. The audience, the Mind and treachery read these keys; nothing is read out of prose any more.
+export const SWAY_KEYS = ['gold', 'flattery', 'fear', 'duty', 'honour', 'family', 'power', 'vengeance', 'love', 'faith', 'safety', 'strength'];
+export const SWAY = {
+  eddard_stark: ['duty', 'honour', 'family'], catelyn_stark: ['family', 'duty'], robb_stark: ['honour', 'family'], jon_snow: ['duty', 'honour'],
+  sansa_stark: ['love', 'flattery'], arya_stark: ['family', 'vengeance'], theon_greyjoy: ['power', 'flattery'], roose_bolton: ['power', 'safety'],
+  ramsay_snow: ['power'], wyman_manderly: ['family', 'vengeance'], greatjon_umber: ['honour', 'strength'], rickard_karstark: ['vengeance', 'flattery'],
+  maege_mormont: ['duty', 'honour'], robert_baratheon: ['love', 'flattery'], cersei_lannister: ['power', 'family'], jaime_lannister: ['love', 'family', 'honour'],
+  tyrion_lannister: ['flattery', 'love', 'gold'], tywin_lannister: ['family', 'power'], kevan_lannister: ['duty', 'family'], joffrey_baratheon: ['flattery', 'fear'],
+  stannis_baratheon: ['duty', 'honour'], renly_baratheon: ['flattery', 'love', 'power'], petyr_baelish: ['power', 'gold'], varys: ['duty', 'safety'],
+  grand_maester_pycelle: ['power', 'safety'], barristan_selmy: ['duty', 'honour'], sandor_clegane: ['vengeance'], gregor_clegane: ['fear', 'strength'],
+  walder_frey: ['gold', 'flattery'], hoster_tully: ['family', 'duty'], edmure_tully: ['honour', 'family'], brynden_tully: ['duty', 'family'],
+  lysa_arryn: ['love', 'safety'], yohn_royce: ['honour', 'duty'], mace_tyrell: ['flattery', 'power'], olenna_tyrell: ['family', 'power'],
+  margaery_tyrell: ['family', 'power'], loras_tyrell: ['love', 'honour'], randyll_tarly: ['duty', 'strength'], doran_martell: ['vengeance', 'duty'],
+  oberyn_martell: ['vengeance', 'love'], balon_greyjoy: ['power', 'vengeance'], euron_greyjoy: ['power'], victarion_greyjoy: ['duty', 'flattery'],
+  asha_greyjoy: ['power', 'family'], jeor_mormont: ['duty'], maester_aemon: ['duty'], benjen_stark: ['duty'], mance_rayder: ['family', 'power'],
+  viserys_targaryen: ['flattery', 'power'], daenerys_targaryen: ['family', 'love'], illyrio_mopatis: ['gold', 'power'], jorah_mormont: ['safety', 'gold'],
+  khal_drogo: ['strength', 'love'], melisandre: ['faith'], davos_seaworth: ['duty', 'family'],
+  rodrik_cassel: ['duty', 'honour'], luwin: ['duty'], jory_cassel: ['duty', 'honour'], janos_slynt: ['gold', 'power'], bran_stark: ['family'],
+  rickon_stark: ['family'], vayon_poole: ['duty'], smalljon_umber: ['strength', 'honour'], galbart_glover: ['duty', 'honour'], howland_reed: ['duty', 'honour'],
+  barbrey_dustin: ['vengeance', 'power'], alliser_thorne: ['duty', 'flattery'], qhorin_halfhand: ['duty'], yoren: ['duty'], cotter_pyke: ['duty', 'strength'],
+  tormund: ['family', 'strength'], ygritte: ['family', 'strength'], craster: ['safety', 'gold'], val: ['family', 'honour'], tommen_baratheon: ['love'],
+  myrcella_baratheon: ['love'], ilyn_payne: ['duty'], meryn_trant: ['power', 'fear'], boros_blount: ['safety', 'fear'], gendry: ['duty'],
+  selyse_florent: ['faith', 'power'], cortnay_penrose: ['duty', 'honour'], brienne_tarth: ['honour', 'duty'], beric_dondarrion: ['honour', 'duty'],
+  lancel_lannister: ['flattery', 'love'], addam_marbrand: ['honour', 'family'], stevron_frey: ['power', 'family'], black_walder_frey: ['power'],
+  lothar_frey: ['family', 'power'], tytos_blackwood: ['honour', 'family'], jonos_bracken: ['vengeance', 'power'], jason_mallister: ['honour', 'duty'],
+  robert_arryn: ['family', 'fear'], nestor_royce: ['power', 'safety'], anya_waynwood: ['family', 'duty'], lyn_corbray: ['power', 'gold'],
+  willas_tyrell: ['family', 'love'], garlan_tyrell: ['family', 'honour'], leyton_hightower: ['gold', 'safety'], paxter_redwyne: ['gold', 'family'],
+  samwell_tarly: ['love', 'duty'], mathis_rowan: ['honour'], arianne_martell: ['power', 'family'], quentyn_martell: ['duty', 'family'], areo_hotah: ['duty'],
+  ellaria_sand: ['love', 'family'], obara_sand: ['vengeance'], anders_yronwood: ['power'], gerold_dayne: ['power'], aeron_greyjoy: ['faith'],
+  rodrik_harlaw: ['family', 'safety'], dagmer_cleftjaw: ['duty', 'strength'], syrio_forel: ['honour', 'strength'], jon_connington: ['love', 'duty'],
+  harry_strickland: ['gold', 'safety'], denys_mallister: ['duty', 'honour'], bowen_marsh: ['duty'], wendel_manderly: ['family', 'duty'],
+  robett_glover: ['duty', 'family'], donella_hornwood: ['family', 'duty'],
 };
 
 /** The explicit nature of a character as 0–1 scales keyed by name, or null if none is written. */
 export function natureOf(id) {
   const row = NATURES[id]; if (!row) return null;
   return Object.fromEntries(NATURE_KEYS.map((k, i) => [k, row[i] / 10]));
+}
+/** What sways a character with a written persona, as { key: true }, or null if none is written. */
+export function swayOf(id) {
+  const keys = SWAY[id]; if (!keys) return null;
+  return Object.fromEntries(SWAY_KEYS.map((k) => [k, keys.includes(k)]));
 }

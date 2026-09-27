@@ -9,6 +9,7 @@ import { createInitialState, migrateState, applyChanges, placePos, placeName, ad
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
 import { chokepointToll, roadCongestion } from '../public/js/shared/chokepoints.js';
+import { needsShips, planVoyage, retarget, sail } from '../public/js/shared/sea.js';
 import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
@@ -299,13 +300,29 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   applied.push(...vt.applied);
   vt.events.push(...advanceMusters(state, spanInfo.days));
   // Marching orders the story didn't resolve: the engine walks the host along at marching pace
+  const turnStart = dayNumber(state.meta.date) - spanInfo.days;
   for (const a of Object.values(state.armies)) {
     if (!a.march || a.movedTurn === state.meta.turn) continue;
-    const to = a.march.to; // read before the move: arriving clears the march order
+    const order = a.march.to; // read before the move: arriving clears the march order
     // when in the turn this host is on the road (the map replays it in step with the story's days)
     // a host raised during the turn (a lord answering on day 9) sets out that day, and marches only the days left
-    const born = Math.min(spanInfo.days - 1, Math.max(0, a.bornDay || 0)); const left = Math.max(1, spanInfo.days - born);
-    { const tgt = String(to).startsWith('army:') ? state.armies[String(to).slice(5)]?.pos : placePos(to, state.holdings); const md = tgt ? marchDays(a, a.pos, tgt).days : left; a.motion = { start: born / spanInfo.days, end: Math.min(1, (born + md) / Math.max(1, spanInfo.days)), from: [...a.pos] }; a.arriveDay = md <= left ? born + md : null; }
+    let born = Math.min(spanInfo.days - 1, Math.max(0, a.bornDay || 0));
+    // The sea is no road: a host bound for another island or shore takes ship — its own, or ships its realm sends — or
+    // waits on the shore and says why (shared/sea.js). It walks again only from where it lands, and pays no toll at sea.
+    if (a.type !== 'fleet') {
+      const goal = String(order).startsWith('army:') ? state.armies[String(order).slice(5)]?.pos : placePos(order, state.holdings);
+      if (a.sea && a.sea.for !== String(order) && a.sea.phase !== 'sailing') { if (goal && needsShips(a.pos, goal) && a.sea.phase !== 'to_port') retarget(state, a, goal, String(order)); else delete a.sea; } // a new order: the same ships, a new landing
+      if (!a.sea && goal && needsShips(a.pos, goal)) planVoyage(state, a, goal, String(order), turnStart + born);
+      if (a.sea && a.sea.phase !== 'to_port') {
+        const r = sail(state, a, { turnStart, span: spanInfo.days, from: born, mine: a.owner === state.meta.player || a.serving === state.meta.player });
+        vt.events.push(...r.events); applied.push(...r.lines);
+        if (!r.done || r.used >= spanInfo.days) { a.movedTurn = state.meta.turn; continue; }
+        born = r.used;
+      }
+    }
+    const to = a.sea?.phase === 'to_port' ? a.sea.port.id : order; // an inland host marches to its port first
+    const left = Math.max(1, spanInfo.days - born);
+    { const tgt = String(to).startsWith('army:') ? state.armies[String(to).slice(5)]?.pos : placePos(to, state.holdings); const md = tgt ? marchDays(a, a.pos, tgt).days : left; a.motion = { start: a.landed ? a.landed.from : born / spanInfo.days, end: Math.min(1, (born + md) / Math.max(1, spanInfo.days)), from: a.landed ? a.landed.start : [...a.pos], ...(a.landed ? { sea: a.landed.path } : {}) }; a.arriveDay = md <= left ? born + md : null; }
     // a host may be ordered against another host: it follows it wherever it goes, and the engine fights them when they meet
     if (String(to).startsWith('army:')) {
       const foe = state.armies[String(to).slice(5)];
@@ -338,6 +355,11 @@ export async function advance(id, { span = 'auto', orders } = {}) {
     }
     const mv = applyChanges(state, [{ op: 'army_move', army: a.id, to, progress: f, status: a.party ? (f >= 1 ? (a.party.returning ? 'home again' : `at ${placeName(state, to)}, ${a.party.why.replace(/^to |^for /, '')}`) : a.status) : f >= 1 ? 'arrived' : 'marching' }]);
     applied.push(...mv.applied);
+    if (f >= 1 && a.sea?.phase === 'to_port') { // at the port: the voyage begins (it sails from the next day on)
+      const goal = String(order).startsWith('army:') ? state.armies[String(order).slice(5)]?.pos : placePos(order, state.holdings);
+      delete a.sea; if (goal) planVoyage(state, a, goal, String(order), turnStart + Math.min(spanInfo.days, a.arriveDay || spanInfo.days));
+      continue;
+    }
     if (f >= 1) {
       // those riding with the host have arrived too
       for (const c of Object.values(state.characters)) if (c.loc === 'army:' + a.id && c.alive && c.id !== a.commander) c.loc = to;
@@ -382,7 +404,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   vt.events.push(...retinueTick(state, spanInfo.days).events);
   vt.events.push(...deliverReplies(state));
   const engineEvents = dayEngineEvents(state, [...deathEvents, ...foldAnswers(vt.events)], spanInfo.days);
-  for (const a of Object.values(state.armies)) { delete a.bornDay; }
+  for (const a of Object.values(state.armies)) { delete a.bornDay; delete a.landed; }
   // ── THE STORY'S PART: the model writes the days around the engine's facts, and the rest of the realm's doings
   const applyCtx = { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days };
   let { obj, raw, error, text } = await runSwarm(id, state, cfg, {
@@ -658,7 +680,7 @@ function foldAnswers(evs) {
   for (const [, g] of byDay) {
     const day = Math.min(...g.map((e) => e.day || 1));
     if (g.length < 2) { out.push(...g); continue; }
-    const parts = g.map((e) => { const m = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men(, .+? riding with (?:him|her))?.*?\(~(\d+) days\)/); return m ? `${m[1]}${m[3] ? ` with ${m[3].replace(/^, | riding with (him|her)$/g, '')}` : ''} (${m[2]} men, ~${m[4]} days away)` : e.title.replace(/ answers the call$/, ''); });
+    const parts = g.map((e) => { const m = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men(, .+? riding with (?:him|her))?.*?\(~(\d+) days\)/); const sea = String(e.text).match(/^(.+?) answers the call with ([\d,]+) men.*must cross the sea/); return m ? `${m[1]}${m[3] ? ` with ${m[3].replace(/^, | riding with (him|her)$/g, '')}` : ''} (${m[2]} men, ~${m[4]} days away)` : sea ? `${sea[1]} (${sea[2]} men, by sea)` : e.title.replace(/ answers the call$/, ''); });
     const men = g.reduce((a, e) => a + (Number(String(e.text).match(/with ([\d,]+) men/)?.[1]?.replace(/,/g, '')) || 0), 0);
     out.push({ ...g[0], day, title: `${g.length} lords answer the call — ${men.toLocaleString('en-GB')} men on the march`, text: `${parts.join('; ')}.`, houses: [...new Set(g.flatMap((e) => e.houses || []))], importance: 3 });
   }

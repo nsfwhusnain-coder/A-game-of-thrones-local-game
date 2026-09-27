@@ -6,7 +6,7 @@ import { JUNCTIONS, PLACE_NAMES, LAND, LAKES, MILES_PER_UNIT } from '../../data/
 import { MAP_VERSION, warpOld } from '../../data/warp.js';
 import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.js';
 import { initEconomy, TAX_LEVELS, project } from './economy.js';
-import { heirOf } from './people.js';
+import { heirOf, isFemale, sexOf } from './people.js';
 import { addReport, updateIntel } from './intel.js';
 import { commandable } from './errands.js';
 import { compileRule } from './rules.js';
@@ -170,6 +170,8 @@ function seedIntel(state) {
 
 /** Bring older saves up to date with new world features. */
 export function migrateState(state) {
+  // every character has a sex (older saves had `gender`, or nothing): the data knows the canon ones
+  for (const c of Object.values(state.characters || {})) if (!c.sex) c.sex = SEX_OF.get(c.id) || sexOf(c);
   // the King's progress keeps to its road in older saves too (the story may not redirect it)
   if (state.armies?.royal_progress && !state.armies.royal_progress.canonLock) state.armies.royal_progress.canonLock = 'kings_ride';
   // Saves from the first, hand-drawn map: carry every position onto the atlas
@@ -226,7 +228,7 @@ function generateLord(h, year) {
   const id = slug(`${first}_${essos ? h.id : surname}`);
   return {
     id, name: essos ? `${first} of ${h.name}` : `${first} ${surname}`, house: h.id, title, age, born: year - age, loc: h.id,
-    roles: essos ? ['ruler'] : [female ? 'lady' : 'lord'], traits, bio: `Head of House ${h.name}.`, alive: true, status: 'free', opinion: 0, loyalty: 50 + Math.floor(rnd() * 40), memories: [], generated: true, gender: female ? 'f' : 'm',
+    roles: essos ? ['ruler'] : [female ? 'lady' : 'lord'], traits, bio: `Head of House ${h.name}.`, alive: true, status: 'free', opinion: 0, loyalty: 50 + Math.floor(rnd() * 40), memories: [], generated: true, sex: female ? 'f' : 'm',
     skills: deriveSkills({ roles: ['lord'], traits, age }),
   };
 }
@@ -243,12 +245,11 @@ export function generateKin(state, houseId, { female = false, age = 14 } = {}) {
   const lord = state.characters[h.lord];
   const traits = [TRAIT_POOL[Math.floor(Math.random() * TRAIT_POOL.length)]].join(', ');
   const year = state.meta?.date?.year || 298;
-  const c = { id, name: `${first} ${surname}`, house: houseId, title: '', age, born: year - age, loc: h.seat || houseId, roles: ['family'], traits, bio: `${female ? 'Daughter' : 'Son'} of House ${h.name}${lord ? `, kin to ${lord.name}` : ''}.`, alive: true, status: 'free', opinion: 0, loyalty: 60, memories: [], generated: true, gender: female ? 'f' : 'm', skills: deriveSkills({ roles: ['family'], traits, age }) };
-  if (lord && lord.age - age >= 16) c[isFemaleLord(lord) ? 'mother' : 'father'] = lord.id;
+  const c = { id, name: `${first} ${surname}`, house: houseId, title: '', age, born: year - age, loc: h.seat || houseId, roles: ['family'], traits, bio: `${female ? 'Daughter' : 'Son'} of House ${h.name}${lord ? `, kin to ${lord.name}` : ''}.`, alive: true, status: 'free', opinion: 0, loyalty: 60, memories: [], generated: true, sex: female ? 'f' : 'm', skills: deriveSkills({ roles: ['family'], traits, age }) };
+  if (lord && lord.age - age >= 16) c[isFemale(lord) ? 'mother' : 'father'] = lord.id;
   state.characters[id] = c;
   return c;
 }
-const isFemaleLord = (c) => c.gender === 'f' || /^(Lady|Queen|Princess)\b/.test(c.title || '');
 
 export function childrenOf(state, id) {
   return Object.values(state.characters).filter((c) => c.father === id || c.mother === id).sort((a, b) => (a.born || 0) - (b.born || 0));
@@ -298,6 +299,7 @@ export function placePos(placeId, holdings) {
 }
 
 const HOUSE_IDS = new Set(HOUSES.map((h) => h.id));
+const SEX_OF = new Map([...CHARACTERS, ...ANCESTORS].map((c) => [c.id, c.sex]));
 const LANDLESS = new Set(HOUSES.filter((h) => h.landless).map((h) => h.id));
 const EXTRA_IDS = new Set(EXTRA_HOLDINGS.map((e) => e[0]));
 const NAME_INDEX = new Map();
@@ -480,7 +482,7 @@ export function resolveSuccessions(state) {
       h.lord = heir.id;
       if (heir.house !== h.id) heir.house = h.id;
       const seat = h.seat && state.holdings[h.seat] ? state.holdings[h.seat].name : h.name;
-      const female = heir.gender === 'f' || /lady|princess|queen/i.test(heir.title || '');
+      const female = isFemale(heir);
       if (h.rank === 'crown') heir.title = `${female ? 'Queen' : 'King'} of the Andals and the First Men, ${female ? 'Lady' : 'Lord'} of the Seven Kingdoms`;
       else if (!/king|queen/i.test(heir.title || '')) heir.title = `${female ? 'Lady' : 'Lord'} of ${seat}`;
       heir.roles = [...new Set([...(heir.roles || []).filter((r) => r !== 'heir'), female ? 'lady' : 'lord'])];
@@ -808,6 +810,7 @@ function applyOne(state, ch, ctx) {
       state.characters[id] = {
         id, name: ch.name || id, house, title: ch.title || '', age: num(ch.age) ?? 30, loc: resolvePlaceId(ch.loc || ch.location) || ch.loc || state.houses[house].seat,
         roles: Array.isArray(ch.roles) ? ch.roles : [ch.role || 'family'].filter(Boolean), traits: ch.traits || '', bio: ch.bio || '', alive: true, status: 'free', opinion: num(ch.opinion) ?? 0, loyalty: 60, memories: [], generated: true,
+        sex: /^(f|female|woman)$/i.test(String(ch.sex || ch.gender || '')) ? 'f' : /^(m|male|man)$/i.test(String(ch.sex || ch.gender || '')) ? 'm' : sexOf({ title: ch.title }),
         father: findChar(state, ch.father), mother: findChar(state, ch.mother), born: state.meta.date.year - (num(ch.age) ?? 30),
       };
       state.characters[id].skills = deriveSkills(state.characters[id]);

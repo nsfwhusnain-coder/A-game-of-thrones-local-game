@@ -428,17 +428,22 @@ export class MapScene {
     for (const a of Object.values(s.armies)) {
       const owner = s.houses[a.owner];
       let rec = this.armyObjs.get(a.id);
-      const sig = `${a.owner}|${a.type}|${armyFigureCount(a.men)}|${a.ships || 0}|${a.composition}`;
+      // a host at sea is carried by ships: it is drawn as its fleet, on the water (shared/sea.js)
+      const atSea = a.type !== 'fleet' && a.sea?.phase === 'sailing';
+      const sig = `${a.owner}|${a.type}|${armyFigureCount(a.men)}|${a.ships || 0}|${a.composition}|${atSea ? 'sea' : ''}`;
       if (!rec || rec.sig !== sig) {
         const oldPos = rec?.pos;
         if (rec) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); }
-        const group = buildArmy(a, owner); this.scene.add(group);
+        const group = buildArmy(atSea ? { ...a, type: 'fleet', ships: a.sea.ships || 1 } : a, owner); this.scene.add(group);
         rec = { group, sig, pos: oldPos || (a.motion?.from ? [...a.motion.from] : [...a.pos]), anim: null, route: null, label: this.addLabel('', [0, 0, 0], 'army', { army: a.id }) };
         this.armyObjs.set(a.id, rec);
       }
-      const mode = a.type === 'fleet' ? 'sea' : 'land';
+      const mode = a.type === 'fleet' || atSea ? 'sea' : 'land';
+      rec.atSea = atSea;
       if (rec.pos[0] !== a.pos[0] || rec.pos[1] !== a.pos[1]) {
-        const path = this.grid.find(rec.pos, a.pos, mode);
+        // a voyage this turn follows the sea lane the engine planned, then the road from the beach
+        const sea = a.motion?.sea;
+        const path = sea?.length > 1 ? this.voyagePath(sea, rec.pos, a.pos, atSea) : this.grid.find(rec.pos, a.pos, mode);
         // during the turn's replay the march follows the day counter (reelF), not the clock
         rec.anim = this.reelHold ? { path, scrub: true, start: a.motion?.start ?? 0, end: a.motion?.end ?? 1 } : { path, t0: performance.now(), dur: 1800 + Math.min(2500, pathLength(path) * 4) };
         // the road it took stays drawn behind it until it moves again: where it went, and where it stopped
@@ -448,7 +453,9 @@ export class MapScene {
       rec.pos = [...a.pos];
       if (rec.route) { this.scene.remove(rec.route); rec.route = null; }
       if (a.dest) {
-        const path = this.grid.find(a.pos, a.dest, mode);
+        // bound over the sea: the lane to the landing, then the road on
+        const v = a.type !== 'fleet' && a.sea?.path?.length > 1 && a.sea.phase !== 'to_port' ? a.sea : null;
+        const path = v ? [...this.voyagePath(v.path, a.pos, v.landing, true), ...this.grid.find(v.landing, a.dest, 'land').slice(1)] : this.grid.find(a.pos, a.dest, mode);
         rec.route = this.routeMesh(path, a.owner === s.meta.player ? '#f6e27a' : this.atWarWith(a.owner) ? '#ff5a44' : '#e8e0d0');
         this.scene.add(rec.route);
       }
@@ -486,6 +493,14 @@ export class MapScene {
       fragmentShader: 'uniform vec3 uColor; varying vec2 vUv; void main(){ float edge = smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y); gl_FragColor = vec4(uColor, edge * 0.55); }',
     });
     const g = this.ribbon(path, 0.7, m, 0.5); g.renderOrder = 2; return g;
+  }
+  // The way a host crosses the sea: from where it stands along the lane the engine planned (shared/sea.js), ending at
+  // `to` if it is still at sea, else at the landing and on by road.
+  voyagePath(sea, from, to, stillAtSea) {
+    const near = (p) => { let bi = 0, bd = Infinity; sea.forEach((q, i) => { const d = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2; if (d < bd) { bd = d; bi = i; } }); return bi; };
+    const i0 = near(from);
+    if (stillAtSea) { const i1 = Math.max(i0, near(to)); return [from, ...sea.slice(i0 + 1, i1 + 1), to]; }
+    return [from, ...sea.slice(i0 + 1), ...this.grid.find(sea[sea.length - 1], to, 'land').slice(1)];
   }
   routeMesh(path, color) {
     const m = new THREE.ShaderMaterial({
@@ -840,7 +855,7 @@ export class MapScene {
         if (t >= 1) rec.anim = null;
       }
       // a host resting at a castle camps before its gates, not inside the keep
-      if (!rec.anim && a.type !== 'fleet') {
+      if (!rec.anim && a.type !== 'fleet' && !rec.atSea) {
         for (const st of this.settlements.values()) {
           const rr = (st.radius || 0) * st.group.scale.x; if (!rr) continue;
           const dx = p[0] - st.group.position.x, dz = p[1] - st.group.position.z;
@@ -852,11 +867,11 @@ export class MapScene {
       const idx = stacks.get(key) || 0; stacks.set(key, idx + 1);
       if (idx) { const ang = idx * 2.1; const r = 5 * rec.group.scale.x; p = [p[0] + Math.cos(ang) * r, p[1] + Math.sin(ang) * r]; }
 
-      const y = a.type === 'fleet' ? WATER_LEVEL + Math.sin(time * 1.3 + id.length) * 0.15 : this.groundAt(p[0], p[1]);
+      const y = a.type === 'fleet' || rec.atSea ? WATER_LEVEL + Math.sin(time * 1.3 + id.length) * 0.15 : this.groundAt(p[0], p[1]);
       rec.group.position.set(p[0], y, p[1]);
       if (heading !== null) rec.group.rotation.y = -heading + Math.PI / 2;
       // a marching host strides: the files rise and fall and sway a little; at rest they stand still
-      const marching = !!rec.anim && a.type !== 'fleet';
+      const marching = !!rec.anim && a.type !== 'fleet' && !rec.atSea;
       for (const m of rec.group.children) if (m.isInstancedMesh) { m.position.y = marching ? Math.abs(Math.sin(time * 7 + m.id)) * 0.09 : 0; m.rotation.z = marching ? Math.sin(time * 3.5) * 0.02 : 0; }
       rec.label.pos.set(p[0], y + 6 * rec.group.scale.x, p[1]);
     }

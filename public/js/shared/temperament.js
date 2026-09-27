@@ -10,46 +10,25 @@
 // The prompt then tells the model the outcome and the manner; the server holds the model to the outcome
 // (a refusal cannot sign a pact; an agreement is recorded even if the model forgets).
 import { personaFor } from '../../data/histories.js';
-import { natureOf } from '../../data/natures.js';
+import { natureOf, swayOf, NATURE_KEYS } from '../../data/natures.js';
+import { archetypeNature, archetypeSway } from '../../data/archetypes.js';
 import { DEMEANOURS, REGION_SPEECH } from '../../data/demeanours.js';
 import { disposition } from './diplomacy.js';
 import { realmTotals } from './world.js';
 
 const clamp = (v, a = 0, b = 100) => Math.max(a, Math.min(b, v));
-const level = (s, table, dflt) => { s = String(s || '').toLowerCase(); for (const [re, v] of table) if (re.test(s)) return v; return dflt; };
 
 // ── Temperament: a person's nature as numbers (0..1) ──
+// Written data only (docs/gdd/08-characters-politics.md §2): the principal characters' natures and what sways them are
+// in data/natures.js; everyone else is played by an archetype (data/archetypes.js: role, country, trait words). The
+// persona's prose (data/histories.js) is for the prompts, never read for numbers.
 export function temperament(c) {
-  const P = personaFor(c); const t = String(c.traits || '').toLowerCase(); const dm = DEMEANOURS[c.id];
-  // for those without a written nature, their manner (data/demeanours.js) and traits speak for them
-  const manner = `${dm?.reg || ''} ${dm?.never || ''} ${t}`.toLowerCase();
-  const courage0 = level(P.courage, [[/coward|timid|avoids danger|lets others fight/, 0.15], [/patient|cautious|hides it|mild/, 0.35], [/once brave|boastful|in boast|for her children|when it counts|growing/, 0.5], [/fearless|reckless|unbending/, 0.95], [/brave/, 0.75]], 0.55);
-  const derived = !P.history || P.history === c.bio; // personaFor() read it from traits, not from the books
-  const courage = derived && /fierce|fanatic|zealous|hard|fearless|brutal|bold|warrior/.test(manner) ? Math.max(courage0, 0.8) : derived && /nervous|timid|craven|frightened/.test(manner) ? Math.min(courage0, 0.25) : courage0;
-  const pride = level(P.pride, [[/immense|arrogant|vain|contempt|grandiose|loud and proud/, 0.92], [/proud|wounded|touchy|jealous|resentful|prickly|insecure/, 0.78], [/humble|modest/, 0.2], [/hid|quiet|wry/, 0.55]], 0.5);
-  const wits = level(P.wits, [[/not very clever|not clever|dull|foolish|narrow|simple|shallow/, 0.2], [/brilliant/, 0.92], [/sharp|shrewd|clever|cunning|learned|wise|quick|capable|perceptive|practical/, 0.68]], 0.5);
-  const guile = level(P.guile, [[/master schemer/, 0.95], [/schemer|cunning|corrupt|lies|charming schemer/, 0.75], [/honest|none|blunt/, 0.12], [/guarded|secretive|hide|mocking/, 0.5]], 0.45);
-  const volatility = /^\s*(cold|calm|patient|controlled|never)/i.test(P.temper || '') ? 0.15 : level(P.temper, [[/volatile|hot|savage|fierce|hysterical|rage|cruel|passionate|querulous|spiteful|bluster/, 0.85], [/never|cold|calm|patient|controlled|steady|gentle|mild|weary|easy/, 0.15]], 0.45);
-  const warmth = level(`${P.temper} ${t} ${dm?.reg || ''}`, [[/cold|contempt|cruel|savage|petulant|sneer|querulous|shrill|bitter|surly|withering|cutting|brutal|harsh|grim|humourless/, 0.18], [/jovial|genial|warm|gentle|kind|charming|generous|easy|earnest|courteous|gracious/, 0.8]], 0.5);
-  const stubbornSrc = `${P.weakness} ${P.courage} ${P.temper} ${t} ${dm?.never || ''}`.toLowerCase();
-  const stubborn = clamp(pride * 0.5 + (1 - guile) * 0.1 + (/stubborn|unbend|inflexib|grudge|never forgive|will not bend|headstrong|will not be told|fanatic|zealous|bend to|nothing for nothing|trusts no one/.test(stubbornSrc + ' ' + manner) ? 0.35 : 0) + (courage > 0.8 ? 0.1 : 0), 0, 1);
-  const sw = `${P.swayedBy} ${P.weakness}`.toLowerCase();
-  const sway = {
-    flattery: /flatter|admiration|vain|called king|respect|recognition|approval/.test(sw) || /vain|pompous/.test(t),
-    gold: /gold|coin|bribe|advantage|trade|food|steel/.test(sw) || /greedy/.test(t),
-    fear: /fear|safety|safe/.test(sw),
-    duty: /duty|oath|law|justice|rights|loyal/.test(sw),
-    honour: /honou?r/.test(sw),
-    family: /family|children|son|daughter|\bkin\b|sister|legacy|his people|her people/.test(sw),
-    faith: /\bfaith\b|\bgods?\b|lord of light|r'hllor/.test(sw),
-    power: /power|crown|advancement|throne|legacy|climb|winning side/.test(sw),
-    vengeance: /vengeance|revenge/.test(sw),
-    strength: /strength|boldness|courage|victory/.test(sw),
-  };
-  // the principal characters' natures are written down (data/natures.js): those numbers win over the prose reading
+  const P = personaFor(c);
   const N = natureOf(c.id);
-  if (N) return { courage: N.courage, pride: N.pride, wits: N.wits, guile: N.guile, volatility: N.temper, warmth: N.warmth, stubborn: N.stubbornness, honesty: N.honesty, ambition: N.ambition, piety: N.piety, sway, persona: P };
-  return { courage, pride, wits, guile, volatility, warmth, stubborn, sway, persona: P };
+  const row = N ? null : archetypeNature(c);
+  const X = N || Object.fromEntries(NATURE_KEYS.map((k, i) => [k, row[i] / 10]));
+  const sway = swayOf(c.id) || archetypeSway(c);
+  return { courage: X.courage, pride: X.pride, wits: X.wits, guile: X.guile, volatility: X.temper, warmth: X.warmth, stubborn: X.stubbornness, honesty: X.honesty, ambition: X.ambition, piety: X.piety, sway, persona: P };
 }
 
 // ── What the player's words are ──
@@ -271,17 +250,22 @@ export function holdToVerdict(state, c, stance, changes) {
 
 /** A few words for a person's nature, for the character sheet and the audience header. */
 export function natureTags(T) {
-  const tags = [];
-  tags.push(T.courage >= 0.9 ? 'fearless' : T.courage >= 0.7 ? 'brave' : T.courage <= 0.2 ? 'craven' : T.courage <= 0.4 ? 'cautious' : null);
-  tags.push(T.pride >= 0.9 ? 'arrogant' : T.pride >= 0.75 ? 'proud' : T.pride <= 0.25 ? 'humble' : null);
-  tags.push(T.wits >= 0.9 ? 'brilliant' : T.wits >= 0.65 ? 'shrewd' : T.wits <= 0.25 ? 'dim' : null);
-  tags.push(T.guile >= 0.9 ? 'a schemer' : T.guile >= 0.7 ? 'cunning' : (T.honesty == null ? T.guile <= 0.15 : false) ? 'honest' : null);
-  if (T.honesty != null) tags.push(T.honesty >= 0.8 ? 'honest' : T.honesty <= 0.2 ? 'deceitful' : null);
-  // calm is not cruel: only the calm AND cold are cold-blooded
-  tags.push(T.volatility >= 0.8 ? 'hot-tempered' : T.volatility <= 0.2 ? (T.warmth <= 0.3 ? 'cold-blooded' : 'even-tempered') : null);
-  tags.push(T.warmth >= 0.75 ? 'warm' : T.warmth <= 0.2 ? 'unfriendly' : null);
-  tags.push(T.stubborn >= 0.75 ? 'stubborn' : T.stubborn <= 0.3 ? 'pliable' : null);
-  const sway = Object.keys(T.sway).filter((k) => T.sway[k]);
-  return { tags: tags.filter(Boolean), sway };
+  // a pure reading of the scales (GDD 08 §2.2), most telling first: the card shows the first four
+  const tags = [
+    T.courage >= 0.9 ? 'fearless' : T.courage >= 0.7 ? 'brave' : T.courage <= 0.2 ? 'craven' : T.courage <= 0.35 ? 'cautious' : null,
+    T.honesty >= 0.8 ? 'honest' : T.honesty <= 0.2 ? 'deceitful' : null,
+    T.guile >= 0.9 ? 'a schemer' : T.guile >= 0.7 ? 'cunning' : null,
+    T.wits >= 0.9 ? 'brilliant' : T.wits >= 0.7 ? 'shrewd' : T.wits <= 0.25 ? 'dim' : null,
+    T.pride >= 0.9 ? 'arrogant' : T.pride >= 0.75 ? 'proud' : T.pride <= 0.25 ? 'humble' : null,
+    // calm is not cruel: only the calm AND cold are cold-blooded
+    T.volatility >= 0.7 ? 'hot-tempered' : T.volatility <= 0.2 ? (T.warmth <= 0.3 ? 'cold-blooded' : 'even-tempered') : null,
+    T.warmth >= 0.75 ? 'warm' : T.warmth <= 0.2 && !(T.volatility <= 0.2) ? 'cold' : null,
+    T.stubborn >= 0.8 ? 'stubborn' : T.stubborn <= 0.3 ? 'pliable' : null,
+    T.sway?.duty ? 'dutiful' : null,
+    T.ambition >= 0.8 ? 'ambitious' : null,
+    T.piety >= 0.8 ? 'devout' : null,
+  ].filter(Boolean);
+  const sway = Object.keys(T.sway || {}).filter((k) => T.sway[k]);
+  return { tags, sway };
 }
 export const VERDICT_LABEL = { obey: 'Obeys', agree: 'Agrees', bargain: 'Names a price', stall: 'Puts you off', refuse: 'Refuses', rage: 'Refuses in anger', yield: 'Gives in', dismiss: 'Ends the audience' };

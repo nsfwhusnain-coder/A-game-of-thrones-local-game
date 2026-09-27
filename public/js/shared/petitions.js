@@ -60,7 +60,7 @@ export function realmPetition(state) {
       const v = pick(vas);
       return {
         title: 'A knight accused', from: v.lord,
-        text: `A sworn knight of House ${v.name} is accused by the smallfolk of burning a village and taking a miller's daughter. ${lordOf(v).name} asks that the matter be left to him; the villagers ask for the lord's justice.`,
+        text: `A sworn knight of House ${v.name} is accused by the smallfolk of burning a village and taking a miller's daughter. ${lordOf(v).name} asks that the matter be left to ${isFemale(lordOf(v)) ? 'her' : 'him'}; the villagers ask for the lord's justice.`,
         options: [
           { label: 'Try the knight yourself', hint: 'Justice seen to be done; the vassal feels slighted', fx: [{ unrestAll: -6 }, { rel: [v.id, -8] }, { loyalty: [v.lord, -5] }] },
           { label: `Leave it to House ${v.name}`, hint: 'Keeps the peace with your vassal; the smallfolk grumble', fx: [{ unrestAll: 5 }, { rel: [v.id, 6] }] },

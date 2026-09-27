@@ -40,7 +40,15 @@ export const SCENARIOS = {
       velaryon: { ships: 50 }, redwyne: { ships: 200, treasury: 200000, levies: 6000 }, hightower: { treasury: 400000, ships: 40, levies: 16000 },
       manderly: { treasury: 180000, ships: 25, levies: 7000 }, frey: { levies: 6000, treasury: 90000 }, bolton: { levies: 5000 },
       karstark: { levies: 4000 }, umber: { levies: 4000 }, royce: { levies: 8000 }, tarly: { levies: 7000 }, rowan: { levies: 6000 },
-      florent: { levies: 5000 }, oakheart: { levies: 4000 }, blackwood: { levies: 4000 }, bracken: { levies: 4000 }, mallister: { ships: 6, levies: 4000 }, waynwood: { levies: 4000 }, corbray: { levies: 4000 }, swann: { levies: 4000 }, caron: { levies: 4000 }, dondarrion: { levies: 3500 }, tarth: { levies: 3000 }, harlaw: { ships: 30, levies: 2500 }, grafton: { ships: 15 },
+      florent: { levies: 5000 }, oakheart: { levies: 4000 }, blackwood: { levies: 4000 }, bracken: { levies: 4000 }, mallister: { ships: 6, levies: 4000 }, waynwood: { levies: 4000 }, corbray: { levies: 4000 }, swann: { levies: 4000 }, caron: { levies: 4000 }, dondarrion: { levies: 3500 }, tarth: { levies: 3000, ships: 4 }, harlaw: { ships: 30, levies: 2500 }, grafton: { ships: 15 },
+      // Island lords keep boats of their own, or they could not reach their liege (docs/gdd/07-military.md §5, §9).
+      // src: the ironborn lords' longships (AFFC, the kingsmoot fleets; GDD 07 §9.1 "the lords' ~200 longships");
+      // the rest inferred: Bear Island's longships fought the ironborn, the Shield Islands guard the Mander's mouth,
+      // Celtigar's ships sailed with Stannis, the Sistermen are seafarers. Skagos keeps to itself: House Crowl has no
+      // ships that would carry a host, so its men wait for the realm's (shared/sea.js).
+      goodbrother: { ships: 30 }, drumm: { ships: 20 }, blacktyde: { ships: 15 }, saltcliffe: { ships: 15 }, orkwood: { ships: 15 },
+      mormont: { ships: 6 }, celtigar: { ships: 10 }, sunderland: { ships: 8 }, farman: { ships: 6 }, hewett: { ships: 5 },
+      serry: { ships: 5 }, grimm: { ships: 5 }, estermont: { ships: 4 },
       nights_watch: { treasury: 2000, levies: 0, menAtArms: 950, guard: 0, ships: 3, food: 12 },
       free_folk: { treasury: 0, levies: 90000, menAtArms: 0, guard: 0, ships: 0, food: 3 },
       braavos: { treasury: 10000000, levies: 20000, menAtArms: 3000, ships: 600, food: 12 },

@@ -3,6 +3,25 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — Phase A finished: islands need ships, people are data, canon in the books' order (WPs A8, A10, A11)
+
+- **A8 — The sea is no road.** An island lord's men no longer walk over the water: they take ship. House Mormont ferries
+  its 900 men across from Bear Island in its own boats and lands near Deepwood Motte; House Crowl of Skagos, with no
+  ships, waits while Lord Manderly's galleys come round from White Harbor, then lands near Last Hearth — and nobody from
+  Skagos pays "the price of the Wall" any more. The map draws a host at sea as its ships, on the sea lane the engine
+  planned. Any host sent to another island or shore does the same (own ships, a few boats making trips, the realm's
+  ships sent to fetch it, or it waits on the shore and says why). Island lords have small fleets of their own now.
+- **A10 — People are data.** Every character has a sex (Old Nan, Chataya and Daenerys's handmaids are no longer "he"),
+  and every line the engine writes uses it. All 120 characters with a written history have their nature written down
+  as numbers (and what sways them); everyone else is played by an archetype of their role and country and their written
+  traits. Eddard Stark reads "brave, honest, stubborn, dutiful"; nothing is guessed from prose any more.
+- **A11 — Canon in order.** The books' great events come in the books' order and in the windows of the GDD: the Red
+  Wedding (late 299) before the Purple Wedding (300); the dragons hatch early in 299; the dead rise at Castle Black in
+  early 299 whatever the "cold" meter says.
+- Dev: `node scripts/screens.js` takes the PR screenshots at 1920×1080 and 1366×768; `/?game=<id>` opens a save.
+- Owner to verify: `npm start` → a Stark game → *Call the banners* (all) → end a few turns: House Mormont's ships cross
+  from Bear Island, House Crowl waits for White Harbor's ships; the chronicle says so, and no one crosses the Wall.
+
 ## 2026-09-27 — Phase A: the worst bugs, fixed in the current build
 
 - **Windows:** the server no longer crashes on start on native Windows (`fileURLToPath` everywhere); all 103 tests pass

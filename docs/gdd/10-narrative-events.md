@@ -45,13 +45,17 @@ Beat = {
 
 ### 3.1 Timekeeping
 
-The scenario starts on the **1st day of the 8th moon, 298 AC**. Canon dates follow the conventional reconstruction
-(A Wiki of Ice and Fire's year pages): **298 AC** — Robert's visit, Bran's fall, the Hand's tourney, Tyrion's seizure,
-the Riverlands burned, Robert's death, Ned's arrest, the Green Fork, the Whispering Wood, the Camps, Robb crowned;
-**299 AC** — Ned executed (early), the red comet, Renly's death, the ironborn in the North, the Blackwater, Winterfell
-sacked, the Red Wedding (late), Balon's death, the dragons hatched (early), autumn declared; **300 AC** — the Purple
-Wedding, Tywin's death, the battle at the Wall, the kingsmoot, winter. The current `plots.js` places the Purple Wedding
-before the Red Wedding and several 299 events in 298 (B-19); the table below is authoritative.
+The scenario starts on the **1st day of the 8th moon, 298 AC**. **The books' order is binding; the dates are the
+game's** ([DECISIONS.md#D-002](DECISIONS.md)). The conventional reconstruction (A Wiki of Ice and Fire's year pages) puts
+all of *A Game of Thrones* in 298 AC, but the game begins with the King's progress still at the Twins, and a royal
+progress at ten miles a day cannot reach Winterfell, return and see the Hand arrested within the five moons left of the
+year. So in play: **298 AC** — Robert's visit, Bran's fall, the Hand's tourney, Tyrion's seizure, the Riverlands burned,
+Robert's death, Ned's arrest, the dragons' golden crown; **early 299 AC** — the North's banners, the Twins, Ned
+executed, the Whispering Wood and the Camps, Robb crowned, the dragons hatched, the dead at Castle Black; **299 AC** —
+the red comet, Renly's death, the ironborn in the North, the Blackwater, Winterfell sacked, the Red Wedding (late),
+Balon's death, autumn declared; **300 AC** — the Purple Wedding, Tywin's death, the battle at the Wall, the kingsmoot,
+winter. The table below is authoritative. *(B-19 — the Purple Wedding before the Red Wedding — fixed in WP A11:
+`plots.js` keeps these windows and this order; `tests/canon.test.js`.)*
 
 ## 4. The canon beats, 298–300 AC
 

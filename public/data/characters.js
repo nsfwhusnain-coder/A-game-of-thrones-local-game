@@ -3,8 +3,19 @@
 //        council, commander, spymaster, envoy, bastard, priest, sellsword, ruler, wildling
 // loc: holding id or place alias (see houses.js)
 
+// Sex is data, not a guess from a title (docs/gdd/03-architecture.md §3.2; bug B-22): the engine's pronouns and the
+// succession read it. These are the women and girls of the roster; everyone else is male. (A guess once made Old Nan,
+// Chataya and Daenerys's handmaids "he".)
+export const WOMEN = new Set([
+  'catelyn_stark', 'sansa_stark', 'arya_stark', 'maege_mormont', 'dacey_mormont', 'meera_reed', 'donella_hornwood', 'barbrey_dustin',
+  'ygritte', 'val', 'cersei_lannister', 'myrcella_baratheon', 'selyse_florent', 'shireen_baratheon', 'melisandre', 'brienne_tarth',
+  'jeyne_westerling', 'shella_whent', 'lysa_arryn', 'anya_waynwood', 'olenna_tyrell', 'margaery_tyrell', 'arwyn_oakheart',
+  'arianne_martell', 'ellaria_sand', 'obara_sand', 'asha_greyjoy', 'daenerys_targaryen', 'septa_mordane', 'old_nan', 'jeyne_poole',
+  'chataya', 'genna_lannister', 'irri', 'jhiqui', 'doreah',
+]);
+
 const C = (id, name, house, title, age, loc, roles, traits, bio, extra = {}) => ({
-  id, name, house, title, age, loc, roles, traits, bio, alive: true, ...extra,
+  id, name, house, sex: WOMEN.has(id) ? 'f' : 'm', title, age, loc, roles, traits, bio, alive: true, ...extra,
 });
 
 export const CHARACTERS = [
