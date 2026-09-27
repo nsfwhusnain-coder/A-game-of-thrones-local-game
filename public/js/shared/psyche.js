@@ -1,6 +1,7 @@
 import { pronouns } from './people.js';
 import { random } from '../engine/rng.js';
 import { partyOf, isForce, forces, together, placeOf as placeAt } from '../engine/parties.js';
+import { fact } from '../engine/facts/log.js';
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 // THE TOLL A WAR TAKES ON A MIND
 //
@@ -141,10 +142,10 @@ export function psycheTick(state, days) {
     const wasBand = bandOf(before);
     if (band !== wasBand && (c.house === player || c.id === state.houses?.[player]?.lord || isKnownTo(state, c, player))) {
       const line = BAND_TEXT[band]?.(c);
-      if (line) events.push({
+      if (line) events.push(fact(state, 'behaviour', {
         title: `${c.name} is not ${pronouns(c).himself}`,
         text: line, where: placeOf(state, c), importance: c.house === player ? 3 : 2, type: 'court', houses: [c.house], mind: true,
-      });
+      }, { actors: [c.id], vis: { scope: 'local' } }));
     }
     // a mind under siege makes worse decisions, trusts less, and drives its own people away
     if (c.paranoia > 55) {
@@ -157,11 +158,11 @@ export function psycheTick(state, days) {
     if (c.stress > 85 && random() < 0.12 * (days / 30)) {
       // the body keeps the account: a collapse, a fever, a fit, a night of wine that does not end
       c.status = c.status === 'free' ? 'wounded' : c.status;
-      events.push({
+      events.push(fact(state, 'illness', {
         title: `${c.name} collapses`,
         text: `${c.name} was found on the floor of the solar at dawn, grey-faced and shaking, and could not be roused for an hour. The maester speaks of the strain, and of rest that will not be taken.`,
         where: placeOf(state, c), importance: c.house === player ? 4 : 2, type: 'court', houses: [c.house], mind: true,
-      });
+      }, { actors: [c.id], data: { why: 'strain' } }));
       c.stress = clamp(c.stress - 25, 0, 100);
       applied.push({ op: 'psyche', text: `${c.name} is worn past bearing` });
     }

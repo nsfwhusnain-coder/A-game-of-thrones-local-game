@@ -53,6 +53,16 @@ const SCENARIOS = {
     const at = s.parties[host.id]?.pos || s.holdings.stark.pos;
     return { id, focus: [at[0] + 20, at[1] - 60], dist: 520 };
   },
+  // the glass turned back (WP B3): three turns played, and the undo button asks how far to go
+  async undo() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+    for (const span of ['4d', '5d', '6d']) await api(`/games/${id}/advance`, { span, orders: [] });
+    return { id, focus: state.holdings.stark.pos, dist: 700, page: async (page) => { await page.click('[data-action="undo"]'); await page.waitForSelector('.undo-levels [data-undo="3"]'); } };
+  },
+  // beginning a chronicle, ironman or not (WP B3)
+  async begin() {
+    return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); } };
+  },
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });

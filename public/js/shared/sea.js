@@ -7,6 +7,7 @@ import { landmassOf, sameLand, bestLanding, shoreCell, seaMilesTo, alongPath, pa
 import { placeName, nearestHolding } from './world.js';
 
 import { SEA } from '../../data/balance.js';
+import { fact } from '../engine/facts/log.js';
 
 export const SHIP_CARRIES = SEA.shipCarries;     // men a ship carries (data/balance.js)
 export const SAIL = SEA.sail;                    // miles a day at sea, by kind of ship (07 §9.1)
@@ -124,14 +125,14 @@ export function sail(state, a, { turnStart, span, from = 0, mine = false }) {
   const shore = placeName(state, a.at || nearestHolding(state, a.pos));
   const end = turnStart + span; let day = turnStart + from;
   if (v.phase === 'stranded') {
-    if (!v.told && mine) events.push({ day: from + 1, title: `${who} cannot cross the sea`, text: `${a.name} (${a.men.toLocaleString()} men) waits at ${shore}: ${v.why === 'no ships' ? 'there are no ships to carry them, and none in the realm to spare' : 'there is no way to them by sea'}.`, where: a.at || null, importance: 3, type: 'war', houses: [a.owner] });
+    if (!v.told && mine) events.push(fact(state, 'delayed', { day: from + 1, title: `${who} cannot cross the sea`, text: `${a.name} (${a.men.toLocaleString()} men) waits at ${shore}: ${v.why === 'no ships' ? 'there are no ships to carry them, and none in the realm to spare' : 'there is no way to them by sea'}.`, where: a.at || null, importance: 3, houses: [a.owner] }, { actors: [a.commander], data: { party: a.id, why: v.why || 'no ships' } }));
     v.told = true;
     return { done: false, used: span, events, lines };
   }
   if (v.phase === 'waiting') {
     if (!v.told && mine) {
       const lender = v.kind === 'realm' ? state.houses[v.by] : null;
-      events.push({ day: from + 1, title: `${who} wait for ships`, text: lender ? `${a.name} (${a.men.toLocaleString()} men) waits at ${shore} while House ${lender.name} sends ${v.ships} ships from ${placeName(state, v.lender)} to carry them over (~${v.wait} days).` : `${a.name} has only ${v.ships} ${v.ships === 1 ? 'ship' : 'ships'}; the men cross in ${Math.ceil(a.men / (v.ships * SHIP_CARRIES))} trips (~${v.wait} days before the last are over).`, where: a.at || null, importance: 2, type: 'war', houses: [a.owner] });
+      events.push(fact(state, 'delayed', { day: from + 1, title: `${who} wait for ships`, text: lender ? `${a.name} (${a.men.toLocaleString()} men) waits at ${shore} while House ${lender.name} sends ${v.ships} ships from ${placeName(state, v.lender)} to carry them over (~${v.wait} days).` : `${a.name} has only ${v.ships} ${v.ships === 1 ? 'ship' : 'ships'}; the men cross in ${Math.ceil(a.men / (v.ships * SHIP_CARRIES))} trips (~${v.wait} days before the last are over).`, where: a.at || null, importance: 2, houses: [a.owner] }, { actors: [a.commander], data: { party: a.id, why: 'ships', wait: v.wait, lender: lender?.id || null } }));
       v.told = true;
     }
     if (v.ready >= end) return { done: false, used: span, events, lines };
@@ -139,7 +140,7 @@ export function sail(state, a, { turnStart, span, from = 0, mine = false }) {
   }
   if (v.phase === 'sailing') {
     if (v.start == null) v.start = day;
-    if (!v.toldSail && mine) events.push({ day: Math.max(1, v.start - turnStart + 1), title: `${who} take ship`, text: `${a.name} (${a.men.toLocaleString()} men) sails from ${shore} ${v.landingName.replace(/^at /, 'for ').replace(/^on the coast near /, 'for the coast near ')} (~${v.days} days at sea).`, where: a.at || null, importance: 2, type: 'war', houses: [a.owner] });
+    if (!v.toldSail && mine) events.push(fact(state, 'embarked', { day: Math.max(1, v.start - turnStart + 1), title: `${who} take ship`, text: `${a.name} (${a.men.toLocaleString()} men) sails from ${shore} ${v.landingName.replace(/^at /, 'for ').replace(/^on the coast near /, 'for the coast near ')} (~${v.days} days at sea).`, where: a.at || null, importance: 2, houses: [a.owner] }, { actors: [a.commander], data: { party: a.id, men: a.men, ships: v.ships, days: v.days } }));
     v.toldSail = true;
     const f = Math.min(1, (end - v.start) / v.days);
     a.pos = alongPath(v.path, f); a.at = null;
@@ -151,7 +152,7 @@ export function sail(state, a, { turnStart, span, from = 0, mine = false }) {
     if (f < 1) return { done: false, used: span, events, lines };
     // landed: the land march goes on from the beach with whatever days are left
     a.pos = [...v.landing];
-    if (mine) events.push({ day: Math.max(1, Math.min(span, hi)), title: `${who} land ${v.landingName}`, text: `${a.name} (${a.men.toLocaleString()} men) comes ashore ${v.landingName} and marches on.`, where: nearestHolding(state, a.pos), importance: 2, type: 'war', houses: [a.owner] });
+    if (mine) events.push(fact(state, 'landed', { day: Math.max(1, Math.min(span, hi)), title: `${who} land ${v.landingName}`, text: `${a.name} (${a.men.toLocaleString()} men) comes ashore ${v.landingName} and marches on.`, where: nearestHolding(state, a.pos), importance: 2, houses: [a.owner] }, { actors: [a.commander], data: { party: a.id, men: a.men }, pos: a.pos }));
     a.landed = { path: a.motion.path, from: lo / span, to: hi / span };
     delete a.sea;
     return { done: true, used: hi, events, lines };

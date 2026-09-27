@@ -6,6 +6,9 @@ import { temperament } from '../public/js/shared/temperament.js';
 import { exposePlot } from '../public/js/shared/treachery.js';
 import { random, shuffle } from '../public/js/engine/rng.js';
 import { partyOf } from '../public/js/engine/parties.js';
+import { emit } from '../public/js/engine/facts/log.js';
+
+const BY_THE_LORD = { type: 'order', ref: 'court' }; // the lord's own act, settled on the spot
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = (a) => a[Math.floor(random() * a.length)];
@@ -28,7 +31,8 @@ export function gift(state, { to, gold: amount }) {
   spend(state, p, n, 'A gift');
   const ch = [{ op: 'figure', house, field: 'treasury', delta: n, source: `A gift from House ${me.name}` }, { op: 'relation', a: p, b: house, delta: warm, reason: `a gift of ${n} dragons` }];
   if (lord) ch.push({ op: 'character', id: lord.id, opinion: clamp((lord.opinion || 0) + warm, -100, 100), note: `Received a gift of ${n} dragons from House ${me.name}.` });
-  applyChanges(state, ch, { source: 'Your gift' });
+  applyChanges(state, ch, { source: 'Your gift', cause: BY_THE_LORD });
+  emit(state, 'gift', { actors: [me.lord, lord?.id], houses: [p, house], data: { gold: n, warmth: warm }, cause: BY_THE_LORD, text: `House ${me.name} sends ${n.toLocaleString('en-GB')} gold dragons as a gift to ${lord ? lord.name : `House ${h.name}`}.` });
   if (lord && state.moods?.[lord.id]) state.moods[lord.id].trust = clamp(state.moods[lord.id].trust + warm, 0, 100);
   if (state.plotting?.[house]) state.plotting[house].pressure = Math.max(0, state.plotting[house].pressure - warm * 1.5); // gold soothes a wavering oath
   const read = warm >= 18 ? 'is much pleased' : warm >= 8 ? 'is pleased' : T?.pride > 0.85 ? 'accepts it coolly; it is small to them' : 'accepts it';
@@ -51,7 +55,8 @@ export function feast(state) {
     ch.push({ op: 'relation', a: a.id, b: b.id, delta: -10, reason: 'a brawl at your feast' });
     incident = ` At the high table, ${state.characters[a.lord].name} and ${state.characters[b.lord].name} came to blows over ${pick(['an old boundary', 'a toast to the wrong king', 'a daughter', 'a horse race', 'precedence at table'])}.`;
   }
-  applyChanges(state, ch, { source: 'Your feast' });
+  applyChanges(state, ch, { source: 'Your feast', cause: BY_THE_LORD });
+  emit(state, 'feast', { actors: [me.lord, ...vas.map((v) => v.lord)], houses: [p, ...vas.map((v) => v.id)], place: me.seat || null, data: { cost, brawl: !!incident }, cause: BY_THE_LORD, text: `${state.characters[me.lord]?.name || `House ${me.name}`} feasts ${vas.length} sworn lord${vas.length === 1 ? '' : 's'} at ${state.holdings[me.seat]?.name || 'the seat'}.${incident}` });
   return { text: `Hold a great feast at ${state.holdings[me.seat]?.name || 'my seat'} for my bannermen.`, note: `[Already done: the feast cost ${cost} dragons; each sworn lord's loyalty +4.${incident} Narrate the feast — who came, who did not, what was said in drink.]`, summary: `The feast is held (${cost.toLocaleString('en-US')} dragons). Your lords are glad of it.${incident}` };
 }
 
@@ -69,7 +74,9 @@ export function tourney(state) {
   if (champ) ch.push({ op: 'character', id: champ.id, note: `Champion of the tourney at ${state.holdings[me.seat]?.name}.`, opinion: clamp((champ.opinion || 0) + 10, -100, 100) });
   const fallen = knights.filter((k) => k !== champ);
   if (fallen.length && random() < 0.12) { const k = pick(fallen); ch.push({ op: 'character', id: k.id, alive: false, cause: 'a lance through the throat in the lists' }, { op: 'relation', a: p, b: k.house, delta: -4, reason: 'a knight dead in your lists' }); blood = ` ${k.name} died in the lists, a splinter through the throat.`; }
-  applyChanges(state, ch, { source: 'Your tourney' });
+  emit(state, 'tourney', { actors: [me.lord], houses: [p, ...guests.map((g) => g.id)], place: me.seat || null, data: { cost, guests: guests.length }, cause: BY_THE_LORD, text: `House ${me.name} holds a tourney at ${state.holdings[me.seat]?.name || 'its seat'}; ${guests.length} houses send knights.` });
+  applyChanges(state, ch, { source: 'Your tourney', cause: BY_THE_LORD });
+  if (champ) emit(state, 'tourney_result', { actors: [champ.id], houses: [p, champ.house], place: me.seat || null, cause: BY_THE_LORD, text: `${champ.name} is champion of the tourney at ${state.holdings[me.seat]?.name || 'the seat'}.` });
   me.prestige = (me.prestige || 0) + 5;
   return { text: `Hold a tourney at ${state.holdings[me.seat]?.name || 'my seat'}.`, note: `[Already done: 5,000 dragons in purses; ${guests.length} houses sent knights; ${champ ? champ.name + ' was champion' : 'no champion of note'}.${blood} Narrate the lists, the melee, the queen of love and beauty.]`, summary: `The tourney is held. ${champ ? `${champ.name} is champion.` : ''}${blood}` };
 }
@@ -102,7 +109,8 @@ export function judge(state, { character, verdict }) {
     for (const v of vassalsOf(state, p)) { const l = state.characters[state.houses[v].lord]; if (!l?.alive) continue; const T = temperament(l); const d = T.guile < 0.3 && T.warmth > 0.5 ? -6 : T.warmth < 0.3 ? 3 : -2; ch.push({ op: 'character', id: l.id, loyalty: clamp((l.loyalty ?? 60) + d, -100, 100) }); }
     summary = `${c.name} is executed. House ${h?.name} will not forget it; your own lords take it each after their nature.`;
   } else throw new CourtError('Unknown judgement.');
-  applyChanges(state, ch, { source: 'Your judgement', protectPlayer: true });
+  emit(state, 'judgement', { actors: [me.lord, c.id], houses: [p, c.house], place: me.seat || null, data: { verdict }, cause: BY_THE_LORD, text: `${state.characters[me.lord]?.name || `House ${me.name}`} passes judgement on ${c.name}: ${{ release: 'freedom', ransom: 'ransom', wall: 'the Wall', execute: 'death' }[verdict]}.` });
+  applyChanges(state, ch, { source: 'Your judgement', protectPlayer: true, cause: BY_THE_LORD });
   const word = { release: 'release', ransom: 'ransom', wall: 'send to the Wall', execute: 'execute' }[verdict];
   return { text: `JUDGEMENT: I ${word} ${c.name}.`, note: `[Already done: ${summary} Narrate how it is done and how the realm hears of it.]`, summary };
 }
@@ -116,7 +124,7 @@ export function declareWar(state, { house, reason }) {
   if (me.liege === house) ch.push({ op: 'liege', house: p, liege: null });
   ch.push({ op: 'war', status: 'start', name: `The war of ${me.name} against ${h.name}`, attackers: [p], defenders: [house], reason: reason || 'declared by House ' + me.name });
   ch.push({ op: 'relation', a: p, b: house, delta: -40, reason: 'war declared' });
-  applyChanges(state, ch, { source: 'Your declaration', protectPlayer: false, playerChoseAllegiance: true });
+  applyChanges(state, ch, { source: 'Your declaration', protectPlayer: false, playerChoseAllegiance: true, cause: BY_THE_LORD });
   return { text: `Declare war on House ${h.name}.${reason ? ' Casus belli: ' + reason : ''}`, note: `[Already done: war is declared${rebelling ? ' — this is REBELLION against your liege' : ''}. Narrate how each house reacts: who joins whom, who waits.]`, summary: `War is declared on House ${h.name}.${rebelling ? ' You are in rebellion.' : ''}` };
 }
 
@@ -140,7 +148,7 @@ export function scheme(state, { house, kind }) {
     if (kind === 'secrets') {
       const lord = state.characters[h.lord];
       const target = [lord, ...Object.values(state.characters).filter((c) => c.house === house && c.alive)].find((c) => c?.secret && !c.secretKnown);
-      if (target) { applyChanges(state, [{ op: 'character', id: target.id, revealSecret: true }]); return { text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} learned ${target.name}'s secret: ${target.secret}. Only the player knows. Narrate nothing of it openly.]`, summary: `${who} brings you ${target.name}'s secret: ${target.secret}` }; }
+      if (target) { applyChanges(state, [{ op: 'character', id: target.id, revealSecret: true }], { cause: BY_THE_LORD }); return { text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} learned ${target.name}'s secret: ${target.secret}. Only the player knows. Narrate nothing of it openly.]`, summary: `${who} brings you ${target.name}'s secret: ${target.secret}` }; }
       return { text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} found nothing worth the gold.]`, summary: `${who} dug, and found nothing House ${h.name} hides that you did not know.` };
     }
     state.intel = state.intel || { parties: {}, spies: {} }; state.intel.spies[house] = state.meta.turn;
@@ -149,6 +157,7 @@ export function scheme(state, { house, kind }) {
   }
   if (roll < chance + (1 - chance) * 0.45) {
     applyChanges(state, [{ op: 'relation', a: p, b: house, delta: -15, reason: 'your spies were caught' }]);
+    emit(state, 'scheme_discovered', { actors: [sm?.id, h.lord], houses: [p, house], place: h.seat || null, vis: { scope: 'houses', houses: [p, house] }, data: { kind }, cause: BY_THE_LORD, text: `House ${h.name} catches agents of House ${me.name} in its household.` });
     return { text: `[SECRET] A scheme against House ${h.name}.`, note: `[Already done: the player's agents were CAUGHT by House ${h.name}. Narrate the discovery and their anger.]`, summary: `Your agents were caught in House ${h.name}'s household. They know who sent them.` };
   }
   return { text: `[SECRET] A scheme against House ${h.name}.`, note: `[Already done: the scheme came to nothing; no one noticed.]`, summary: `${who}'s agents came back with nothing. The gold is gone; no one noticed.` };
@@ -165,6 +174,8 @@ export function secrecy(state, { army, mode, to }) {
   if (mode === 'feint') {
     if (!state.holdings[to]) throw new CourtError('Where should the realm think it goes?');
     a.feint = to; delete a.secrecy;
+    // the word is spread and believed; what is true stays with the engine (the rumour's own fact says it is false)
+    emit(state, 'rumour', { houses: [p], place: to, data: { party: a.id, feint: to, false: true }, cause: BY_THE_LORD, text: `Word goes about that ${a.name} marches on ${pn(to)}.` });
     return { text: `Spread word that ${a.name} marches on ${pn(to)}.`, note: `[Already done: word is spread that ${a.name} marches on ${pn(to)}. Those who have not seen it believe it.]`, summary: `Word goes out that ${a.name} marches on ${pn(to)}.` };
   }
   throw new CourtError('Unknown order.');

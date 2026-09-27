@@ -102,6 +102,25 @@ test('a rider bound for an island takes ship, and is aboard while at sea', () =>
   assert.deepEqual(validate(s), [], 'aboard ship is no breach of invariant 3');
 });
 
+test('a rider at sea is not turned about mid-voyage, and a road that cannot be found leaves the old one standing', () => {
+  const s = fresh();
+  const theon = s.characters.theon_greyjoy;
+  const r = startRide(s, theon, 'greyjoy');
+  const [a, b] = r.route.sea; advance(r, (r.route.t[a] + r.route.t[b]) / 2); marchTick(s, { span: 0.001, turnStart: 0 });
+  const route = JSON.stringify(r.route);
+  // the lord recalls him while he is on the water (the soak found a rider left "camped" on the sea this way)
+  const out = applyChanges(s, [{ op: 'travel', character: 'theon_greyjoy', to: 'stark' }]);
+  assert.equal(out.applied.length, 0); assert.match(out.rejected[0].reason, /at sea, and can turn only when the ship makes port/);
+  assert.equal(JSON.stringify(r.route), route, 'the voyage goes on as it was');
+  assert.equal(r.march.to, 'greyjoy');
+  marchTick(s, { span: 30, turnStart: 0 });
+  assert.equal(theon.loc, 'greyjoy', 'and he lands where the ship was bound'); assert.deepEqual(validate(s), []);
+  // on land, a turn to somewhere no road reaches is refused and the ride goes on as before
+  const jon = s.characters.jon_snow; const ride = startRide(s, jon, 'nights_watch'); const was = JSON.stringify(ride.march);
+  assert.throws(() => startRide(s, jon, 'party:the_silence'), /no road or sea lane/); // a ship on the open sea: no rider reaches it
+  assert.equal(JSON.stringify(ride.march), was); assert.ok(ride.route, 'the old road stands');
+});
+
 test('a long journey by land may go by sea when a ship is clearly quicker — for a traveller, never a host', () => {
   const s = fresh();
   const ports = Object.values(s.holdings).filter((h) => h.coastal).map((h) => h.pos);

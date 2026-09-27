@@ -77,11 +77,11 @@ function renderHouseDetail() {
   const blurb = { crown: 'You sit the Iron Throne. Command the paramounts, tax the realm — and pay its crushing debts.', paramount: 'Rule a kingdom of the Seven. Your bannermen are many, and each has his own mind.', major: 'A great bannerman. Your liege needs you — perhaps more than you need him.', minor: 'A small house with big ambitions. Every alliance matters.', city_state: 'A Free City of merchants and intrigue.', order: 'Hold the Wall with too few men and too little bread.', tribe: 'Lead a host beyond the reach of kings.', exile: 'A crown without a kingdom. You have a name — and little else.', company: 'Sellswords for hire. Gold buys loyalty — until it doesn\'t.' }[h.rank] || '';
   $('#house-detail').innerHTML = `
     <div class="detail-hero"><img class="banner" src="${bannerURL(h.sigil, 80, 120)}" alt=""><div><h2>House ${esc(h.name)}</h2><div class="words">${esc(h.words ? '“' + h.words + '”' : '')}</div><div class="muted">${RANK_NAMES[h.rank] || ''} · ${REGION_NAMES[h.region] || h.region}</div></div></div>
-    ${lord ? `<div class="lord-card"><img src="${portraitURL({ ...lord, alive: true }, h, 160)}" alt=""><div style="flex:1;min-width:0"><div class="lc-k">You will play as</div><div class="lc-name">${esc(lord.name)}</div><div class="lc-title">${esc(lord.title || '')}</div><div class="lc-traits">${esc(lord.traits || '')}</div></div><button class="btn primary" id="begin">Begin ▶</button></div>` : '<button class="btn primary" id="begin">Begin ▶</button>'}
+    ${lord ? `<div class="lord-card"><img src="${portraitURL({ ...lord, alive: true }, h, 160)}" alt=""><div style="flex:1;min-width:0"><div class="lc-k">You will play as</div><div class="lc-name">${esc(lord.name)}</div><div class="lc-title">${esc(lord.title || '')}</div><div class="lc-traits">${esc(lord.traits || '')}</div></div><div class="begin-box"><button class="btn primary" id="begin">Begin ▶</button><label class="ironman" title="An ironman chronicle is written once: there is no undoing a turn."><input type="checkbox" id="ironman"> Ironman</label></div></div>` : '<div class="begin-box"><button class="btn primary" id="begin">Begin ▶</button><label class="ironman" title="An ironman chronicle is written once: there is no undoing a turn."><input type="checkbox" id="ironman"> Ironman</label></div>'}
     ${(() => { const b = briefFor(h, { houses: Object.fromEntries(HOUSES.map((x) => [x.id, x])) }); return `<p style="line-height:1.45">${esc(b.situation)}</p><div class="grid2"><div><h4>Strengths</h4>${b.strengths.map((x) => `<div style="font-size:0.88rem">✦ ${esc(x)}</div>`).join('')}</div><div><h4>Weaknesses</h4>${b.weaknesses.map((x) => `<div style="font-size:0.88rem">✧ ${esc(x)}</div>`).join('')}</div></div>`; })()}
     <div class="kv"><span class="k">Seat</span><span>${esc(h.seat || '— (landless)')}</span><span class="k">Liege</span><span>${liege ? esc(liege.name) : 'None'}</span><span class="k">Vassals</span><span>${vassals.length ? vassals.length + ' houses' : '—'}</span></div>
     ${people.length ? `<h4>Your people</h4><div class="portrait-row">${people.map((c) => `<div class="p" title="${esc(c.title)}"><img src="${portraitURL({ ...c, alive: true }, h, 96)}"><div>${esc(c.name.replace(/^(Ser|Maester|Lord|Lady|Grand Maester) /, '').split(' ')[0])}</div></div>`).join('')}</div>` : ''}`;
-  $('#begin').onclick = async () => { try { try { localStorage.setItem('wc-last-house', h.id); } catch { /* ignore */ } const r = await api('/games', { body: { scenario: 'agot_298', house: h.id } }); startGame(r.id, r.state); } catch (e) { toast(e.message, true); } };
+  $('#begin').onclick = async () => { try { try { localStorage.setItem('wc-last-house', h.id); } catch { /* ignore */ } const r = await api('/games', { body: { scenario: 'agot_298', house: h.id, ironman: !!$('#ironman')?.checked } }); startGame(r.id, r.state); } catch (e) { toast(e.message, true); } };
 }
 async function renderSaves() {
   const saves = await api('/saves');
@@ -165,7 +165,11 @@ app.renderOrders = renderOrders; app.renderTop = renderTop;
   let mine = null; try { mine = (await api('/version')).build; } catch { return; }
   setInterval(async () => { try { const b = (await api('/version')).build; if (b !== mine && !$('#update-banner')) document.body.insertAdjacentHTML('beforeend', '<div id="update-banner" class="update-banner">The game has been updated. <button class="btn small primary" onclick="location.reload()">Reload</button></div>'); } catch { /* server restarting */ } }, 20000);
 })();
-app.setState = (s, opts = {}) => { app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); if (!opts.keepDrawer) renderDrawer(); };
+app.setState = (s, opts = {}) => {
+  app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); if (!opts.keepDrawer) renderDrawer();
+  // an ironman chronicle has no glass to turn back
+  for (const b of document.querySelectorAll('[data-action="undo"]')) b.classList.toggle('hidden', !!s.meta.settings?.ironman);
+};
 
 function renderTop() {
   { const u = app.state && nextTurnLength(app.state); const el = $('#turn-until'); if (el && u) el.innerHTML = `next turn: <b>${u.days} ${u.days === 1 ? 'day' : 'days'}</b> — ${esc(u.reason)}`; }
@@ -242,11 +246,29 @@ function maybeShowOutcome() {
     <p class="muted" style="font-size:0.85rem">The world does not stop. You may play on, undo the turn, or begin again with another house.</p>
     <div class="report-actions">
       <button class="btn ghost" data-action="close-modal">Play on</button>
-      <button class="btn" id="oc-undo">Undo the turn</button>
+      ${app.state.meta.settings?.ironman ? '' : '<button class="btn" id="oc-undo">Undo the turn</button>'}
       <button class="btn primary" id="oc-menu">A new house</button>
     </div></div>`);
-  $('#oc-undo').onclick = async () => { try { const st2 = await api(`/games/${app.saveId}/undo`, { body: {} }); app.setState(st2); outcomeShown = null; closeModal(); toast('The last turn has been undone.'); } catch (err) { toast(err.message, true); } };
+  if ($('#oc-undo')) $('#oc-undo').onclick = async () => { try { const st2 = await api(`/games/${app.saveId}/undo`, { body: { turns: 1 } }); app.setState(st2); outcomeShown = null; closeModal(); toast('The last turn has been undone.'); } catch (err) { toast(err.message, true); } };
   $('#oc-menu').onclick = () => { closeModal(); handleAction('menu'); };
+}
+
+// Turning back the glass (docs/gdd/03-architecture.md §11): the server says how far back it can go — the last ten
+// turns, none in an ironman chronicle — and the lord chooses the eve to return to. The orders of that turn come back
+// written, to be changed and given again.
+async function chooseUndo() {
+  let u; try { u = await api(`/games/${app.saveId}/undo`); } catch (e) { toast(e.message, true); return; }
+  if (u.ironman) { toast('An ironman chronicle cannot be unwritten.', true); return; }
+  if (!u.depth) { toast('There is nothing to undo yet.', true); return; }
+  const eve = (n) => app.state.history.find((t) => t.turn === u.turn - n + 1)?.dateFrom;
+  modal(`<h2>Turn back the glass?</h2>
+    <p style="line-height:1.5">The world returns to how it stood on the eve of the turn you choose, your orders for it still written. Everything that happened since is unwritten.</p>
+    <div class="undo-levels">${Array.from({ length: u.depth }, (_, i) => i + 1).map((n) => `<button class="btn${n === 1 ? ' primary' : ''}" data-undo="${n}">${n === 1 ? 'The last turn' : `The last ${n} turns`}${eve(n) ? `<span class="muted"> — back to ${esc(eve(n))}</span>` : ''}</button>`).join('')}</div>
+    <div class="settings-actions"><button class="btn ghost" data-action="close-modal">Let it stand</button></div>`);
+  $$('[data-undo]').forEach((b) => b.onclick = async () => {
+    const n = Number(b.dataset.undo);
+    try { const st = await api(`/games/${app.saveId}/undo`, { body: { turns: n } }); closeModal(); app.setState(st); toast(n === 1 ? 'The last turn has been undone.' : `${n} turns have been undone.`); } catch (e) { toast(e.message, true); }
+  });
 }
 
 // ───── orders ─────
@@ -414,11 +436,7 @@ async function handleAction(action, el) {
       break;
     }
     case 'ravens': setDrawer('letters'); $('#drawer').classList.remove('hidden'); $('#drawer-open').classList.add('hidden'); break;
-    case 'undo': {
-      if (!await confirmModal('Unmake the last turn?', 'The world returns to how it stood before you advanced, and everything that happened since is unwritten. Only the most recent turn can be recalled.', { yes: 'Turn back the glass', no: 'Let it stand' })) return;
-      try { const st = await api(`/games/${app.saveId}/undo`, { body: {} }); app.setState(st); toast('The last turn has been undone.'); } catch (e) { toast(e.message, true); }
-      break;
-    }
+    case 'undo': return chooseUndo();
     case 'settings': return showSettings();
     case 'help': return showHelp();
     case 'music': { startMusic(); const on = !musicSettings().on; setMusic('on', on); toast(on ? 'Music on' : 'Music off'); return; }

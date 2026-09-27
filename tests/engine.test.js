@@ -575,7 +575,10 @@ test('a child lord is ruled for: the mother takes the regency, and gives it up a
   s.characters[s.houses.arryn.lord].age = 17;
   const r2 = regencyTick(s, 30);
   assert.equal(s.houses.arryn.regent, undefined);
-  assert.ok(r2.events.some((e) => /in .* own right/i.test(e.title)));
+  // told in the engine's own words, and recorded as a fact (a slip in WP B3 once wrote code into this title)
+  const heir = s.characters[s.houses.arryn.lord];
+  assert.ok(r2.events.some((e) => e.title === `${heir.name} rules in his own right` && e.fact), r2.events.map((e) => e.title).join(' | '));
+  assert.ok([...r.events, ...r2.events].every((e) => e.fact && !/\$|fact\(/.test(`${e.title} ${e.text}`)));
 });
 
 test('a captive lord is ruled for too, and the vassals like it less each moon', () => {

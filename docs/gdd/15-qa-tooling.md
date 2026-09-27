@@ -13,7 +13,7 @@
 | Contract | `tests/ai-contract.test.js` | CI | every AI call kind: schema builds, mock output validates, prompt within token budget, prompt snapshot, fallback on provider error ([04](04-ai-system.md) §14) |
 | Integration | `tests/turn.test.js`, `tests/http.test.js` (existing, fixed for Windows) | CI | a full jump on the mock provider: facts, events bound to facts, keyframes, invariants ([03](03-architecture.md) §14) |
 | Scenario | `tests/scenarios/*.test.js` | CI | scripted multi-turn stories with assertions (§2) |
-| Soak | `scripts/soak.js` | CI nightly | 200 turns × 6 houses on mock; invariants every turn; save size; time per turn — ✅ WP B2 (`npm run soak`; 2 × 8 turns in every CI run) |
+| Soak | `scripts/soak.js` | CI nightly | 200 turns × 6 houses on mock; invariants every turn; save size; time per turn — ✅ WP B2 (`npm run soak`; 2 × 8 turns in every CI run); WP B3: every engine card backed by a fact, the fact log well formed, each game's seed printed (`--seed` plays it again) |
 | Replay | `scripts/replay.js` | CI | determinism: re-run recorded turns from snapshots and diff facts |
 | Visual | Playwright + SwiftShader | CI | the dev pages and the main flow; screenshots attached to PRs; DOM/geometry assertions for 12 §14 |
 | Model bench | `npm run bench` | **Owner** | the live model's accuracy and latency (04 §13) |

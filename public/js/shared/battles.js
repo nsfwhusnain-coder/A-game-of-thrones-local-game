@@ -8,6 +8,7 @@ import { atWar, battleOdds, siegeEstimate } from './warfare.js';
 import { contingentsHoldBack } from './treachery.js';
 import { random } from '../engine/rng.js';
 import { settle } from '../engine/parties.js';
+import { fact } from '../engine/facts/log.js';
 
 const CONTACT = 10;      // map units (~18 miles): hosts this close will meet
 const SIEGE_REACH = 7;   // a host this close to an enemy castle sits before its walls
@@ -86,7 +87,7 @@ function fight(state, att, def, days, r) {
   const weather = { summer: 'under a hot sun', autumn: 'in the rain and mud', winter: 'in the snow', spring: 'across flooded fields' }[season];
   const details = `${how} Fought ${weather}; ${att.name} (${before[att.id].toLocaleString('en-US')}) against ${def.name} (${before[def.id].toLocaleString('en-US')}). ${W?.name} lost ~${winLoss.toLocaleString('en-US')}; ${L?.name} lost ~${(wiped ? before[lose.id] : loseLoss).toLocaleString('en-US')}${wiped ? ' — the host is no more' : ' and are falling back'}.${fates.length ? ' ' + fates.join('; ') + '.' : ''}`;
   const p0 = state.meta.player; const mine = [win.owner, lose.owner].includes(p0);
-  const event = { title: `${W?.name} victorious near ${place?.name}`, text: `${win.name} ${wiped ? 'destroyed' : 'defeated'} ${lose.name}${fates.length ? '; ' + fates[0] : ''}.`, details, where: place?.id, importance: mine ? 5 : 4, type: 'war', houses: [win.owner, lose.owner], day: 1 + Math.floor(r() * days) };
+  const event = fact(state, 'battle', { title: `${W?.name} victorious near ${place?.name}`, text: `${win.name} ${wiped ? 'destroyed' : 'defeated'} ${lose.name}${fates.length ? '; ' + fates[0] : ''}.`, details, where: place?.id, importance: mine ? 5 : 4, type: 'war', houses: [win.owner, lose.owner], day: 1 + Math.floor(r() * days) }, { actors: [att.commander, def.commander], data: { attacker: att.id, defender: def.id, winner: win.id, loser: lose.id, wiped, lost: { [win.id]: winLoss, [lose.id]: wiped ? before[lose.id] : loseLoss } }, pos: place?.pos });
   return { changes, event };
 }
 
@@ -125,13 +126,13 @@ function besiege(state, h, besiegers, days, r) {
     const cost = Math.round(est.garrison * rnd(0.08, 0.22, r));
     changes.push({ op: 'army_update', army: lead.id, delta: -hurt, cause: 'a sally from the gates', morale: Math.max(5, (lead.morale ?? 70) - 6) });
     changes.push({ op: 'holding', id: h.id, garrison: Math.max(0, est.garrison - cost) });
-    events.push({ title: `A sally from ${h.name}`, text: `The garrison of ${h.name} came out at dawn, fired the siege engines and cut down some ${hurt.toLocaleString('en-US')} of ${lead.name} before the gates closed again.`, details: `${cost.toLocaleString('en-US')} defenders did not get back inside.`, where: h.id, importance: [lead.owner, h.owner].includes(state.meta.player) ? 4 : 2, type: 'war', houses: [lead.owner, h.owner], day: Math.max(1, Math.round(r() * days)) });
+    events.push(fact(state, 'sally', { title: `A sally from ${h.name}`, text: `The garrison of ${h.name} came out at dawn, fired the siege engines and cut down some ${hurt.toLocaleString('en-US')} of ${lead.name} before the gates closed again.`, details: `${cost.toLocaleString('en-US')} defenders did not get back inside.`, where: h.id, importance: [lead.owner, h.owner].includes(state.meta.player) ? 4 : 2, type: 'war', houses: [lead.owner, h.owner], day: Math.max(1, Math.round(r() * days)) }, { actors: [lead.commander], data: { holding: h.id, party: lead.id } }));
   }
   const canStorm = (h.fort || 0) < 4 ? men > est.garrison * 6 : men > est.garrison * 12;
   const fall = (how, loss) => {
     changes.push({ op: 'holding', id: h.id, owner: lead.owner, status: 'occupied', garrison: Math.min(800, Math.round(men * 0.08)), note: `Taken by House ${L?.name} (${how})` });
     if (loss) changes.push({ op: 'army_update', army: lead.id, delta: -loss, cause: 'siege' });
-    events.push({ title: `${h.name} has fallen`, text: `${h.name} ${how === 'stormed' ? 'was stormed' : 'yielded, starved,'} by ${lead.name}. House ${L?.name} holds it now.`, details: how === 'stormed' ? `Ladders and rams at dawn; the walls were carried at a cost of ~${loss.toLocaleString('en-US')} men.` : `After ${Math.round(h.siege.days / 30 * 10) / 10} moons the stores ran out and the garrison opened the gates.`, where: h.id, importance: [lead.owner, h.owner].includes(state.meta.player) ? 5 : 4, type: 'war', houses: [lead.owner, h.owner], day: Math.min(days, 1 + Math.floor(r() * days)) });
+    events.push(fact(state, 'holding_fell', { title: `${h.name} has fallen`, text: `${h.name} ${how === 'stormed' ? 'was stormed' : 'yielded, starved,'} by ${lead.name}. House ${L?.name} holds it now.`, details: how === 'stormed' ? `Ladders and rams at dawn; the walls were carried at a cost of ~${loss.toLocaleString('en-US')} men.` : `After ${Math.round(h.siege.days / 30 * 10) / 10} moons the stores ran out and the garrison opened the gates.`, where: h.id, importance: [lead.owner, h.owner].includes(state.meta.player) ? 5 : 4, type: 'war', houses: [lead.owner, h.owner], day: Math.min(days, 1 + Math.floor(r() * days)) }, { actors: [lead.commander], data: { holding: h.id, by: lead.owner, how } }));
     delete h.siege;
   };
   // high walls and great castles are rarely carried by storm: a moon's chance falls with every course of stone
@@ -147,12 +148,12 @@ function besiege(state, h, besiegers, days, r) {
     // the siege lines melt away
     for (const a of besiegers) { const home = homeOf(state, a); delete a.besieging; if (home) { a.march = { to: home, since: state.meta.turn }; a.route = null; a.at = null; } settle(state, a); }
     changes.push({ op: 'holding', id: h.id, status: 'normal', note: 'The siege is raised' });
-    events.push({ title: `The siege of ${h.name} is raised`, text: `${lead.name} has broken camp and marched away from ${h.name}. Sickness, hunger and idleness did what the walls could not.`, details: `After ${Math.round(h.siege.days / 30 * 10) / 10} moons before the gates, the host was too wasted to hold the lines.`, where: h.id, importance: [lead.owner, h.owner].includes(state.meta.player) ? 4 : 3, type: 'war', houses: [lead.owner, h.owner], day: days });
+    events.push(fact(state, 'siege_lifted', { title: `The siege of ${h.name} is raised`, text: `${lead.name} has broken camp and marched away from ${h.name}. Sickness, hunger and idleness did what the walls could not.`, details: `After ${Math.round(h.siege.days / 30 * 10) / 10} moons before the gates, the host was too wasted to hold the lines.`, where: h.id, importance: [lead.owner, h.owner].includes(state.meta.player) ? 4 : 3, type: 'war', houses: [lead.owner, h.owner], day: days }, { actors: [lead.commander], data: { holding: h.id, by: lead.owner } }));
     delete h.siege;
   } else {
     if (h.status !== 'besieged') {
       changes.push({ op: 'holding', id: h.id, status: 'besieged', note: `Besieged by House ${L?.name}` });
-      events.push({ title: `The siege of ${h.name}`, text: `${lead.name} (${men.toLocaleString('en-US')} men) sits before the walls of ${h.name}.`, details: `The castle holds ~${est.garrison} men behind walls of ${h.fort || 0}/6; its stores should last ~${Math.round(h.siege.stores * 10) / 10} moons. ${canStorm ? 'The besiegers have the numbers to try the walls.' : 'It cannot be taken by storm with the men at hand; only hunger or treachery will do it.'}`, where: h.id, importance: [lead.owner, h.owner].includes(state.meta.player) ? 4 : 3, type: 'war', houses: [lead.owner, h.owner], day: 1 });
+      events.push(fact(state, 'siege_begun', { title: `The siege of ${h.name}`, text: `${lead.name} (${men.toLocaleString('en-US')} men) sits before the walls of ${h.name}.`, details: `The castle holds ~${est.garrison} men behind walls of ${h.fort || 0}/6; its stores should last ~${Math.round(h.siege.stores * 10) / 10} moons. ${canStorm ? 'The besiegers have the numbers to try the walls.' : 'It cannot be taken by storm with the men at hand; only hunger or treachery will do it.'}`, where: h.id, importance: [lead.owner, h.owner].includes(state.meta.player) ? 4 : 3, type: 'war', houses: [lead.owner, h.owner], day: 1 }, { actors: [lead.commander], data: { holding: h.id, by: lead.owner, men } }));
     }
     changes.push({ op: 'holding', id: h.id, prosperity: Math.max(0, (h.prosperity ?? 50) - 6) });
   }
@@ -182,7 +183,8 @@ export function resolveWarfare(state, days, { skip = new Set(), r = random } = {
     const aMoving = a.march && !b.march, bMoving = b.march && !a.march;
     const [att, def] = aMoving ? [a, b] : bMoving ? [b, a] : a.men >= b.men ? [a, b] : [b, a];
     const res = fight(state, att, def, days, r);
-    const out = applyChanges(state, res.changes, { source: 'The field of battle', battleHouses: new Set([a.owner, b.owner]), spanDays: days });
+    // the battle tells its own fact; the dead, the taken and the broken hosts are recorded on the battle's day
+    const out = applyChanges(state, res.changes, { source: 'The field of battle', battleHouses: new Set([a.owner, b.owner]), spanDays: days, told: ['battle'], on: res.event.day, alongside: res.event.fact, cause: { type: 'rule', ref: 'battle' } });
     applied.push(...out.applied); events.push(res.event); fought.add(a.id); fought.add(b.id);
   }
   // sieges: hosts that sit before an enemy castle, and did not just fight
@@ -198,14 +200,14 @@ export function resolveWarfare(state, days, { skip = new Set(), r = random } = {
     const h = state.holdings[hid]; if (!h) continue;
     // a relieving host of the defenders nearby fights first (handled above); otherwise the siege goes on
     const res = besiege(state, h, bes.sort((x, y) => y.men - x.men), days, r);
-    const out = applyChanges(state, res.changes, { source: 'The siege lines', battleHouses: new Set(bes.map((a) => a.owner)), spanDays: days });
+    const out = applyChanges(state, res.changes, { source: 'The siege lines', battleHouses: new Set(bes.map((a) => a.owner)), spanDays: days, told: ['holding'], cause: { type: 'rule', ref: 'siege' } });
     applied.push(...out.applied); events.push(...res.events);
   }
   // sieges with no one left outside the walls are lifted
   for (const h of Object.values(state.holdings)) {
     if (h.status !== 'besieged' || byHold.has(h.id)) continue;
     const near = armies().some((a) => a.kind !== 'fleet' && atWar(state, a.owner, h.owner) && dist(a.pos, h.pos) <= SIEGE_REACH);
-    if (!near) { const out = applyChanges(state, [{ op: 'holding', id: h.id, status: 'normal', note: 'The siege is lifted' }]); applied.push(...out.applied); delete h.siege; }
+    if (!near) { const out = applyChanges(state, [{ op: 'holding', id: h.id, status: 'normal', note: 'The siege is lifted' }], { cause: { type: 'rule', ref: 'siege' } }); applied.push(...out.applied); delete h.siege; }
   }
   return { events, applied };
 }

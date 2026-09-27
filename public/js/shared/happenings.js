@@ -7,6 +7,7 @@ import { HAPPENINGS, NAMES, GOODS, SEAS, REGION_LABEL } from '../../data/happeni
 import { getRelation, realmOf } from './world.js';
 import { random } from '../engine/rng.js';
 import { placeOf } from '../engine/parties.js';
+import { fact } from '../engine/facts/log.js';
 
 const pickR = (a, r) => a[Math.floor(r() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -143,7 +144,7 @@ export function happenings(state, days, r = random) {
     };
     const title = sentenceCase(fill(variant(tpl.t, r), ctx, r)); const text = sentenceCase(fill(variant(tpl.x, r), ctx, r));
     const mine = inPlayerRealm(s, h);
-    const e = { title, text, where: h.id, importance: tpl.imp || 1, type: tpl.type || 'rumor', houses: [owner.id], bg: true, tpl: tpl.id, day: 1 + Math.floor(r() * days) };
+    const e = fact(s, 'happening', { title, text, where: h.id, importance: tpl.imp || 1, type: tpl.type || 'rumor', houses: [owner.id], bg: true, tpl: tpl.id, day: 1 + Math.floor(r() * days) }, { data: { tpl: tpl.id } });
     if (mine) e.mine = true;
     out.events.push(e);
     cd[tpl.id] = turn;

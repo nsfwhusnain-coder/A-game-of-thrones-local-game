@@ -201,3 +201,58 @@ only because they are also painted into the terrain). The winding is fixed; rout
 are drawn so they lie on the hills between the engine's few waypoints.
 
 **Why.** Found while taking the B2 screenshots: the engine's routes were right and invisible.
+
+## D-011 · 2026-09-27 · Facts are made where the change is made; cards are their projections (WP B3)
+
+**What.** `engine/facts/log.js` records a fact with `emit(state, kind, …)`: id `f<turn>.<n>`, the absolute day from the
+turn's clock (`meta.clock = { turn, from, to }`, set by the server for the length of a turn and never saved), actors,
+houses, place, data, cause, scope and importance (the kind's default, +1 for the player's house or kin, +1 for a great
+lord, capped at 5 — or the importance the teller gives). A subsystem that tells a card calls `fact(state, kind, card,
+more)`, which records the fact and returns the card bound to it (`card.fact`); `shown(mine, …)` records it always and
+shows it only where the player should read it. Every `applyChanges` op that changes something a lord could notice (a
+host raised or disbanded, a march begun, a death, a capture, a holding taken or granted, war and peace, fealty, pacts,
+taxes, works, customs, seasons, weddings, letters) records its own fact, and the applied line names it (`facts`). A
+caller that tells the change in its own words passes `told: [ops]` (a battle tells its battle; the road tells its
+ambush; the years tell their dead) so nothing is recorded twice. A card made without a day is placed by the turn as
+before, and its fact follows it there (`redate`); facts of the same moment (`alongside`: a beat's changes, an heir's
+succession) move with it. The facts of the turn live in `state.facts` until the save writes them to `facts.jsonl`
+(`saveState` flushes), so a dry run on a copy leaves no trace and a replay makes the same ones — the replay test now
+compares the fact log byte for byte.
+
+**The story model's own events** are not facts: they are marked `story: true` and stay what they are — telling —
+until the narrator of WP B8 tells facts instead. The order receipts (`orderId`) likewise wait for B4's verbs.
+
+**Why.** "Facts are the only history" (03 §1) needs every change to leave one record, made by the code that made the
+change; making them at the event sites (rather than diffing states) keeps the engine's own words and the exact day.
+
+## D-012 · 2026-09-27 · Turn records in files, snapshots before the orders are carried out, undo by bytes (WP B3)
+
+**What.** Each turn's record is written to `turns/NNNNNN.json`; `state.history` keeps the last 30 turns and any the
+chronicle has not yet taken in (the prompts, the feed and the pins read no further back). Before a turn is played —
+with the orders the player gave already written, before the engine carries them out — the save keeps a snapshot
+(`snapshots/NNNNNN.json.gz`: the state, the chronicle, and the byte lengths of `facts.jsonl` and `world-log.md`); the
+last ten are kept. `undo(id, { turns })` restores the snapshot of the earliest turn unmade, cuts the logs back to those
+lengths, rewrites the chronicle and forgets the later turns and snapshots; the dice are turned back with the world, so
+the same orders make the same turns again. `newGame(…, { ironman: true })` sets `meta.settings.ironman`: no
+snapshots, and undo is refused (403). The title screen offers it beside "Begin"; the undo button is hidden in such a
+game, and otherwise asks how many turns to turn back (`GET /api/games/:id/undo` says how many can be).
+
+**Why.** Undo that gives back the orders is the useful kind (change one word and go again). Cutting the logs by byte
+length is exact and cheap, where rewriting them line by line is neither; ten gzipped snapshots of a ~0.7 MB state cost
+~1.5 MB on disk.
+
+## D-013 · 2026-09-27 · Fact kinds beyond the catalogue (WP B3)
+
+**What.** Kinds added to 03 §8, each where the catalogue had no word for a thing the engine already does: `ambush`
+(outlaws falling on a small company), `men_hired` (men-at-arms taken into pay; sellswords keep `sellswords_hired`),
+`gift` (gold sent for goodwill), `ledger` (the steward's notes that reach the chronicle), `house_ended`, `canon_beat`
+(a beat of the great story, carrying its `thread`), `legacy` (a line of a pre-B3 save). The GDD is updated.
+
+## D-014 · 2026-09-27 · A traveller at sea goes where the ship goes; the soak is replayable (WP B3)
+
+**What.** The soak found a rider left "camped" on the open sea: a rider re-aimed while aboard ship could not plan a road
+from the water, and the failed re-aim left the ride pointing at the new place with no road, so the next turn dropped
+the march where the ship was. Now a traveller aboard ship cannot be turned until it lands (the order is refused with
+that reason); a re-aim that finds no road leaves the old journey standing; and a traveller who can go no further on the
+water is set down at the nearest port. The soak prints each game's seed and takes `--seed`, so a failure it finds can
+be played again exactly.

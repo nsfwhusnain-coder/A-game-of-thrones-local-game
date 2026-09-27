@@ -1,7 +1,9 @@
 // The soak (docs/gdd/15-qa-tooling.md §1, §7): many turns of several houses on the mock provider, with a player who
-// calls the banners, marches, sends riders and recalls them, and the invariants of 03 §14 checked after every turn.
+// calls the banners, marches, sends riders and recalls them, and the invariants of 03 §14 checked after every turn —
+// and the history kept true: every card the engine tells is backed by a fact, every fact well formed and unique.
 // Also reports the time a turn takes and how big the save grows. Exits 1 if any invariant broke.
-//   node scripts/soak.js [--turns 200] [--houses stark,lannister,tully,greyjoy,martell,tyrell] [--span auto] [--report file.md]
+//   node scripts/soak.js [--turns 200] [--houses stark,lannister,tully,greyjoy,martell,tyrell] [--span auto] [--seed N] [--report file.md]
+// Every game's seed is printed: `--seed N --houses <house>` plays the very same game again, to the very same failure.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,6 +13,7 @@ process.env.WC_PROVIDER = 'mock';
 process.env.WC_SAVES = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-soak-'));
 const game = await import('../server/game.js');
 const { validate } = await import('../public/js/engine/state/validate.js');
+const { KINDS } = await import('../public/js/engine/facts/kinds.js');
 
 const TURNS = Number(args.turns || 200);
 const HOUSES = String(args.houses || 'stark,lannister,tully,greyjoy,martell,tyrell').split(',');
@@ -39,13 +42,17 @@ function play(id, t) {
 log(`# Soak — ${HOUSES.length} houses × ${TURNS} turns (mock provider, span ${SPAN}) — ${new Date().toISOString().slice(0, 16)}\n`);
 const t0 = Date.now(); const summary = [];
 for (const house of HOUSES) {
-  const { id } = game.newGame('agot_298', house);
+  const seed = args.seed != null && args.seed !== true ? Number(args.seed) : (Date.now() ^ (house.length * 2654435761)) >>> 0;
+  const { id } = game.newGame('agot_298', house, { seed });
+  log(`- ${house}: seed ${seed}`);
   const times = []; let first = null;
   for (let t = 1; t <= TURNS; t++) {
     const orders = play(id, t);
     const a = Date.now();
-    await game.advance(id, { span: SPAN, ...(orders ? { orders } : {}) });
+    const { turn } = await game.advance(id, { span: SPAN, ...(orders ? { orders } : {}) });
     times.push(Date.now() - a);
+    const unbacked = turn.events.filter((e) => !e.fact && !e.story && !e.orderId);
+    if (unbacked.length) { broken += unbacked.length; log(`- ${house} turn ${t}: ${unbacked.length} card(s) with no fact behind them — ${unbacked.slice(0, 3).map((e) => e.title).join('; ')}`, true); }
     const s = game.loadState(id);
     const problems = validate(s);
     if (problems.length) { broken += problems.length; if (!first) first = { t, problems }; log(`- ${house} turn ${t} (${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}): ${problems.length} broken — ${problems.slice(0, 5).join('; ')}`, true); }
@@ -53,12 +60,20 @@ for (const house of HOUSES) {
   }
   const s = game.loadState(id);
   const size = fs.statSync(path.join(process.env.WC_SAVES, id, 'state.json')).size;
+  // the fact log: every line a fact of a known kind, every id once, the turns in order
+  const facts = game.readFacts(id, { limit: 1e9 }); const seen = new Set(); let last = 0;
+  for (const f of facts) {
+    const bad = !KINDS[f.kind] ? `unknown kind ${f.kind}` : seen.has(f.id) ? `${f.id} twice` : f.turn < last ? `${f.id} out of order` : !f.text || /undefined|NaN/.test(f.text) ? `${f.id} says "${f.text}"` : null;
+    if (bad) { broken++; log(`- ${house}: fact log — ${bad}`, true); }
+    seen.add(f.id); last = f.turn;
+  }
+  const logSize = fs.statSync(path.join(process.env.WC_SAVES, id, 'facts.jsonl')).size;
   const avg = times.reduce((x, y) => x + y, 0) / times.length; const max = Math.max(...times);
-  summary.push({ house, turns: times.length, date: `${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}`, avg, max, size, parties: Object.keys(s.parties).length, first });
-  log(`- ${house}: ${times.length} turns to ${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}, ${Math.round(avg)} ms a turn (max ${max}), save ${(size / 1024).toFixed(0)} KB, ${Object.keys(s.parties).length} parties${first ? `, FIRST BROKEN ON TURN ${first.t}` : ', every invariant held'}`);
+  summary.push({ house, turns: times.length, date: `${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}`, avg, max, size, parties: Object.keys(s.parties).length, first, facts: facts.length, logSize });
+  log(`- ${house}: ${times.length} turns to ${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}, ${Math.round(avg)} ms a turn (max ${max}), save ${(size / 1024).toFixed(0)} KB, ${facts.length} facts (${(logSize / 1024).toFixed(0)} KB), ${Object.keys(s.parties).length} parties${first ? `, FIRST BROKEN ON TURN ${first.t}` : ', every invariant held'}`);
 }
-log(`\n| house | turns | reached | ms/turn | max ms | save | parties | invariants |\n|---|---|---|---|---|---|---|---|`);
-for (const x of summary) log(`| ${x.house} | ${x.turns} | ${x.date} | ${Math.round(x.avg)} | ${x.max} | ${(x.size / 1024).toFixed(0)} KB | ${x.parties} | ${x.first ? `broken on turn ${x.first.t}` : 'held'} |`);
+log(`\n| house | turns | reached | ms/turn | max ms | save | facts | parties | invariants |\n|---|---|---|---|---|---|---|---|---|`);
+for (const x of summary) log(`| ${x.house} | ${x.turns} | ${x.date} | ${Math.round(x.avg)} | ${x.max} | ${(x.size / 1024).toFixed(0)} KB | ${x.facts} (${(x.logSize / 1024).toFixed(0)} KB) | ${x.parties} | ${x.first ? `broken on turn ${x.first.t}` : 'held'} |`);
 log(`\n${broken ? `✖ ${broken} broken invariant(s)` : '✔ every invariant held every turn'} — ${((Date.now() - t0) / 1000).toFixed(0)} s in all`, true);
 if (args.report) fs.writeFileSync(args.report, lines.join('\n') + '\n');
 fs.rmSync(process.env.WC_SAVES, { recursive: true, force: true });

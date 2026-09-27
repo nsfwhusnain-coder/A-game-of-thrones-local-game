@@ -14,11 +14,12 @@ import { MONTHS, dateStr, addDays, dayNumber, SPANS, spanOf } from '../engine/ti
 import { random, seedState, newSeed, withRng } from '../engine/rng.js';
 import { nextId } from '../engine/ids.js';
 import { kindOf, settle, settleAll, isRef, idOf, ref, partyAt, partyOf, setLoc, joinParty, leaveParty, moveMembers, disband, forces, isForce } from '../engine/parties.js';
-import { planRoute, paceOf } from '../engine/movement.js';
+import { planRoute, paceOf, atSeaOn } from '../engine/movement.js';
 import { bound, DOING } from '../engine/activity.js';
 import { sameLand } from '../engine/geo.js';
 import { toV3 } from '../engine/state/migrate.js';
 import { settleWorld } from '../engine/state/settle.js';
+import { emit } from '../engine/facts/log.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -436,6 +437,9 @@ export function startRide(state, c, dest) {
   const target = isRef(dest) ? partyAt(state, dest) : null;
   const to = target ? target.pos : placePos(dest, state.holdings); if (!to) throw new Error('unknown destination ' + dest);
   let p = rideOf(state, c); const fresh = !p; const was = c.loc;
+  // a traveller aboard ship goes where the ship goes: the road can be changed once it makes port
+  if (!fresh && p.route && atSeaOn(p.route, p.route.done)) throw new Error(`${c.name} is at sea, and can turn only when the ship makes port`);
+  const before = fresh ? null : { march: p.march, route: p.route, at: p.at };
   if (fresh) {
     const from = charPos(state, c); if (!from) throw new Error(`${c.name}'s whereabouts are unknown`);
     let id = `rider_${c.id}`; while (state.parties[id]) id += '_2';
@@ -444,7 +448,7 @@ export function startRide(state, c, dest) {
   }
   p.march = { to: target ? ref(target.id) : dest, since: state.meta.turn }; p.at = null;
   if (!planRoute(state, p, to, p.march.to, { toName: target ? target.name : placeName(state, dest) })) {
-    if (fresh) { setLoc(state, c, was); delete state.parties[p.id]; }
+    if (fresh) { setLoc(state, c, was); delete state.parties[p.id]; } else Object.assign(p, before); // the old road stands
     throw new Error(`no road or sea lane leads there from where ${c.name} is`);
   }
   settle(state, p);
@@ -485,8 +489,9 @@ export function applyChanges(state, changes, ctx = {}) {
     if (seen.has(key)) continue;
     seen.add(key);
     try {
-      const r = applyOne(state, ch, { date, src, ...ctx });
-      if (r) applied.push(r); else rejected.push({ change: ch, reason: 'no effect' });
+      const facts = [];
+      const r = applyOne(state, ch, { date, src, ...ctx, facts });
+      if (r) applied.push(facts.length ? { ...r, facts: facts.map((f) => f.id) } : r); else rejected.push({ change: ch, reason: 'no effect' });
     } catch (e) {
       rejected.push({ change: ch, reason: e.message });
     }
@@ -525,7 +530,10 @@ export function resolveSuccessions(state) {
       text = elected ? `SUCCESSION: the magisters of ${h.name} choose ${c.name} to rule after ${lord?.name || 'the last'}` : `SUCCESSION: the main line of House ${h.name} has failed; a cousin, ${c.name}, claims the seat`;
     }
     state.chronicle.push({ date, text });
-    out.push({ op: 'succession', text, house: h.id });
+    // the fact falls on the day the old head died, if that was this turn
+    const died = lord && (state.facts || []).findLast((f) => f.actors[0] === lord.id && ['death', 'slain_in_battle', 'executed'].includes(f.kind));
+    const f = emit(state, 'succession', { actors: [h.lord, lord?.id], houses: [h.id], place: h.seat || null, title: `A new head of House ${h.name}`, text: text.replace(/^SUCCESSION: /, '').replace(/^./, (x) => x.toUpperCase()) + '.', importance: h.id === state.meta.player ? 5 : 4, data: { heir: h.lord, prev: lord?.id || null }, cause: { type: 'rule', ref: 'succession' }, ...(died ? { on: died.day - (state.meta.clock?.from ?? died.day) + 1, alongside: died.id } : {}) });
+    out.push({ op: 'succession', text, house: h.id, fact: f.id });
   }
   return out;
 }
@@ -534,6 +542,16 @@ function applyOne(state, ch, ctx) {
   const { date, src } = ctx;
   if (!ch || typeof ch !== 'object') throw new Error('not an object');
   const op = String(ch.op || ch.type || '').toLowerCase();
+  // What the op changed, recorded as its fact (engine/facts/log.js), just before the op returns — unless whoever
+  // proposed it has recorded it already in its own words (`ctx.told` lists such ops: a battle tells its own battle).
+  const note = (kind, f) => {
+    if (ctx.told?.includes(op)) return null;
+    // `ctx.on`: the day of the turn the caller's changes happened; `ctx.alongside`: the fact they are part of (they move
+    // with it when the turn dates it)
+    const made = emit(state, kind, { cause: ctx.cause || { type: 'engine', ref: src }, ...(ctx.on != null ? { on: ctx.on } : {}), ...(ctx.alongside ? { alongside: ctx.alongside } : {}), ...f });
+    ctx.facts?.push(made); return made;
+  };
+  const lordOf = (hid) => state.houses[hid]?.lord || null;
   switch (op) {
     case 'figure': case 'figures': case 'house_figure': {
       const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house ' + ch.house);
@@ -589,7 +607,9 @@ function applyOne(state, ch, ctx) {
         members: [], morale: num(ch.morale) ?? 70, supply: num(ch.supply) ?? 80, asOf: date,
       };
       settle(state, state.parties[id]);
-      return { op, text: `${state.parties[id].name} (${state.houses[owner].name}) ${men ? fmt(men) + ' men' : ''} appears at ${placeName(state, ch.at || ch.location) || 'the field'}` };
+      const made = state.parties[id];
+      note('host_formed', { actors: [made.commander], houses: [owner], place: made.at, pos: made.pos, data: { party: id, men, kind: made.kind } });
+      return { op, text: `${made.name} (${state.houses[owner].name}) ${men ? fmt(men) + ' men' : ''} appears at ${placeName(state, ch.at || ch.location) || 'the field'}` };
     }
     case 'army_march': case 'march': case 'fleet_sail': {
       // the story sends a host on its way; the engine walks it at its true pace, and the map shows the road
@@ -599,10 +619,15 @@ function applyOne(state, ch, ctx) {
       // a party the great story depends on (the King's progress) keeps to its road; only the engine's beats turn it
       if (ctx.protectPlayer && a.canonLock) throw new Error(`${a.name} keeps to its road`);
       const foe = idOf(ch.to) ?? String(ch.to || ''); const target = state.parties[foe] || state.parties[findArmy(state, foe) || ''];
-      if (target && target.id !== a.id) { a.march = { to: ref(target.id), since: state.meta.turn }; a.at = null; settle(state, a); return { op, text: `${a.name} marches against ${target.name}` }; }
+      if (target && target.id !== a.id) {
+        a.march = { to: ref(target.id), since: state.meta.turn }; a.at = null; settle(state, a);
+        note('set_out', { actors: [a.commander], houses: [a.owner, target.owner], pos: a.pos, data: { party: a.id, against: target.id }, text: `${a.name} marches against ${target.name}.` });
+        return { op, text: `${a.name} marches against ${target.name}` };
+      }
       const dest = resolvePlaceId(ch.to); if (!dest || !placePos(dest, state.holdings)) throw new Error('unknown destination ' + ch.to);
       if (a.at === dest) throw new Error(`${a.name} is already at ${placeName(state, dest)}`);
       a.march = { to: dest, since: state.meta.turn }; a.at = null; settle(state, a);
+      note('set_out', { actors: [a.commander], houses: [a.owner], pos: a.pos, data: { party: a.id, to: dest } });
       return { op, text: `${a.name} marches for ${placeName(state, dest)}` };
     }
     case 'army_move': case 'fleet_move': case 'move_army': {
@@ -618,10 +643,12 @@ function applyOne(state, ch, ctx) {
       const miles = Math.hypot(dest[0] - a.pos[0], dest[1] - a.pos[1]) * MILES_PER_UNIT;
       if (miles <= 2 * paceOf(state, a) && (a.kind === 'fleet' || sameLand(a.pos, dest))) {
         a.pos = [...dest]; a.at = place || null; delete a.march; a.route = null; a.asOf = date; settle(state, a);
+        note('arrived', { actors: [a.commander], houses: [a.owner], place: place || nearestHolding(state, dest), pos: a.pos, data: { party: a.id, men: a.men, step: true } });
         return { op, text: `${a.name} ${place ? 'moves to' : 'makes camp near'} ${placeName(state, place || nearestHolding(state, dest))}` };
       }
       if (!place && !foe) throw new Error('a host marches to a named place');
       a.march = { to: place || ref(foe.id), since: state.meta.turn }; a.at = null; a.asOf = date; settle(state, a);
+      note('set_out', { actors: [a.commander], houses: [a.owner], pos: a.pos, data: { party: a.id, ...(place ? { to: place } : { against: foe.id }) }, ...(place ? {} : { text: `${a.name} marches against ${foe.name}.` }) });
       return { op, text: `${a.name} marches for ${place ? placeName(state, place) : foe.name}` };
     }
     // ── orders the engine carries out itself (so the player's commands really happen) ──
@@ -640,6 +667,7 @@ function applyOne(state, ch, ctx) {
       if (led && !riding && led.commander === c.id && led.men < 400) {
         if (led.march?.to === dest || led.at === dest) throw new Error(`${c.name} is already bound for ${placeName(state, dest)}`);
         led.march = { to: dest, since: state.meta.turn }; led.at = null; settle(state, led);
+        note('set_out', { actors: [c.id], houses: [c.house], pos: led.pos, data: { party: led.id, to: dest } });
         return { op, text: `${c.name} turns ${led.name} (${fmt(led.men)} men) for ${placeName(state, dest)}` };
       }
       if (!riding && resolvePlaceId(c.loc) === dest) throw new Error(`${c.name} is already at ${placeName(state, dest)}`);
@@ -666,10 +694,12 @@ function applyOne(state, ch, ctx) {
         // a host emptied to make the company is no more: its people go with the company
         if (here && here.men <= 0) { moveMembers(state, here, co); delete state.parties[here.id]; }
         planRoute(state, co, to, dest, { toName: placeName(state, dest) }); settle(state, co);
+        note('set_out', { actors: [c.id, ...comp.map((x) => x.id)], houses: [c.house], pos: co.pos, data: { party: id, to: dest, men: taken, days: co.route ? Math.max(1, Math.ceil(co.route.days)) : undefined } });
         return { op, text: `${c.name} rides for ${placeName(state, dest)} with ${fmt(taken)} men (${src})${comp.length ? `, with ${comp.map((x) => x.name).join(', ')}` : ''}` };
       }
       const turning = riding ? ` (turning back from the road to ${placeName(state, riding.march?.to)})` : '';
       const p = startRide(state, c, dest);
+      note('set_out', { actors: [c.id], houses: [c.house], pos: p.pos, data: { party: p.id, to: dest, days: Math.max(1, Math.ceil(p.route.days)), ...(riding ? { turned: true } : {}) } });
       return { op, text: `${c.name} sets out for ${placeName(state, dest)} (~${Math.max(1, Math.ceil(p.route.days))} days${p.route.sea ? ', part of it by ship' : '\' ride'})${turning}` };
     }
     case 'recruit': case 'hire_men': {
@@ -695,6 +725,7 @@ function applyOne(state, ch, ctx) {
         const lord = Object.values(state.characters).find((c) => c.alive && c.house === hid && (c.loc === place));
         host = state.parties[id] = { id, owner: hid, name: `The ${state.houses[hid].name} company at ${placeName(state, place)}`, commander: lord?.id || null, at: place, pos: [...pos], men, kind: 'garrison', members: [], composition: `${kind} hired at ${placeName(state, place)}`, morale: 65, supply: 80, asOf: date };
       }
+      note(kind === 'sellswords' ? 'sellswords_hired' : 'men_hired', { actors: [host.commander], houses: [hid], place, pos, data: { party: host.id, men, cost: men * price }, text: `${fmt(men)} ${kind} are hired at ${placeName(state, place)} for House ${state.houses[hid].name}.` });
       return { op, text: `${fmt(men)} ${kind} hired at ${placeName(state, place)} for ${fmt(men * price)} dragons${men < (num(ch.men) ?? 200) ? ' (all that could be found or paid for)' : ''}; ${host.name} now ${fmt(host.men)}` };
     }
     case 'hire': case 'hire_officer': {
@@ -715,6 +746,7 @@ function applyOne(state, ch, ctx) {
       c.roles = [role, ...(role === 'knight' ? [] : [])]; c.title = `${ROLE[role]} of House ${state.houses[hid].name}`;
       c.bio = ch.bio || `Taken into service at ${placeName(state, place)}.`; c.loc = place; c.loyalty = 55; c.father = undefined; c.mother = undefined;
       if (role === 'spymaster') c.traits = 'discreet, watchful, well-connected';
+      note('office_granted', { actors: [c.id, lordOf(hid)], houses: [hid], place, data: { office: role, hired: true }, text: `${c.name} enters the service of House ${state.houses[hid].name} as ${ROLE[role]}.` });
       return { op, text: `${c.name} enters the service of House ${state.houses[hid].name} as ${ROLE[role]} at ${placeName(state, place)} (${cost} dragons)` };
     }
     case 'army_update': case 'fleet_update': {
@@ -739,28 +771,35 @@ function applyOne(state, ch, ctx) {
           if (nv < floor) { nv = floor; out.push(`(losses limited: no battle, ${season})`); }
         }
         a.men = nv; out.push(`men ${fmt(old)} → ${fmt(a.men)}`);
+        // men lost to a battle, siege or ambush are that fight's fact; men who melt away are their own
+        if (nv < old && !violent && nv > 0) note('desertion', { actors: [a.commander], houses: [a.owner], pos: a.pos, data: { party: a.id, lost: old - nv, men: nv }, text: `${fmt(old - nv)} men slip away from ${a.name}${ch.cause || ch.reason ? ` — ${ch.cause || ch.reason}` : ''}.` });
       }
       if (num(ch.ships) !== null) { a.ships = num(ch.ships); out.push(`ships ${a.ships}`); }
       for (const k of ['morale', 'supply']) if (num(ch[k]) !== null) { a[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${a[k]}`); }
       // what a host is doing is the engine's to say (engine/parties.js settle): the story's status words are not kept (B-20)
       // a host is never handed to a name the world does not know: an unresolvable commander is refused, not stored
-      if (ch.commander) { const cm = findChar(state, ch.commander); if (!cm) throw new Error('unknown commander ' + ch.commander); if (!state.characters[cm].alive) throw new Error(`${state.characters[cm].name} is dead and cannot command`); a.commander = cm; out.push(`${state.characters[cm].name} takes command`); }
-      if (ch.owner) { const o = findHouse(state, ch.owner); if (o) { a.owner = o; out.push('changes allegiance to ' + state.houses[o].name); } }
+      if (ch.commander) { const cm = findChar(state, ch.commander); if (!cm) throw new Error('unknown commander ' + ch.commander); if (!state.characters[cm].alive) throw new Error(`${state.characters[cm].name} is dead and cannot command`); if (a.commander !== cm) note('office_granted', { actors: [cm], houses: [a.owner], pos: a.pos, data: { party: a.id, office: 'command' }, text: `${state.characters[cm].name} takes command of ${a.name}.` }); a.commander = cm; out.push(`${state.characters[cm].name} takes command`); }
+      if (ch.owner) { const o = findHouse(state, ch.owner); if (o && o !== a.owner) { note('sellswords_turned', { actors: [a.commander], houses: [a.owner, o], pos: a.pos, data: { party: a.id, from: a.owner, to: o }, text: `${a.name} goes over to House ${state.houses[o].name}.` }); a.owner = o; out.push('changes allegiance to ' + state.houses[o].name); } }
       if (ch.name) a.name = ch.name;
       if (ch.composition) a.composition = ch.composition;
       a.asOf = date;
-      if (a.men <= 0 && a.kind !== 'fleet') { disband(state, a, a.at || nearestHolding(state, a.pos)); return { op, text: `${a.name} has ceased to exist` }; }
+      if (a.men <= 0 && a.kind !== 'fleet') {
+        note('host_disbanded', { actors: [a.commander], houses: [a.owner], pos: a.pos, data: { party: a.id, name: a.name, why: ch.cause || ch.reason || 'no men are left' } });
+        disband(state, a, a.at || nearestHolding(state, a.pos)); return { op, text: `${a.name} has ceased to exist` };
+      }
       return { op, text: `${a.name}: ${out.join(', ')}` };
     }
     case 'army_destroy': case 'army_disband': case 'fleet_destroy': {
       const id = findArmy(state, ch.army || ch.id); if (!id) throw new Error('unknown army');
       const gone = state.parties[id]; const n = gone.name;
+      note('host_disbanded', { actors: [gone.commander], houses: [gone.owner], place: gone.at || null, pos: gone.pos, data: { party: id, name: n, men: gone.men, why: ch.reason || (op === 'army_disband' ? 'disbanded' : 'destroyed') } });
       disband(state, gone, gone.at || nearestHolding(state, gone.pos));
       return { op, text: `${n} ${op === 'army_disband' ? 'disbands' : 'is destroyed'}${ch.reason ? ' — ' + ch.reason : ''}` };
     }
     case 'holding': case 'holding_update': case 'province': {
       const hid = resolvePlaceId(ch.id || ch.holding || ch.place); if (!hid || !state.holdings[hid]) throw new Error('unknown holding ' + (ch.id || ch.holding));
       const h = state.holdings[hid]; const out = [];
+      const was = { owner: h.owner, status: h.status };
       if (ch.owner) { const o = findHouse(state, ch.owner); if (!o) throw new Error('unknown owner'); if (o !== h.owner) { out.push(`passes from ${state.houses[h.owner]?.name} to ${state.houses[o].name}`); h.owner = o; } }
       for (const k of ['unrest', 'prosperity']) if (num(ch[k]) !== null) { h[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${h[k]}`); }
       if (num(ch.garrison) !== null) { h.garrison = Math.max(0, Math.round(num(ch.garrison))); out.push(`garrison ~${fmt(h.garrison)}`); }
@@ -772,6 +811,13 @@ function applyOne(state, ch, ctx) {
       if (ch.name && String(ch.name).trim() && ch.name !== h.name) { out.push(`renamed from ${h.name}`); h.formerNames = [...(h.formerNames || []), h.name]; h.name = String(ch.name).trim().slice(0, 60); registerPlaces(state); }
       if (ch.type && HOLDING_TYPES.includes(ch.type)) { h.type = ch.type; out.push(ch.type); }
       if (ch.note) { h.notes.push(`${date}: ${ch.note}`); h.notes = h.notes.slice(-8); }
+      const houses = [...new Set([h.owner, was.owner].filter(Boolean))];
+      if (h.owner !== was.owner) {
+        const taken = /occupied|sacked|taken|storm|fell|siege|captur|conquer/i.test(`${ch.status || ''} ${ch.note || ''}`);
+        note(taken ? 'holding_fell' : 'holding_granted', { actors: [lordOf(h.owner)], houses, place: hid, pos: h.pos, data: { from: was.owner, to: h.owner }, text: taken ? `${h.name} falls to House ${state.houses[h.owner]?.name}.` : `${h.name} passes to House ${state.houses[h.owner]?.name}${ch.note ? ` — ${ch.note}` : ''}.` });
+      } else if (h.status !== was.status && /besieged/.test(h.status || '')) note('siege_begun', { houses, place: hid, pos: h.pos, text: `${h.name} is besieged${ch.note ? ` — ${ch.note}` : ''}.` });
+      else if (h.status !== was.status && /besieged/.test(was.status || '')) note('siege_lifted', { houses, place: hid, pos: h.pos, text: `The siege of ${h.name} is lifted.` });
+      if (ch.building) note('works_done', { houses: [h.owner], place: hid, pos: h.pos, data: { building: String(ch.building) }, text: `${h.name} raises ${ch.building}.` });
       return { op, text: `${h.name}: ${out.join(', ') || 'updated'}` };
     }
     case 'holding_new': case 'found': case 'settlement': {
@@ -788,6 +834,7 @@ function applyOne(state, ch, ctx) {
       const region = nearestHolding(state, pos) ? state.holdings[nearestHolding(state, pos)].region : state.houses[owner].region;
       state.holdings[id] = { id, name, fullName: name, pos, owner, seatOf: null, region, type, prosperity: 40, unrest: 15, garrison: null, status: 'normal', notes: [ch.note ? `${date}: ${ch.note}` : `${date}: founded`], resources: {}, population: type === 'town' ? 4000 : type === 'camp' ? 800 : 1500, coastal: isCoastal(pos), founded: date };
       registerPlaces(state);
+      note('works_done', { actors: [lordOf(owner)], houses: [owner], place: id, pos, data: { founded: id, type }, text: `House ${state.houses[owner].name} raises ${name}.` });
       return { op, text: `${name} is raised by House ${state.houses[owner].name} near ${placeName(state, ch.at || ch.near)}` };
     }
     case 'landmark': case 'map_label': {
@@ -802,6 +849,8 @@ function applyOne(state, ch, ctx) {
     case 'character': case 'character_update': {
       const cid = findChar(state, ch.id || ch.character); if (!cid) throw new Error('unknown character ' + (ch.id || ch.character));
       const c = state.characters[cid]; const out = [];
+      const was = { alive: c.alive, status: c.status, house: c.house, title: c.title, spouse: c.spouse, secret: c.secretKnown };
+      const where = () => resolvePlaceId(c.loc) || partyOf(state, c)?.at || null;
       if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; c.diedTurn = state.meta?.turn ?? 0; c.cause = ch.cause || c.cause || null; leaveParty(state, c); out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
       if (ch.loc || ch.location || ch.with) {
         const raw = ch.with || ch.loc || ch.location;
@@ -817,9 +866,13 @@ function applyOne(state, ch, ctx) {
         else if (ctx.protectPlayer && free && !isRef(l) && bound(state, c)) out.push(`stays: ${c.name} is ${DOING[bound(state, c).kind]}`); // one thing at a time (engine/activity.js)
         else if (miles > 60 && free) {
           // no one crosses the realm in a day: a far move is a journey, taken on the road (a far host is ridden to)
-          try { const p = startRide(state, c, l); out.push(`sets out for ${placeName(state, l)} (~${Math.max(1, Math.ceil(p.route.days))} days)`); } catch (e) { out.push(`stays: ${e.message}`); }
+          try {
+            const p = startRide(state, c, l); out.push(`sets out for ${placeName(state, l)} (~${Math.max(1, Math.ceil(p.route.days))} days)`);
+            note('set_out', { actors: [c.id], houses: [c.house], pos: p.pos, data: { party: p.id, to: isRef(l) ? null : l, ...(isRef(l) ? { joining: idOf(l) } : {}), days: Math.max(1, Math.ceil(p.route.days)) } });
+          } catch (e) { out.push(`stays: ${e.message}`); }
         } else {
           setLoc(state, c, l);
+          if (c.alive && ch.alive !== false) note('arrived', { actors: [c.id], houses: [c.house], place: isRef(l) ? state.parties[army]?.at || null : l, data: isRef(l) ? { joined: army } : {}, text: `${c.name} is ${isRef(l) ? `now ${placeName(state, l)}` : `now at ${placeName(state, l)}`}.` });
           // placeName already says "with The King's progress" for a host, so do not say "with" twice
           out.push(isRef(l) ? `travels ${placeName(state, l)}` : `now at ${placeName(state, l)}`);
         }
@@ -836,6 +889,21 @@ function applyOne(state, ch, ctx) {
       if (ch.revealSecret || ch.secretRevealed) { c.secretKnown = true; out.push('their secret is uncovered'); }
       if (ch.secret && typeof ch.secret === 'string') { c.secret = ch.secret; out.push('now hides a secret'); }
       if (ch.spouse) { const sp = findChar(state, ch.spouse); if (sp) { c.spouse = sp; state.characters[sp].spouse = c.id; out.push('wed to ' + state.characters[sp].name); } }
+      // what a lord of the realm could notice of all that (opinion, memories and traits are the person's own)
+      const f = { actors: [c.id], houses: [c.house], place: where() };
+      const held = (x) => /imprisoned|captive|hostage/.test(x || '');
+      const why = `${ch.cause || ''} ${ch.note || ''}`;
+      if (was.alive && !c.alive) note(/battle|victory|slain|the field|fell /i.test(why) ? 'slain_in_battle' : /execut|behead|hanged|headsman/i.test(why) ? 'executed' : 'death', { ...f, data: { cause: ch.cause || null } });
+      else if (c.alive) {
+        if (held(c.status) && !held(was.status)) note(/battle/i.test(why) ? 'captured_in_battle' : 'captured', { ...f, data: { by: resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner || null, note: ch.note || null } });
+        else if (held(was.status) && !held(c.status)) note(/ransom/i.test(why) ? 'ransomed' : 'released', f);
+        if (c.status === 'wounded' && was.status !== 'wounded') note('wounded', { ...f, data: { note: ch.note || null } });
+        if (/missing|vanish/i.test(c.status || '') && !/missing|vanish/i.test(was.status || '')) note('vanished', f);
+        if (c.house !== was.house && c.house === 'nights_watch') note('sent_to_wall', { ...f, houses: [was.house, c.house] });
+        else if (ch.title && c.title !== was.title) note('office_granted', { ...f, data: { title: c.title } });
+        if (c.spouse && c.spouse !== was.spouse) note('wedding', { ...f, actors: [c.id, c.spouse], houses: [c.house, state.characters[c.spouse]?.house] });
+        if (c.secretKnown && !was.secret) note('secret_revealed', { ...f, vis: { scope: 'secret', houses: [state.meta.player] }, text: `${c.name}'s secret is uncovered.` });
+      }
       return { op, text: `${c.name} ${out.join(', ') || 'updated'}` };
     }
     case 'character_new': case 'new_character': {
@@ -860,6 +928,7 @@ function applyOne(state, ch, ctx) {
       const old = state.houses[hid].liege; state.houses[hid].liege = lg;
       if (ch.independent !== undefined) state.houses[hid].independent = !!ch.independent;
       if (!lg) state.houses[hid].independent = true;
+      if (lg !== old) note(lg ? 'fealty_sworn' : 'fealty_renounced', { actors: [lordOf(hid), lg ? lordOf(lg) : null], houses: [hid, lg, old], place: state.houses[hid].seat || null, data: { house: hid, liege: lg, was: old || null }, text: lg ? `House ${state.houses[hid].name} swears fealty to House ${state.houses[lg].name}.` : `House ${state.houses[hid].name} declares itself bound to no one${old ? `, renouncing House ${state.houses[old]?.name}` : ''}.` });
       return { op, text: `${state.houses[hid].name} ${lg ? 'swears fealty to ' + state.houses[lg].name : 'declares independence'}${old && old !== lg ? ` (was sworn to ${state.houses[old]?.name})` : ''}` };
     }
     case 'house_update': case 'house': {
@@ -872,6 +941,8 @@ function applyOne(state, ch, ctx) {
       if (ch.independent !== undefined) h.independent = !!ch.independent;
       if (ch.tribute || ch.levies) { h.obligations = { ...(h.obligations || {}), ...(ch.tribute ? { tribute: ch.tribute } : {}), ...(ch.levies ? { levies: ch.levies } : {}) }; out.push(`obligations ${ch.tribute || ''} ${ch.levies || ''}`); }
       if (ch.note) h.notes = [...h.notes, `${date}: ${ch.note}`].slice(-10);
+      if (ch.status && /extinct|ended/i.test(ch.status)) note('house_ended', { houses: [hid], data: { house: hid }, text: `House ${h.name} is ended.` });
+      else if (ch.title && /\b(king|queen)\b/i.test(ch.title)) note('claim_proclaimed', { actors: [h.lord], houses: [hid], place: h.seat || null, data: { title: ch.title }, text: `House ${h.name} proclaims: ${ch.title}.` });
       return { op, text: `${h.name}: ${out.join(', ') || 'updated'}` };
     }
     case 'war': {
@@ -887,15 +958,20 @@ function applyOne(state, ch, ctx) {
         const existing = state.wars.find((w) => w.id === id);
         if (existing) {
           existing.attackers = [...new Set([...existing.attackers, ...att])];
+          const before = new Set([...existing.attackers, ...existing.defenders]);
           existing.defenders = [...new Set([...existing.defenders, ...def])].filter((x) => !existing.attackers.includes(x));
+          const joined = [...existing.attackers, ...existing.defenders].filter((x) => !before.has(x));
+          if (joined.length) note('war_joined', { actors: joined.map(lordOf), houses: joined, data: { war: existing.id, houses: joined }, text: `${joined.map((x) => `House ${state.houses[x].name}`).join(', ')} ${joined.length > 1 ? 'join' : 'joins'} ${existing.name}.` });
           return { op, text: `${existing.name} widens` };
         }
         state.wars.push({ id, name: ch.name || `War of ${state.houses[att[0]].name} against ${state.houses[def[0]].name}`, attackers: att, defenders: def, started: date, status: 'ongoing', note: ch.reason || ch.note || '' });
+        note('war_declared', { actors: [lordOf(att[0]), lordOf(def[0])], houses: [...att, ...def], data: { war: id, attackers: att, defenders: def, reason: ch.reason || null }, text: `${state.wars.at(-1).name}: House ${state.houses[att[0]].name} makes war on House ${state.houses[def[0]].name}.` });
         return { op, text: `WAR: ${state.wars.at(-1).name}` };
       }
       const w = state.wars.find((x) => x.id === slug(ch.id || ch.name) || slug(x.name) === slug(ch.name || ''));
       if (!w) throw new Error('unknown war');
       w.status = 'ended'; w.ended = date; w.outcome = ch.outcome || '';
+      note('peace_made', { actors: [lordOf(w.attackers[0]), lordOf(w.defenders[0])], houses: [...w.attackers, ...w.defenders], data: { war: w.id, outcome: w.outcome || null }, text: `${w.name} is over${w.outcome ? ` — ${w.outcome}` : ''}.` });
       return { op, text: `PEACE: ${w.name} ends${ch.outcome ? ' — ' + ch.outcome : ''}` };
     }
     case 'war_join': {
@@ -906,6 +982,7 @@ function applyOne(state, ch, ctx) {
       if (ctx.protectPlayer && !ctx.playerDeclaredWar && hid === state.meta.player && ch.side !== 'defender') throw new Error('only the player can declare the player\'s wars');
       if (w.attackers.includes(hid) || w.defenders.includes(hid)) throw new Error(`${state.houses[hid].name} is already in ${w.name}`);
       (ch.side === 'defender' ? w.defenders : w.attackers).push(hid);
+      note('war_joined', { actors: [lordOf(hid)], houses: [hid, ...w.attackers, ...w.defenders], data: { war: w.id, side: ch.side === 'defender' ? 'defender' : 'attacker' }, text: `House ${state.houses[hid].name} joins ${w.name}.` });
       return { op, text: `${state.houses[hid].name} joins ${w.name}` };
     }
     case 'pact': case 'treaty': case 'embargo': case 'trade': case 'alliance': case 'marriage': {
@@ -918,10 +995,12 @@ function applyOne(state, ch, ctx) {
       if (status === 'end' || status === 'ended' || status === 'broken') {
         if (!ex) throw new Error('no such pact');
         ex.status = status === 'broken' ? 'broken' : 'ended'; ex.ended = date;
+        note('pact_broken', { actors: [lordOf(a), lordOf(b)], houses: [a, b], data: { pact: ex.id, type, status: ex.status }, text: `The ${type} between House ${state.houses[a].name} and House ${state.houses[b].name} is ${ex.status === 'broken' ? 'broken' : 'at an end'}.` });
         return { op, text: `${type} between ${state.houses[a].name} and ${state.houses[b].name} ${ex.status}` };
       }
       if (ex) { Object.assign(ex, { terms: ch.terms || ex.terms, status }); return { op, text: `${type} between ${state.houses[a].name} and ${state.houses[b].name}: ${status}` }; }
       state.pacts.push({ id, type, a, b, terms: ch.terms || '', status, since: date });
+      note(type === 'marriage' ? 'betrothal' : 'pact_made', { actors: [lordOf(a), lordOf(b)], houses: [a, b], data: { pact: id, type, terms: ch.terms || null }, text: `House ${state.houses[a].name} and House ${state.houses[b].name} make ${type === 'marriage' ? 'a marriage pact' : `a${/^[aeiou]/i.test(type) ? 'n' : ''} ${type}`}${ch.terms ? `: ${ch.terms}` : ''}.` });
       return { op, text: `${type.toUpperCase()}: ${state.houses[a].name} & ${state.houses[b].name}${ch.terms ? ' — ' + ch.terms : ''}` };
     }
     case 'battle': {
@@ -932,6 +1011,8 @@ function applyOne(state, ch, ctx) {
       state.battles = state.battles || [];
       state.battles.push({ name: ch.name || `Battle at ${placeName(state, ch.at)}`, pos, date, turn: state.meta.turn, attacker: findHouse(state, ch.attacker), defender: findHouse(state, ch.defender), victor: findHouse(state, ch.victor), losses: ch.losses || {}, summary: ch.summary || '' });
       state.battles = state.battles.slice(-40);
+      const bt = state.battles.at(-1);
+      note('battle', { actors: [], houses: [bt.attacker, bt.defender], place: resolvePlaceId(ch.at || ch.location) || null, pos, data: { attacker: bt.attacker, defender: bt.defender, winner: bt.victor, lost: bt.losses }, text: `${bt.name}${bt.victor ? `: victory for House ${state.houses[bt.victor]?.name}` : ''}.${bt.summary ? ` ${bt.summary}` : ''}` });
       return { op, text: `BATTLE: ${state.battles.at(-1).name}${ch.victor ? ' — victory for ' + (state.houses[findHouse(state, ch.victor)]?.name || ch.victor) : ''}` };
     }
     case 'raven': case 'letter': case 'message': {
@@ -941,6 +1022,7 @@ function applyOne(state, ch, ctx) {
       if (to && to !== lord && state.characters[to].house !== pl) {
         if (ctx.protectPlayer && fc?.house === pl) throw new Error(`only you send ${fc.name}'s letters`);
         const tc = state.characters[to]; tc.memories = [...(tc.memories || []), `${date}: a letter from ${fc?.name || ch.fromName || 'someone'}`].slice(-12);
+        note('letter_arrived', { actors: [from, to], houses: [fc?.house, tc.house], data: { from, to }, text: `${fc?.name || ch.fromName || 'Someone'} writes to ${tc.name}.` });
         return { op, text: `${fc?.name || ch.fromName || 'Someone'} writes to ${tc.name}` };
       }
       // one of the household at the lord's side speaks to him; no raven flies across a hall
@@ -948,6 +1030,7 @@ function applyOne(state, ch, ctx) {
       if (fc && fc.house === pl && lc && !rideOf(state, fc) && !rideOf(state, lc) && fc.loc === lc.loc) throw new Error(`${fc.name} is with you; no raven is needed`);
       state.ravens.unshift({ id: nextId(state, 'r'), day: dayNumber(state.meta.date), from: from || null, fromName: from ? state.characters[from].name : (ch.fromName || ch.from || 'Unknown'), text: String(ch.text || ''), date, read: false });
       state.ravens = state.ravens.slice(0, 60);
+      note('letter_arrived', { actors: [from, lord], houses: [fc?.house, pl], data: { raven: state.ravens[0].id, from: from || null }, text: `A raven from ${state.ravens[0].fromName} reaches ${lc?.name || `House ${state.houses[pl]?.name}`}.` });
       return { op, text: `A raven arrives from ${state.ravens[0].fromName}` };
     }
     case 'decision': case 'choice': {
@@ -956,6 +1039,7 @@ function applyOne(state, ch, ctx) {
       state.decisions = state.decisions || [];
       const d = { id: slug(ch.id || ch.title || 'decision') + '_' + nextId(state, 'd'), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, day: dayNumber(state.meta.date), days: Math.max(1, Math.round(num(ch.days) ?? 14)), status: 'pending', ...(resolvePlaceId(ch.where) && state.holdings[resolvePlaceId(ch.where)] ? { where: resolvePlaceId(ch.where) } : {}) };
       state.decisions.push(d);
+      note('petition', { actors: [d.from, state.houses[state.meta.player]?.lord], houses: [state.meta.player, state.characters[d.from]?.house], place: d.where || null, data: { matter: d.id }, title: d.title, text: `A matter is brought before ${state.characters[state.houses[state.meta.player]?.lord]?.name || 'the lord'}: ${d.title}.` });
       return { op, text: `A decision awaits you: ${d.title}` };
     }
     case 'report': case 'sighting': case 'rumour_host': {
@@ -964,6 +1048,8 @@ function applyOne(state, ch, ctx) {
       const pos = ch.at ? posOf(state, ch.at) : null;
       if (!aid && !ch.false && !ch.lie) throw new Error('unknown army ' + (ch.army || ch.id));
       const r = addReport(state, { army: aid || null, pos: pos || (aid ? state.parties[aid].pos : null), men: num(ch.men), source: ch.source || 'a raven', false: !!(ch.false || ch.lie), owner: findHouse(state, ch.owner) || (aid && state.parties[aid].owner), name: ch.name });
+      // what was said, not what is: the fact is the report (its truth stays with the engine, never in the words)
+      note('rumour', { houses: [state.meta.player, r.owner], pos: r.pos || null, vis: { scope: 'houses', houses: [state.meta.player] }, data: { report: true, party: aid || null, men: r.men || null, false: !!(ch.false || ch.lie) }, text: `Word reaches House ${state.houses[state.meta.player]?.name} of ${r.name} (~${fmt(r.men)} men).` });
       return { op, text: `A report reaches you: ${r.name} (~${fmt(r.men)} men) near ${ch.at ? placeName(state, ch.at) : 'where it was last seen'} — ${r.source}` };
     }
     // ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -994,13 +1080,15 @@ function applyOne(state, ch, ctx) {
         const r = state.rules.find((x) => x.house === hid && x.id === key && x.status !== 'ended');
         if (!r) throw new Error('no such custom to end');
         r.status = 'ended';
+        note('custom_created', { houses: [hid], data: { rule: r.id, ended: true }, text: `${r.name} is at an end.` });
         return { op, text: `${r.name} is at an end` };
       }
       const spec = compileRule(state, { ...ch, house: hid, source: ctx.source || 'the story' });
       const existing = state.rules.findIndex((r) => r.id === spec.id && r.house === hid);
       if (state.rules.filter((r) => r.house === hid && !r.status).length >= 12 && existing < 0) throw new Error('this house already keeps as many special customs as its stewards can track');
-      if (existing >= 0) { state.rules[existing] = { ...state.rules[existing], ...spec, status: undefined }; return { op, text: `${spec.name} is changed` }; }
+      if (existing >= 0) { state.rules[existing] = { ...state.rules[existing], ...spec, status: undefined }; note('custom_created', { houses: [hid], data: { rule: spec.id, changed: true }, text: `House ${state.houses[hid].name} changes a custom: ${spec.name}.` }); return { op, text: `${spec.name} is changed` }; }
       state.rules.push(spec);
+      note('custom_created', { actors: [lordOf(hid)], houses: [hid], data: { rule: spec.id, kind: spec.kind }, text: `House ${state.houses[hid].name} keeps a new custom: ${spec.name}.` });
       state.vars = state.vars || {}; state.vars[hid] = state.vars[hid] || {};
       for (const [k, v0] of Object.entries(spec.vars || {})) if (state.vars[hid][k] === undefined) state.vars[hid][k] = v0;
       return { op, text: `NEW CUSTOM — ${state.houses[hid].name}: ${spec.name} (${spec.kind}: ${spec.formula})` };
@@ -1021,7 +1109,9 @@ function applyOne(state, ch, ctx) {
       const hid = findHouse(state, ch.house); if (!hid) throw new Error('unknown house');
       if (hid === state.meta.player && ctx.protectPlayer) throw new Error('only the player sets their own taxes');
       const lvl = String(ch.level || ch.tax || '').toLowerCase(); if (!TAX_LEVELS[lvl]) throw new Error('bad tax level');
+      const wasTax = state.houses[hid].policy?.tax;
       state.houses[hid].policy = { ...(state.houses[hid].policy || {}), tax: lvl };
+      if (wasTax !== lvl) note('tax_changed', { actors: [lordOf(hid)], houses: [hid], place: state.houses[hid].seat || null, data: { tax: lvl, was: wasTax || null }, text: `House ${state.houses[hid].name} proclaims ${TAX_LEVELS[lvl].label.toLowerCase()} taxes.` });
       return { op, text: `House ${state.houses[hid].name} sets ${TAX_LEVELS[lvl].label.toLowerCase()} taxes` };
     }
     case 'project': {
@@ -1042,23 +1132,28 @@ function applyOne(state, ch, ctx) {
       if (twin) throw new Error(`${twin.name} is already under way`);
       const p = { id: slug(ch.id || ch.name || 'project') + '_' + nextId(state, 'w'), house: hid, ...(ch.template ? { template: String(ch.template) } : {}), name: ch.name || 'Works', holding: hold, cost, remaining: cost, perMonth: cost / months, months, monthsLeft: months, effect: ch.effect || {}, status: 'active', started: date };
       state.projects.push(p);
+      note('works_begun', { actors: [lordOf(hid)], houses: [hid], place: hold, data: { project: p.id, name: p.name, cost, months }, text: `House ${state.houses[hid].name} begins ${p.name} at ${placeName(state, hold)}.` });
       return { op, text: `House ${state.houses[hid].name} begins: ${p.name} (${fmt(cost)} gd over ${months} moons)` };
     }
     case 'season': {
       const sname = String(ch.season || '').toLowerCase();
       if (!['summer', 'autumn', 'winter', 'spring'].includes(sname)) throw new Error('bad season');
       if (state.world?.season !== sname) state.world = { ...(state.world || {}), seasonDays: 0 };
+      const turned = state.world?.season !== sname;
       state.world = { ...(state.world || {}), season: sname, seasonNote: ch.note || '' };
+      if (turned) note('season_turned', { place: resolvePlaceId('oldtown'), data: { season: sname }, text: `The Citadel sends out its white ravens: ${sname} has come${ch.note ? ` — ${ch.note}` : ''}.` });
       return { op, text: `The season turns: ${sname.toUpperCase()}${ch.note ? ' — ' + ch.note : ''}` };
     }
     case 'marriage_characters': case 'wed': {
       const a = findChar(state, ch.a), b = findChar(state, ch.b); if (!a || !b) throw new Error('unknown characters');
       state.characters[a].spouse = b; state.characters[b].spouse = a;
+      note('wedding', { actors: [a, b], houses: [state.characters[a].house, state.characters[b].house], place: resolvePlaceId(state.characters[a].loc) || null });
       return { op, text: `${state.characters[a].name} weds ${state.characters[b].name}` };
     }
     case 'betroth': {
       const a = findChar(state, ch.a), b = findChar(state, ch.b); if (!a || !b) throw new Error('unknown characters');
       state.characters[a].betrothed = b; state.characters[b].betrothed = a;
+      note('betrothal', { actors: [a, b], houses: [state.characters[a].house, state.characters[b].house] });
       return { op, text: `${state.characters[a].name} is betrothed to ${state.characters[b].name}` };
     }
     default:

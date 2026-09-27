@@ -11,6 +11,7 @@ import { commandable } from '../public/js/shared/errands.js';
 import { PROJECT_TEMPLATES } from '../public/js/shared/economy.js';
 import * as court from './court.js';
 import { unitsOf, unitsFor, addUnits, unitsText } from '../public/js/shared/units.js';
+import { emit, fact } from '../public/js/engine/facts/log.js';
 export { commandable };
 
 const OFFICES = ['spymaster', 'steward', 'maester', 'captain', 'master_at_arms', 'knight', 'envoy', 'commander'];
@@ -193,6 +194,7 @@ export function executeActions(state, actions, orders = [], options = { immediat
   const broke = new Set(Object.keys(results).map(Number));
   for (const a0 of actions || []) {
     const a = withOp(a0); const i = Number(a.order) || 0; if (!a?.op || broke.has(i)) continue;
+    const cause = { type: 'order', ref: orders[i - 1]?.id || null }; // what the lord commanded is the cause of what follows
     // an action with nothing in it (recruit 0 men) is no action: the story tells that order
     if (['recruit', 'hire_men'].includes(a.op) && !(Number(a.men) >= 10)) continue;
     try {
@@ -206,18 +208,20 @@ export function executeActions(state, actions, orders = [], options = { immediat
         army.march = { to, since: state.meta.turn }; settle(state, army);
         const lead = leaderIn(state, orders[i - 1]?.text, army);
         if (lead) { army.commander = lead.id; joinParty(state, lead, army); }
+        emit(state, 'set_out', { actors: [army.commander], houses: [army.owner], pos: army.pos, data: { party: army.id, to }, cause });
         note(i, `${army.name} (${army.men.toLocaleString('en-GB')} men${army.commander ? ` under ${state.characters[army.commander]?.name}` : ''}) marches for ${placeName(state, to)}`); continue;
       }
-      if (a.op === 'raise') { const lead = !a.commander && leaderIn(state, orders[i - 1]?.text, null, resolvePlaceId(a.at)); for (const l of raiseLevies(state, { ...(lead ? { ...a, commander: lead.id } : a), immediate: !!options.immediate })) note(i, l); continue; }
-      if (a.op === 'banners') { for (const l of callBanners(state, a)) note(i, l); continue; }
-      if (a.op === 'merge') { for (const l of mergeHosts(state, a)) note(i, l); continue; }
+      if (a.op === 'raise') { const lead = !a.commander && leaderIn(state, orders[i - 1]?.text, null, resolvePlaceId(a.at)); for (const l of raiseLevies(state, { ...(lead ? { ...a, commander: lead.id } : a), immediate: !!options.immediate, cause })) note(i, l); continue; }
+      if (a.op === 'banners') { for (const l of callBanners(state, { ...a, cause })) note(i, l); continue; }
+      if (a.op === 'merge') { for (const l of mergeHosts(state, { ...a, cause })) note(i, l); continue; }
       if (a.op === 'works') { const w = startWorks(state, a.template, a.at); note(i, `Work begins: ${w.name} (${w.cost.toLocaleString('en-GB')} dragons over ${w.months} moons)`); continue; }
       if (a.op === 'feast' || a.op === 'tourney') { const r = court[a.op](state); note(i, r.summary || r.text); continue; }
       if (a.op === 'appoint') {
         const c = state.characters[a.character]; if (!c || c.house !== p || !c.alive) throw new Error('no such person of yours');
         if (!OFFICES.includes(a.role)) throw new Error('unknown office');
         for (const o of Object.values(state.characters)) if (o.house === p && o.id !== c.id && o.roles?.includes(a.role) && a.role !== 'commander' && a.role !== 'knight') o.roles = o.roles.filter((r) => r !== a.role);
-        c.roles = [...new Set([...(c.roles || []), a.role])]; note(i, `${c.name} takes up the office of ${a.role.replace('_', ' ')}`); continue;
+        c.roles = [...new Set([...(c.roles || []), a.role])]; note(i, `${c.name} takes up the office of ${a.role.replace('_', ' ')}`);
+        emit(state, 'office_granted', { actors: [c.id, me.lord], houses: [p], data: { office: a.role }, cause }); continue;
       }
       const op = { travel: 'travel', recruit: 'recruit', hire: 'hire' }[a.op]; if (!op) continue;
       const change = { ...a, op, house: p };
@@ -232,7 +236,7 @@ export function executeActions(state, actions, orders = [], options = { immediat
         if (text && LETTER.test(text) && !IN_PERSON.test(text)) throw new Error('that is a letter — it goes by raven, and no one rides');
         change.to = destination(state, a.to) || a.to;
       }
-      const r = applyChanges(state, [change], { source: 'Your orders' });
+      const r = applyChanges(state, [change], { source: 'Your orders', cause });
       r.applied.forEach((x) => note(i, x.text)); r.rejected.forEach((x) => note(i, `could not be done: ${x.reason}`));
     } catch (e) { note(i, `could not be done: ${e.message}`); }
   }
@@ -303,6 +307,7 @@ export async function carryOutOrders(state, ask) {
     for (const a of Object.values(state.parties)) {
       if (!commandable(state, a) || a.owner === state.meta.player || a.march?.to === to) continue;
       a.march = { to, since: state.meta.turn }; settle(state, a);
+      emit(state, 'set_out', { actors: [a.commander], houses: [a.owner, a.serving], pos: a.pos, data: { party: a.id, to }, cause: { type: 'order', ref: o.id } });
       (results[k + 1] = results[k + 1] || []).push(`${a.name} marches for ${placeName(state, to)}`);
     }
   });
@@ -401,6 +406,7 @@ export function postLetters(state, orders) {
     state.post.unshift({ id, to: c.id, toName: c.name, text: o.text, sent: dateStr(state.meta.date), sentDay: dayNumber(state.meta.date), arriveDay: dayNumber(state.meta.date) + days, days, status: 'in flight' });
     state.post = state.post.slice(0, 40);
     o.post = id; o.result = [...(o.result || []), `A raven flies to ${c.name} (~${days} ${days === 1 ? 'day' : 'days'})`];
+    emit(state, 'letter_sent', { actors: [lord?.id, c.id], houses: [p, c.house], data: { to: c.id, days, post: id }, vis: { scope: 'houses', houses: [p, c.house] }, cause: { type: 'order', ref: o.id }, text: `A raven flies from ${lord?.name || `House ${state.houses[p].name}`} to ${c.name} (~${days} ${days === 1 ? 'day' : 'days'}).` });
   }
 }
 
@@ -470,7 +476,7 @@ export function foldInto(state, host, other) {
   delete state.parties[other.id]; settle(state, host);
 }
 /** Call up the house's own levies at one of its holdings — into the host already standing there, if there is one. */
-export function raiseLevies(state, { at, men, commander, name, to, immediate }) {
+export function raiseLevies(state, { at, men, commander, name, to, immediate, cause }) {
   const p = state.meta.player; const me = state.houses[p];
   const place = resolvePlaceId(at) || me.seat; const hold = state.holdings[place];
   if (!hold || (hold.owner !== p && state.houses[hold.owner]?.liege !== p)) throw new Error(`${hold?.name || at} is not your land`);
@@ -499,8 +505,9 @@ export function raiseLevies(state, { at, men, commander, name, to, immediate }) 
   }
   for (const v of Object.values(state.houses)) if (v.liege === p && v.obligations?.muster === place && ['called', 'delayed', 'answered'].includes(v.obligations.levies) && !(v.obligations.join && state.parties[v.obligations.join])) v.obligations.join = host.id;
   if (n < Math.round(Number(men) || 0)) out.push(`only ${fmtN(n)} could be found of the ${fmtN(Math.round(Number(men)))} asked for`);
+  emit(state, 'levies_called', { actors: [me.lord, host.commander], houses: [p], place, pos: hold.pos, data: { party: host.id, men: n, now: first }, cause, text: `House ${me.name} calls up ${fmtN(n)} levies at ${hold.name}${n > first ? `; ${fmtN(n - first)} of them are still coming in from the fields` : ''}.` });
   const dest = to && destination(state, to);
-  if (dest && dest !== place) { host.march = { to: dest, since: state.meta.turn }; settle(state, host); out.push(`${host.name} marches for ${placeName(state, dest)}`); }
+  if (dest && dest !== place) { host.march = { to: dest, since: state.meta.turn }; settle(state, host); out.push(`${host.name} marches for ${placeName(state, dest)}`); emit(state, 'set_out', { actors: [host.commander], houses: [p], pos: host.pos, data: { party: host.id, to: dest }, cause }); }
   return out;
 }
 /** Bring the next day's levy contingent into its camp. Numbers are engine-owned and grow visibly. */
@@ -512,13 +519,13 @@ export function advanceMusters(state, days) {
     if (!add) continue;
     a.men += add; a.muster.remaining -= add;
     if (a.muster.remaining <= 0) { delete a.muster; settle(state, a); }
-    events.push({ title: `${a.name} grows in the fields`, text: `${add.toLocaleString('en-GB')} more men have reached the camp. The host now numbers ${a.men.toLocaleString('en-GB')}.`, where: a.at || null, importance: 2, type: 'war', houses: [a.owner] });
+    events.push(fact(state, 'muster_grew', { title: `${a.name} grows in the fields`, text: `${add.toLocaleString('en-GB')} more men have reached the camp. The host now numbers ${a.men.toLocaleString('en-GB')}.`, where: a.at || null, importance: 2, houses: [a.owner] }, { actors: [a.commander], data: { party: a.id, men: add, total: a.men }, cause: { type: 'rule', ref: 'muster' } }));
   }
   return events;
 }
 
 /** Call the banners: sworn lords are summoned to muster (they answer, delay or refuse by their nature, over days). */
-export function callBanners(state, { vassals, at }) {
+export function callBanners(state, { vassals, at, cause }) {
   const p = state.meta.player; const me = state.houses[p];
   const all = Object.values(state.houses).filter((h) => h.liege === p);
   const list = vassals === 'all' || !Array.isArray(vassals) || !vassals.length ? all : all.filter((h) => vassals.some((v) => slug(v) === h.id || String(v).toLowerCase().includes(h.name.toLowerCase())));
@@ -527,10 +534,11 @@ export function callBanners(state, { vassals, at }) {
   // the host already standing at the muster (the lord's own levies) is the one the banners join, wherever it later goes
   const join = fieldHostAt(state, p, muster)?.id || null;
   for (const v of list) v.obligations = { ...(v.obligations || {}), levies: 'called', muster, calledDays: 0, join };
+  emit(state, 'levies_called', { actors: [me.lord], houses: [p, ...list.map((v) => v.id)], place: resolvePlaceId(muster) || null, data: { vassals: list.map((v) => v.id), muster }, cause, text: `House ${me.name} calls its banners: ${list.length} sworn house${list.length > 1 ? 's are' : ' is'} summoned to ${placeName(state, muster)}.` });
   return [`The banners are called: ${list.length} sworn house${list.length > 1 ? 's' : ''} summoned to muster at ${placeName(state, muster)} (${list.slice(0, 8).map((v) => v.name).join(', ')}${list.length > 8 ? '…' : ''}); each answers in their own time and temper`];
 }
 /** Bring hosts at one place together under one banner. */
-export function mergeHosts(state, { armies, name, commander }) {
+export function mergeHosts(state, { armies, name, commander, cause }) {
   const mine = Object.values(state.parties).filter((a) => commandable(state, a) && a.kind !== 'fleet');
   // the castle's own garrison stays on its walls unless it is named
   const picked = Array.isArray(armies) && armies.length ? mine.filter((a) => armies.includes(a.id) || armies.some((x) => slug(x) === slug(a.name))) : mine.filter((a) => a.kind !== 'garrison');
@@ -539,10 +547,11 @@ export function mergeHosts(state, { armies, name, commander }) {
   for (const g of groups.values()) {
     if (g.length < 2) continue;
     g.sort((a, b) => (b.owner === state.meta.player) - (a.owner === state.meta.player) || b.men - a.men);
-    const host = g[0]; for (const o of g.slice(1)) foldInto(state, host, o);
+    const host = g[0]; const folded = g.slice(1).map((o) => o.id); for (const o of g.slice(1)) foldInto(state, host, o);
     if (name) host.name = String(name).slice(0, 80);
     const cmd = commander && state.characters[commander]; if (cmd?.alive) { host.commander = cmd.id; joinParty(state, cmd, host); }
     out.push(`${g.length} hosts at ${placeName(state, host.at || host.pos)} are joined into ${host.name}: ${fmtN(host.men)} men${host.commander ? ` under ${state.characters[host.commander]?.name}` : ''}`);
+    emit(state, 'host_joined', { actors: [host.commander], houses: [host.owner], place: host.at || null, pos: host.pos, data: { party: host.id, joined: folded, men: host.men }, cause, text: `${g.length} hosts are joined into ${host.name} (${fmtN(host.men)} men).` });
   }
   if (!out.length) throw new Error('there are no two hosts in the same place to join — they must first march to one place');
   return out;
