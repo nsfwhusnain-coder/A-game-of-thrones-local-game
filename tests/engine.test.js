@@ -205,7 +205,7 @@ test('a losing war tempts the schemers first: the Boltons treat with the enemy l
 });
 
 // ── Orders: the sworn hosts answering the call are the player's to command ──
-import { executeActions, commandable, carryOutOrders, raiseLevies, advanceMusters } from '../server/orders.js';
+import { executeActions, commandable, carryOutOrders, raiseLevies, advanceMusters, readOrdersByRule } from '../server/orders.js';
 test('"march the whole host to Moat Cailin" sends the sworn hosts on the road there too', async () => {
   const s = fresh();
   apply(s, [{ op: 'army_create', id: 'hb', owner: 'bolton', name: 'Host of House Bolton', at: 'bolton', men: 4000 }]);
@@ -916,6 +916,16 @@ test('an unresolved destination is refused aloud rather than replaced with a pla
   const result = executeActions(s, [{ op: 'march', order: 1, army: army.id, to: 'Casterly Rock' }], [{ text: "March to the Weeping Stones below Gorne's Way." }]);
   assert.match(result[1].join(' '), /destination.+could not be resolved/i);
   assert.equal(s.armies[army.id].march, undefined);
+});
+
+test('the offline order reader preserves broad and unknown march destinations for authority to decide', () => {
+  const s = fresh(); const army = Object.values(s.armies).find((a) => a.owner === 'stark' && a.type === 'army'); army.name = 'The Northern Host';
+  const north = readOrdersByRule(s, [{ text: 'March the Northern Host north of the Wall.' }]);
+  assert.equal(north.actions[0].to, 'hardhome');
+  const unknown = readOrdersByRule(s, [{ text: 'March the Northern Host to the Palace of Fallen Stars.' }]);
+  assert.match(unknown.actions[0].to, /Palace of Fallen Stars/);
+  const result = executeActions(s, unknown.actions, [{ text: 'March the Northern Host to the Palace of Fallen Stars.' }]);
+  assert.match(result[1].join(' '), /could not be resolved/i);
 });
 
 test('the playback clock gives every same-day event its own moving moment', async () => {

@@ -145,7 +145,12 @@ export function readOrdersByRule(state, orders, addressee = null) {
     const who = findPerson(t) || (addressee && state.characters[addressee]); const to = placeIn(t);
     if (who && to && /\b(ride|go|travel|march|come|send|return|sail|head|make for)\b/i.test(t)) { actions.push({ op: 'travel', order: n, character: who.id, to, men: /\b(men|riders|swords|guards|escort|company)\b/i.test(t) ? num(t) || 50 : 0 }); return; }
     const host = Object.values(state.armies).find((a) => a.owner === p && new RegExp(a.name.replace(/[^\w ]/g, ''), 'i').test(t));
-    if (host && to) actions.push({ op: 'march', order: n, army: host.id, to });
+    if (host && /\b(march|advance|move|make for|head|go|attack|invade|besiege)\b/i.test(t)) {
+      // Keep an unknown written destination as written. executeActions is the authority that either
+      // resolves it or refuses aloud; dropping the action here would turn a bad place into silence.
+      const rawTo = t.match(/\b(?:to|towards?|for|on)\s+(?:the\s+)?(.+?)(?:[.!?]|$)/i)?.[1]?.trim();
+      actions.push({ op: 'march', order: n, army: host.id, to: to || destination(state, t) || rawTo });
+    }
   });
   return { actions, story: [] };
 }
