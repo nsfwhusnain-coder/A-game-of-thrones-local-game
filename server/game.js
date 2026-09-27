@@ -6,6 +6,7 @@ import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplie
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
+import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers } from './agents.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
 import { nextTurnLength } from '../public/js/shared/turns.js';
@@ -135,11 +136,12 @@ function streamedEvents(text) {
   }
   return out.slice(0, 20);
 }
-const tracker = (id, kind) => { const t0 = Date.now(); progress.set(id, { kind, phase: 'waiting', ms: 0, t0 }); return (p) => progress.set(id, { kind, t0, ...progress.get(id), ...p, ms: Date.now() - t0 }); };
+const tracker = (id, kind, seed = {}) => { const t0 = Date.now(); progress.set(id, { kind, phase: 'waiting', ms: 0, t0, ...seed }); return (p) => progress.set(id, { kind, t0, ...progress.get(id), ...p, ms: Date.now() - t0 }); };
 const done = (id) => progress.delete(id);
 
 async function askJson(id, kind, messages, cfg, extra = {}) {
-  const onProgress = tracker(id, kind);
+  // the swarm names whoever is speaking, so the player is told 'the Hand moves the realm', not 'step 2 of 5'
+  const onProgress = tracker(id, kind, extra.agentLabel ? { agentLabel: extra.agentLabel, agentStep: extra.agentStep, agentTotal: extra.agentTotal } : {});
   try { return await askJsonInner(id, kind, messages, { ...extra, onProgress }); } finally { done(id); }
 }
 async function askJsonInner(id, kind, messages, extra) {
@@ -158,6 +160,67 @@ async function askJsonInner(id, kind, messages, extra) {
     }
   }
 }
+
+// ───────────────────────────── The swarm ─────────────────────────────
+// The turn used to be one enormous question to one model. It is now a short council: each agent
+// reads the same realm (the same prompt prefix, so the model server's cache is reused) and is
+// given one charge at the end of it. What each settles is handed to the next in plain English —
+// never as change operations, so the Bard, who writes last, never sees the machinery.
+//
+// If anything at all goes wrong the world still turns: an agent that cannot be read is skipped,
+// and the Bard is the only one whose absence is felt (its summary is then salvaged as before).
+async function runSwarm(id, state, cfg, ctx) {
+  const { span, chronicle, turnReason, engineEvents, dateFrom, applyCtx, applied, rejected } = ctx;
+  const spanDays = spanOf(span).days;
+  const agents = agentsFor(cfg.swarm ?? 'full');
+  const build = (agent, brief) => buildJumpPrompt(state, state.orders, span, chronicle, cfg, turnReason, { engineEvents, dateFrom, agent, brief });
+
+  // No swarm: the old single question, unchanged.
+  if (!agents.length) {
+    return askJson(id, 'jump', build(null, ''), cfg, { spanDays, streamText: true });
+  }
+
+  const briefs = [];
+  const say = (s) => { if (s) briefs.push(s); };
+  let last = null; let bard = null; let bardErr = null;
+  // what the Hand and the Whisperer actually managed to do, told to the Bard as plain fact
+  const doneHere = [];
+
+  for (let i = 0; i < agents.length; i++) {
+    const agent = agents[i];
+    const isBard = agent === 'bard';
+    const brief = briefs.join('\n\n');
+    const r = await askJson(id, 'jump', build(agent, brief), cfg, {
+      spanDays,
+      streamText: isBard, // only the chronicle is worth streaming to the player
+      maxTokens: isBard ? cfg.maxTokens : Math.min(cfg.maxTokens, agent === 'hand' ? 1800 : 900),
+      temperature: isBard ? cfg.temperature : Math.min(cfg.temperature, 0.6), // the clerks are sober; the Bard is not
+      agent, agentLabel: AGENT_LABELS[agent], agentStep: i + 1, agentTotal: agents.length,
+    }).catch((e) => ({ obj: null, error: e.message }));
+    last = r.raw || last;
+    const obj = r.obj;
+    if (!obj) { if (isBard) { bardErr = r.error || 'unreadable'; bard = r; } console.warn(`swarm: the ${agent} could not be read (${r.error || 'no object'})`); continue; }
+
+    if (isBard) { bard = { ...r, obj }; break; }
+
+    // what this agent is allowed to change, applied at once so the next agent sees a true world
+    const ops = filterOps(agent, obj.changes);
+    if (ops.length) {
+      const told = applyChanges(state, ops, { ...applyCtx, source: AGENT_SOURCE[agent] || applyCtx.source, mayInvent: agent === 'weaver' });
+      applied.push(...told.applied); rejected.push(...told.rejected);
+      doneHere.push(...told.applied);
+    }
+    if (agent === 'maester') say(briefFromMaester(obj));
+    if (agent === 'hand') say(briefFromPlan(obj));
+    if (agent === 'whisperer') say(briefFromWhispers(obj));
+  }
+
+  // The Bard is told what happened, not what was decided: the engine's own receipts.
+  if (!bard) return { obj: null, raw: last, error: 'the chronicler wrote nothing', text: '' };
+  const out = bard.obj || null;
+  return { obj: out ? { summary: out.summary, events: out.events, threads: out.threads, changes: [] } : null, raw: bard.raw || last, error: bardErr || bard.error, text: bard.text };
+}
+const AGENT_SOURCE = { hand: 'The doings of the realm', weaver: 'A custom of the realm', whisperer: 'Whispers and letters' };
 
 const consolidating = new Map(); // save id -> promise (memory is compressed in the background)
 
@@ -289,8 +352,10 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   const engineEvents = dayEngineEvents(state, [...deathEvents, ...foldAnswers(vt.events)], spanInfo.days);
   for (const a of Object.values(state.armies)) { delete a.bornDay; }
   // ── THE STORY'S PART: the model writes the days around the engine's facts, and the rest of the realm's doings
-  const messages = buildJumpPrompt(state, state.orders, span, chronicle, cfg, turnReason, { engineEvents, dateFrom });
-  let { obj, raw, error, text } = await askJson(id, 'jump', messages, cfg, { spanDays: spanOf(span).days, streamText: true });
+  const applyCtx = { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days };
+  let { obj, raw, error, text } = await runSwarm(id, state, cfg, {
+    span, chronicle, turnReason, engineEvents, dateFrom, applyCtx, applied, rejected,
+  });
   let salvaged = false;
   if (!obj) {
     // Unreadable even after repair and a retry: the realm still moves on (the ledger, vassals, seasons and marches
@@ -301,7 +366,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
     console.warn(`turn ${state.meta.turn + 1}: simulator reply unreadable (${error}); the engine advanced the world alone`);
   }
 
-  const told = applyChanges(state, obj.changes || [], { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days });
+  const told = applyChanges(state, obj.changes || [], applyCtx);
   applied.push(...told.applied); rejected.push(...told.rejected);
   // The seasons turn on their own if the story does not turn them
   if (!applied.some((a) => a.op === 'season')) {

@@ -1,5 +1,6 @@
 // Prompt construction for the simulation. The model is the game engine: it narrates,
 // decides what every other house does, and emits structured changes that the engine applies.
+import { agentCharge } from './agents.js';
 import { threadsDigest, THREADS } from '../public/js/shared/plots.js';
 import { regencyLine } from '../public/js/shared/regency.js';
 import { standing, standingWord } from '../public/js/shared/standing.js';
@@ -430,7 +431,7 @@ function greatMatters(state) {
 }
 function nearestPlace(state, pos) { let best = null, d = Infinity; for (const h of Object.values(state.holdings)) { const x = Math.hypot(h.pos[0] - pos[0], h.pos[1] - pos[1]); if (x < d) { d = x; best = h.id; } } return best; }
 
-export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg, until = null, { engineEvents = null, dateFrom = null } = {}) {
+export function buildJumpPrompt(state, orders, spanKey, chronicleMd, cfg, until = null, { engineEvents = null, dateFrom = null, agent = null, brief = '' } = {}) {
   const sc = SCENARIOS[state.meta.scenario];
   const span = spanOf(spanKey);
   const budget = Math.max(4000, cfg.contextTokens - cfg.maxTokens - 1500);
@@ -477,6 +478,9 @@ Only use ids that exist in the tables below. Change only what the story justifie
     (state.storyThreads || []).length ? 'THREADS THE PLAYER FOLLOWS (update them in "threads")\n' + state.storyThreads.map((t) => `- ${t.title}: ${t.last}`).join('\n') : '',
     greatMatters(state),
     todaysBeats(state, span.days),
+    // The charge comes LAST so that every agent of the swarm shares the same prompt prefix and the
+    // model server can reuse its cache between them: only this final block differs.
+    agent ? agentCharge(agent, span, brief) :
     `Now simulate the ${span.label}. Reply with the JSON object only: {"summary":"...","events":[...],"changes":[...]} — complete and valid.`,
   ].filter(Boolean).join('\n\n');
   return [{ role: 'system', content: system }, { role: 'user', content: user }];

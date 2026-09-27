@@ -327,9 +327,11 @@ function busy(on, text, { live = false } = {}) {
       if (prog && prog.phase && prog.phase !== 'idle') {
         // in the world's words; the numbers only for those who ask for them (Settings → model diagnostics)
         const pct = prog.phase === 'reading' ? Math.round((100 * (prog.promptDone || 0)) / Math.max(1, prog.promptTotal || 1)) : null;
-        what = prog.phase === 'waiting' || prog.phase === 'reading' ? `The maesters read the letters of the realm…${pct !== null ? ` ${pct}%` : ''}`
-          : prog.phase === 'thinking' ? 'The maesters deliberate…'
-          : prog.phase === 'writing' ? (live && prog.events?.length ? `The news comes in… (${prog.events.length} so far)` : 'The chronicle is written…')
+        // the council of five names whoever is speaking, so the wait is part of the world
+        const who = prog.agentLabel ? `${prog.agentLabel}…${prog.agentTotal > 1 ? ` (${prog.agentStep}/${prog.agentTotal})` : ''}` : null;
+        what = prog.phase === 'waiting' || prog.phase === 'reading' ? (who || `The maesters read the letters of the realm…${pct !== null ? ` ${pct}%` : ''}`)
+          : prog.phase === 'thinking' ? (who || 'The maesters deliberate…')
+          : prog.phase === 'writing' ? (live && prog.events?.length ? `The news comes in… (${prog.events.length} so far)` : (who || 'The chronicle is written…'))
           : prog.note ? prog.note.charAt(0).toUpperCase() + prog.note.slice(1) + '…' : what;
         if (showDiagnostics()) {
           const tps = prog.tokens && prog.ms ? (prog.tokens / Math.max(1, (prog.ms - (prog.firstTokenMs || 0)) / 1000)).toFixed(0) : null;
@@ -568,6 +570,7 @@ async function showSettings() {
       <div><label>Recent turns kept verbatim</label><input class="input" id="cfg-keep" type="number" value="${c.keepRecentTurns}"></div>
       <div><label>Request timeout (seconds)</label><input class="input" id="cfg-timeout" type="number" value="${c.timeoutSec}"></div>
       <div><label>World detail per turn</label><select id="cfg-detail"><option value="full">Full — every house & person (best with big context & fast GPU)</option><option value="lean">Lean — only what matters to you (much faster on laptops)</option></select></div>
+      <div><label>Who writes the turn</label><select id="cfg-swarm"><option value="full">The council of five — maester, Hand, weaver, whisperer, bard (richest; five short questions instead of one long one)</option><option value="lean">The Hand and the bard — the realm still moves, and is still well written (faster)</option><option value="off">One voice — the old single prompt (fastest, blandest)</option></select><small class="muted">The council shares one prompt prefix, so a local server reuses its cache between them.</small></div>
       <div><label>Thinking (reasoning models such as Qwen3)</label><select id="cfg-think"><option value="auto">Server default</option><option value="on">On — deeper, slower turns</option><option value="off">Off — fast turns</option></select></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-thinkchat" ${c.thinkInAudiences ? 'checked' : ''}> Also think in audiences &amp; councils (slower replies)</label></div>
       <div><label>Thinking budget (extra tokens)</label><input class="input" id="cfg-tbudget" type="number" value="${c.thinkingBudget ?? 6000}"></div>
@@ -579,7 +582,7 @@ async function showSettings() {
     </div>
     <div class="settings-actions"><button class="btn primary" id="cfg-save">Save</button><button class="btn" id="cfg-test">Test connection</button><button class="btn ghost" id="cfg-models">Fetch models</button></div>
     <div id="cfg-result" class="muted" style="margin-top:0.6rem;white-space:pre-wrap;font-size:0.85rem"></div>`);
-  $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full'; $('#cfg-think').value = c.thinking || 'auto'; $('#cfg-effort').value = c.reasoningEffort ?? 'low';
+  $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full'; $('#cfg-swarm').value = c.swarm || 'full'; $('#cfg-think').value = c.thinking || 'auto'; $('#cfg-effort').value = c.reasoningEffort ?? 'low';
   const showScale = (v) => { setUiScale(v); $('#ui-scale-v').textContent = Math.round(v * 100) + '%'; };
   $('#ui-scale').oninput = (e) => showScale(Number(e.target.value));
   $('#ui-scale-reset').onclick = () => { $('#ui-scale').value = 1; showScale(1); };
@@ -604,7 +607,7 @@ async function showSettings() {
   $$('[data-url]').forEach((b) => b.onclick = () => { $('#cfg-url').value = b.dataset.url; });
   const collect = () => {
     let extra = {}; try { extra = JSON.parse($('#cfg-extra').value || '{}'); } catch { toast('Extra parameters are not valid JSON', true); }
-    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, thinking: $('#cfg-think').value, thinkInAudiences: $('#cfg-thinkchat').checked, thinkingBudget: Number($('#cfg-tbudget').value) || 0, reasoningEffort: $('#cfg-effort').value, stream: $('#cfg-stream').checked, extraBody: extra };
+    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, swarm: $('#cfg-swarm').value, thinking: $('#cfg-think').value, thinkInAudiences: $('#cfg-thinkchat').checked, thinkingBudget: Number($('#cfg-tbudget').value) || 0, reasoningEffort: $('#cfg-effort').value, stream: $('#cfg-stream').checked, extraBody: extra };
   };
   $('#cfg-save').onclick = async () => { const r = await api('/config', { body: collect() }); $('#cfg-url').value = r.baseUrl; toast('Settings saved.'); refreshLLMStatus(); };
   $('#cfg-test').onclick = async () => { await api('/config', { body: collect() }); $('#cfg-result').textContent = 'Testing…'; try { const r = await api('/llm/test', { body: {} }); $('#cfg-result').textContent = `✔ Connected (${r.ms} ms, ${r.model || 'model'})\n${r.text}`; } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } refreshLLMStatus(); };
