@@ -115,6 +115,7 @@ function reliefs(state, c, days) {
 export function psycheTick(state, days) {
   const events = []; const applied = [];
   const player = state.meta?.player;
+  const playerMatter = (house) => house === player || state.houses?.[house]?.liege === player || state.houses?.[player]?.liege === house || (state.wars || []).some((w) => w.status !== 'ended' && ((w.attackers || []).includes(player) || (w.defenders || []).includes(player)) && ((w.attackers || []).includes(house) || (w.defenders || []).includes(house)));
   for (const c of Object.values(state.characters || {})) {
     if (!c.alive) continue;
     const before = c.stress ?? 0;
@@ -140,7 +141,7 @@ export function psycheTick(state, days) {
       const line = BAND_TEXT[band]?.(c);
       if (line) events.push({
         title: `${c.name} is not himself`.replace('himself', c.gender === 'f' ? 'herself' : 'himself'),
-        text: line, where: placeOf(state, c), importance: c.house === player ? 3 : 2, type: 'court', houses: [c.house], mind: true,
+        text: line, where: placeOf(state, c), importance: c.house === player ? 3 : 2, type: 'court', houses: [c.house], mind: true, ...(playerMatter(c.house) ? {} : { bg: true }),
       });
     }
     // a mind under siege makes worse decisions, trusts less, and drives its own people away
@@ -157,7 +158,7 @@ export function psycheTick(state, days) {
       events.push({
         title: `${c.name} collapses`,
         text: `${c.name} was found on the floor of the solar at dawn, grey-faced and shaking, and could not be roused for an hour. The maester speaks of the strain, and of rest that will not be taken.`,
-        where: placeOf(state, c), importance: c.house === player ? 4 : 2, type: 'court', houses: [c.house], mind: true,
+        where: placeOf(state, c), importance: c.house === player ? 4 : 2, type: 'court', houses: [c.house], mind: true, ...(playerMatter(c.house) ? {} : { bg: true }),
       });
       c.stress = clamp(c.stress - 25, 0, 100);
       applied.push({ op: 'psyche', text: `${c.name} is worn past bearing` });
