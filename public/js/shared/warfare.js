@@ -6,7 +6,7 @@ import { roadWarnings } from './chokepoints.js';
 
 import { MILES_PER_UNIT } from "../../data/geography.js"; // ~1.85 miles per game unit on the atlas
 export { MILES_PER_UNIT };
-const SPEED = { foot: 18, horse: 32, fleet: 60 }; // miles per day
+import { SPEED } from '../../data/balance.js'; // miles per day, by class
 
 export function atWar(state, a, b) {
   if (!a || !b || a === b) return false;

@@ -4,6 +4,7 @@
 // news. The engine rolls for each traveller each turn; the player's own people's roads are pinned on the map.
 import { applyChanges, roadPos, placeName } from './world.js';
 import { atWar, marchDays } from './warfare.js';
+import { random } from '../engine/rng.js';
 
 const pick = (a, r) => a[Math.floor(r() * a.length)];
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -47,7 +48,7 @@ function danger(state, h, house) {
  * Roll the road for everyone travelling this period. Returns { events, applied }.
  * Travellers: characters riding alone (c.travel) and small companies on the march (under 400 men).
  */
-export function roadEncounters(state, days, r = Math.random) {
+export function roadEncounters(state, days, r = random) {
   const events = []; const changes = []; const p = state.meta.player;
   const k = Math.min(1.5, days / 30);
   const mineHouse = (h) => h === p || state.houses[h]?.liege === p;

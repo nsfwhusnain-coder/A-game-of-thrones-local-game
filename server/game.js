@@ -10,6 +10,9 @@ import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '
 import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
 import { chokepointToll, roadCongestion } from '../public/js/shared/chokepoints.js';
 import { needsShips, planVoyage, retarget, sail } from '../public/js/shared/sea.js';
+import { random } from '../public/js/engine/rng.js';
+import { nextId } from '../public/js/engine/ids.js';
+import { withDice } from './dice.js';
 import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
@@ -113,7 +116,7 @@ export function deleteSave(id) { fs.rmSync(dir(id), { recursive: true, force: tr
 export function setOrders(id, orders) {
   const state = loadState(id);
   const prev = new Map(state.orders.map((o) => [o.id, o])); // keep the simulator-only notes and flags of existing orders
-  state.orders = (orders || []).map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text || '').slice(0, 2000) })).filter((o) => o.text.trim());
+  state.orders = (orders || []).map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o.text || '').slice(0, 2000) })).filter((o) => o.text.trim());
   saveState(id, state);
   return state.orders;
 }
@@ -241,7 +244,7 @@ export async function previewOrderPlans(id) {
   const job = (async () => {
     const cfg = loadConfig(); const state = loadState(id);
     const ask = cfg.provider === 'mock' ? null : async (msgs) => (await askJson(id, 'orders', msgs, cfg, { maxTokens: 900 })).obj;
-    if (!(await previewOrders(state, ask))) return state.orders;
+    if (!(await withDice(state, () => previewOrders(state, ask)))) return state.orders;
     // the player may have edited or removed orders meanwhile: a receipt is kept only for the text it was read from
     const fresh = loadState(id); const read = new Map(state.orders.map((o) => [o.id, o]));
     for (const o of fresh.orders) { const r = read.get(o.id); if (r?.plan && r.planFor === o.text) Object.assign(o, { plan: r.plan, planFor: r.planFor, preview: r.preview }); }
@@ -257,7 +260,11 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
-  if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || crypto.randomBytes(4).toString('hex'), text: String(o.text) })).filter((o) => o.text.trim()); }
+  // everything the engine rolls this turn comes from this save's dice (server/dice.js), awaits and all
+  return withDice(state, () => advanceWith(id, state, cfg, { span, orders }));
+}
+async function advanceWith(id, state, cfg, { span, orders }) {
+  if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o.text) })).filter((o) => o.text.trim()); }
   for (const a of Object.values(state.armies)) { delete a.motion; delete a.arriveDay; }
   const chronicle = readChronicle(id);
   // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
@@ -282,7 +289,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
       c.age += 1;
       const ailing = c.status === 'wounded' || /ailing|dying|sick|abed/i.test(`${c.traits} ${c.bio}`);
       const risk = c.age >= 60 ? ((c.age - 58) ** 2) / 2600 + (ailing ? 0.25 : 0) : ailing && c.age > 45 ? 0.08 : 0;
-      if (risk && Math.random() < Math.min(0.85, risk)) naturalDeaths.push({ op: 'character', id: c.id, alive: false, cause: ailing ? 'illness' : 'old age' });
+      if (risk && random() < Math.min(0.85, risk)) naturalDeaths.push({ op: 'character', id: c.id, alive: false, cause: ailing ? 'illness' : 'old age' });
     }
   }
   state.meta.turn += 1;
@@ -447,7 +454,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   events.push(...orderEvents(state, state.orders, events));
   events.push(...engineEvents);
   // every event has its day in the period, so the turn can be told in order
-  for (const e of events) if (!e.day) e.day = 1 + Math.floor(Math.random() * spanInfo.days);
+  for (const e of events) if (!e.day) e.day = 1 + Math.floor(random() * spanInfo.days);
   events.sort((a, b) => a.day - b.day || (b.orderId ? 1 : 0) - (a.orderId ? 1 : 0));
   for (const a of applied.filter((x) => x.op === 'succession')) {
     const hh = state.houses[a.house];
@@ -478,7 +485,7 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   // If the simulator raised no matter for the player over a moon or more, the realm brings one itself
   const newDecision = applied.some((a) => a.op === 'decision');
   const pendingCount = (state.decisions || []).filter((d) => d.status === 'pending').length;
-  if (!newDecision && pendingCount === 0 && Math.random() < 0.75 * Math.min(1, spanInfo.days / 30)) {
+  if (!newDecision && pendingCount === 0 && random() < 0.75 * Math.min(1, spanInfo.days / 30)) {
     // the same kind of matter does not come before you twice in quick succession
     state.plots = state.plots || {}; const seen = state.plots.petitioned = state.plots.petitioned || {};
     const kindOf = (t) => t.replace(/House [A-Z][\w']*( of [A-Z][\w' ]*)?/g, '').replace(/[^a-z ]/gi, '').trim().slice(0, 40);
@@ -588,6 +595,9 @@ export async function talk(id, charId, message) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
+  return withDice(state, () => talkWith(id, state, cfg, charId, message));
+}
+async function talkWith(id, state, cfg, charId, message) {
   const c = state.characters[charId];
   if (!c) throw httpError(404, 'unknown character');
   if (!c.alive) throw httpError(400, `${c.name} is dead.`);
@@ -668,7 +678,7 @@ function dayEngineEvents(state, evs, days) {
   const arrived = new Map(Object.values(state.armies).filter((a) => a.arriveDay && a.at).map((a) => [a.at, a.arriveDay]));
   for (const e of evs) {
     if (e.day) { e.day = Math.max(1, Math.min(days, Math.round(e.day))); continue; }
-    e.day = (e.where && arrived.get(e.where)) || 1 + Math.floor(Math.random() * days);
+    e.day = (e.where && arrived.get(e.where)) || 1 + Math.floor(random() * days);
   }
   return evs.sort((a, b) => a.day - b.day);
 }
@@ -722,7 +732,7 @@ function deliverReplies(state) {
     const res = applyChanges(state, r.changes || [], { source: c.name, protectPlayer: true, mayMove: r.mayMove || [] });
     const entry = (state.chats[r.char] || []).find((m) => m.pending && m.arrivesDay === r.arrivesDay);
     if (entry) { delete entry.pending; entry.date = dateStr(state.meta.date); entry.applied = res.applied.map((a) => a.text); }
-    state.ravens.unshift({ id: Date.now() + Math.random(), day: today, from: c.id, fromName: c.name, to: lordId, text: String(r.text).replace(/\*[^*]*\*/g, '').trim(), date: dateStr(state.meta.date), read: false });
+    state.ravens.unshift({ id: nextId(state, 'r'), day: today, from: c.id, fromName: c.name, to: lordId, text: String(r.text).replace(/\*[^*]*\*/g, '').trim(), date: dateStr(state.meta.date), read: false });
     const first = String(r.text).replace(/\*[^*]*\*/g, ' ').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s/)[0] || '';
     const whence = String(c.loc || '').startsWith('army:') ? `the camp of ${state.armies[c.loc.slice(5)]?.name || 'a host'}` : placeName(state, c.loc);
     events.push({ title: `${c.name} answers ${state.characters[lordId]?.name || 'the lord'}`, text: `A raven from ${whence}: “${first.slice(0, 220)}”${res.applied.length ? ` — ${res.applied.map((a) => a.text).join('; ')}` : ''}`, where: resolvePlaceId(c.loc) || null, importance: 3, type: 'diplomacy', houses: [p, c.house], mine: true, day: 1 });
@@ -766,6 +776,9 @@ export function editState(id, patch) {
 // Direct actions that take effect immediately in the ledger (and are told to the simulator as orders).
 export function act(id, body) {
   const state = loadState(id);
+  return withDice(state, () => actWith(id, state, body));
+}
+function actWith(id, state, body) {
   const p = state.meta.player; const me = state.houses[p];
   // an order may carry a note for the simulator only (what the ledger already settled), never shown to the player
   // status: 'done' — the engine settled it here and now (the story narrates it, never repeats it); 'underway' —
@@ -773,7 +786,7 @@ export function act(id, body) {
   const addOrder = (text, note = '', status = null, result = null) => {
     const settled = status === 'done' ? '[Already carried out by the engine; do not apply it again, narrate what follows.]' : status === 'underway' ? '[Already set in motion by the engine; do not apply it again.]' : '';
     const n = [note, note.startsWith('[Already') ? '' : settled].filter(Boolean).join(' ');
-    state.orders.push({ id: crypto.randomBytes(4).toString('hex'), text, auto: true, ...(n ? { note: n } : {}), ...(status ? { status, executed: true, result: result ? [result] : [text] } : {}) });
+    state.orders.push({ id: nextId(state, 'o'), text, auto: true, ...(n ? { note: n } : {}), ...(status ? { status, executed: true, result: result ? [result] : [text] } : {}) });
   };
   let result = {};
   switch (body.kind) {
@@ -921,6 +934,9 @@ export async function council(id, members, message) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
+  return withDice(state, () => councilWith(id, state, cfg, members, message));
+}
+async function councilWith(id, state, cfg, members, message) {
   const ids = (members || []).filter((m) => state.characters[m]?.alive);
   if (!ids.length) throw httpError(400, 'no one to hold council with');
   const messages = buildCouncilPrompt(state, ids, message, readChronicle(id), cfg);

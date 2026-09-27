@@ -4,11 +4,12 @@
 // the inputs (statuses, prosperity, obligations, projects); this engine settles the books.
 import { evaluateRules } from './rules.js';
 import { RESOURCES, REGION_PROFILE, HOLDING_RESOURCES, POPULATION, POPULATION_DEFAULTS, TRIBUTE_SHARE, TAX_LEVELS, RESOURCE_VALUE } from '../../data/economy.js';
+import { random } from '../engine/rng.js';
 
 const MINES = new Set(['gold', 'silver', 'iron']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const rnd = (a, b) => a + Math.random() * (b - a);
-const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; // ~[-1,1]
+const rnd = (a, b) => a + random() * (b - a);
+const gauss = () => (random() + random() + random() - 1.5) / 1.5; // ~[-1,1]
 
 export const SEASONS = {
   summer: { label: 'Summer', food: 1.0, north: 0.9, note: 'Fields are full.' },
@@ -156,7 +157,7 @@ export function settle(state, days) {
     const y = holdingYield(state, h);
     let luck = 1 + gauss() * 0.22;
     // occasional windfalls and misfortunes
-    const roll = Math.random();
+    const roll = random();
     let why = '';
     if (roll < 0.03 * months) { luck *= 0.45; why = pick(['blight in the fields', 'a fire in the granary', 'outlaws on the roads', 'a sickness among the smallfolk', 'a storm wrecked the fishing boats']); }
     else if (roll > 1 - 0.03 * months) { luck *= 1.5; why = pick(['a bumper harvest', 'a rich market season', 'a new vein in the mines', 'fat herring shoals', 'a great fair drew merchants']); }
@@ -182,7 +183,7 @@ export function settle(state, days) {
     const share = TRIBUTE_SHARE[liege.rank] ?? 0.2;
     const ltax = TAX_LEVELS[liege.policy?.tax || 'normal'];
     let rel = 0; try { rel = state.relations[(v.id < liege.id ? `${v.id}|${liege.id}` : `${liege.id}|${v.id}`)]?.v ?? 0; } catch { /* */ }
-    let comply = st === 'paying' ? rnd(0.85, 1.05) : st === 'reduced' ? rnd(0.45, 0.55) : st === 'late' ? (Math.random() < 0.35 ? rnd(0.8, 1.6) : 0) : 0;
+    let comply = st === 'paying' ? rnd(0.85, 1.05) : st === 'reduced' ? rnd(0.45, 0.55) : st === 'late' ? (random() < 0.35 ? rnd(0.8, 1.6) : 0) : 0;
     if (st === 'paying' && rel < -30) comply *= rnd(0.5, 0.9);
     const base = (ledgers[v.id]?.own || 0) / TAX_LEVELS[v.policy?.tax || 'normal'].income;
     const due = base * share * ltax.income;
@@ -344,7 +345,7 @@ export function stewardOf(state, houseId) {
   return cs.find((c) => c.roles?.includes('steward')) || cs.find((c) => c.roles?.includes('maester')) || null;
 }
 
-function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function pick(a) { return a[Math.floor(random() * a.length)]; }
 
 // Standard works a lord can pour money into directly from the Economy window
 export const PROJECT_TEMPLATES = [
@@ -395,7 +396,7 @@ export function seasonTick(state, days) {
   w.seasonDays = (w.seasonDays || 0) + days;
   if (w.seasonDays < c.min) return null;
   const pTurn = 1 - Math.exp(-days / Math.max(30, c.mean - c.min));
-  if (Math.random() >= pTurn) return null;
+  if (random() >= pTurn) return null;
   w.season = c.next; w.seasonDays = 0; w.seasonNote = c.note;
   return { season: c.next, text: c.note };
 }

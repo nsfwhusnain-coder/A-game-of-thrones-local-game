@@ -6,6 +6,7 @@
 import { applyChanges } from './world.js';
 import { atWar, battleOdds, siegeEstimate } from './warfare.js';
 import { contingentsHoldBack } from './treachery.js';
+import { random } from '../engine/rng.js';
 
 const CONTACT = 10;      // map units (~18 miles): hosts this close will meet
 const SIEGE_REACH = 7;   // a host this close to an enemy castle sits before its walls
@@ -158,7 +159,7 @@ function besiege(state, h, besiegers, days, r) {
  * Resolve the period's clashes. skip: houses whose battle the story itself told this turn (not fought twice).
  * Returns { events, applied }.
  */
-export function resolveWarfare(state, days, { skip = new Set(), r = Math.random } = {}) {
+export function resolveWarfare(state, days, { skip = new Set(), r = random } = {}) {
   const events = []; const applied = []; const fought = new Set();
   const armies = () => Object.values(state.armies).filter((a) => a.men > 0);
   // battles: the closest pairs first

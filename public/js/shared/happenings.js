@@ -5,13 +5,14 @@
 // make the map feel inhabited, and the story model is spared from writing the small life of the realm.
 import { HAPPENINGS, NAMES, GOODS, SEAS, REGION_LABEL } from '../../data/happenings.js';
 import { getRelation, realmOf } from './world.js';
+import { random } from '../engine/rng.js';
 
 const pickR = (a, r) => a[Math.floor(r() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // how many happenings a period brings: a fortnight a handful, a year several dozen
 // a quiet day may bring nothing; a moon about seven
-export function happeningCount(days, r = Math.random) { const x = (days / 30) * 7; return clamp(Math.floor(x) + (r() < x % 1 ? 1 : 0), 0, 60); }
+export function happeningCount(days, r = random) { const x = (days / 30) * 7; return clamp(Math.floor(x) + (r() < x % 1 ? 1 : 0), 0, 60); }
 
 function atWar(s, house) {
   const r = realmOf(s, house);
@@ -81,7 +82,7 @@ function rivalOf(s, house) {
   for (const k of Object.keys(s.houses)) { if (k === house || !s.houses[k].seat) continue; const x = getRelation(s, house, k); if (x < v) { v = x; best = k; } }
   if (best) return best;
   const own = s.houses[house]; const near = Object.values(s.houses).filter((x) => x.id !== house && x.region === own?.region && x.seat);
-  return near.length ? near[Math.floor(Math.random() * near.length)].id : null;
+  return near.length ? near[Math.floor(random() * near.length)].id : null;
 }
 function friendOf(s, house) {
   let best = null, v = 15;
@@ -104,7 +105,7 @@ const variant = (t, r) => { const vs = String(t).split(' || '); return vs[Math.f
  * Play out the small life of the realm for a period.
  * Returns { events, changes } — events are marked bg:true (background), changes are ordinary change ops.
  */
-export function happenings(state, days, r = Math.random) {
+export function happenings(state, days, r = random) {
   const s = state; const out = { events: [], changes: [] };
   s.plots = s.plots || {}; const cd = (s.plots.hap = s.plots.hap || {});
   const turn = s.meta.turn;

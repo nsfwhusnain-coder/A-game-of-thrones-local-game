@@ -10,6 +10,9 @@ import { heirOf, isFemale, sexOf } from './people.js';
 import { addReport, updateIntel } from './intel.js';
 import { commandable } from './errands.js';
 import { compileRule } from './rules.js';
+import { MONTHS, dateStr, addDays, dayNumber, SPANS, spanOf } from '../engine/time.js';
+import { random, seedState, newSeed, withRng } from '../engine/rng.js';
+import { nextId } from '../engine/ids.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -70,7 +73,7 @@ const inPoly = ([x, y], pts) => { let c = false; for (let i = 0, j = pts.length 
 export function isLand(p) { return LAND.some((l) => inPoly(p, l.pts)) && !LAKES.some((l) => inPoly(p, l.pts)); }
 /** A dry spot at about `dist` units from `p` (or `p` itself), searching outward. */
 export function landNear(p, dist = 0) {
-  const a0 = Math.random() * Math.PI * 2;
+  const a0 = random() * Math.PI * 2;
   for (let r = dist; r < dist + 40; r += 2) for (let k = 0; k < 12; k++) { const a = a0 + (k / 12) * Math.PI * 2; const q = r ? [Math.round(p[0] + Math.cos(a) * r), Math.round(p[1] + Math.sin(a) * r)] : [Math.round(p[0]), Math.round(p[1])]; if (isLand(q)) return q; if (!r) break; }
   return null;
 }
@@ -82,7 +85,14 @@ export function isCoastal([x, y]) {
   return false;
 }
 
-export function createInitialState(scenarioId, playerHouse) {
+export function createInitialState(scenarioId, playerHouse, { seed = newSeed() } = {}) {
+  // the world is made with the new game's own dice, so a seed always makes the same world
+  const dice = { meta: { seed, rngState: seedState(seed) } };
+  const state = withRng(dice, () => buildInitialState(scenarioId, playerHouse, seed));
+  state.meta.rngState = dice.meta.rngState;
+  return state;
+}
+function buildInitialState(scenarioId, playerHouse, seed) {
   const sc = SCENARIOS[scenarioId];
   if (!sc) throw new Error('Unknown scenario ' + scenarioId);
   const houses = {};
@@ -140,7 +150,8 @@ export function createInitialState(scenarioId, playerHouse) {
     version: 2,
     meta: {
       scenario: sc.id, scenarioName: sc.name, player: playerHouse, date: { ...sc.date }, turn: 0, mapVersion: MAP_VERSION,
-      created: new Date().toISOString(),
+      created: new Date().toISOString(), // lint-allow: when the chronicle was begun, not a roll of the dice
+      seed, rngState: seedState(seed), seq: 0, // the save's own dice (engine/rng.js) and id counter (engine/ids.js)
     },
     houses, characters, holdings, armies, relations,
     wars: structuredClone(sc.wars), pacts: structuredClone(sc.pacts),
@@ -170,6 +181,9 @@ function seedIntel(state) {
 
 /** Bring older saves up to date with new world features. */
 export function migrateState(state) {
+  // saves from before the dice were the save's own: a seed from the save's own name for the game, so it stays fixed
+  if (!Array.isArray(state.meta.rngState)) { let h = 2166136261; for (const ch of `${state.meta.created}|${state.meta.player}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } state.meta.seed = h >>> 0; state.meta.rngState = seedState(state.meta.seed); }
+  if (state.meta.seq == null) state.meta.seq = 0;
   // every character has a sex (older saves had `gender`, or nothing): the data knows the canon ones
   for (const c of Object.values(state.characters || {})) if (!c.sex) c.sex = SEX_OF.get(c.id) || sexOf(c);
   // the King's progress keeps to its road in older saves too (the story may not redirect it)
@@ -240,10 +254,10 @@ export function generateKin(state, houseId, { female = false, age = 14 } = {}) {
   const region = state.holdings[h.seat]?.region || h.region || 'reach';
   const pool = female ? (FEMALE_NAMES[region] || FEMALE_NAMES.reach) : (NAME_POOLS[region] || NAME_POOLS.reach).filter((n) => !/^(Lyessa|Alys|Sarra|Wynafryd|Harma|Morna|Gysella|Bethany|Jeyne|Ysilla|Mya|Cerenna|Myranda|Lanna|Tanda|Falyse|Leonette|Rhonda|Sharna|Ellyn|Larra|Nymella|Belore)$/.test(n));
   const surname = h.name.replace(/ of .*$/, '').replace(/^Nymeros /, '');
-  let first = pool[Math.floor(Math.random() * pool.length)], id = slug(`${first}_${surname}`), n = 2;
+  let first = pool[Math.floor(random() * pool.length)], id = slug(`${first}_${surname}`), n = 2;
   while (state.characters[id]) id = slug(`${first}_${surname}_${n++}`);
   const lord = state.characters[h.lord];
-  const traits = [TRAIT_POOL[Math.floor(Math.random() * TRAIT_POOL.length)]].join(', ');
+  const traits = [TRAIT_POOL[Math.floor(random() * TRAIT_POOL.length)]].join(', ');
   const year = state.meta?.date?.year || 298;
   const c = { id, name: `${first} ${surname}`, house: houseId, title: '', age, born: year - age, loc: h.seat || houseId, roles: ['family'], traits, bio: `${female ? 'Daughter' : 'Son'} of House ${h.name}${lord ? `, kin to ${lord.name}` : ''}.`, alive: true, status: 'free', opinion: 0, loyalty: 60, memories: [], generated: true, sex: female ? 'f' : 'm', skills: deriveSkills({ roles: ['family'], traits, age }) };
   if (lord && lord.age - age >= 16) c[isFemale(lord) ? 'mother' : 'father'] = lord.id;
@@ -355,30 +369,8 @@ export function realmTotals(state, houseId) {
   return tot;
 }
 
-// ---------- Calendar ----------
-export const MONTHS = ['1st moon', '2nd moon', '3rd moon', '4th moon', '5th moon', '6th moon', '7th moon', '8th moon', '9th moon', '10th moon', '11th moon', '12th moon'];
-export function dateStr(d) { return `${d.day} ${MONTHS[d.month - 1]}, ${d.year} AC`; }
-export function addDays(d, days) {
-  let total = (d.year * 12 + (d.month - 1)) * 30 + (d.day - 1) + days;
-  const year = Math.floor(total / 360); total -= year * 360;
-  const month = Math.floor(total / 30) + 1; const day = (total % 30) + 1;
-  return { year, month, day };
-}
-/** Days since the start of the reckoning: for deadlines that run in days, whatever the length of a turn. */
-export const dayNumber = (d) => d.year * 360 + (d.month - 1) * 30 + (d.day - 1);
-
-export const SPANS = {
-  '1d': { days: 1, label: 'one day' }, '3d': { days: 3, label: 'three days' },
-  '1w': { days: 7, label: 'one week' }, '2w': { days: 14, label: 'two weeks' }, '1m': { days: 30, label: 'one moon' },
-  '3m': { days: 90, label: 'three moons' }, '6m': { days: 180, label: 'half a year' }, '1y': { days: 360, label: 'one year' },
-};
-
-/** A turn's length from its key: the old fixed spans ('1w'), or a turn of n days ('12d'). */
-export function spanOf(key) {
-  if (SPANS[key]) return SPANS[key];
-  const m = /^(\d+)d$/.exec(String(key || '')); if (!m) return SPANS['1m'];
-  const n = Math.max(1, Number(m[1])); return { days: n, label: n === 1 ? 'one day' : `${n} days` };
-}
+// ---------- Calendar ---------- (engine/time.js; re-exported for the modules that import it from here)
+export { MONTHS, dateStr, addDays, dayNumber, SPANS, spanOf };
 
 // ---------- Applying simulation changes ----------
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -671,11 +663,11 @@ function applyOne(state, ch, ctx) {
       const t = state.houses[hid].figures.treasury; const cost = role === 'spymaster' ? 600 : role === 'maester' ? 400 : 250;
       if (!t || Number(t.v) < cost) throw new Error(`not enough gold (${cost} dragons)`);
       t.v = Number(t.v) - cost;
-      const c = generateKin(state, hid, { female: role === 'spymaster' && Math.random() < 0.3, age: 25 + Math.floor(Math.random() * 25) });
+      const c = generateKin(state, hid, { female: role === 'spymaster' && random() < 0.3, age: 25 + Math.floor(random() * 25) });
       // officers are hired men, not kin: a common name and a byname, never the house's own
       const BYNAMES = { spymaster: ['the Quiet', 'Softfoot', 'of the Street of Silk', 'Longfingers', 'the Grey'], steward: ['the Careful', 'of the Counting House', 'Inkfingers'], maester: [], captain: ['the Hard', 'Hardhand', 'of the Guard'], master_at_arms: ['Ironarm', 'the Old Bull'], knight: ['the Bold', 'of the Kingswood', 'Blackshield'], envoy: ['Silvertongue', 'the Fair'], commander: ['the Grim', 'Oakheart'] };
       const first = c.name.split(' ')[0]; const by = BYNAMES[role] || [];
-      c.name = ch.name ? String(ch.name).slice(0, 60) : role === 'maester' ? `Maester ${first}` : role === 'knight' ? `Ser ${first} ${by[Math.floor(Math.random() * by.length)] || ''}`.trim() : `${first} ${by[Math.floor(Math.random() * by.length)] || ''}`.trim();
+      c.name = ch.name ? String(ch.name).slice(0, 60) : role === 'maester' ? `Maester ${first}` : role === 'knight' ? `Ser ${first} ${by[Math.floor(random() * by.length)] || ''}`.trim() : `${first} ${by[Math.floor(random() * by.length)] || ''}`.trim();
       const nid = slug(c.name); if (!state.characters[nid]) { delete state.characters[c.id]; c.id = nid; state.characters[nid] = c; }
       c.roles = [role, ...(role === 'knight' ? [] : [])]; c.title = `${ROLE[role]} of House ${state.houses[hid].name}`;
       c.bio = ch.bio || `Taken into service at ${placeName(state, place)}.`; c.loc = place; c.loyalty = 55; c.father = undefined; c.mother = undefined;
@@ -750,7 +742,7 @@ function applyOne(state, ch, ctx) {
       if (state.holdings[id]) throw new Error('holding exists: ' + id);
       const near = Array.isArray(ch.at) ? ch.at : posOf(state, ch.at || ch.near);
       if (!near) throw new Error('unknown place ' + (ch.at || ch.near));
-      const pos = landNear(near, ch.at && !ch.near ? 0 : 8 + Math.random() * 6);
+      const pos = landNear(near, ch.at && !ch.near ? 0 : 8 + random() * 6);
       if (!pos) throw new Error('no dry land there');
       const type = HOLDING_TYPES.includes(ch.type) ? ch.type : 'castle';
       const region = nearestHolding(state, pos) ? state.holdings[nearestHolding(state, pos)].region : state.houses[owner].region;
@@ -764,7 +756,7 @@ function applyOne(state, ch, ctx) {
       state.landmarks = state.landmarks || [];
       if (ch.remove) { state.landmarks = state.landmarks.filter((l) => l.name !== text); return { op, text: `Landmark removed: ${text}` }; }
       const pos = Array.isArray(ch.at) ? ch.at : posOf(state, ch.at); if (!pos) throw new Error('unknown place ' + ch.at);
-      state.landmarks = [...state.landmarks.filter((l) => l.name !== text), { name: text, pos: [pos[0] + (Math.random() - 0.5) * 6, pos[1] + (Math.random() - 0.5) * 6], kind: ch.kind || 'site', note: ch.note || '', date }].slice(-40);
+      state.landmarks = [...state.landmarks.filter((l) => l.name !== text), { name: text, pos: [pos[0] + (random() - 0.5) * 6, pos[1] + (random() - 0.5) * 6], kind: ch.kind || 'site', note: ch.note || '', date }].slice(-40);
       return { op, text: `On the map: ${text}` };
     }
     case 'character': case 'character_update': {
@@ -911,7 +903,7 @@ function applyOne(state, ch, ctx) {
       // one of the household at the lord's side speaks to him; no raven flies across a hall
       const lc = lord && state.characters[lord];
       if (fc && fc.house === pl && lc && !fc.travel && !lc.travel && fc.loc === lc.loc) throw new Error(`${fc.name} is with you; no raven is needed`);
-      state.ravens.unshift({ id: Date.now() + Math.random(), day: dayNumber(state.meta.date), from: from || null, fromName: from ? state.characters[from].name : (ch.fromName || ch.from || 'Unknown'), text: String(ch.text || ''), date, read: false });
+      state.ravens.unshift({ id: nextId(state, 'r'), day: dayNumber(state.meta.date), from: from || null, fromName: from ? state.characters[from].name : (ch.fromName || ch.from || 'Unknown'), text: String(ch.text || ''), date, read: false });
       state.ravens = state.ravens.slice(0, 60);
       return { op, text: `A raven arrives from ${state.ravens[0].fromName}` };
     }
@@ -919,7 +911,7 @@ function applyOne(state, ch, ctx) {
       const opts = (Array.isArray(ch.options) ? ch.options : []).map((o) => (typeof o === 'string' ? { label: o } : { label: String(o.label || o.text || ''), hint: String(o.hint || o.effect || ''), ...(Array.isArray(o.fx) ? { fx: o.fx } : {}) })).filter((o) => o.label);
       if (opts.length < 2) throw new Error('a decision needs at least two options');
       state.decisions = state.decisions || [];
-      const d = { id: slug(ch.id || ch.title || 'decision') + '_' + Math.random().toString(36).slice(2, 6), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, day: dayNumber(state.meta.date), days: Math.max(1, Math.round(num(ch.days) ?? 14)), status: 'pending', ...(resolvePlaceId(ch.where) && state.holdings[resolvePlaceId(ch.where)] ? { where: resolvePlaceId(ch.where) } : {}) };
+      const d = { id: slug(ch.id || ch.title || 'decision') + '_' + nextId(state, 'd'), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, day: dayNumber(state.meta.date), days: Math.max(1, Math.round(num(ch.days) ?? 14)), status: 'pending', ...(resolvePlaceId(ch.where) && state.holdings[resolvePlaceId(ch.where)] ? { where: resolvePlaceId(ch.where) } : {}) };
       state.decisions.push(d);
       return { op, text: `A decision awaits you: ${d.title}` };
     }
@@ -1005,7 +997,7 @@ function applyOne(state, ch, ctx) {
       // the same works at the same place are begun once
       const twin = state.projects.find((x) => x.house === hid && x.status === 'active' && x.holding === hold && ((ch.template && x.template === ch.template) || slug(x.name) === slug(ch.name || 'Works')));
       if (twin) throw new Error(`${twin.name} is already under way`);
-      const p = { id: slug(ch.id || ch.name || 'project') + '_' + Math.random().toString(36).slice(2, 6), house: hid, ...(ch.template ? { template: String(ch.template) } : {}), name: ch.name || 'Works', holding: hold, cost, remaining: cost, perMonth: cost / months, months, monthsLeft: months, effect: ch.effect || {}, status: 'active', started: date };
+      const p = { id: slug(ch.id || ch.name || 'project') + '_' + nextId(state, 'w'), house: hid, ...(ch.template ? { template: String(ch.template) } : {}), name: ch.name || 'Works', holding: hold, cost, remaining: cost, perMonth: cost / months, months, monthsLeft: months, effect: ch.effect || {}, status: 'active', started: date };
       state.projects.push(p);
       return { op, text: `House ${state.houses[hid].name} begins: ${p.name} (${fmt(cost)} gd over ${months} moons)` };
     }

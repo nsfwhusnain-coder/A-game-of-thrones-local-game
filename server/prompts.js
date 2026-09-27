@@ -29,6 +29,7 @@ import { beliefsAboutPlayer } from '../public/js/shared/intel.js';
 import { AGENDAS } from '../public/data/agendas.js';
 import { whereabouts as whereNow } from '../public/js/shared/roads.js';
 import { ordersBlock } from './orders.js';
+import { random } from '../public/js/engine/rng.js';
 
 // For the swarm: every agent's charge (at the end of the message) gives its own reply shape; the system prompt must not
 // contradict it, or the model writes the whole turn every time. Identical for every agent, so the prefix is still cached.
@@ -416,11 +417,11 @@ function todaysBeats(state, days) {
   const weight = (a) => { const c = state.characters[a.who]; const h = state.houses[c.house]; return (h?.region === myRegion ? 2.5 : 1) * (['crown', 'paramount'].includes(h?.rank) ? 1.4 : 1) * (state.meta.turn - (told[a.who] ?? -99) < 4 ? 0.15 : 1); };
   const n = days <= 3 ? 2 : days <= 14 ? 3 : 4; const out = []; const pool = [...live];
   for (let i = 0; i < n && pool.length; i++) {
-    const total = pool.reduce((x, a) => x + weight(a), 0); let r = Math.random() * total; let k = 0;
+    const total = pool.reduce((x, a) => x + weight(a), 0); let r = random() * total; let k = 0;
     for (; k < pool.length - 1; k++) { r -= weight(pool[k]); if (r <= 0) break; }
     const a = pool.splice(k, 1)[0]; const c = state.characters[a.who];
     const fresh = a.moves.filter((m) => !(told[a.who + '|' + m] > state.meta.turn - 30));
-    const move = (fresh.length ? fresh : a.moves)[Math.floor(Math.random() * (fresh.length || a.moves.length))];
+    const move = (fresh.length ? fresh : a.moves)[Math.floor(random() * (fresh.length || a.moves.length))];
     told[a.who] = state.meta.turn; told[a.who + '|' + move] = state.meta.turn;
     out.push(`${i + 1}. ${c.name} (at ${placeName(state, c.loc)}) — ${move}. You may change the details or the outcome to fit what has happened; make it their own.`);
   }

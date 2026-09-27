@@ -4,9 +4,10 @@
 import { applyChanges, vassalsOf, realmOf, getRelation } from '../public/js/shared/world.js';
 import { temperament } from '../public/js/shared/temperament.js';
 import { exposePlot } from '../public/js/shared/treachery.js';
+import { random, shuffle } from '../public/js/engine/rng.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const pick = (a) => a[Math.floor(random() * a.length)];
 const gold = (h) => Number(h.figures?.treasury?.v) || 0;
 const spend = (state, house, n, source) => applyChanges(state, [{ op: 'figure', house, field: 'treasury', delta: -n, source }]);
 export class CourtError extends Error { constructor(msg) { super(msg); this.status = 400; } }
@@ -44,8 +45,8 @@ export function feast(state) {
   for (const v of vas) { if (state.plotting?.[v.id]) state.plotting[v.id].pressure = Math.max(0, state.plotting[v.id].pressure - 8); const l = state.characters[v.lord]; ch.push({ op: 'relation', a: p, b: v.id, delta: 4, reason: 'feasted at your table' }, { op: 'character', id: l.id, loyalty: clamp((l.loyalty ?? 60) + 4, -100, 100) }); }
   if (me.seat) ch.push({ op: 'holding', id: me.seat, unrest: clamp((state.holdings[me.seat].unrest || 0) - 4, 0, 100) });
   let incident = '';
-  if (vas.length >= 2 && Math.random() < 0.25) {
-    const [a, b] = [...vas].sort(() => Math.random() - 0.5);
+  if (vas.length >= 2 && random() < 0.25) {
+    const [a, b] = shuffle(vas);
     ch.push({ op: 'relation', a: a.id, b: b.id, delta: -10, reason: 'a brawl at your feast' });
     incident = ` At the high table, ${state.characters[a.lord].name} and ${state.characters[b.lord].name} came to blows over ${pick(['an old boundary', 'a toast to the wrong king', 'a daughter', 'a horse race', 'precedence at table'])}.`;
   }
@@ -66,7 +67,7 @@ export function tourney(state) {
   let blood = '';
   if (champ) ch.push({ op: 'character', id: champ.id, note: `Champion of the tourney at ${state.holdings[me.seat]?.name}.`, opinion: clamp((champ.opinion || 0) + 10, -100, 100) });
   const fallen = knights.filter((k) => k !== champ);
-  if (fallen.length && Math.random() < 0.12) { const k = pick(fallen); ch.push({ op: 'character', id: k.id, alive: false, cause: 'a lance through the throat in the lists' }, { op: 'relation', a: p, b: k.house, delta: -4, reason: 'a knight dead in your lists' }); blood = ` ${k.name} died in the lists, a splinter through the throat.`; }
+  if (fallen.length && random() < 0.12) { const k = pick(fallen); ch.push({ op: 'character', id: k.id, alive: false, cause: 'a lance through the throat in the lists' }, { op: 'relation', a: p, b: k.house, delta: -4, reason: 'a knight dead in your lists' }); blood = ` ${k.name} died in the lists, a splinter through the throat.`; }
   applyChanges(state, ch, { source: 'Your tourney' });
   me.prestige = (me.prestige || 0) + 5;
   return { text: `Hold a tourney at ${state.holdings[me.seat]?.name || 'my seat'}.`, note: `[Already done: 5,000 dragons in purses; ${guests.length} houses sent knights; ${champ ? champ.name + ' was champion' : 'no champion of note'}.${blood} Narrate the lists, the melee, the queen of love and beauty.]`, summary: `The tourney is held. ${champ ? `${champ.name} is champion.` : ''}${blood}` };
@@ -132,7 +133,7 @@ export function scheme(state, { house, kind }) {
   spend(state, p, cost, 'Secret expenses');
   const sm = spymaster(state); const skill = sm?.skills?.[3] ?? 5;
   const chance = clamp(0.3 + skill * 0.035, 0.2, 0.88);
-  const roll = Math.random();
+  const roll = random();
   const who = sm ? sm.name : 'Your hired men';
   if (roll < chance) {
     if (kind === 'secrets') {

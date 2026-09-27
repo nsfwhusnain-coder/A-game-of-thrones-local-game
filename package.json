@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "start": "node --watch-path=server --watch-path=public/js/shared --watch-path=public/data server/index.js",
-    "check": "node scripts/check-data.js && node --experimental-vm-modules --no-warnings scripts/check-syntax.mjs",
+    "check": "node scripts/check-data.js && node --experimental-vm-modules --no-warnings scripts/check-syntax.mjs && node scripts/lint-engine.js",
     "fetch-sigils": "node scripts/fetch-sigils.js",
     "fetch-voices": "node scripts/fetch-voices.js",
     "test": "node --test tests/*.test.js",

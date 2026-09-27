@@ -287,7 +287,7 @@ export function compileRule(state, spec) {
   if (grow) run(grow, scope);
 
   return {
-    id: String(spec.id || name).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 40) || `rule_${Date.now().toString(36)}`,
+    id: String(spec.id || name).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 40) || `rule_${[...String(spec.kind || '') + String(spec.formula || '')].reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 7).toString(36)}`, // named by what it does, not by the clock
     name, kind, house: spec.house,
     formula: formula.src, when: when?.src || null, grow: grow?.src || null,
     vars, note: String(spec.note || '').slice(0, 240),

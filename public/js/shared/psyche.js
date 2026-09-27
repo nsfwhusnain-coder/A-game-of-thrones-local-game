@@ -1,4 +1,5 @@
 import { pronouns } from './people.js';
+import { random } from '../engine/rng.js';
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 // THE TOLL A WAR TAKES ON A MIND
 //
@@ -147,12 +148,12 @@ export function psycheTick(state, days) {
     // a mind under siege makes worse decisions, trusts less, and drives its own people away
     if (c.paranoia > 55) {
       const liege = state.houses?.[c.house]?.liege;
-      if (liege && Math.random() < 0.25 * (days / 30)) {
+      if (liege && random() < 0.25 * (days / 30)) {
         c.loyalty = clamp((c.loyalty ?? 50) - 2, -100, 100);
         applied.push({ op: 'psyche', text: `${c.name} trusts ${state.houses[liege].name} a little less than ${pronouns(c).he} did` });
       }
     }
-    if (c.stress > 85 && Math.random() < 0.12 * (days / 30)) {
+    if (c.stress > 85 && random() < 0.12 * (days / 30)) {
       // the body keeps the account: a collapse, a fever, a fit, a night of wine that does not end
       c.status = c.status === 'free' ? 'wounded' : c.status;
       events.push({
