@@ -30,16 +30,16 @@ owner's complaints so they can never come back.
 | `story-matches-map` | Stark, 6 turns as in the audit | every event's named actors are where the facts say on those days; no event claims an arrival without an `arrived` fact (B-03, B-12) |
 | `kings-progress` | any house, 60 days, no orders | the progress moves along the kingsroad day by day; "The King comes to Winterfell" fires on its `arrived` fact, never before; Robert and the progress's members are in the party until then (B-06) |
 | `no-feasts-at-war` | Stark calls banners | no called/answered vassal lord starts a retinue journey until released (B-10) |
-| `islands-need-ships` | Stark calls Crowl (Skagos) and Mormont (Bear Island) | their contingents wait at their ports for transport or sail with their own ships; no land path over the sea; no Wall toll (B-11) |
-| `natives-pass-free` | Reed contingent marches south through the Neck | no toll, no losses (B-11) |
+| `islands-need-ships` | Stark calls Crowl (Skagos) and Mormont (Bear Island) | their contingents wait at their ports for transport or sail with their own ships; no land path over the sea; no Wall toll (B-11) — **`tests/sea.test.js`** |
+| `natives-pass-free` | Reed contingent marches south through the Neck | no toll, no losses (B-11) — **`tests/sea.test.js`** |
 | `audience-binds` | Stark: audience with Roose Bolton, "bring your men to Moat Cailin within the fortnight" → mock verdict agree | a commitment exists; Bolton's contingent orders change to Moat Cailin the next day; on the due day the commitment is kept or broken with a fact (B-14) |
 | `officers-know-truth` | Stark: after banners are called, audience with Luwin | the audience context lists the true muster state (who arrived, who is on the road, ETAs) (B-15) |
 | `no-spoilers` | any house | no stop reason, card, tooltip or prompt visible to the player contains a future beat's title (B-18) |
-| `canon-order` | 30 moons, Canon gravity, no player interference, as Tyrell (far from the war) | beats fire in the table's order and within windows; Red Wedding before Purple Wedding (B-19) |
+| `canon-order` | 30 moons, Canon gravity, no player interference, as Tyrell (far from the war) | beats fire in the table's order and within windows; Red Wedding before Purple Wedding (B-19) — **`tests/canon.test.js`** (current engine: the schedule and the order with every precondition met; the 30-moon playthrough comes with the beat engine, WP D1) |
 | `player-hosts-protected` | any | no non-player cause changes the player's host's men/orders except engine rules (battle, supply, desertion) (B-08, B-20) |
 | `vassal-figures-protected` | any | no NPC house's levies change except through engine rules (B-09) |
-| `pronouns` | a female lord (Maege Mormont, Barbrey Dustin) answers the banners | every engine text uses she/her (B-22) |
-| `natures` | load | Eddard's tags are "honest, dutiful…", never "cunning"/"cold-blooded" (B-21) |
+| `pronouns` | a female lord (Maege Mormont, Barbrey Dustin) answers the banners | every engine text uses she/her (B-22) — **`tests/people.test.js`** |
+| `natures` | load | Eddard's tags are "honest, dutiful…", never "cunning"/"cold-blooded" (B-21) — **`tests/people.test.js`** |
 | `economy-anchors` | balance sim | [06](06-economy.md) §12 gates |
 | `windows-boot` | CI on windows-latest | the server starts, serves `/`, creates `saves/` under the repo (B-01) |
 

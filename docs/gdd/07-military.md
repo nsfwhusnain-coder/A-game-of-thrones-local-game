@@ -179,6 +179,9 @@ free text (fixes B-20).
 - **Islands** need ships (§9). Skagos, Bear Island, the Iron Islands, Tarth, Dragonstone, Driftmark, the Three Sisters,
   the Shield Islands, the Arbor, Estermont have no land route; their contingents call for transport (their liege's fleet,
   their own ships, or a hired passage) and wait at their port until it comes. (Fixes Crowl's march from Skagos.)
+  *Implemented in WP A8 for the current engine* (`engine/geo.js`, `shared/sea.js`; [DECISIONS.md#D-001](DECISIONS.md)):
+  any host bound for another landmass sails — own ships, a few boats making trips, or the realm's ships sent to fetch
+  it — and lands on the coast that gets it to its goal soonest; hired passage comes with WP C6.
 
 ## 6. Supply
 

@@ -39,7 +39,9 @@ Plus `sway` (what moves them: `gold, flattery, fear, duty, honour, family, power
 
 `data/histories.js P(...)` entries gain an explicit `nature` object (the prose fields stay for prompts). A character with
 no persona gets a nature from **archetype defaults** by role, region and rank (`data/archetypes.js`, new), plus ±2 seeded
-variation — never from regex. `temperament.js` reads the scales; `natureTags()` becomes a pure function of the scales
+variation — never from regex. *Implemented in WP A10* ([DECISIONS.md#D-003](DECISIONS.md)): the scales and sway live in
+`data/natures.js` (every persona; checked by `npm run check`), archetypes also read the character's written trait words
+through a fixed table, and `sex` is data on every character. `temperament.js` reads the scales; `natureTags()` becomes a pure function of the scales
 (e.g. `honesty ≥ 8 → "honest"`, `guile ≥ 7 → "a schemer"`, `temper ≥ 7 → "hot-tempered"`, `warmth ≤ 2 → "cold"`).
 
 ### 2.3 Calibration table (authoritative starting values)
