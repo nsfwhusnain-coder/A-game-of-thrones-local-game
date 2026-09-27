@@ -69,6 +69,8 @@ export const DEFAULT_CONFIG = {
   timeoutSec: 1800,
   consolidateEvery: 5,                // consolidate turn history into the chronicle every N turns (Pax Historia style)
   keepRecentTurns: 4,                 // how many recent turns stay verbatim in the prompt
+  minds: 6,                           // how many lords of the realm have a mind each week (3 | 6 | 10 | 'off' for the old Hand; 04 §5.1)
+  narrator: 'on',                     // 'on' = the narrator tells the turn from its facts, checked against them (04 §6); 'off' = the old Bard
   swarm: 'lean',                      // 'lean' = the Hand moves the realm, the Bard tells it (default: two calls a turn); 'full' = the five-agent council (Maester, Hand, Weaver, Whisperer, Bard; slow — ~5 calls a turn); 'off' = one monolithic prompt
   promptDetail: 'full',               // 'full' = every house & character each turn; 'lean' = only what's relevant (much faster on laptops)
   extraBody: {},                      // merged into the request body (e.g. {"top_p":0.9,"min_p":0.05})
@@ -113,7 +115,8 @@ export const estimateTokens = (s) => Math.ceil(String(s || '').length / 3.6);
  */
 export async function chat(messages, opts = {}) {
   const cfg = { ...loadConfig(), ...opts.cfgOverride };
-  if (cfg.provider === 'mock') return mockResponse(messages, opts);
+  // replay (recorded replies of the call registry, server/ai/) plays the old free-form calls as the mock does
+  if (cfg.provider === 'mock' || cfg.provider === 'replay') return mockResponse(messages, opts);
   if (cfg.provider === 'relay') return relayResponse(messages, opts, cfg);
   // audiences, councils, counsel and memory upkeep are quick exchanges: no deliberation unless asked for
   const quick = ['chat', 'council', 'suggest', 'consolidate', 'orders'].includes(opts.kind) && !cfg.thinkInAudiences && (cfg.thinking || 'auto') !== 'off';

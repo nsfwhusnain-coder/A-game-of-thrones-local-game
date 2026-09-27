@@ -82,12 +82,12 @@ function openNews(turn, idx) {
   const s = app.state; const t = s.history.find((x) => x.turn === turn); const e = t?.events?.[idx]; if (!e) return;
   if (e.where && s.holdings[e.where]) { app.map?.flyTo(s.holdings[e.where].pos, 420); app.map?.flash(s.holdings[e.where].pos); }
   modal(`<div class="pin-head"><span class="pin-place">${esc(e.where ? placeName(s, e.where) : '')}</span><span class="pin-count">${esc(t.date)}</span></div>
-    <div class="pin-body event imp-${e.importance}">${eventArt(e)}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<div class="pin-details">${esc(e.details)}</div>` : ''}</div>
+    <div class="pin-body event imp-${e.importance}">${eventArt(e)}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<div class="pin-details">${esc(e.details)}</div>` : ''}${recordHtml(e)}</div>
     <div class="report-actions"><button class="btn primary" data-action="close-modal">Close</button></div>`);
 }
 function openMeanwhile(turn) {
   const t = app.state.history.find((x) => x.turn === turn); if (!t) return;
-  modal(`<h2>Across the realm — ${esc(t.date)}</h2>${meanwhileHtml(t.events, true)}<div class="report-actions"><button class="btn primary" data-action="close-modal">Close</button></div>`);
+  modal(`<h2>Across the realm — ${esc(t.date)}</h2>${t.meanwhile ? `<p class="news-meanwhile">${esc(t.meanwhile)}</p>` : ''}${meanwhileHtml(t.events, true)}<div class="report-actions"><button class="btn primary" data-action="close-modal">Close</button></div>`);
 }
 // The story's open threads: the great matters under way (engine) and what the chronicle last found unresolved
 function threadsHtml(s) {
@@ -108,7 +108,12 @@ function storyHtml(s, t, e) {
     <div class="story-h">${NEWS_ICON[e.type] ? icon(NEWS_ICON[e.type], 'sh-ico') : ''}${esc(e.title)}</div>
     <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">${icon('pin', 'tg-ico')}${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
     ${ordered ? `<div class="story-order">${esc(s.characters[s.houses[s.meta.player].lord]?.name || 'The lord')} commanded: “${esc(ordered.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim())}”</div>` : ''}
-    <div class="story-x">${esc(e.text)}</div>${e.details ? `<div class="story-d">${esc(e.details)}</div>` : ''}</div>`;
+    <div class="story-x">${esc(e.text)}</div>${e.details ? `<div class="story-d">${esc(e.details)}</div>` : ''}${recordHtml(e)}</div>`;
+}
+// a story the chronicler told: the engine's own lines behind it, one click away (the numbers are always true there)
+function recordHtml(e) {
+  if (!e.narrated || !e.record?.length) return '';
+  return `<details class="story-rec"><summary>The record</summary><ul>${e.record.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></details>`;
 }
 // what the player ordered that day, and what the engine made of it — your hand in the day's story
 function yoursHtml(t) {
@@ -124,7 +129,7 @@ function renderFeed(body) {
   const bar = rv ? `<div class="reveal-bar"><span class="rb-date" id="rb-date">${esc(rv.date || '')}</span><button class="btn small ghost" data-rb="pause">${rv.ctl.paused ? 'Resume' : 'Pause'}</button><button class="btn small ghost" data-rb="next">Next ›</button><button class="btn small ghost" data-rb="skip">Skip ⏭</button><span class="rb-count" id="rb-count">${rv.n} / ${rv.total}</span></div>` : '';
   body.innerHTML = bar + decisionsHtml() + threadsHtml(s) + (turns.length ? turns.map((t) => { const ev = storyEvents(t).reverse(); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
       ${yoursHtml(t)}${ev.map((e) => storyHtml(s, t, e)).join('') || '<div class="news-quiet">No news of note.</div>'}
-      ${bg ? `<div class="news-more" data-meanwhile="${t.turn}">+ ${bg} small happening${bg > 1 ? 's' : ''} across the realm</div>` : ''}</div>`; }).join('')
+      ${t.meanwhile ? `<div class="news-meanwhile">${esc(t.meanwhile)}</div>` : ''}${bg ? `<div class="news-more" data-meanwhile="${t.turn}">+ ${bg} small happening${bg > 1 ? 's' : ''} across the realm</div>` : ''}</div>`; }).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>
       ${(() => { const b = briefFor(s.houses[s.meta.player], s); return `<div class="event imp-4"><div class="et">Your situation</div><div class="eb">${esc(b.situation)}</div><div class="eb" style="margin-top:0.4rem"><b>Aims:</b> ${b.goals.map(esc).join(' · ')}</div></div>`; })()}
       <details class="event howto"${s.meta.turn === 0 ? ' open' : ''}><summary class="et">How to play</summary><div class="eb">

@@ -439,3 +439,63 @@ another kept following it until the next march: `settle` stops it. (3) The AI cl
 validating it, so an alias whose id the enum had dropped for a clearer name (`storms_end` → `baratheon_se`) failed the
 schema: replies are validated as written, then their names become ids. (4) "House Manderly begins Build warships at
 White Harbor at White Harbor" now reads "House Manderly begins works at White Harbor: build warships".
+
+## D-028 · 2026-09-27 · The narrator tells the engine's cards, and a told story replaces them (WP B8)
+
+**What.** 04 §6 has the narrator tell "the facts the player's house knows". Until each house keeps its own knowledge
+(B9), what the player's house knows this turn is exactly what the engine already chose to show it: the chronicle's
+engine cards (each bound to its fact, a folded week of answers to its facts), plus the facts of the lord's own orders,
+which the engine never carded (their receipt card came from the order). So the narrator is handed those facts, gathered
+into stories (`engine/facts/cluster.js`: a thread, a party, a binding cause — an order, a mind's intent, a beat; a cause
+of a rule such as "the muster" runs everywhere and binds nothing — or a place within two days); cards marked as small
+happenings (`bg`) are the Meanwhile. A story told truly becomes **one card that replaces the engine's cards for its
+facts**, carrying them (`facts`) and their lines (`record`, shown as "The record" under the scene): the prose never
+stands between the player and a true number. A story told under an order is that order's card (the lord's words quoted
+above the scene). A story not told truly keeps its engine cards. The facts beyond the eight stories keep theirs too.
+
+**Why.** The alternatives were a narrated card beside each engine card (the chronicle told everything twice — the flood
+of B-series cards the A3 fold was written to stop) or narrated cards only (the numbers hidden behind prose that might
+round them). Replacing with the record kept is what 03 §1 asks: the facts are the history, the prose is their telling.
+
+## D-029 · 2026-09-27 · How the validator reads a telling (WP B8)
+
+**What.** 04 §6.4, made exact: (1) *names* — a person is found by every name the game knows (id, name, name without a
+byname — "Jon Umber" — byname, "Lord Umber", unique given names), longest first; a lone given name directly before
+another capitalised word is someone the roster does not know and is skipped. A named person *acts* when a past-tense
+verb follows the name, or when the name is the subject of "said/asked/told…". Someone not in the story who acts must be
+within 40 miles of the story's place; a sentence that only remembers, writes to, sends for or names the dead ("thought
+of", "a letter to", "the late") exempts them. (2) *arrival* — a person or party who arrives, reaches, rides into, comes
+to or joins must have an arrival in the story's facts **at that place** (the facts' kinds of arriving, or the facts' own
+words); "will", "before", "on their way" and the like mark an arrival not yet made. (3) *numbers* — digits (not ordinals,
+not a year "298 AC") and number words ("three thousand eight hundred", "a score"); each must be one of the story's (±2 %,
+from its facts' data and words) or ≤ 12. (4) *places* — a holding named must be the story's, named by its facts, within
+40 miles of its place, within 25 miles of a road its parties walk, a seat named as a title ("of the Last Hearth"), or
+only remembered. (5) the anachronisms of `data/anachronisms.js`, each allowed once this game has reached it (a beat
+fired, a title held, a death, a battle fought). (6) game words and the tired phrases of 10 §8.2; (7) Latin script only;
+(8) no explicit description. The headline, the line and every sentence of the scene are read separately. The Meanwhile
+sentence is held to (5)–(8) only (it names the small happenings in passing).
+
+**Found by the soak.** Run over 5 houses × 16 turns on the mock (which tells only the engine's own words, so any fault is
+the validator's): a nipple in a canon beat's boar wound was "explicit", a host's arrival was read from a headline glued
+to the next sentence, "700 men … join" did not begin a sentence, and a host *raised* at Last Hearth counted as having
+arrived at Winterfell. All four fixed; the soak and the 60-week suite now pass 100 % on the mock.
+
+## D-030 · 2026-09-27 · One more telling, then the record (WP B8)
+
+**What.** The client's one retry of a whole reply (04 §5.4) is wrong for the narrator: one bad story would have the
+model tell all eight again. A call may now `salvage` a reply of many parts: the narrator keeps the events that passed,
+and each failed story is told again **alone** (`only`, with the faults named, one attempt); if that fails too, the story
+keeps the engine's cards. A reply with no event worth keeping is retried whole, once, as before. The mock and replay
+providers never retry (a recorded reply is what it is). The turn record's `narration` says how each week was told:
+stories, told, told again, left plain, faults by rule and the first twelve faults, the recording key, and the stories'
+fact groups — enough for the bench to tell the same week again with another model.
+
+## D-031 · 2026-09-27 · The narrate suite is sixty weeks of seeded games (WP B8)
+
+**What.** 04 §13 asks for "60 fact bundles". A bundle hand-written as JSON would drift from the engine's facts at the
+next change of a template; instead the suite (`bench/suites/narrate`) is twelve games — each a house, a seed and its
+orders — played on the mock before any narrator is asked, and five weeks of each told again by the narrator under test.
+Every model is given the same sixty weeks, and the bundles stay true as the engine grows. Scores: true on the first
+telling (the 90 % gate), mended by telling again, left plain, faults by rule; `--judge` asks the model (or another) to
+score each told story's voice 1–5 against the style bible (the 3.8 gate). The judge is the bench's, not the game's.
+Also: `POST /api/games` now takes a `seed`, so a game — and a bug report — can be played again exactly.

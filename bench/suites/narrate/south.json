@@ -1,0 +1,79 @@
+{
+ "about": "The West, the Reach, the crown and Dorne: lions calling their banners, roses feasting, the King's court, the Martells watching.",
+ "games": [
+  {
+   "id": "lannister-war",
+   "house": "lannister",
+   "seed": 298,
+   "orders": {
+    "1": [
+     "Call the banners to Casterly Rock."
+    ],
+    "3": [
+     "March the host to the Golden Tooth."
+    ]
+   },
+   "tell": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "id": "tyrell-feast",
+   "house": "tyrell",
+   "seed": 23,
+   "orders": {
+    "1": [
+     "Hold a feast at Highgarden."
+    ],
+    "3": [
+     "Hold a tourney at Highgarden."
+    ]
+   },
+   "tell": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "id": "crown",
+   "house": "baratheon",
+   "seed": 5,
+   "orders": {
+    "2": [
+     "Hold a tourney at King's Landing."
+    ]
+   },
+   "tell": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "id": "martell",
+   "house": "martell",
+   "seed": 88,
+   "orders": {
+    "1": [
+     "Send Oberyn Martell to King's Landing."
+    ]
+   },
+   "tell": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
+  }
+ ]
+}

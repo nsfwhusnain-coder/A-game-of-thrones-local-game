@@ -35,9 +35,10 @@ export function readReply(text, call, ctx, schema) {
   // the reply is held to the schema the model was given (its enums hold the names it may write), then its names become
   // ids for the checks and the game: an id the enum left out for a clearer name ("storms_end" for baratheon_se) is fine
   const problems = validate(value, schema);
-  if (!problems.length && ctx.canons) canonicalize(value, schema, ctx.canons);
-  if (!problems.length && call.check) problems.push(...call.check(value, ctx));
-  return { value, problems };
+  const shaped = !problems.length;
+  if (shaped && ctx.canons) canonicalize(value, schema, ctx.canons);
+  if (shaped && call.check) problems.push(...call.check(value, ctx));
+  return { value, problems, shaped };
 }
 
 /**
@@ -60,7 +61,8 @@ export async function runCall(kind, state, args = {}, opts = {}) {
   } catch (e) { return fall([`the call could not be prepared: ${e.message}`]); }
   record.promptTokens = estimateTokens(messages.map((m) => m.content).join('\n'));
   let msgs = messages; let problems = [];
-  for (let attempt = 0; attempt < (provider === 'mock' || provider === 'replay' ? 1 : 2); attempt++) {
+  const tries = provider === 'mock' || provider === 'replay' ? 1 : (call.attempts?.(ctx) ?? 2);
+  for (let attempt = 0; attempt < tries; attempt++) {
     let r;
     try { r = await reply(provider, { kind, call, ctx, messages: msgs, schema, route, cfg, onProgress: opts.onProgress }); } catch (e) {
       record.attempts.push({ error: e.message }); return fall([`the model could not be reached: ${e.message}`]);
@@ -74,6 +76,13 @@ export async function runCall(kind, state, args = {}, opts = {}) {
       return withCtx({ value: read.value, via, problems: [], ms: record.ms, promptTokens: record.promptTokens, model: r.model, record }, ctx);
     }
     problems = read.problems;
+    // a reply of many parts (the narrator's events) keeps the parts that passed; the caller mends the rest
+    const part = read.shaped && call.salvage ? call.salvage(read.value, problems, ctx) : null;
+    if (part) {
+      const via = provider === 'mock' ? 'mock' : String(r.model || '').startsWith('replay:') ? 'replay' : r.model === 'mock' ? 'mock' : 'model';
+      record.via = via; record.ms = Date.now() - t0; record.problems = part.problems;
+      return withCtx({ value: part.value, via, problems: part.problems, partial: true, ms: record.ms, promptTokens: record.promptTokens, model: r.model, record }, ctx);
+    }
     // one more try on a real model, told plainly what was wrong (04 §5.4); then the fallback
     msgs = [...messages, { role: 'assistant', content: String(r.text).slice(0, 4000) }, { role: 'user', content: `That answer cannot be used: ${problems.slice(0, 4).join('; ')}. Answer again, in the same JSON shape, fixing only that.` }];
   }
