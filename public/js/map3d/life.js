@@ -76,7 +76,9 @@ export class LivingMap {
         ? [[...from], [...to]]
         : (budget.n--, this.o.grid.find(from, to, 'land'));
       if (!path || path.length < 2) return;
-      next.push({ id, kind, from: [...from], to: [...to], path, t: old?.t ?? hash(id), ...extra });
+      // an A* path can be hundreds of points; walking it every frame for hundreds of entities is
+      // needless work, so each road is thinned to at most 64 waypoints once, here
+      next.push({ id, kind, from: [...from], to: [...to], path: thin(path, 64), t: old?.t ?? hash(id), ...extra });
     };
 
     const holdings = Object.values(state.holdings || {});
@@ -189,6 +191,12 @@ export class LivingMap {
   }
 }
 
+function thin(path, max) {
+  if (path.length <= max) return path;
+  const out = []; const step = (path.length - 1) / (max - 1);
+  for (let i = 0; i < max; i++) out.push(path[Math.round(i * step)]);
+  return out;
+}
 function pathLen(path) {
   if (path.__len) return path.__len;
   let L = 0; for (let i = 1; i < path.length; i++) L += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
