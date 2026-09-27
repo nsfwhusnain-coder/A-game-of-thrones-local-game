@@ -20,6 +20,7 @@ import { underway, orderOutcome, STATUS_LABEL } from './shared/errands.js';
 import { nextTurnLength } from './shared/turns.js';
 import { regencyLine, speakerFor, incapacity } from './shared/regency.js';
 import { standing, standingWord, epitaph } from './shared/standing.js';
+import { exportMapChronicle } from './ui/export.js';
 
 app.openChat = openChat; app.openCouncil = openCouncil;
 
@@ -472,9 +473,10 @@ async function showChronicle() {
   modal(`<div class="chron-tabs"><button class="btn small active" id="chron-tab-c">The Chronicle</button><button class="btn small" id="chron-tab-w">World log</button></div><h2>📜 The Chronicle</h2><p class="muted" style="font-size:0.85rem">The long memory of your story. Every few turns the archmaester compresses older events into this record (<code>saves/${esc(app.saveId)}/chronicle.md</code>). The simulator reads it every turn — edit it to correct or steer the tale.</p>
     <div class="md" id="chron-view">${md(r.text)}</div>
     <textarea class="chronicle-edit hidden" id="chron-edit">${esc(r.text)}</textarea>
-    <div class="settings-actions"><button class="btn" id="chron-toggle">Edit</button><button class="btn hidden" id="chron-save">Save</button><button class="btn ghost" id="chron-consolidate">Consolidate now</button></div>`);
+    <div class="settings-actions"><button class="btn" id="chron-toggle">Edit</button><button class="btn hidden" id="chron-save">Save</button><button class="btn" id="chron-export">Paint a map chronicle</button><button class="btn ghost" id="chron-consolidate">Consolidate now</button></div>`);
   $('#chron-toggle').onclick = () => { $('#chron-view').classList.toggle('hidden'); $('#chron-edit').classList.toggle('hidden'); $('#chron-save').classList.toggle('hidden'); };
   $('#chron-save').onclick = async () => { await api(`/games/${app.saveId}/chronicle`, { body: { text: $('#chron-edit').value } }); toast('Chronicle saved.'); showChronicle(); };
+  $('#chron-export').onclick = async () => { try { const name = await exportMapChronicle(app.map, app.state); toast(`Painted ${name}`); } catch (e) { toast(e.message, true); } };
   $('#chron-consolidate').onclick = async () => { busy(true, 'The archmaester writes…'); try { await api(`/games/${app.saveId}/consolidate`, { body: {} }); app.state = await api('/games/' + app.saveId); showChronicle(); } catch (e) { toast(e.message, true); } finally { busy(false); } };
   $('#chron-tab-w').onclick = showWorldLog;
 }
