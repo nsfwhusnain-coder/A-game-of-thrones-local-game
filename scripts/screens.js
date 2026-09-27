@@ -134,6 +134,18 @@ const SCENARIOS = {
       });
     } };
   },
+  // news that came late (WP B9): a card told the day its word arrived, with the day it happened; the map shows the
+  // realm's hosts only as the house knows them
+  async news() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 5 });
+    for (let t = 0; t < 5; t++) await api(`/games/${id}/advance`, { span: '7d', orders: t === 0 ? [{ text: 'Call the banners to Winterfell.' }] : [] });
+    return { id, focus: state.holdings.frey.pos, dist: 1500, page: async (page) => {
+      await page.evaluate(() => {
+        const late = document.querySelector('#drawer-body .story-heard')?.closest('.story');
+        late?.scrollIntoView({ block: 'center' });
+      });
+    } };
+  },
   // beginning a chronicle, ironman or not (WP B3)
   async begin() {
     return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); } };

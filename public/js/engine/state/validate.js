@@ -6,7 +6,9 @@
 //   3  no party sits on the open sea unless it is a fleet or embarked
 //   4  a host's contingents add up to its men
 //   8  every letter in flight lands after it was sent
-// (5–7, 9 and 10 need the fact log, commitments and knowledge: they arrive with WP B3, B9 and B10.)
+//   9  what a house has learned it learned after it happened, and a secret only by a spy, a scheme or a confession
+// (10 — the player's view holds no hidden truth — is the server's: server/view.js `hiddenTruths`; 5–7 need commitments
+// and the segmented jump: WP B10–B11.)
 import { JUNCTIONS } from '../../../data/geography.js';
 import { KINDS, STATES, idOf, ref } from '../parties.js';
 import { ACTIVITIES } from '../activity.js';
@@ -80,7 +82,19 @@ export const INVARIANTS = {
     }
     return out;
   },
+  9: function learnedInTime(state) {
+    const out = [];
+    for (const [house, k] of Object.entries(state.knowledge || {})) {
+      for (const [id, n] of Object.entries(k.facts || {})) {
+        if (!(n.day >= n.happened)) out.push(`9: House ${house} learned ${id} on day ${n.day}, before it happened (day ${n.happened})`);
+        if (n.scope === 'secret' && !SECRET_WAYS.has(n.via)) out.push(`9: House ${house} knows the secret ${id} by ${n.via}`);
+      }
+      for (const p of k.pending || []) if (!(p.day > p.happened)) out.push(`9: House ${house} waits for news of day ${p.happened} that came on day ${p.day}`);
+    }
+    return out;
+  },
 };
+const SECRET_WAYS = new Set(['spy', 'scheme', 'confession']);
 
 // the shape of a party: what the engine and the map rely on
 function wellFormed(state) {

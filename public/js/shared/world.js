@@ -7,7 +7,7 @@ import { MAP_VERSION, warpOld } from '../../data/warp.js';
 import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.js';
 import { initEconomy, TAX_LEVELS, project } from './economy.js';
 import { heirOf, isFemale, sexOf } from './people.js';
-import { addReport, updateIntel } from './intel.js';
+import { addReport, seedKnowledge, knowledgeOf } from '../engine/knowledge.js';
 import { commandable } from './errands.js';
 import { compileRule } from './rules.js';
 import { MONTHS, dateStr, addDays, dayNumber, SPANS, spanOf } from '../engine/time.js';
@@ -176,15 +176,8 @@ function buildInitialState(scenarioId, playerHouse, seed) {
     if (pr) h.figures.income = { ...h.figures.income, v: Math.round((pr.low + pr.high) / 2) };
   }
   settleWorld(state);
-  seedIntel(state);
+  seedKnowledge(state); // what every lord knows at the start: where the realm's hosts and fleets were last heard of
   return state;
-}
-
-// What every lord knows at the start: where the great hosts and fleets of the realm were last heard of
-function seedIntel(state) {
-  state.intel = { parties: {}, spies: {} };
-  for (const a of Object.values(state.parties)) state.intel.parties[a.id] = { pos: [...a.pos], men: a.men, turn: state.meta.turn, source: 'common knowledge', owner: a.owner, name: a.name };
-  updateIntel(state);
 }
 
 /** Bring older saves up to date with new world features. */
@@ -215,7 +208,10 @@ export function migrateState(state) {
     if (!h.lord && h.rank !== 'company') { const c = generateLord(h, state.meta.date.year); if (!state.characters[c.id]) state.characters[c.id] = c; h.lord = c.id; }
   }
   if (state.houses.golden_company && !state.houses.golden_company.lord) state.houses.golden_company.lord = 'harry_strickland';
-  if (!state.intel) seedIntel(state); // saves from before the fog of war
+  // the player's reports and spies (`state.intel` before WP B9) are the house's knowledge now; saves from before the fog
+  // of war begin with what everyone knows
+  if (state.intel) { const k = knowledgeOf(state); Object.assign(k.parties, state.intel.parties || {}); Object.assign(k.spies, state.intel.spies || {}); delete state.intel; }
+  if (!state.knowledge?.[state.meta.player]) seedKnowledge(state);
   return state;
 }
 
@@ -1043,7 +1039,7 @@ function applyOne(state, ch, ctx) {
       return { op, text: `A decision awaits you: ${d.title}` };
     }
     case 'report': case 'sighting': case 'rumour_host': {
-      // news of a host reaching the player — true, stale, or planted (fog of war: shared/intel.js)
+      // news of a host reaching the player — true, stale, or planted (fog of war: engine/knowledge.js)
       const aid = findArmy(state, ch.army || ch.id);
       const pos = ch.at ? posOf(state, ch.at) : null;
       if (!aid && !ch.false && !ch.lie) throw new Error('unknown army ' + (ch.army || ch.id));

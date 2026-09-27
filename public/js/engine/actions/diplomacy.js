@@ -6,6 +6,7 @@ import { exposePlot } from '../../shared/treachery.js';
 import { MILES_PER_UNIT } from '../../../data/geography.js';
 import { random } from '../rng.js';
 import { emit } from '../facts/log.js';
+import { knowledgeOf, learn } from '../knowledge.js';
 
 const gold = (h) => Number(h?.figures?.treasury?.v) || 0;
 const spend = (state, house, n, source) => applyChanges(state, [{ op: 'figure', house, field: 'treasury', delta: -n, source }]);
@@ -31,10 +32,15 @@ function scheme(state, house, { house: target, kind }, cause) {
     if (kind === 'secrets') {
       const lord = state.characters[h.lord];
       const found = [lord, ...Object.values(state.characters).filter((c) => c.house === target && c.alive)].find((c) => c?.secret && !c.secretKnown);
-      if (found) { applyChanges(state, [{ op: 'character', id: found.id, revealSecret: true }], { cause }); return { found: true, text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} learned ${found.name}'s secret: ${found.secret}. Only the player knows. Narrate nothing of it openly.]`, summary: `${who} brings you ${found.name}'s secret: ${found.secret}` }; }
+      if (found) {
+        const before = (state.facts || []).length;
+        applyChanges(state, [{ op: 'character', id: found.id, revealSecret: true }], { cause });
+        // the secret is known to this house now, by its spy (engine/knowledge.js; invariant 9)
+        for (const f of (state.facts || []).slice(before)) if (f.kind === 'secret_revealed') learn(state, house, f, { via: 'spy' });
+        return { found: true, text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} learned ${found.name}'s secret: ${found.secret}. Only the player knows. Narrate nothing of it openly.]`, summary: `${who} brings you ${found.name}'s secret: ${found.secret}` }; }
       return { found: false, text: `[SECRET] Uncover the secrets of House ${h.name}.`, note: `[Already done: ${who} found nothing worth the gold.]`, summary: `${who} dug, and found nothing House ${h.name} hides that you did not know.` };
     }
-    state.intel = state.intel || { parties: {}, spies: {} }; state.intel.spies = state.intel.spies || {}; state.intel.spies[target] = state.meta.turn;
+    knowledgeOf(state, house).spies[target] = state.meta.turn;
     if (h.liege === house) { const found = exposePlot(state, target); return { found: true, text: `[SECRET] Plant spies in the household of House ${h.name}.`, note: `[Already done: ${who} has eyes in House ${h.name}. Finding: ${found}]`, summary: `${who} has eyes in House ${h.name}. ${found}` }; }
     return { found: true, text: `[SECRET] Plant spies in the household of House ${h.name}.`, note: `[Already done: ${who} has eyes in House ${h.name}; the player now sees their hosts.]`, summary: `${who} has placed eyes in House ${h.name}. Their hosts will be known to you wherever they march.` };
   }

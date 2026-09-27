@@ -108,7 +108,13 @@ function storyHtml(s, t, e) {
     <div class="story-h">${NEWS_ICON[e.type] ? icon(NEWS_ICON[e.type], 'sh-ico') : ''}${esc(e.title)}</div>
     <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">${icon('pin', 'tg-ico')}${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
     ${ordered ? `<div class="story-order">${esc(s.characters[s.houses[s.meta.player].lord]?.name || 'The lord')} commanded: “${esc(ordered.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim())}”</div>` : ''}
-    <div class="story-x">${esc(e.text)}</div>${e.details ? `<div class="story-d">${esc(e.details)}</div>` : ''}${recordHtml(e)}</div>`;
+    <div class="story-x">${esc(e.text)}</div>${e.details ? `<div class="story-d">${esc(e.details)}</div>` : ''}${recordHtml(e)}${heardHtml(e, date)}</div>`;
+}
+// news that came late: the day it happened, and how word of it came (09 §7.1)
+const CAME = { raven: 'the raven came', rumour: 'word came', letter: 'the letter came', rider: 'the rider came' };
+function heardHtml(e, date) {
+  if (!e.heard?.happened) return '';
+  return `<div class="story-heard">It happened on ${esc(e.heard.happened.replace(/, \d+ AC$/, ''))}; ${CAME[e.heard.via] || 'word came'} on ${esc(date)}.</div>`;
 }
 // a story the chronicler told: the engine's own lines behind it, one click away (the numbers are always true there)
 function recordHtml(e) {

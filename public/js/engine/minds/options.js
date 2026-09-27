@@ -4,12 +4,12 @@
 // one's counsel and let the days pass. Nothing here changes the world.
 import { VERBS, intentFor, check } from '../actions/registry.js';
 import { commands } from '../actions/military.js';
-import { isForce } from '../parties.js';
 import { atWar } from '../../shared/warfare.js';
 import { getRelation, placeName, resolvePlaceId, realmOf } from '../../shared/world.js';
 import { PROJECT_TEMPLATES } from '../../shared/economy.js';
 import { MILES_PER_UNIT } from '../../../data/geography.js';
 import { dayNumber } from '../time.js';
+import { hostsKnownTo } from '../knowledge.js';
 
 // How long a house lets pass before doing the same thing again (days): a tourney is an event of the year, a feast of
 // the season; taxes are not changed every week, nor gifts sent, nor a son sent riding off each Monday.
@@ -50,7 +50,8 @@ export function worldView(state, actorId) {
   const hosts = Object.values(state.parties).filter((a) => commands(state, hid, a) && a.kind !== 'garrison' && a.kind !== 'fleet' && a.men > 0 && (role === 'head' || a.commander === actorId));
   const wars = (state.wars || []).filter((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].includes(hid));
   const foesOf = new Set(wars.flatMap((w) => (w.attackers.includes(hid) ? w.defenders : w.attackers)));
-  const foeHosts = Object.values(state.parties).filter((a) => isForce(a) && a.men > 0 && (foesOf.has(a.owner) || (a.serving && foesOf.has(a.serving))));
+  // the foe's hosts as this house knows them: those it sees, and those its reports place (09 §7.2) — not the truth
+  const foeHosts = hostsKnownTo(state, hid).filter((a) => a.men > 0 && (foesOf.has(a.owner) || (a.serving && foesOf.has(a.serving))));
   const near = (pos, mi) => foeHosts.filter((a) => miles(a.pos, pos) <= mi);
   const threatened = holdings.filter((id) => near(state.holdings[id].pos, 70).length);
   const besieged = holdings.filter((id) => ['besieged', 'under siege'].includes(state.holdings[id].status));

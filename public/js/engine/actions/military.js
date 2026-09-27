@@ -284,7 +284,7 @@ export const MILITARY = [
     facts: ['host_disbanded'], mind: { allowed: true },
   },
   {
-    // how a host marches: openly, in secret, or behind a feint (fog of war — shared/intel.js)
+    // how a host marches: openly, in secret, or behind a feint (fog of war — engine/knowledge.js)
     id: 'set_secrecy', family: 'intrigue', label: 'March openly, in secret, or behind a feint',
     params: { army: 'party:own', mode: 'enum:open|hidden|feint', to: 'holding?' },
     legal: (state, i) => {

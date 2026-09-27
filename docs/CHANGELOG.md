@@ -3,6 +3,23 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B9: every house knows only what has reached it (WP B9)
+
+- **News travels.** What happens within sight of your castles, your sworn lords' castles and your hosts you know at
+  once; the realm's great news comes by raven, a day for every two hundred miles; small matters come by rumour, slowly,
+  and not from the far end of the realm. A card that came late says so: "It happened on the 9th; word came on the 24th."
+  News that has not reached you by the end of a turn arrives in the turn it does.
+- **The lords of the realm know only what has reached them too.** A lord's mind decides on the news his house has, and
+  on the enemy hosts it can see or has word of — where the word puts them.
+- **Your game no longer carries what your house does not know.** The browser is sent other houses' hosts only as seen
+  (without where they are going) or as reported (where the report says), others' secrets stay hidden (the sheet still
+  tells you there is more to know), other houses' coffers are a maester's estimate, and the lords' private counsel,
+  unread answers and secret pacts stay on the server.
+- A spy's uncovered secret is now knowledge of your house in its own right.
+- Owner to verify: play a few weeks as Stark; far news (a tourney at Casterly Rock, a lord riding to King's Landing)
+  shows "word came on …" under it. In the browser's developer tools, the game's state holds no `minds`, and a
+  Lannister host far from the North is either absent or marked `reported`.
+
 ## 2026-09-27 — B8: the chronicle is told, and never wrong (WP B8)
 
 - **The week is told as stories, in the voice of the books.** What your house learns in a turn is gathered into at most

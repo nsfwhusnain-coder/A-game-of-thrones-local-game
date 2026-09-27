@@ -499,3 +499,35 @@ Every model is given the same sixty weeks, and the bundles stay true as the engi
 telling (the 90 % gate), mended by telling again, left plain, faults by rule; `--judge` asks the model (or another) to
 score each told story's voice 1–5 against the style bible (the 3.8 gate). The judge is the bench's, not the game's.
 Also: `POST /api/games` now takes a `seed`, so a game — and a bug report — can be played again exactly.
+
+## D-032 · 2026-09-27 · What each house knows: worked out, not stored (WP B9)
+
+**What.** 03 §3.8 has `HouseKnowledge.facts: { factId: { day, via, confidence } }` for every house. Stored for 158
+houses and every fact, that is tens of thousands of entries a season in the save. Instead **news of a fact is worked out
+from the fact** (`engine/knowledge.js` `newsOf`): a house's own doings and what happens within sight of its castles,
+its sworn castles, its hosts and its people abroad, at once (`witness`); public news of weight (importance ≥ 3) by raven,
+a day plus a day per 200 miles from the nearest of its eyes (at most ten days for the realm's greatest news, thirty for
+the rest); small public news by rumour at 30 miles a day and not beyond 900 miles, local news not beyond 450; a letter's
+business only to its houses; a secret never. Only what cannot be worked out is stored in `state.knowledge[house]`: facts
+learned by a spy, a letter, a confession or a scheme (with the day, the way, the day it happened and its scope — for
+invariant 9), the reports of hosts, the spies a house keeps, the cards of news still on the road (`pending`), beliefs.
+`state.intel` (the player's reports and spies) is migrated into `state.knowledge[player]`. The sight radii stay the
+tuned ones of the old fog of war (55 / 45 / 75 / 45 / 30 map units, not 09 §7.2's 60 / 40 / 80 / 50), and a house's liege
+is not among the friends whose hosts it sees as its own: changing either changed every seeded game's dice for nothing
+the player would notice.
+
+## D-033 · 2026-09-27 · The chronicle hears late; the player's view is the server's (WP B9)
+
+**What.** (1) A card of the turn whose fact the player's house hears of later is told on the day its word arrives
+(`heard: { via, happened }`, shown as "It happened on the 9th; word came on the 24th"); if the word comes after the
+turn, the card waits in `knowledge.pending` and is told in the turn it arrives. The engine still chooses which cards
+are news for the player (its `shown()` choices); knowledge only decides *when*. A card whose news the engine cannot work
+out (a spy's finding) stands. (2) Minds see only their house's knowledge: their dossier's news is what has reached their
+house by now, and the enemy hosts they reason about are those they see or have report of (`hostsKnownTo`), where the
+report puts them. (3) Every answer of the API passes through `server/view.js`: other houses' hosts as seen (without
+their marches, routes or feints), as reported (whose, how many, where the report says, how old — no more), or not at
+all; people riding with a host the house cannot see are "somewhere unknown"; others' secrets, stress, paranoia and
+memories stay on the server (`secretHidden` tells the sheet there is more to know); other houses' figures as a
+maester's estimate (two significant figures) and no ledgers; only the player's own knowledge; no minds, no replies not
+yet arrived, no secret pacts; turn records without the minds' counsel or the engine's applied operations. `hiddenTruths`
+checks invariant 10 over a view, in the tests and over a six-week game.
