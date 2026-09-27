@@ -10,10 +10,11 @@
 import { applyChanges } from './world.js';
 import { pronouns } from './people.js';
 import { happenings } from './happenings.js';
+import { random } from '../engine/rng.js';
 
 const ym = (d) => d.year * 12 + (d.month - 1);
 const YM = (y, m) => y * 12 + (m - 1);
-const pick = (a, r = Math.random) => a[Math.floor(r() * a.length)];
+const pick = (a, r = random) => a[Math.floor(r() * a.length)];
 const C = (s, id) => s.characters[id];
 const alive = (s, ...ids) => ids.every((id) => s.characters[id]?.alive);
 const free = (s, id) => alive(s, id) && !/imprisoned|captive|hostage/.test(s.characters[id].status || '');
@@ -161,7 +162,7 @@ export const THREADS = [
             events: [ev('Fire in the Riverlands', 'Men with no banners — but everyone knows the Mountain — burn Sherrer, the Mummer\'s Ford and a score of villages across the Riverlands. Edmure Tully calls his banners; Lord Tywin gathers a host at Casterly Rock.', 'riverrun', 5, 'war', ['lannister', 'tully', 'clegane'])],
             changes: [{ op: 'war', id: 'lannister_vs_tully', name: 'War in the Riverlands', attackers: ['lannister'], defenders: ['tully'], reason: 'The seizure of Tyrion Lannister' }],
           };
-          for (const h of Object.values(s.holdings)) if (s.houses[h.owner]?.region === 'riverlands' && Math.random() < 0.35) out.changes.push({ op: 'holding', id: h.id, unrest: Math.min(100, (h.unrest || 0) + 25), prosperity: Math.max(0, (h.prosperity || 50) - 15), note: 'Raided and burned by men without banners' });
+          for (const h of Object.values(s.holdings)) if (s.houses[h.owner]?.region === 'riverlands' && random() < 0.35) out.changes.push({ op: 'holding', id: h.id, unrest: Math.min(100, (h.unrest || 0) + 25), prosperity: Math.max(0, (h.prosperity || 50) - 15), note: 'Raided and burned by men without banners' });
           if (plays(s, 'tully') || s.houses[player(s)]?.region === 'riverlands') {
             out.decision = {
               id: 'riverlands_burn', title: 'The Riverlands burn', from: 'edmure_tully',
@@ -337,7 +338,7 @@ export const THREADS = [
         // the player's own battles are fought by the engine where their hosts are, never scripted for them
         id: 'whispering_wood', at: YM(299, 3), grace: 3, needs: (s) => inWar(s, 'stark', 'lannister') && free(s, 'jaime_lannister') && !plays(s, 'lannister', 'stark', 'tully'),
         fire: (s) => {
-          const win = Math.random() < (plays(s, 'stark') ? 0.6 : 0.7);
+          const win = random() < (plays(s, 'stark') ? 0.6 : 0.7);
           return win
             ? { events: [ev('The Whispering Wood', 'In the dark of the Whispering Wood the northmen fall on Jaime Lannister\'s camp from three sides. The Kingslayer is taken alive, and three lordlings with him. The siege of Riverrun is broken.', 'tully', 5, 'war', ['stark', 'lannister'])], changes: [{ op: 'character', id: 'jaime_lannister', status: 'imprisoned', loc: 'tully' }, { op: 'battle', name: 'Battle of the Whispering Wood', at: 'tully', attacker: 'stark', defender: 'lannister', victor: 'stark' }] }
             : { events: [ev('A trap that failed', 'The northmen try to take Jaime Lannister in the Whispering Wood, but his scouts smell them out. He cuts his way free and the siege of Riverrun goes on.', 'tully', 3, 'war', ['stark', 'lannister'])], changes: [{ op: 'battle', name: 'Skirmish in the Whispering Wood', at: 'tully', attacker: 'stark', defender: 'lannister', victor: 'lannister' }] };
@@ -361,7 +362,7 @@ export const THREADS = [
         },
       },
       {
-        id: 'red_wedding', at: YM(299, 11), grace: 3, needs: (s) => flag(s, 'frey_pact') && !plays(s, 'stark') && alive(s, 'walder_frey', 'roose_bolton') && s.houses.stark?.lord && alive(s, s.houses.stark.lord) && inWar(s, 'stark', 'lannister') && Math.random() < 0.7,
+        id: 'red_wedding', at: YM(299, 11), grace: 3, needs: (s) => flag(s, 'frey_pact') && !plays(s, 'stark') && alive(s, 'walder_frey', 'roose_bolton') && s.houses.stark?.lord && alive(s, s.houses.stark.lord) && inWar(s, 'stark', 'lannister') && random() < 0.7,
         fire: (s) => {
           const lord = s.houses.stark.lord;
           return {
@@ -446,7 +447,7 @@ function threatTick(s, days) {
   T.winter = Math.min(100, s.world?.season === 'winter' ? 90 : s.world?.season === 'autumn' ? 55 + T.others * 0.2 : 20 + T.others * 0.2);
   const out = { events: [], changes: [] };
   // the free folk come over the Wall
-  if (T.free_folk > 35 && Math.random() < k * T.free_folk / 260) {
+  if (T.free_folk > 35 && random() < k * T.free_folk / 260) {
     const north = Object.values(s.holdings).filter((h) => s.houses[h.owner]?.region === 'north' && h.pos[1] < 700);
     const h = pick(north.length ? north : Object.values(s.holdings).filter((x) => s.houses[x.owner]?.region === 'north'));
     if (h) {
@@ -455,7 +456,7 @@ function threatTick(s, days) {
       out.raid = h.id;
     }
   }
-  if (T.others > 55 && Math.random() < k * 0.18) out.events.push(ev('The dead in the snow', 'Rangers come back from beyond the Wall with a tale no one at court believes: men dead a fortnight rose and walked. At Castle Black they burn their dead now.', 'nights_watch', 4, 'court', ['nights_watch']));
+  if (T.others > 55 && random() < k * 0.18) out.events.push(ev('The dead in the snow', 'Rangers come back from beyond the Wall with a tale no one at court believes: men dead a fortnight rose and walked. At Castle Black they burn their dead now.', 'nights_watch', 4, 'court', ['nights_watch']));
   return out;
 }
 
@@ -463,7 +464,7 @@ function threatTick(s, days) {
 function churn(s, days) {
   const out = { events: [], changes: [] };
   const great = Object.values(s.houses).filter((h) => h.status !== 'extinct' && h.lord && s.characters[h.lord]?.alive && h.id !== player(s) && !h.landless);
-  const x = (days / 30) * (1.2 + Math.random()); const n = Math.min(4, Math.floor(x) + (Math.random() < x % 1 ? 1 : 0));
+  const x = (days / 30) * (1.2 + random()); const n = Math.min(4, Math.floor(x) + (random() < x % 1 ? 1 : 0));
   const lordName = (h) => s.characters[h.lord]?.name || `the lord of ${h.name}`;
   const tries = [
     () => { // an old feud flares
@@ -497,7 +498,7 @@ function churn(s, days) {
     },
     () => { // a good harvest or a bad one somewhere
       const h = pick(Object.values(s.holdings).filter((x) => x.owner !== player(s) && !['wall', 'beyond', 'essos'].includes(x.region))); if (!h) return;
-      const good = Math.random() < 0.55;
+      const good = random() < 0.55;
       out.events.push(ev(good ? `Full granaries at ${h.name}` : `Blight at ${h.name}`, good ? `The harvest around ${h.name} is the best in memory; the lord's granaries are full to the rafters.` : `A blight has taken the wheat around ${h.name}. The smallfolk are already eating their seed corn.`, h.id, 1, 'economy', [h.owner]));
       out.changes.push({ op: 'holding', id: h.id, prosperity: Math.max(0, Math.min(100, (h.prosperity || 50) + (good ? 6 : -8))) });
     },
@@ -607,7 +608,7 @@ export function worldTick(state, days) {
   const hp = happenings(s, days); events.push(...hp.events); changes.push(...hp.changes);
   const { applied } = applyChanges(s, changes, { source: 'The ravens' });
   const pending = (s.decisions || []).filter((d) => d.status === 'pending').length;
-  if (!decisions.length && pending < 2 && Math.random() < 0.6 * Math.min(1, days / 30)) { const o = opportunity(s, th.raid); if (o) decisions.push(o); }
+  if (!decisions.length && pending < 2 && random() < 0.6 * Math.min(1, days / 30)) { const o = opportunity(s, th.raid); if (o) decisions.push(o); }
   for (const d of decisions.slice(0, 2)) {
     const r = applyChanges(s, [{ op: 'decision', ...d }]); applied.push(...r.applied);
     const made = s.decisions.at(-1); if (made && d.lapse) made.lapse = d.lapse; if (made && d.from && s.characters[d.from]) made.from = d.from;

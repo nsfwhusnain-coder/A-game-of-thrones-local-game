@@ -3,6 +3,18 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B1: the engine's own dice (WP B1)
+
+- **Every game has its own dice.** Everything the engine decides by chance — who answers the banners, a road's outlaws,
+  a battle's turn — is rolled from a seeded stream kept in the save, never from the computer's clock. The same save and
+  the same orders always give the same turn: the foundation for *Stop here*, undo and replays in later work, and for
+  bug reports the owner can send back as a save.
+- Names people use are tables now (`public/data/aliases.js`, `engine/ids.js`): "Ned", "the Greatjon", "the Wall", "the
+  Freys", "the King" (whoever holds the throne) — the order parser and the constrained model calls of the next work
+  packages read them. Tunable numbers begin to gather in `public/data/balance.js` (difficulty, speeds, the sea, musters).
+- `npm run check` now also fails if engine code rolls dice with `Math.random` or reads the clock.
+- Owner to verify: nothing to see in play — an old save still loads and plays; a new game plays as before.
+
 ## 2026-09-27 — Phase A finished: islands need ships, people are data, canon in the books' order (WPs A8, A10, A11)
 
 - **A8 — The sea is no road.** An island lord's men no longer walk over the water: they take ship. House Mormont ferries

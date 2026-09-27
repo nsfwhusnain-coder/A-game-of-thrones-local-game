@@ -9,6 +9,7 @@
 //    believe; the story may likewise plant false reports on the player (the 'report' op).
 // The true state stays in state.armies (the engine and the story model use it); state.intel holds reports.
 
+import { random } from '../engine/rng.js';
 const SIGHT = { holding: 55, vassal: 45, army: 75, ally: 45, person: 30 };
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
@@ -54,7 +55,7 @@ function nearestName(state, pos) {
 }
 
 /** After a turn: record what the house has seen or heard, and let old reports age. */
-export function updateIntel(state, r = Math.random) {
+export function updateIntel(state, r = random) {
   state.intel = state.intel || { armies: {}, spies: {} };
   const E = eyes(state); const t = state.meta.turn;
   for (const a of Object.values(state.armies)) {

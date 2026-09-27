@@ -6,8 +6,10 @@
 import { landmassOf, sameLand, bestLanding, shoreCell, seaMilesTo, alongPath } from '../engine/geo.js';
 import { placeName, nearestHolding } from './world.js';
 
-export const SHIP_CARRIES = 100;                 // men a ship carries: between a longship's 40 and a cog's 200
-export const SAIL = { cog: 60, longship: 90 };   // miles a day at sea (07 §9.1)
+import { SEA } from '../../data/balance.js';
+
+export const SHIP_CARRIES = SEA.shipCarries;     // men a ship carries (data/balance.js)
+export const SAIL = SEA.sail;                    // miles a day at sea, by kind of ship (07 §9.1)
 const ironborn = (state, hid) => state.houses[hid]?.region === 'iron_islands';
 export const sailSpeed = (state, hid) => (ironborn(state, hid) ? SAIL.longship : SAIL.cog);
 export const shipsOf = (state, hid) => Math.max(0, Math.round(Number(state.houses[hid]?.figures?.ships?.v) || 0));
@@ -80,7 +82,7 @@ export function planVoyage(state, a, to, forKey, today) {
   const speed = sailSpeed(state, a.owner);
   const land = bestLanding(from, to, { seaSpeed: speed });
   if (!land) { a.sea = { for: forKey, phase: 'stranded', why: 'no way by sea' }; return a.sea; }
-  const days = Math.max(1, Math.ceil(land.seaMiles / speed)) + 1; // a day to embark and land
+  const days = Math.max(1, Math.ceil(land.seaMiles / speed)) + SEA.embarkDays; // a day to embark and land
   const t = transportFor(state, a.owner, a.men, from, days);
   const wait = t.wait || 0;
   a.sea = {

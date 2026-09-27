@@ -10,6 +10,7 @@ import { applyChanges, getRelation, realmTotals } from './world.js';
 import { temperament } from './temperament.js';
 import { isFemale } from './people.js';
 import { atWar } from './warfare.js';
+import { random } from '../engine/rng.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -23,7 +24,7 @@ function recentDefeats(state, house) {
 }
 
 /** One turn of temptation for every sworn lord. Returns { events, applied, whispers } — whispers are the player's rumours. */
-export function treacheryTick(state, days, r = Math.random) {
+export function treacheryTick(state, days, r = random) {
   state.plotting = state.plotting || {}; // house -> { with, since, pressure, known }
   const events = []; const changes = []; const p = state.meta.player;
   const k = Math.min(1.5, days / 30);
@@ -72,7 +73,7 @@ function whisper(state, v, lord, rec, days, r) {
 }
 
 /** In battle: do the plotting lords' men fight? Returns the men withdrawn and who withdrew them. */
-export function contingentsHoldBack(state, army, r = Math.random) {
+export function contingentsHoldBack(state, army, r = random) {
   const out = []; if (!army?.contingents) return out;
   for (const [vid, men] of Object.entries(army.contingents)) {
     const rec = state.plotting?.[vid]; if (!rec?.with) continue;

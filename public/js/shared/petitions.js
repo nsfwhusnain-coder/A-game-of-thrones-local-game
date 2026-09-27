@@ -3,8 +3,9 @@
 import { vassalsOf, getRelation, generateKin, applyChanges } from './world.js';
 import { isFemale } from './people.js';
 import { answerCall, answerRising, answerRebel } from './vassals.js';
+import { random, shuffle } from '../engine/rng.js';
 
-const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const pick = (a) => a[Math.floor(random() * a.length)];
 
 export function realmPetition(state) {
   const p = state.meta.player; const me = state.houses[p];
@@ -14,7 +15,7 @@ export function realmPetition(state) {
   const templates = [];
   if (vas.length >= 2) {
     templates.push(() => {
-      const [a, b] = [...vas].sort(() => Math.random() - 0.5);
+      const [a, b] = shuffle(vas);
       return {
         title: `A border quarrel: ${a.name} and ${b.name}`, from: a.lord,
         text: `${lordOf(a).name} and ${lordOf(b).name} both claim a mill, a ford and three villages on the land between their seats. Blood has been spilled over it. Both appeal to you for judgement.`,
@@ -139,7 +140,7 @@ export function applyPetitionFx(state, fx, date = '') {
     if (e.plot) { state.plots = state.plots || {}; state.plots.flags = { ...(state.plots.flags || {}), [e.plot[0]]: e.plot[1] }; }
     if (e.prestige) { me.prestige = (me.prestige || 0) + e.prestige; out.push(`prestige ${e.prestige > 0 ? '+' : ''}${e.prestige}`); }
     if (e.threat && state.plots?.threats) { const [k, d] = e.threat; state.plots.threats[k] = Math.max(0, Math.min(100, (state.plots.threats[k] || 0) + d)); }
-    if (e.chance) { const [pr, yes, no] = e.chance; out.push(...applyPetitionFx(state, Math.random() < pr ? yes : no, date)); }
+    if (e.chance) { const [pr, yes, no] = e.chance; out.push(...applyPetitionFx(state, random() < pr ? yes : no, date)); }
   }
   return out;
 }

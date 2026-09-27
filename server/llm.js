@@ -400,7 +400,7 @@ function mockResponse(messages, opts) {
         { op: 'figure', house, field: 'treasury', delta: 1200, source: 'Steward\'s ledger' },
         { op: 'figure', house, field: 'food', delta: -1, source: 'Steward\'s ledger' },
         ...(bannerCall ? [
-          { op: 'army_create', id: `${house}_host_${Date.now() % 1000}`, owner: house, name: 'The Muster', at: house, men: 6500, type: 'army', composition: 'Levies, knights and men-at-arms (mock)', status: 'mustering' },
+          { op: 'army_create', id: `${house}_host_mock`, owner: house, name: 'The Muster', at: house, men: 6500, type: 'army', composition: 'Levies, knights and men-at-arms (mock)', status: 'mustering' },
           { op: 'figure', house, field: 'levies', delta: -6500 },
         ] : []),
         { op: 'army_move', army: 'iron_fleet', to: 'seagard', progress: 0.5, status: 'sailing' },

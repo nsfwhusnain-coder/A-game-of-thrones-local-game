@@ -4,6 +4,7 @@
 // travel the map (anyone on the road can see a lord's banners), stay some days, and ride home.
 import { placeName, dateStr } from './world.js';
 import { pronouns } from './people.js';
+import { random } from '../engine/rng.js';
 
 const PURPOSES = [
   { kind: 'liege', w: 3, why: (d) => `to pay ${d.his} respects to ${d.lordName} at ${d.place}`, stay: [2, 5] },
@@ -30,7 +31,7 @@ export function dutyBound(state, h) {
 }
 
 /** Send lords out, bring them home. Returns { events }. Parties are armies with a.party (and a.public). */
-export function retinueTick(state, days, r = Math.random) {
+export function retinueTick(state, days, r = random) {
   const events = []; const p = state.meta.player;
   // those abroad: arrived parties stay their days, then ride home; home again, the tail disbands
   for (const a of Object.values(state.armies)) {

@@ -76,3 +76,22 @@ opens it in Chromium (Playwright, SwiftShader WebGL) and writes `visual-out/<sce
 
 **Why.** CLAUDE.md requires screenshots at both sizes for every UI change; a script makes that one command and is the
 seed of `scripts/visual.js` (WP F9).
+
+## D-005 · 2026-09-27 · The save's dice, in scope rather than passed by hand (WP B1)
+
+**What.** 03 §6 has every phase take `ctx.rng`. The engine's ~70 rolls live in two dozen modules written before that, many
+several calls deep; threading an `rng` argument through all of them would touch every signature for no gain. Instead
+`public/js/engine/rng.js` exports `random()` (and `chance`, `pick`, `shuffle`) as the drop-in for `Math.random`, drawing
+from **the stream of the save being simulated**. On the server, `server/dice.js` runs each engine entry point (a turn,
+an action, an audience, a council, an order preview) inside an `AsyncLocalStorage` scope holding that save's stream, so
+the dice follow the save across every `await` and two saves in one process never share them. In the browser and in
+tests a fixed-seed fallback stream (or `withRng(state, fn)`) is used. The stream is xoshiro128** over the four words of
+`state.meta.rngState`, advanced in place, so whatever saves the state saves the dice. New games take a fresh seed;
+`createInitialState(…, { seed })` makes the same world for the same seed. Ids the engine mints (letters, orders,
+decisions, works) come from `state.meta.seq` via `nextId()`. The absolute day is derived (`dayNumber(meta.date)`), not
+stored twice. `npm run check` runs `scripts/lint-engine.js`, which fails on `Math.random`, the clock, crypto or a `node:`
+import in `public/js/engine/`, `public/js/shared/` and `server/turn/`.
+
+**Why.** The same guarantee (a turn replays byte for byte: `tests/replay.test.js`, which even swaps `Math.random` between
+the two runs) at a fraction of the churn, and the rebuilt modules of later work packages can still take `ctx.rng`
+explicitly where that reads better — `random()` and `ctx.rng` draw from the same stream.

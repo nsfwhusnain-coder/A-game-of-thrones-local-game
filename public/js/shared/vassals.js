@@ -6,6 +6,7 @@ import { marchDays, atWar } from './warfare.js';
 import { incapacity } from './regency.js';
 import { pronouns, isFemale } from './people.js';
 import { needsShips } from './sea.js';
+import { random } from '../engine/rng.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -49,7 +50,7 @@ export function vassalTick(state, days, touched = new Set()) {
     if (v.id === p) { events.push(...playerAsVassal(state, v, months)); continue; } // the player answers for themself
     // --- dues ---
     if (!touched.has(v.id) && ['paying', 'late', 'withholding'].includes(ob.tribute)) {
-      const r = Math.random(); let next = ob.tribute;
+      const r = random(); let next = ob.tribute;
       if (ob.tribute === 'paying' && t < 32 && r < 0.3 * months) next = 'late';
       else if (ob.tribute === 'late' && t < 20 && r < 0.25 * months) next = 'withholding';
       else if (ob.tribute === 'late' && t >= 50 && r < 0.4 * months) next = 'paying';
@@ -68,9 +69,9 @@ export function vassalTick(state, days, touched = new Set()) {
       const seatPos = placePos(v.seat, state.holdings);
       const musterPos = placePos(ob.muster || liege.seat, state.holdings);
       // a raven must reach them and the levies must be gathered from the fields: a week or two
-      const ready = ob.calledDays >= (ob.levies === 'delayed' ? 30 : 10 + Math.random() * 8);
+      const ready = ob.calledDays >= (ob.levies === 'delayed' ? 30 : 10 + random() * 8);
       if (!ready) continue;
-      const roll = Math.random() * 100;
+      const roll = random() * 100;
       let answer;
       if (t >= 45) answer = roll < 88 ? 'answered' : 'delayed';
       else if (t >= 28) answer = roll < 50 ? 'answered' : roll < 90 ? 'delayed' : 'refused';
@@ -93,12 +94,12 @@ export function vassalTick(state, days, touched = new Set()) {
           applied.push(...r.applied);
           const a = Object.values(state.armies).find((x) => x.owner === v.id && x.name === name && !x.serving); let riding = [];
           if (a) {
-            a.serving = v.liege; ob.host = a.id; a.bornDay = Math.floor(Math.random() * Math.max(1, days));
+            a.serving = v.liege; ob.host = a.id; a.bornDay = Math.floor(random() * Math.max(1, days));
             if (musterPos && ob.muster && ob.muster !== v.seat) { a.march = { to: ob.muster, since: state.meta.turn }; a.dest = musterPos; a.status = 'marching'; }
             // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
             state.characters[v.lord].loc = 'army:' + a.id;
             const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && (!isFemale(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !c.travel && [v.seat, 'army:'].some((l) => String(c.loc || '').startsWith(l) || c.loc === v.seat) && !(c.roles || []).includes('maester'));
-            riding = kin.filter(() => Math.random() < 0.55).slice(0, 2);
+            riding = kin.filter(() => random() < 0.55).slice(0, 2);
             for (const c of riding) { c.loc = 'army:' + a.id; delete c.travel; }
           }
           const eta = a && musterPos ? marchDays(a, seatPos, musterPos).days : 0;
@@ -113,7 +114,7 @@ export function vassalTick(state, days, touched = new Set()) {
       } else if (answer === 'delayed') {
         const P = pronouns(state.characters[v.lord]);
         const excuses = ['the harvest is not yet in', 'fever in the villages', 'the roads are flooded', `${P.his} own borders are threatened`, `${P.his} knights are scattered at a tourney`, `${P.he} must first settle a quarrel with ${P.his} neighbour`];
-        const text = `${lordName} writes that ${excuses[Math.floor(Math.random() * excuses.length)]}. ${P.He} will come — later.`;
+        const text = `${lordName} writes that ${excuses[Math.floor(random() * excuses.length)]}. ${P.He} will come — later.`;
         if (mine) events.push({ title: `House ${v.name} delays`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] });
       } else {
         const text = `${lordName} refuses the summons. ${pronouns(state.characters[v.lord]).His} men will stay at home.`;
@@ -133,9 +134,9 @@ function unrestTick(state, days) {
   const events = []; const months = days / 30; const p = state.meta.player;
   for (const h of Object.values(state.holdings)) {
     if (h.status === 'rising') { h.unrest = Math.max(h.unrest, 85); continue; }
-    if ((h.unrest || 0) < 85 || (h.status && h.status !== 'normal') || Math.random() >= 0.35 * months) continue;
+    if ((h.unrest || 0) < 85 || (h.status && h.status !== 'normal') || random() >= 0.35 * months) continue;
     h.status = 'rising';
-    if (h.owner !== p) { if (Math.random() < 0.5) { h.status = 'normal'; h.unrest -= 20; } continue; } // the story handles other lords' troubles
+    if (h.owner !== p) { if (random() < 0.5) { h.status = 'normal'; h.unrest -= 20; } continue; } // the story handles other lords' troubles
     const cost = Math.round(h.population * 0.01 / 50) * 50 + 500;
     applyChanges(state, [{ op: 'decision', title: `The smallfolk rise at ${h.name}`, from: null, text: `Hunger, taxes and lawlessness have driven the smallfolk of ${h.name} to arms. They have burned a tithe barn and hanged a tax collector, and they will not disperse.`, options: [
       { label: 'Crush the rising', hint: 'Your men-at-arms ride out. It will be bloody, and it will be remembered.', fx: [{ rising: [h.id, 'crush'] }] },
@@ -153,7 +154,7 @@ export function answerRising(state, [hid, how, cost]) {
   const maa = Number(me.figures.menAtArms?.v) || 0;
   if (how === 'crush') {
     h.status = 'normal'; h.unrest = Math.max(0, h.unrest - 45); h.population = Math.round(h.population * 0.96); h.prosperity = Math.max(0, h.prosperity - 6);
-    me.figures.menAtArms = { ...me.figures.menAtArms, v: Math.max(0, maa - Math.round(20 + Math.random() * 60)) };
+    me.figures.menAtArms = { ...me.figures.menAtArms, v: Math.max(0, maa - Math.round(20 + random() * 60)) };
     out.push(`${h.name}: the rising is crushed; unrest ${h.unrest}, some hundreds dead`);
     for (const x of Object.values(state.holdings)) if (x.owner === p && x.id !== hid) x.unrest = Math.min(100, (x.unrest || 0) + 3);
   } else if (how === 'grant') {
@@ -167,7 +168,7 @@ export function answerRising(state, [hid, how, cost]) {
     h.unrest = Math.min(100, h.unrest + 5);
     const near = Object.values(state.holdings).filter((x) => x.owner === p && x.id !== hid).sort((a, b) => Math.hypot(a.pos[0] - h.pos[0], a.pos[1] - h.pos[1]) - Math.hypot(b.pos[0] - h.pos[0], b.pos[1] - h.pos[1]))[0];
     if (near) { near.unrest = Math.min(100, (near.unrest || 0) + 15); out.push(`unrest spreads to ${near.name}`); }
-    if (Math.random() < 0.4) { h.status = 'normal'; h.unrest -= 25; out.push(`${h.name}: the rising burns itself out`); }
+    if (random() < 0.4) { h.status = 'normal'; h.unrest -= 25; out.push(`${h.name}: the rising burns itself out`); }
   }
   return out;
 }
@@ -178,7 +179,7 @@ function rebellionTick(state, days) {
   for (const v of Object.values(state.houses)) {
     if (v.liege !== p || !v.lord || !state.characters[v.lord]?.alive || v.rebel) continue;
     const t = vassalTemper(state, v.id);
-    if (t >= 14 || v.obligations?.tribute !== 'withholding' || Math.random() >= 0.2 * months) continue;
+    if (t >= 14 || v.obligations?.tribute !== 'withholding' || random() >= 0.2 * months) continue;
     v.rebel = true;
     const lord = state.characters[v.lord];
     applyChanges(state, [{ op: 'decision', title: `House ${v.name} defies you`, from: v.lord, text: `${lord.name} has closed the gates of ${state.holdings[v.seat]?.name || `${pronouns(lord).his} seat`}, turned away your envoy and declared that House ${v.name} owes you nothing. Other lords are watching to see what you do.`, options: [
@@ -278,7 +279,7 @@ export function fieldService(state, days) {
       const drift = (autumn ? 2.5 : 1.2) * months * (/sieg|idle|mustered|garrison/.test(host.status || '') ? 1.3 : 0.8);
       state.relations[k] = { ...(state.relations[k] || {}), v: clamp(Math.round((state.relations[k]?.v ?? 0) - drift), -100, 100) };
       const t = vassalTemper(state, vid);
-      if (t < 22 && Math.random() < 0.5 * months) {
+      if (t < 22 && random() < 0.5 * months) {
         const leave = Math.min(men, host.men);
         host.men -= leave; delete host.contingents[vid];
         const lev = v.figures.levies = v.figures.levies || { v: 0 };
@@ -307,7 +308,7 @@ function playerAsVassal(state, me, months) {
   // no liege summons a vassal who is at war with him: that is rebellion, not service
   const rebel = state.wars.some((w) => w.status !== 'ended' && ((w.attackers.includes(me.id) && w.defenders.includes(liege.id)) || (w.defenders.includes(me.id) && w.attackers.includes(liege.id))));
   if (rebel) return events;
-  if (atWarNow && (!ob.levies || ob.levies === 'not_called') && Math.random() < 0.45 * months) { ob.levies = 'called'; ob.muster = liege.seat; ob.calledDays = 0; }
+  if (atWarNow && (!ob.levies || ob.levies === 'not_called') && random() < 0.45 * months) { ob.levies = 'called'; ob.muster = liege.seat; ob.calledDays = 0; }
   if (ob.levies === 'delayed') { ob.calledDays = (ob.calledDays || 0) + months * 30; if (ob.calledDays > 40) { ob.levies = 'called'; ob.calledDays = 0; state.relations[k] = { ...(state.relations[k] || {}), v: clamp((state.relations[k]?.v ?? 0) - 5, -100, 100) }; } }
   if (ob.levies === 'called' && !(state.decisions || []).some((d) => d.kind === 'liege_call' && d.status === 'pending')) {
     const lev = Number(me.figures.levies?.v) || 0;

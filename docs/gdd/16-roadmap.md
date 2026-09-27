@@ -48,7 +48,7 @@ validator is the real fix.**
 
 | WP | Title | Depends | Size | Acceptance |
 |---|---|---|---|---|
-| B1 | Engine foundations: `engine/rng.js` (seeded, in the save), day numbers, `data/balance.js`, id/alias tables, lint rule against `Math.random` in the engine | A2 | M | replay of a mock turn is byte-identical |
+| B1 | Engine foundations: `engine/rng.js` (seeded, in the save), day numbers, `data/balance.js`, id/alias tables, lint rule against `Math.random` in the engine | A2 | M | replay of a mock turn is byte-identical — ✅ `engine/rng.js`, `engine/time.js`, `engine/ids.js`, `data/balance.js`, `data/aliases.js`, `scripts/lint-engine.js`; `tests/replay.test.js` (DECISIONS D-005) |
 | B2 | State v3: Party model, Activity system, `movement.js` (server-side routes, shared pathfinding), migration v2→v3 with a fixture save | B1 | L | invariants 1–4, 8 of 03 §14 hold every turn in the soak; the v2 fixture loads |
 | B3 | Fact log, fact kinds + engine text templates (correct pronouns), turn records in files, snapshots, multi-level undo | B2 | M | every engine subsystem emits facts, not events; undo 3 turns works; ironman disables undo |
 | B4 | Verb registry; port every existing action (`act()` kinds, `orders.js executeActions`, `court.js`) to verbs with `legal/cost/start/receipt` | B3 | L | all old actions reachable by verb; receipts for all |
