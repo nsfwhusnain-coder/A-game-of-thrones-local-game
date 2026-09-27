@@ -746,7 +746,7 @@ test('a rule that runs away is stopped, not allowed to hang the turn', () => {
 });
 
 // ── Geography that bites: the hard places of Westeros ──
-import { crossings, chokepointToll, roadWarnings, hasLeave, CHOKEPOINTS } from '../public/js/shared/chokepoints.js';
+import { crossings, chokepointToll, roadWarnings, hasLeave, roadCongestion, CHOKEPOINTS } from '../public/js/shared/chokepoints.js';
 
 const host = (owner, men = 12000) => ({ id: 'h', owner, name: 'A host', men, morale: 70, type: 'army' });
 
@@ -853,4 +853,14 @@ test('a mind that is breaking is felt by the house, not reported as a stat', () 
   for (let i = 0; i < 3 && !events.some((e) => e.mind); i++) events = psycheTick(s, 30).events;
   assert.ok(events.some((e) => e.mind), 'the household should notice');
   assert.ok(events.every((e) => !/\bstress\b|\d\d\/100/.test(e.text)));
+});
+
+test('a countryside on the move slows the host that marches through it', () => {
+  const s = fresh();
+  const from = s.holdings.stark.pos, to = s.holdings.manderly.pos;
+  assert.equal(roadCongestion(s, from, to), 0, 'a realm at peace has clear roads');
+  s.holdings.manderly.status = 'sacked';
+  s.holdings.manderly.unrest = 90;
+  const jam = roadCongestion(s, from, to);
+  assert.ok(jam > 0.05 && jam <= 0.3, `expected a jammed road, got ${jam}`);
 });

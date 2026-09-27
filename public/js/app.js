@@ -539,6 +539,7 @@ async function showSettings() {
   modal(`<h2>Settings</h2>
     <h4>Display</h4>
     <div class="scale-row"><label style="margin:0;white-space:nowrap">Interface size</label><input type="range" id="ui-scale" min="0.6" max="1.8" step="0.05" value="${uiScale()}"><span id="ui-scale-v" style="width:3.5rem;text-align:right">${Math.round(uiScale() * 100)}%</span><button class="btn small" id="ui-scale-reset">Reset</button></div>
+    <div class="scale-row"><label style="margin:0;white-space:nowrap" title="Refugees leaving a sacked town, carts between prosperous holdings, outriders ahead of a host, deserters slipping away, ravens carrying the letters that were really sent"><input type="checkbox" id="gfx-life"> A living map</label></div>
     <div class="scale-row"><label style="margin:0;white-space:nowrap">Graphics</label><select id="gfx-q" style="flex:1"><option value="high">High — sharpest relief, full resolution</option><option value="balanced">Balanced (recommended for laptops)</option><option value="fast">Fast — for older machines</option></select></div>
     <label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="house-theme" ${houseTheming() ? 'checked' : ''}> Colour the interface in my house's colours</label>
     <div class="settings-section"></div>
@@ -591,6 +592,8 @@ async function showSettings() {
   $('#snd-engine').value = voiceSettings().engine; $('#snd-narrator').value = voiceSettings().narrator;
   try { $('#gfx-q').value = localStorage.getItem('gfx-quality') || 'balanced'; } catch { /* */ }
   $('#cfg-diag').onchange = (e) => { try { localStorage.setItem('model-diagnostics', e.target.checked ? '1' : '0'); } catch { /* */ } };
+  try { $('#gfx-life').checked = (localStorage.getItem('map-life') ?? (localStorage.getItem('gfx-quality') === 'fast' ? '0' : '1')) === '1'; } catch { /* */ }
+  $('#gfx-life').onchange = (e) => { app.map?.setLife(e.target.checked); };
   $('#gfx-q').onchange = (e) => { try { localStorage.setItem('gfx-quality', e.target.value); } catch { /* */ } toast('Graphics quality changes when the map next loads (reload the page).'); };
   $('#snd-music').onchange = (e) => { startMusic(); setMusic('on', e.target.checked); };
   $('#snd-sfx').onchange = (e) => { setSfx('on', e.target.checked); sfx('bell'); };

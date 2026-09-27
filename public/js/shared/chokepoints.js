@@ -244,3 +244,33 @@ export function chokepointDigest(state) {
     return `- ${cp.name}${gate ? ` (held by House ${state.houses?.[gate.owner]?.name || gate.owner} at ${gate.name})` : ''}: ${cp.blurb}`;
   }).join('\n');
 }
+
+// ── The roads are full of people ───────────────────────────────────────────────────────────────
+// An army does not march through a countryside emptied by war at the pace of a summer road. Where
+// people are fleeing — sacked towns, besieged castles, a restive countryside — the column crawls:
+// carts across the verges, families on the causeway, the baggage train stopping every mile. The
+// living map draws those columns; this is what they cost the host that must push through them.
+
+/** 0 (clear roads) … 0.30 (a countryside on the move). */
+export function roadCongestion(state, from, to) {
+  if (!from || !to) return 0;
+  const len = Math.hypot(to[0] - from[0], to[1] - from[1]);
+  if (len < 1) return 0;
+  let worst = 0, sum = 0;
+  for (const h of Object.values(state.holdings || {})) {
+    // distance from the holding to the marching line, if it lies alongside it
+    const t = Math.max(0, Math.min(1, ((h.pos[0] - from[0]) * (to[0] - from[0]) + (h.pos[1] - from[1]) * (to[1] - from[1])) / (len * len)));
+    const px = from[0] + (to[0] - from[0]) * t, py = from[1] + (to[1] - from[1]) * t;
+    const d = Math.hypot(h.pos[0] - px, h.pos[1] - py);
+    if (d > 45) continue;
+    const beset = /besieg|sack|burn/i.test(h.status || '') ? 1 : 0;
+    // only people who are actually fleeing clog a road; a large town merely sends more of them
+    const size = 0.75 + Math.min(1, (h.population || 5000) / 40000);
+    const flow = ((beset * 0.55) + Math.max(0, ((h.unrest ?? 0) - 55) / 100)) * size;
+    if (!flow) continue;
+    const near = 1 - d / 45;
+    worst = Math.max(worst, flow * near);
+    sum += flow * near;
+  }
+  return Math.min(0.3, worst * 0.22 + sum * 0.05);
+}

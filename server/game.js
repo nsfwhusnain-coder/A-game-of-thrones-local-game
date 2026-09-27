@@ -7,7 +7,7 @@ import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidateP
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers } from './agents.js';
-import { chokepointToll } from '../public/js/shared/chokepoints.js';
+import { chokepointToll, roadCongestion } from '../public/js/shared/chokepoints.js';
 import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
@@ -314,6 +314,8 @@ export async function advance(id, { span = 'auto', orders } = {}) {
     // The Neck, the Green Fork, the Bloody Gate, the Golden Tooth, the passes into Dorne: a host
     // that must cross one of these pays in days, in men and in heart, unless it has leave.
     const legEnd = [a.pos[0] + (dest[0] - a.pos[0]) * f, a.pos[1] + (dest[1] - a.pos[1]) * f];
+    const jam = roadCongestion(state, a.pos, legEnd); // refugees, wrecked villages, a countryside on the move
+    if (jam > 0.02) f = Math.max(0, f * (1 - jam));
     const toll = chokepointToll(state, a, a.pos, legEnd, left);
     if (toll.met.length) {
       if (toll.losses) a.men = Math.max(0, a.men - toll.losses);
