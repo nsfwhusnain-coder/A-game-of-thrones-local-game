@@ -110,7 +110,7 @@ export function readOrdersByRule(state, orders, addressee = null) {
     const gathering = /\b(assem\w*|gather\w*|raise\w*|muster\w*|call\w* up|create|form|build|forge|make)\b[^.]*\b(host|army|levies|men|forces)\b/i.test(t);
     if (/\b(call|raise|summon)\b[^.]*\b(banners|bannermen|vassals|sworn lords)\b/i.test(t) || (gathering && realmWide)) {
       actions.push({ op: 'banners', order: n, vassals: 'all', at: placeIn(t) || state.houses[p].seat });
-      if (/\b(own|my) levies|\ball\b.*\bmen\b|able[- ]?bod|\bhost\b|\barmy\b/i.test(t)) actions.push({ op: 'raise', order: n, at: resolvePlaceId(placeIn(t)) || state.houses[p].seat, name: hostName(t) });
+      if (/\b(own|my) levies|\braise\w*\s+(?:\w+\s+){0,3}levies\b|\ball\b.*\bmen\b|able[- ]?bod|\bhost\b|\barmy\b/i.test(t)) actions.push({ op: 'raise', order: n, at: resolvePlaceId(placeIn(t)) || state.houses[p].seat, name: hostName(t) });
       return;
     }
     if (gathering && !/\b(recruit|hire|sellswords?)\b/i.test(t)) {
