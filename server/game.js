@@ -17,6 +17,8 @@ import { resolveWarfare } from '../public/js/shared/battles.js';
 import { roadEncounters } from '../public/js/shared/roads.js';
 import { updateIntel } from '../public/js/shared/intel.js';
 import { treacheryTick } from '../public/js/shared/treachery.js';
+import { regencyTick } from '../public/js/shared/regency.js';
+import { outcomeFor, standing } from '../public/js/shared/standing.js';
 import * as court from './court.js';
 import { carryOutOrders, readOrdersByRule, executeActions, named, startWorks, commandable, previewOrders, orderEvents, raiseLevies, callBanners, ravenDays } from './orders.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
@@ -270,14 +272,17 @@ export async function advance(id, { span = 'auto', orders } = {}) {
   // Oaths are weighed: tempted lords treat with the enemy in secret, and the desperate turn their cloaks
   const tr = treacheryTick(state, spanInfo.days);
   vt.events.push(...tr.events); applied.push(...tr.applied);
-  // Hosts in contact fight; hosts before enemy walls besiege them (unless the story told that battle itself)
-  const toldBattles = new Set();
-  const wf = resolveWarfare(state, spanInfo.days, { skip: toldBattles });
+  // Hosts in contact fight; hosts before enemy walls besiege them. The engine fights first and the story is
+  // then told the results, so a battle is never fought twice or narrated away.
+  const wf = resolveWarfare(state, spanInfo.days);
   vt.events.push(...wf.events); applied.push(...wf.applied);
   vt.events.push(...fieldService(state, spanInfo.days), ...gatherMusters(state));
   // The world goes on: the great threads of the story, rising threats, the other houses' lives
   const wt = worldTick(state, spanInfo.days);
   vt.events.push(...wt.events); applied.push(...wt.applied);
+  // Who rules where the head of a house cannot: regencies begin, hold and end, and cost the house its vassals' patience
+  const rg = regencyTick(state, spanInfo.days);
+  vt.events.push(...rg.events); applied.push(...rg.applied);
   // lords on the road with their households: feasts, weddings, their liege's hall, the market towns
   vt.events.push(...retinueTick(state, spanInfo.days).events);
   vt.events.push(...deliverReplies(state));
@@ -371,6 +376,18 @@ export async function advance(id, { span = 'auto', orders } = {}) {
     if (rising) applyPetitionFx(state, [{ rising: [rising.rising[0], 'ignore'] }]);
     if (rebel) applyPetitionFx(state, [{ rebel: [rebel.rebel[0], 'release'] }]); // silence: they take themselves out of your realm
     if (d.lapse) applyPetitionFx(state, d.lapse); // the world decides for you
+  }
+
+  // Where the house stands after all of it, and whether the story has reached its end — ruin, the failing of
+  // the line, a crown of your own, or the Iron Throne. The engine decides this, never the story model.
+  state.standing = standing(state, p);
+  if (!state.outcome) {
+    const oc = outcomeFor(state);
+    if (oc) {
+      state.outcome = { ...oc, turn: state.meta.turn, date: record.date };
+      events.push({ title: oc.title, text: oc.text, where: state.houses[p].seat || null, importance: 5, type: 'court', houses: [p], day: spanInfo.days });
+      state.chronicle.push({ date: record.date, text: `${oc.title} — ${oc.text}` });
+    }
   }
 
   // Flush chronicle ops + major events into the markdown chronicle

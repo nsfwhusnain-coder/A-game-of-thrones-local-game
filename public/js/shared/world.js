@@ -694,7 +694,8 @@ function applyOne(state, ch, ctx) {
       if (num(ch.ships) !== null) { a.ships = num(ch.ships); out.push(`ships ${a.ships}`); }
       for (const k of ['morale', 'supply']) if (num(ch[k]) !== null) { a[k] = clamp(num(ch[k]), 0, 100); out.push(`${k} ${a[k]}`); }
       if (ch.status) { a.status = ch.status; out.push(ch.status); }
-      if (ch.commander) { a.commander = findChar(state, ch.commander) || ch.commander; out.push('new commander'); }
+      // a host is never handed to a name the world does not know: an unresolvable commander is refused, not stored
+      if (ch.commander) { const cm = findChar(state, ch.commander); if (!cm) throw new Error('unknown commander ' + ch.commander); if (!state.characters[cm].alive) throw new Error(`${state.characters[cm].name} is dead and cannot command`); a.commander = cm; out.push(`${state.characters[cm].name} takes command`); }
       if (ch.owner) { const o = findHouse(state, ch.owner); if (o) { a.owner = o; out.push('changes allegiance to ' + state.houses[o].name); } }
       if (ch.name) a.name = ch.name;
       if (ch.composition) a.composition = ch.composition;
@@ -719,7 +720,7 @@ function applyOne(state, ch, ctx) {
       if (num(ch.population) !== null) { h.population = Math.max(0, Math.round(num(ch.population))); out.push(`population ~${fmt(h.population)}`); }
       if (num(ch.fort) !== null) { h.fort = Math.max(0, Math.min(6, num(ch.fort))); out.push(`fortifications ${h.fort}`); }
       if (ch.building) { h.buildings = [...new Set([...(h.buildings || []), String(ch.building)])]; out.push('builds ' + ch.building); }
-      if (ch.resource && typeof ch.resource === 'object') { const t = String(ch.resource.type); h.resources[t] = Math.max(0, (h.resources[t] || 0) + (num(ch.resource.delta) ?? 0)); out.push(`${t} ${num(ch.resource.delta) > 0 ? 'up' : 'down'}`); }
+      if (ch.resource && typeof ch.resource === 'object') { const t = String(ch.resource.type); h.resources = h.resources || {}; h.resources[t] = Math.max(0, (h.resources[t] || 0) + (num(ch.resource.delta) ?? 0)); out.push(`${t} ${num(ch.resource.delta) > 0 ? 'up' : 'down'}`); }
       if (ch.status) { h.status = ch.status; out.push(ch.status); }
       if (ch.name && String(ch.name).trim() && ch.name !== h.name) { out.push(`renamed from ${h.name}`); h.formerNames = [...(h.formerNames || []), h.name]; h.name = String(ch.name).trim().slice(0, 60); registerPlaces(state); }
       if (ch.type && HOLDING_TYPES.includes(ch.type)) { h.type = ch.type; out.push(ch.type); }
@@ -821,14 +822,19 @@ function applyOne(state, ch, ctx) {
     case 'war': {
       const status = String(ch.status || 'start').toLowerCase();
       if (status === 'start' || status === 'declare' || status === 'ongoing') {
-        const att = (Array.isArray(ch.attackers) ? ch.attackers : [ch.attacker]).map((x) => findHouse(state, x)).filter(Boolean);
-        const def = (Array.isArray(ch.defenders) ? ch.defenders : [ch.defender]).map((x) => findHouse(state, x)).filter(Boolean);
+        const att = [...new Set((Array.isArray(ch.attackers) ? ch.attackers : [ch.attacker]).map((x) => findHouse(state, x)).filter(Boolean))];
+        // no house fights on both sides of the same war: the first side it was named on is the one it is on
+        const def = [...new Set((Array.isArray(ch.defenders) ? ch.defenders : [ch.defender]).map((x) => findHouse(state, x)).filter(Boolean))].filter((x) => !att.includes(x));
         // the story may bring war to the player, but only the player declares it
         if (ctx.protectPlayer && !ctx.playerDeclaredWar && att.includes(state.meta.player)) throw new Error('only the player can declare the player\'s wars');
         if (!att.length || !def.length) throw new Error('war needs sides');
         const id = slug(ch.id || ch.name || `${att[0]}_vs_${def[0]}`);
         const existing = state.wars.find((w) => w.id === id);
-        if (existing) { existing.attackers = [...new Set([...existing.attackers, ...att])]; existing.defenders = [...new Set([...existing.defenders, ...def])]; return { op, text: `${existing.name} widens` }; }
+        if (existing) {
+          existing.attackers = [...new Set([...existing.attackers, ...att])];
+          existing.defenders = [...new Set([...existing.defenders, ...def])].filter((x) => !existing.attackers.includes(x));
+          return { op, text: `${existing.name} widens` };
+        }
         state.wars.push({ id, name: ch.name || `War of ${state.houses[att[0]].name} against ${state.houses[def[0]].name}`, attackers: att, defenders: def, started: date, status: 'ongoing', note: ch.reason || ch.note || '' });
         return { op, text: `WAR: ${state.wars.at(-1).name}` };
       }
@@ -840,6 +846,10 @@ function applyOne(state, ch, ctx) {
     case 'war_join': {
       const w = state.wars.find((x) => x.id === slug(ch.war || ch.id) || slug(x.name) === slug(ch.war || ''));
       const hid = findHouse(state, ch.house); if (!w || !hid) throw new Error('bad war_join');
+      if (w.status === 'ended') throw new Error('that war is over');
+      // war_join is the same power as declaring a war: the story may not march the player into one either
+      if (ctx.protectPlayer && !ctx.playerDeclaredWar && hid === state.meta.player && ch.side !== 'defender') throw new Error('only the player can declare the player\'s wars');
+      if (w.attackers.includes(hid) || w.defenders.includes(hid)) throw new Error(`${state.houses[hid].name} is already in ${w.name}`);
       (ch.side === 'defender' ? w.defenders : w.attackers).push(hid);
       return { op, text: `${state.houses[hid].name} joins ${w.name}` };
     }

@@ -12,7 +12,7 @@ import { temperament, natureTags, VERDICT_LABEL, moodWord } from '../shared/temp
 export function setDrawer(tab) { app.drawerTab = tab; renderDrawer(); }
 export function renderDrawer() {
   if (!app.state) return;
-  $$('#drawer-tabs button[data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === app.drawerTab));
+  $$('#drawer-tabs button[data-tab]').forEach((b) => { const on = b.dataset.tab === app.drawerTab; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
   const unread = app.state.ravens.filter((r) => !r.read).length;
   $('#letters-count').textContent = unread ? `(${unread})` : '';
   const body = $('#drawer-body');

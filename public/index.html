@@ -12,6 +12,7 @@
   </script>
 </head>
 <body>
+<a class="skip-link" href="#order-input">Skip to your orders</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="cloth" x="-5%" y="-2%" width="110%" height="106%"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.035" numOctaves="1" seed="4"><animate attributeName="baseFrequency" dur="11s" values="0.008 0.035;0.011 0.03;0.008 0.035" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
   <!-- ═════════ Title screen ═════════ -->
   <section id="title-screen" class="screen">
@@ -26,10 +27,10 @@
           <div id="scenario-list"></div>
           <div class="house-picker-head">
             <h2>Choose your house</h2>
-            <input id="house-search" class="input" placeholder="Search houses…">
+            <input id="house-search" class="input" type="search" aria-label="Search houses" placeholder="Search houses…">
           </div>
           <div class="house-filters" id="house-filters"></div>
-          <div id="house-grid" class="house-grid"></div>
+          <div id="house-grid" class="house-grid" role="listbox" aria-label="Playable houses"></div>
         </div>
         <div class="panel" id="house-detail"><div class="empty-detail"><div class="big-sigil">🛡</div><p>Select a house to see its lands, its people and its prospects.</p></div></div>
         <div class="panel" id="saves-panel">
@@ -39,6 +40,7 @@
             <h3>The Maester-Simulator</h3>
             <div class="llm-status" id="llm-status-title"></div>
             <button class="btn" data-action="settings">⚙ Settings &amp; model endpoint</button>
+            <button class="btn ghost" data-action="help">? How the game is played</button>
           </div>
         </div>
       </div>
@@ -51,7 +53,7 @@
     <div id="map-loading" class="map-loading hidden"><img id="map-loading-banner" class="loading-banner" alt=""><div class="loading-title">Westeros Chronicles</div><div class="loading-words" id="map-loading-words"></div><div class="bar"><div id="map-loading-bar"></div></div><div id="map-loading-text" class="loading-text">Unrolling the map…</div><blockquote id="map-loading-quote" class="loading-quote"></blockquote></div>
 
     <!-- top bar: resources + date + time controls -->
-    <header id="hud-top">
+    <header id="hud-top" role="banner" aria-label="Realm at a glance">
       <div class="res-row" id="res-row"></div>
       <div class="hud-top-right">
         <div class="date-box" id="date-box"></div>
@@ -63,7 +65,8 @@
           <button class="icon-btn" data-action="ravens" title="Letters">🐦<span id="raven-badge" class="badge hidden"></span></button>
           <button class="icon-btn" data-action="music" title="Music on/off" id="music-btn">🎵</button>
           <button class="icon-btn" data-action="undo" title="Undo last turn">↶</button>
-          <button class="icon-btn" data-action="settings" title="Settings &amp; model endpoint">⚙</button>
+          <button class="icon-btn" data-action="help" title="How to play (?)" aria-label="How to play" aria-keyshortcuts="?">?</button>
+          <button class="icon-btn" data-action="settings" title="Settings &amp; model endpoint" aria-label="Settings">⚙</button>
           <button class="icon-btn" data-action="menu" title="Main menu">☰</button>
         </div>
       </div>
@@ -76,12 +79,12 @@
         <button class="player-portrait" id="player-portrait" data-action="open-ruler"></button>
         <div class="player-name" id="player-name"></div>
       </div>
-      <nav class="action-ring" id="action-ring">
+      <nav class="action-ring" id="action-ring" aria-label="Main menus">
         <button data-win="realm" title="Realm (R)"><span>🏰</span><em>Realm</em></button>
         <button data-win="council" title="Council (C)"><span>🕯</span><em>Council</em></button>
         <button data-win="military" title="Military (M)"><span>⚔</span><em>Military</em></button>
         <button data-win="economy" title="Economy (E)"><span>🪙</span><em>Economy</em></button>
-        <button data-win="diplomacy" title="Diplomacy (D)"><span>🕊</span><em>Diplomacy</em></button>
+        <button data-win="diplomacy" title="Diplomacy (D)" aria-keyshortcuts="d"><span>🕊</span><em>Diplomacy</em></button>
         <button data-win="intrigue" title="Intrigue (I)"><span>🗡</span><em>Intrigue</em></button>
         <button data-win="people" title="People (P)"><span>👥</span><em>People</em></button>
         <button data-win="chronicle" title="Chronicle (H)"><span>📜</span><em>Chronicle</em></button>
@@ -89,25 +92,25 @@
     </div>
 
     <!-- right sliding window: realm, council, military… -->
-    <aside id="window" class="window hidden"><div class="win-head"><h2 id="win-title"></h2><button class="win-close" data-action="close-window">✕</button></div><div class="win-body" id="win-body"></div></aside>
+    <aside id="window" class="window hidden" role="region" aria-labelledby="win-title" aria-hidden="true"><div class="win-head"><h2 id="win-title"></h2><button class="win-close" data-action="close-window" aria-label="Close">✕</button></div><div class="win-body" id="win-body"></div></aside>
 
     <!-- floating detail sheet (character / holding / army) -->
-    <aside id="sheet" class="sheet hidden"><button class="win-close" data-action="close-sheet">✕</button><div id="sheet-body"></div></aside>
+    <aside id="sheet" class="sheet hidden" role="region" aria-label="Detail" aria-hidden="true"><button class="win-close" data-action="close-sheet" aria-label="Close">✕</button><div id="sheet-body"></div></aside>
 
     <!-- the chronicle (left): events, letters, audiences — and your orders beneath -->
-    <aside id="drawer" class="drawer">
-      <nav class="drawer-tabs" id="drawer-tabs">
-        <button data-tab="feed" class="active">Chronicle</button>
-        <button data-tab="letters">Letters <span id="letters-count"></span></button>
-        <button data-tab="audience">Audience</button>
+    <aside id="drawer" class="drawer" role="complementary" aria-label="Chronicle, letters and audiences">
+      <nav class="drawer-tabs" id="drawer-tabs" role="tablist" aria-label="Chronicle sections">
+        <button data-tab="feed" class="active" role="tab" aria-selected="true">Chronicle</button>
+        <button data-tab="letters" role="tab" aria-selected="false">Letters <span id="letters-count"></span></button>
+        <button data-tab="audience" role="tab" aria-selected="false">Audience</button>
         <button class="collapse" data-action="toggle-drawer" title="Hide">⟨</button>
       </nav>
-      <div class="drawer-body" id="drawer-body"></div>
+      <div class="drawer-body" id="drawer-body" role="tabpanel" aria-live="polite"></div>
       <!-- your orders: written here, read by your steward, carried out when the day ends -->
     <footer id="command" class="composer">
       <div class="orders" id="orders"></div>
       <div class="cmd-row">
-        <textarea id="order-input" rows="2" placeholder="Command your house… (Enter to add, Ctrl+Enter to end the day)"></textarea>
+        <textarea id="order-input" rows="2" aria-label="Write an order to your house" placeholder="Command your house… (Enter to add, Ctrl+Enter to end the day)"></textarea>
         <button class="btn ghost" data-action="suggest" title="Counsel: ask your advisors for ideas">✨</button>
         <button class="btn" data-action="add-order" title="Add the order (Enter)">＋</button>
       </div>
@@ -115,7 +118,7 @@
     </aside>
     <button id="drawer-open" class="drawer-open hidden" data-action="toggle-drawer">Chronicle ⟩</button>
 
-    <div id="mapmodes" class="mapmodes">
+    <div id="mapmodes" class="mapmodes" role="group" aria-label="Map modes">
       <button data-mode="political" class="active" data-mi="crown" title="Realms map">Realms</button>
       <button data-mode="houses" data-mi="castle" title="Holders map">Holders</button>
       <button data-mode="diplomacy" data-mi="dove" title="Diplomacy map">Diplomacy</button>
@@ -125,12 +128,12 @@
       <button data-mode="terrain" data-mi="map" title="Terrain map">Terrain</button>
     </div>
     <div id="pick-hint" class="pick-hint hidden"></div>
-    <div id="tooltip" class="tooltip hidden"></div>
+    <div id="tooltip" class="tooltip hidden" role="tooltip" aria-hidden="true"></div>
   </section>
 
-  <div id="modal" class="modal hidden"><div class="modal-box" id="modal-box"></div></div>
-  <div id="busy" class="busy hidden"><div class="busy-inner"><div class="raven">🐦‍⬛</div><div id="busy-text">The maesters confer…</div><div id="busy-time" class="muted"></div><div id="busy-feed" class="busy-feed"></div></div></div>
-  <div id="toasts"></div>
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-box" id="modal-box"></div></div>
+  <div id="busy" class="busy hidden" role="status" aria-live="polite"><div class="busy-inner"><div class="raven">🐦‍⬛</div><div id="busy-text">The maesters confer…</div><div id="busy-time" class="muted"></div><div id="busy-feed" class="busy-feed"></div></div></div>
+  <div id="toasts" role="status" aria-live="polite"></div>
 
   <script type="module" src="js/app.js"></script>
 </body>

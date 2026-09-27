@@ -1,6 +1,8 @@
 // Prompt construction for the simulation. The model is the game engine: it narrates,
 // decides what every other house does, and emits structured changes that the engine applies.
 import { threadsDigest, THREADS } from '../public/js/shared/plots.js';
+import { regencyLine } from '../public/js/shared/regency.js';
+import { standing, standingWord } from '../public/js/shared/standing.js';
 import { VOICES, HOUSE_WAYS } from '../public/data/voices.js';
 import { personaFor } from '../public/data/histories.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
@@ -216,6 +218,11 @@ export function playerSheet(state) {
   lines.push(`PLAYER HOUSE: ${p} — House ${h.name}${h.title ? ', ' + h.title : ''}. Words: "${h.words}". Seat: ${h.seat ? state.holdings[h.seat].name : 'none'}. Liege: ${h.liege || 'none'}.`);
   const lord = h.lord ? state.characters[h.lord] : null;
   lines.push(`Head of house (the player acts as them): ${lord ? `${lord.name} (${lord.id})` : 'unknown'}.`);
+  // who truly holds the seal, and how the house stands — both are the engine's word, not the story's
+  const rg = regencyLine(state, p);
+  if (rg) lines.push(`REGENCY: ${rg} The player acts as the regent. Bannermen obey a regent slowly and grudgingly; rivals within the house circle.`);
+  const st = standing(state, p);
+  if (st) lines.push(`Standing of the house: ${st.score}/100 — ${standingWord(st)} (lands ${st.lands}, swords ${st.might}, gold ${st.wealth}, sway ${st.sway}, blood ${st.blood}, good order ${st.order}).`);
   if (state.meta.turn < 3) { const b = briefFor(h, state); lines.push(`House situation: ${b.situation} Strengths: ${b.strengths.join('; ')}. Weaknesses: ${b.weaknesses.join('; ')}.`); }
   lines.push(`Known figures (as last reported): ${figuresLine(h)}`);
   const pr = project(state, p);

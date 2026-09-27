@@ -60,6 +60,20 @@ If a reply is cut off, the game asks the model to finish it. If the model spends
 
 ## What's in the game
 
+- **A campaign you can win and lose.** Your house has a **standing** in the realm — lands, swords, gold, sway,
+  blood and good order, scored out of a hundred and shown in the Realm window. A story can end: the line fails,
+  the house is broken, a crown of your own is won, or the Iron Throne is taken and kept. The end screen gives
+  the house its epitaph — turns played, wars fought, battles won — and lets you play on, undo, or begin again.
+- **Regency.** A lord of eight does not command armies. When a house's head is a child, a captive, missing or
+  incapable, a regent takes the seal — the mother first, then a sibling, an uncle, the ablest of the blood, or
+  a sworn castellan — and the whole realm knows it. Bannermen obey a regent slowly and grudgingly, and the
+  Vale's boy lord is finally played the way the books describe him.
+- **Sieges that cost something.** A castle eats its own stores, and a granary really does matter. The camp
+  outside dies of the flux, the cold and desertion; the garrison sallies at dawn and fires the engines; and a
+  host that wastes away before the walls raises the siege and marches home. Storming is now a real choice.
+- **In-game help** (the `?` key, or the `?` on the top bar): the loop, what the engine decides and what the
+  story decides, the keys, and the things new players miss.
+
 - **A 3D map of the Known World, built from real atlas data** (three.js).
   - Geography: the canonical coastlines, islands, lakes, rivers, roads, mountain ranges, forests, swamps and kingdom borders of the fan-made *Lands of Ice and Fire* GIS atlas, projected so that distances are true to the books: the North is a third of Westeros, and Winterfell is some 500 miles from Moat Cailin.
   - Terrain, generated from that data: ridged mountain ranges that rise from foothills to snow-capped cores (the Frostfangs, the Mountains of the Moon with the Giant's Lance under the Eyrie, the Red Mountains of Dorne), the snows beyond the Wall, the heather and pine of the North, the farmland patchwork of the Riverlands and the Reach, the sands and red rock of Dorne, dunes, marshes and beaches. Per-pixel relief lighting, animated water with foam and sun glints, and instanced forests.
@@ -205,4 +219,6 @@ config.json            your model settings (git-ignored)
 The map geography is derived from *A Song of Ice and Fire Speculative World Map*, GIS files by **cadaei**, based on the maps of **Tear** (Cartographers' Guild) and **theMountainGoat**, released under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) via [mapbox/GOT-Inspired-Map](https://github.com/mapbox/GOT-Inspired-Map). The data was projected, simplified and annotated for this game. The derived files (`data-src/got-inspired-map/`, `public/data/atlas.js`) are shared under the same licence and must not be used commercially. The world of A Song of Ice and Fire, its places and its characters are © George R. R. Martin. This is a non-commercial fan project.
 - **Scenarios:** add an entry to `public/data/scenarios.js`.
 
-See [docs/DESIGN.md](docs/DESIGN.md) for the design notes and roadmap.
+See [docs/DESIGN.md](docs/DESIGN.md) for the design contract (which systems the engine owns and which the story
+model owns), [docs/REVIEW.md](docs/REVIEW.md) for a full code and design review with the bugs found and fixed,
+and [docs/ROADMAP.md](docs/ROADMAP.md) for the phased development plan.

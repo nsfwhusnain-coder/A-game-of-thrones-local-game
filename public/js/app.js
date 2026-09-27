@@ -10,7 +10,7 @@ import { CHARACTERS } from '../data/characters.js';
 import { briefFor } from '../data/briefs.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
-import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
+import { app, $, $$, esc, fmt, api, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
@@ -18,6 +18,8 @@ import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName, SPANS, spanOf 
 import { project, SEASONS } from './shared/economy.js';
 import { underway, orderOutcome, STATUS_LABEL } from './shared/errands.js';
 import { nextTurnLength } from './shared/turns.js';
+import { regencyLine, speakerFor, incapacity } from './shared/regency.js';
+import { standing, standingWord, epitaph } from './shared/standing.js';
 
 app.openChat = openChat; app.openCouncil = openCouncil;
 
@@ -83,7 +85,7 @@ async function renderSaves() {
   }).join('') : '<div class="muted">No saved games yet.</div>';
   $('#save-list').onclick = async (e) => {
     const del = e.target.closest('[data-del]')?.dataset.del;
-    if (del) { e.stopPropagation(); if (confirm('Delete this save permanently?')) { await api('/games/' + del, { method: 'DELETE' }); renderSaves(); } return; }
+    if (del) { e.stopPropagation(); if (await confirmModal('Burn this chronicle?', 'The save and everything written in it will be gone for good. There is no undoing this.', { yes: 'Burn it', no: 'Keep it', danger: true })) { await api('/games/' + del, { method: 'DELETE' }); renderSaves(); } return; }
     const s = e.target.closest('.save'); if (s) startGame(s.dataset.id);
   };
 }
@@ -150,7 +152,7 @@ async function startGame(id, state) {
   closeWindow(); closeSheet(); app.chatWith = null; app.council = null;
   renderAll();
 }
-function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); }
+function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); maybeShowOutcome(); }
 app.renderOrders = renderOrders; app.renderTop = renderTop;
 // the game's code changed on disk (an update): say so, rather than run a page that no longer matches the server
 (async () => {
@@ -191,10 +193,54 @@ function renderTop() {
   $('#raven-badge').textContent = unread; $('#raven-badge').classList.toggle('hidden', !unread);
 }
 function renderPlayer() {
-  const h = player(); const r = ruler();
+  const s = app.state; const h = player(); const r = ruler();
+  // Who actually holds the seal: a child lord or a captive one is ruled for, and the card says so plainly
+  const speaker = speakerFor(s, h.id); const why = incapacity(s, h.id);
+  const isRegent = why && speaker && speaker.id !== h.lord;
+  const face = isRegent ? speaker : r;
   $('#player-banner').innerHTML = `<img src="${bannerURL(h.sigil, 80, 120)}" alt="House ${esc(h.name)}" title="House ${esc(h.name)} — ${esc(h.words)}">`;
-  $('#player-portrait').innerHTML = r ? `<img src="${por(r, 160)}" alt="">` : '';
-  $('#player-name').innerHTML = `${esc(r?.name || 'House ' + h.name)}<small>${esc(h.title || RANK_NAMES[h.rank])}</small>`;
+  $('#player-portrait').innerHTML = face ? `<img src="${por(face, 160)}" alt="Portrait of ${esc(face.name)}">` : '';
+  $('#player-portrait').setAttribute('aria-label', face ? `${face.name} — open the character sheet` : 'Your ruler');
+  const line = regencyLine(s, h.id);
+  $('#player-name').innerHTML = `${esc(face?.name || 'House ' + h.name)}<small>${esc(isRegent ? `Regent · ${h.title || RANK_NAMES[h.rank]}` : (h.title || RANK_NAMES[h.rank]))}</small>`
+    + (line ? `<div class="regency-note" title="${esc(line)}">⚖ ${esc(line)}</div>` : '')
+    + (why && !isRegent ? `<div class="regency-note warn">⚠ ${esc(why.text)} — and no one of the house is fit to rule for ${esc(r && /lady|queen|princess/i.test(r.title || '') ? 'her' : 'him')}.</div>` : '');
+}
+app.openRuler = () => { const sp = speakerFor(app.state, player().id); if (sp) openSheet('char', sp.id); };
+
+// ───── the end of the story ─────
+// A campaign can now be lost and won. When the engine settles on an outcome the game says so, once, plainly,
+// with the ledger of what the house was at the end.
+let outcomeShown = null;
+function maybeShowOutcome() {
+  const o = app.state?.outcome; if (!o || outcomeShown === o.turn) return;
+  outcomeShown = o.turn;
+  const e = epitaph(app.state);
+  const h = player();
+  const row = (k, v) => `<div class="k">${k}</div><div>${v}</div>`;
+  const st = e.standing;
+  modal(`<div class="outcome ${o.victory ? 'win' : 'loss'}">
+    <img class="outcome-banner" src="${bannerURL(h.sigil, 90, 135)}" alt="">
+    <h2>${esc(o.title)}</h2>
+    <p class="outcome-text">${esc(o.text)}</p>
+    <div class="kv outcome-ledger">
+      ${row('Ended', esc(o.date))}
+      ${row('Turns played', e.turns)}
+      ${row('Last of the line', esc(e.lord || '—'))}
+      ${row('Holdings', e.holdings)}
+      ${row('Sworn houses', e.vassals)}
+      ${row('Living kin', e.kin)}
+      ${row('Wars', `${e.wars} · ${e.battlesWon} of ${e.battles} battles won`)}
+      ${row('Standing', `<b>${st.score}</b> / 100 — ${esc(standingWord(st))}`)}
+    </div>
+    <p class="muted" style="font-size:0.85rem">The world does not stop. You may play on, undo the turn, or begin again with another house.</p>
+    <div class="report-actions">
+      <button class="btn ghost" data-action="close-modal">Play on</button>
+      <button class="btn" id="oc-undo">Undo the turn</button>
+      <button class="btn primary" id="oc-menu">A new house</button>
+    </div></div>`);
+  $('#oc-undo').onclick = async () => { try { const st2 = await api(`/games/${app.saveId}/undo`, { body: {} }); app.setState(st2); outcomeShown = null; closeModal(); toast('The last turn has been undone.'); } catch (err) { toast(err.message, true); } };
+  $('#oc-menu').onclick = () => { closeModal(); handleAction('menu'); };
 }
 
 // ───── orders ─────
@@ -321,8 +367,10 @@ $('#modal').onclick = (e) => { if (e.target.id === 'modal') closeModal(); };
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (!$('#modal').classList.contains('hidden')) return closeModal(); if (app.picking) { app.picking = null; $('#pick-hint').classList.add('hidden'); return; } if (app.sheet) return closeSheet(); if (app.win) return closeWindow(); }
   if (!app.state || /input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;
-  const map = { r: 'realm', c: 'council', m: 'military', e: 'economy', i: 'intrigue', p: 'people', f: 'diplomacy' };
+  // the letters shown on the dock buttons; f stays as an old alias for diplomacy
+  const map = { r: 'realm', c: 'council', m: 'military', e: 'economy', i: 'intrigue', p: 'people', d: 'diplomacy', f: 'diplomacy' };
   if (e.key === 'h') return showChronicle();
+  if (e.key === '?') return showHelp();
   if (map[e.key] && !e.ctrlKey && !e.metaKey) openWindow(map[e.key]);
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) advance();
 });
@@ -359,11 +407,12 @@ async function handleAction(action, el) {
     }
     case 'ravens': setDrawer('letters'); $('#drawer').classList.remove('hidden'); $('#drawer-open').classList.add('hidden'); break;
     case 'undo': {
-      if (!confirm('Undo the last turn? The world returns to how it was before you advanced.')) return;
+      if (!await confirmModal('Unmake the last turn?', 'The world returns to how it stood before you advanced, and everything that happened since is unwritten. Only the most recent turn can be recalled.', { yes: 'Turn back the glass', no: 'Let it stand' })) return;
       try { const st = await api(`/games/${app.saveId}/undo`, { body: {} }); app.setState(st); toast('The last turn has been undone.'); } catch (e) { toast(e.message, true); }
       break;
     }
     case 'settings': return showSettings();
+    case 'help': return showHelp();
     case 'music': { startMusic(); const on = !musicSettings().on; setMusic('on', on); toast(on ? 'Music on' : 'Music off'); return; }
     case 'menu': app.state = null; if (app.map) app.map.state = null; closeWindow(); closeSheet(); initTitle(); break;
     case 'close-window': closeWindow(); break;
@@ -372,14 +421,17 @@ async function handleAction(action, el) {
     case 'close-modal': closeModal(); break;
     case 'toggle-drawer': $('#drawer').classList.toggle('hidden'); $('#drawer-open').classList.toggle('hidden', !$('#drawer').classList.contains('hidden')); break;
     case 'open-realm': openWindow('realm'); break;
-    case 'open-ruler': if (ruler()) openSheet('char', ruler().id); break;
+    case 'open-ruler': app.openRuler(); break;
   }
 }
 
 async function advance() {
   if (app.busy || !app.state) return;
   const undecided = (app.state.decisions || []).filter((d) => d.status === 'pending');
-  if (undecided.length && !confirm(`${undecided.length} decision${undecided.length > 1 ? 's await' : ' awaits'} your answer (${undecided.map((d) => d.title).join(', ')}). Silence is also an answer — advance anyway?`)) { setDrawer('feed'); return; }
+  if (undecided.length && !await confirmModal(
+    undecided.length > 1 ? 'Matters still await your word' : 'A matter still awaits your word',
+    `${undecided.map((d) => d.title).join('; ')}. Silence is an answer too — the world will decide without you.`,
+    { yes: 'Let the days pass', no: 'Hear them first' })) { setDrawer('feed'); return; }
   const pending = orderInput.value.trim(); if (pending) { addOrder(pending); orderInput.value = ''; }
   const span = 'auto'; const until = nextTurnLength(app.state);
   busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}…`, { live: true });
@@ -397,7 +449,9 @@ async function advance() {
       if (app.map) { app.map.reelHold = false; app.map.reelF = 1; }
       // a day's turn ends on your choices, if any wait on you; a longer one with the full report
       // the chronicle has told the turn; what waits on the lord's word comes before him
-      if ((app.state.decisions || []).some((d) => d.status === 'pending' && d.turn === app.state.meta.turn)) showChoices();
+      // an ending trumps everything else waiting on the lord's word
+      if (app.state.outcome && app.state.outcome.turn === app.state.meta.turn) maybeShowOutcome();
+      else if ((app.state.decisions || []).some((d) => d.status === 'pending' && d.turn === app.state.meta.turn)) showChoices();
       if (newRavens) sfx('raven');
     } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
@@ -429,6 +483,52 @@ async function showWorldLog() {
   modal(`<div class="chron-tabs"><button class="btn small" id="chron-tab-c">The Chronicle</button><button class="btn small active" id="chron-tab-w">World log</button></div><h2>📖 World log</h2><p class="muted" style="font-size:0.85rem">Everything that has happened, turn by turn — your orders, your decisions, the great events and the small life of the realm. Newest first. Also kept as <code>saves/${esc(app.saveId)}/world-log.md</code>.</p>
     <div class="md world-log">${turns.length ? md(turns.reverse().join('\n\n')) : '<p class="muted">Nothing yet — advance time and the log begins.</p>'}</div>`);
   $('#chron-tab-c').onclick = showChronicle;
+}
+
+// ───── how to play ─────
+// There was no in-game guidance of any kind: every control had to be discovered by clicking. This is the
+// one page that explains the loop, the keys, and what the engine decides versus what the story decides.
+const HELP_KEYS = [
+  ['Ctrl / ⌘ + Enter', 'End the turn — time runs on until the next thing that matters'],
+  ['Enter', 'Add what you have written as an order'],
+  ['R', 'Realm'], ['C', 'Council'], ['M', 'Military'], ['E', 'Economy'],
+  ['D', 'Diplomacy'], ['I', 'Intrigue'], ['P', 'People'], ['H', 'Chronicle'],
+  ['?', 'This page'],
+  ['Esc', 'Close whatever is open; cancel a march you are aiming'],
+];
+function showHelp() {
+  modal(`<h2>How the game is played</h2>
+    <div class="help-cols">
+      <div>
+        <h4>The loop</h4>
+        <p>Time is stopped until you end the turn. Write orders in plain words at the foot of the chronicle —
+        <i>“Send Jory to Moat Cailin with fifty men”</i>, <i>“Call the banners of the North to Winterfell”</i> —
+        and your steward reads each one back to you before it happens. Then end the turn. The engine carries out
+        your orders, marches the hosts, fights the battles and settles the books; the model tells the story that
+        grows around them.</p>
+        <h4>A turn is not a fixed length</h4>
+        <p>It runs until the next thing that matters to you: a host arrives, an answer lands, an enemy draws near,
+        works are finished. At most a moon. The bar by <b>End turn</b> says what it is waiting for.</p>
+        <h4>Who decides what</h4>
+        <p>The <b>engine</b> owns the numbers and the physics — gold, food, distances, battle odds, sieges,
+        succession, regency. The <b>story model</b> owns what people say and do. It cannot empty your treasury,
+        move your people, or declare your wars. If something must truly happen, it happens in the engine.</p>
+      </div>
+      <div>
+        <h4>Things new players miss</h4>
+        <ul style="line-height:1.5">
+          <li>Click a host, then <b>March</b>, then click anywhere on the map — including an enemy host.</li>
+          <li>You can speak with <i>anyone</i> alive, anywhere. If they are far away it becomes a letter, and the answer takes days to come back.</li>
+          <li>Silence is an answer. A decision left unanswered lapses, and the world chooses for you.</li>
+          <li>The <b>Chronicle</b> file is the game's long memory. You may edit it by hand to correct or steer the tale.</li>
+          <li>The <b>standing of your house</b> (Realm window) is what the campaign is finally scored on.</li>
+          <li>Sieges cost the besieger. Camps sicken; a long siege can break the host outside the walls.</li>
+        </ul>
+        <h4>Keys</h4>
+        <div class="kv help-keys">${HELP_KEYS.map(([k, v]) => `<span class="k"><kbd>${esc(k)}</kbd></span><span>${esc(v)}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="settings-actions"><button class="btn primary" data-action="close-modal">Back to the realm</button></div>`);
 }
 
 async function showSettings() {

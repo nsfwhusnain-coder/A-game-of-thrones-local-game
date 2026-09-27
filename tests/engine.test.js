@@ -546,3 +546,116 @@ test('the story can march any host but the player\'s, and the engine walks it', 
   assert.equal(s.armies.lh.march.to, 'tully'); assert.equal(r.rejected.length, 1);
   assert.equal(s.armies.nh.march, undefined);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Regency, standing and the end of a story — the systems added in the AAA pass
+// ═══════════════════════════════════════════════════════════════════════════
+import { incapacity, chooseRegent, regencyTick, speakerFor, regencyLine, underRegency } from '../public/js/shared/regency.js';
+import { standing, standingWord, outcomeFor, epitaph } from '../public/js/shared/standing.js';
+import { applyChanges as apply2 } from '../public/js/shared/world.js';
+
+test('a child lord is ruled for: the mother takes the regency, and gives it up at sixteen', () => {
+  const s = fresh('arryn');
+  // Robert Arryn is eight in 298; Lysa is his mother
+  assert.equal(incapacity(s, 'arryn')?.kind, 'minority');
+  const reg = chooseRegent(s, 'arryn');
+  assert.equal(reg?.id, 'lysa_arryn');
+  const r = regencyTick(s, 30);
+  assert.equal(s.houses.arryn.regent, 'lysa_arryn');
+  assert.ok(r.events.some((e) => /regency/i.test(e.title)));
+  assert.equal(speakerFor(s, 'arryn').id, 'lysa_arryn');
+  assert.ok(underRegency(s, 'arryn'));
+  assert.match(regencyLine(s, 'arryn'), /Lysa Arryn rules as regent/);
+  // the boy comes of age
+  s.characters[s.houses.arryn.lord].age = 17;
+  const r2 = regencyTick(s, 30);
+  assert.equal(s.houses.arryn.regent, undefined);
+  assert.ok(r2.events.some((e) => /in .* own right/i.test(e.title)));
+});
+
+test('a captive lord is ruled for too, and the vassals like it less each moon', () => {
+  const s = fresh('stark');
+  const lordId = s.houses.stark.lord;
+  s.characters[lordId].status = 'imprisoned';
+  assert.equal(incapacity(s, 'stark')?.kind, 'captive');
+  const before = Object.values(s.houses).filter((v) => v.liege === 'stark').map((v) => s.characters[v.lord]?.loyalty ?? 60);
+  regencyTick(s, 60);
+  assert.ok(s.houses.stark.regent, 'someone must hold the seat');
+  const after = Object.values(s.houses).filter((v) => v.liege === 'stark').map((v) => s.characters[v.lord]?.loyalty ?? 60);
+  assert.ok(after.some((v, i) => v < before[i]), 'a captive liege costs loyalty');
+});
+
+test('the standing of a house is measured, and a great house outranks a small one', () => {
+  const s = fresh('stark');
+  const big = standing(s, 'stark'), small = standing(s, 'cassel') || standing(s, 'mormont');
+  assert.ok(big.score > small.score);
+  assert.ok(big.score >= 0 && big.score <= 100);
+  assert.equal(typeof standingWord(big), 'string');
+});
+
+test('a house stripped of everything is broken — but not on the first bad turn', () => {
+  const s = fresh('mormont');
+  for (const h of Object.values(s.holdings)) if (h.owner === 'mormont') h.owner = 'bolton';
+  for (const a of Object.values(s.armies)) if (a.owner === 'mormont') delete s.armies[a.id];
+  s.houses.mormont.figures.treasury.v = 0;
+  assert.equal(outcomeFor(s, 'mormont'), null, 'one turn of ruin is not the end');
+  const o = outcomeFor(s, 'mormont');
+  assert.equal(o?.kind, 'ruin');
+  assert.equal(o.victory, false);
+});
+
+test('the line ending is the end of the story', () => {
+  const s = fresh('mormont');
+  for (const c of Object.values(s.characters)) if (c.house === 'mormont') c.alive = false;
+  const o = outcomeFor(s, 'mormont');
+  assert.equal(o?.kind, 'extinct');
+  assert.match(o.title, /line of House Mormont is ended/);
+});
+
+test('taking King\'s Landing and making peace wins the game', () => {
+  const s = fresh('stark');
+  s.holdings.baratheon.owner = 'stark';
+  s.wars = [];
+  const o = outcomeFor(s, 'stark');
+  assert.equal(o?.kind, 'throne');
+  assert.equal(o.victory, true);
+  const e = epitaph(s, 'stark');
+  assert.equal(e.house, 'Stark');
+  assert.ok(e.standing.score > 0);
+});
+
+test('the story may not march the player into a war, by war_join or otherwise', () => {
+  const s = fresh('stark');
+  apply2(s, [{ op: 'war', status: 'start', id: 'w1', name: 'A war', attackers: ['lannister'], defenders: ['tully'] }]);
+  const r = apply2(s, [{ op: 'war_join', war: 'w1', house: 'stark', side: 'attacker' }], { protectPlayer: true });
+  assert.equal(r.applied.length, 0);
+  assert.match(r.rejected[0].reason, /only the player/);
+  // and no house fights on both sides of the same war
+  const r2 = apply2(s, [{ op: 'war_join', war: 'w1', house: 'lannister', side: 'defender' }]);
+  assert.equal(r2.applied.length, 0);
+  const w = s.wars.find((x) => x.id === 'w1');
+  assert.equal(w.defenders.includes('lannister'), false);
+});
+
+test('a host is never given to a commander the world does not know', () => {
+  const s = fresh('stark');
+  apply2(s, [{ op: 'army_create', id: 'h1', owner: 'stark', name: 'A host', at: 'stark', men: 1000 }]);
+  const r = apply2(s, [{ op: 'army_update', army: 'h1', commander: 'ser_nobody_of_nowhere' }]);
+  assert.match(r.rejected[0]?.reason || '', /unknown commander/);
+  assert.ok(!s.armies.h1.commander);
+});
+
+test('a siege costs the besieger: the camp sickens, and the castle eats its stores', () => {
+  const s = fresh('lannister');
+  apply2(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['tully'] },
+    { op: 'army_create', id: 'sg', owner: 'lannister', name: 'The siege host', at: 'tully', men: 12000 }]);
+  for (const a of Object.values(s.armies)) if (a.id !== 'sg' && ['tully', 'stark'].includes(a.owner)) delete s.armies[a.id];
+  const men0 = s.armies.sg.men;
+  resolveWarfare(s, 30, { r: () => 0.99 });
+  assert.equal(s.holdings.tully.status, 'besieged');
+  const stores0 = s.holdings.tully.siege.stores;
+  resolveWarfare(s, 30, { r: () => 0.99 });
+  assert.ok(s.armies.sg.men < men0, 'the camp loses men to the flux and desertion');
+  assert.ok(s.holdings.tully.siege.stores < stores0, 'the castle eats');
+  assert.ok((s.armies.sg.supply ?? 80) >= 20, 'a foraging host does not starve to nothing');
+});

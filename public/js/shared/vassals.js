@@ -4,6 +4,7 @@ import { unitsOf, addUnits } from './units.js';
 const isWoman = (c) => c.gender === 'f' || /\b(Lady|Queen|Princess|Septa|Daughter|Wife|Mother|Sister|Maid)\b/.test(c.title || '') || (c.roles || []).includes('lady');
 import { applyChanges, placePos, getRelation } from './world.js';
 import { marchDays, atWar } from './warfare.js';
+import { incapacity } from './regency.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -17,6 +18,9 @@ export function vassalTemper(state, vid) {
   if (/\b(loyal|honorable|dutiful)\b/i.test(tr)) t += 8;
   if (/\b(ambitious|scheming|treacherous|greedy)\b/i.test(tr)) t -= 8;
   if (/\bcraven\b/i.test(tr)) t -= 4;
+  // men obey a lord, not a seal: a regent, a child or a captive liege is served slowly and grudgingly
+  const why = incapacity(state, liege);
+  if (why) t -= why.kind === 'minority' ? 7 : 11;
   const tax = state.houses[liege].policy?.tax;
   if (tax === 'heavy') t -= 6; else if (tax === 'crushing') t -= 14; else if (tax === 'light') t += 4;
   // a lord whose own lands are hungry or restless has less to give
