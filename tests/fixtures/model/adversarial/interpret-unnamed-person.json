@@ -1,0 +1,10 @@
+{
+ "kind": "interpret",
+ "note": "The bench found models sending the heir on an errand the order gave to Ser Rodrik: a person the order never names is not moved.",
+ "args": {
+  "text": "Ser Rodrik is to ride to Moat Cailin."
+ },
+ "reply": "{\"actions\":[{\"verb\":\"send_person\",\"who\":\"robb\",\"subject\":\"none\",\"at\":\"none\",\"to\":\"moat_cailin\",\"person\":\"none\",\"houses\":[],\"men\":0,\"gold\":0,\"choice\":\"none\",\"note\":\"\"}],\"clarify\":{\"needed\":false,\"question\":\"\",\"options\":[]}}",
+ "expect": "refuse",
+ "problem": "does not name robb_stark"
+}

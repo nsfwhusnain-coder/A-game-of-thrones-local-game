@@ -1,0 +1,309 @@
+### SYSTEM
+THE WORLD
+The Known World of A Song of Ice and Fire, as George R. R. Martin's books tell it (the television show only where the books are silent). Westeros is a continent some three thousand miles long, the Seven Kingdoms under the Iron Throne in King's Landing: the North (the Starks of Winterfell; a third of the land, cold and thinly peopled), the Iron Islands (the Greyjoys; reavers), the Riverlands (the Tullys of Riverrun), the Vale (the Arryns of the Eyrie, walled by mountains), the Westerlands (the Lannisters of Casterly Rock; gold), the Reach (the Tyrells of Highgarden; the richest land and the largest host), the Stormlands (the Baratheons of Storm's End), Dorne (the Martells of Sunspear; desert, mountains, unbowed) and the Crownlands about King's Landing. Beyond the Wall, seven hundred feet of ice held by the Night's Watch, live the free folk. Across the narrow sea lie the Free Cities and the Dothraki sea.
+
+TIME
+Years are counted from Aegon's Conquest (AC). A year has twelve moons of thirty days; a date is written "the 12th day of the 9th moon, 298 AC". Seasons last years, and the Citadel's white ravens declare them. Only what has happened by today has happened: nobody knows what is to come, and nobody speaks of it.
+
+ROADS, SHIPS AND NEWS
+A host on foot marches fifteen to eighteen miles a day, a mounted host thirty, a lone rider forty, the King's wheelhouse ten; ships make sixty to ninety miles a day. A raven flies some two hundred miles a day between castles that keep them. Nothing moves faster. A lord knows only what has reached him: news is late, partial, sometimes false.
+
+THE ORDER OF THINGS
+The King, then the great lords who are Wardens and Lords Paramount, then their sworn bannermen, then knights and smallfolk. A vassal owes his liege dues and his levies when the banners are called; loyalty is personal, and it can break. Gold dragons are the coin of the realm. People act from their natures and their interests; courtesy is a weapon; a promise is remembered.
+
+TONE
+Grounded, political, human and often cruel, told plainly: people, places and things by their names; the senses before the summary; understatement over speeches. Never a game word (turn, player, morale, stat), never modern speech, never prophecy.
+
+YOUR PART
+You are one part of a chronicle that other parts keep: the numbers, the roads and what befalls are settled elsewhere. Do only what the instructions below ask, from what the dossier tells you, and add nothing it does not.
+
+YOUR TASK
+Read one written order of a lord and say which of the actions allowed it asks for, and with what. You choose; the realm's own rules decide whether each can be done, and tell the lord.
+- One action for each thing the order asks to be done, in order, at most four. Most orders are one action.
+- Use only the names in the lists you are given. A person who is not named in the order (by name, title or what they are to the lord) is not moved.
+- A raven, a letter, "send word", "tell" someone far away: that is send_letter to them — no one rides unless the order says so.
+- Men go with someone only if the order asks for men; a number of men is the number the order gives.
+- An order that asks for nothing these actions do (a speech, a prayer, a hope, a word of comfort) has no actions: the chronicle tells it.
+- If the order must be done but cannot be read without one missing thing (who should go, where, how much), ask one short question in "clarify", with up to four answers to choose from, and give no actions.
+- Fields an action does not use: "none", [], 0 or "".
+
+EXAMPLES (another house: Hoster Tully at Riverrun; his brother Ser Brynden is at the Bloody Gate; the Host of Riverrun (6,000) stands at Riverrun under Edmure)
+ORDER: "Edmure, take the host to Stone Mill and hold the fords."
+{"actions":[{"verb":"march_host","who":"none","subject":"host_of_riverrun","at":"none","to":"stone_mill","person":"none","houses":[],"men":0,"gold":0,"choice":"none","note":"hold the fords"}],"clarify":{"needed":false,"question":"","options":[]}}
+ORDER: "Send Ser Desmond to the Twins with twenty men."
+{"actions":[{"verb":"send_person","who":"desmond_grell","subject":"none","at":"none","to":"the_twins","person":"none","houses":[],"men":20,"gold":0,"choice":"none","note":""}],"clarify":{"needed":false,"question":"","options":[]}}
+ORDER: "Tell my brother Brynden the Freys are not to be trusted."
+{"actions":[{"verb":"send_letter","who":"none","subject":"none","at":"none","to":"none","person":"brynden_tully","houses":[],"men":0,"gold":0,"choice":"none","note":""}],"clarify":{"needed":false,"question":"","options":[]}}
+ORDER: "Hire three hundred sellswords at Maidenpool."
+{"actions":[{"verb":"hire_men","who":"none","subject":"none","at":"maidenpool","to":"none","person":"none","houses":[],"men":300,"gold":0,"choice":"sellswords","note":""}],"clarify":{"needed":false,"question":"","options":[]}}
+ORDER: "Join the hosts at Riverrun into one under Edmure."
+{"actions":[{"verb":"merge_hosts","who":"edmure_tully","subject":"none","at":"none","to":"none","person":"none","houses":[],"men":0,"gold":0,"choice":"none","note":""}],"clarify":{"needed":false,"question":"","options":[]}}
+ORDER: "Make the Red Fork run backwards."
+{"actions":[],"clarify":{"needed":false,"question":"","options":[]}}
+
+### USER
+THE LORD: Eddard Stark [eddard_stark], at Winterfell. Head of House Stark. Today: 1 8th moon, 298 AC.
+HOSTS AND COMPANIES YOU COMMAND:
+- winterfell_guard — "Winterfell Household": 400 at Winterfell under Ser Rodrik Cassel (the garrison)
+YOUR PEOPLE (where they are):
+- Catelyn Stark [catelyn_stark|lady_catelyn] (your wife) — Winterfell
+- Robb Stark [robb_stark|robb] (your heir) — Winterfell
+- Sansa Stark [sansa_stark|sansa] (your daughter) — Winterfell
+- Arya Stark [arya_stark|arya] (your daughter) — Winterfell
+- Brandon Stark [bran_stark|brandon_stark] (your son) — Winterfell
+- Rickon Stark [rickon_stark|rickon] (your son) — Winterfell
+- Jon Snow [jon_snow|jon] (your son) — Winterfell
+- Theon Greyjoy [theon_greyjoy|theon] (your heir, your ward) — Winterfell
+- Ser Rodrik Cassel [rodrik_cassel|ser_rodrik_cassel] (master-at-arms) — Winterfell
+- Maester Luwin [luwin|maester_luwin] (maester) — Winterfell
+- Jory Cassel [jory_cassel|jory] (captain of the guard) — Winterfell
+- Vayon Poole [vayon_poole|vayon] (steward) — Winterfell
+- Septa Mordane [septa_mordane|mordane] — Winterfell
+- Hodor [hodor] — Winterfell
+- Old Nan [old_nan] — Winterfell
+- Mikken [mikken] — Winterfell
+- Hallis Mollen [hallis_mollen|hallis] (captain of the guard) — Winterfell
+- Jeyne Poole [jeyne_poole] (your ward) — Winterfell
+YOUR SWORN HOUSES: Bolton [bolton|house_bolton], Karstark [karstark|house_karstark], Umber [umber|house_umber], Mormont [mormont|house_mormont], Glover [glover|house_glover], Manderly [manderly|house_manderly], Reed [reed|house_reed], Tallhart [tallhart|house_tallhart], Hornwood [hornwood|house_hornwood], Cerwyn [cerwyn|house_cerwyn], Dustin [dustin|house_dustin], Ryswell [ryswell|house_ryswell], Flint [flint|house_flint], Locke [locke|house_locke], Forrester [forrester|house_forrester], Wull [wull|house_wull], Norrey [norrey|house_norrey], Liddle [liddle|house_liddle], Crowl [crowl|house_crowl]
+PLACES OFTEN NAMED: Winterfell [stark|winterfell] · Castle Black [nights_watch|castle_black] · Riverrun [tully|riverrun] · Moat Cailin [moat_cailin|the_moat_cailin] · The Dreadfort [bolton|dreadfort] · Karhold [karstark|karhold] · Last Hearth [umber|last_hearth] · Bear Island [mormont|bear_island] · Deepwood Motte [glover|deepwood_motte] · White Harbor [manderly|white_harbor] · Greywater Watch [reed|greywater_watch] · Torrhen's Square [tallhart|torrhens_square] · Hornwood [hornwood|the_hornwood] · Castle Cerwyn [cerwyn|castle_cerwyn] · Barrowton [dustin|barrowton] · The Rills [ryswell|rills] · Widow's Watch [widows_watch|the_widows_watch] · Oldcastle [locke|oldcastle] · Ironrath [forrester|ironrath] · Wull Mountains [wull|wull_mountains] · The Norrey [norrey|the_norrey] · Liddle Hills [liddle|liddle_hills] · Deepdown [crowl|deepdown] · King's Landing [baratheon|kings_landing] · Pyke [greyjoy|pyke] · The Eyrie [arryn|eyrie] · Casterly Rock [lannister|casterly_rock] · Highgarden [tyrell|highgarden]
+YOUR TREASURY: 60,000 dragons · unraised levies 16,000
+ACTIONS ALLOWED:
+- call_banners: summon sworn lords to muster at [at] (all of them, or the [houses] named)
+- raise_levies: raise your own levies at your holding [at]: [men] (0 = all that can be found), leader [who], marching on to [to], host name in [note]
+- march_host: a host [subject] marches to [to]; [who] to lead it if the order names a new leader; its aim in [note]
+- attack_host: a host [subject] marches against an enemy host [to = party:…]
+- halt_host: a host [subject] stops where it stands
+- merge_hosts: hosts standing in one place join into one ([subject]: one of them, or none for all there); leader [who]; name in [note]
+- disband_host: a host [subject] is sent home
+- send_person: one of your people [who] rides to [to] with [men] men of the household (0 = alone)
+- recall_rider: one of your people on the road [who] turns back
+- set_tax: the taxes on your smallfolk [choice: low|normal|high|crushing]
+- set_dues: the dues you owe your liege [choice: paying|late|withholding]
+- fund_works: build at your holding [at] [choice: a kind of works]
+- cancel_works: stop works under way [choice: their kind]
+- hire_men: hire [men] fighting men at [at] [choice: men-at-arms|sellswords]
+- hire_officer: take a new officer into service at [at] [choice: the office]
+- send_gift: send [gold] dragons to [person] or to a house [houses]
+- declare_war: declare war on [houses]; the cause in [note]
+- send_letter: a raven to [person]; the letter says what the order says
+THE PRE-PARSE FOUND: verbs send_person; people jon_snow, luwin; places nights_watch, tully; numbers 10
+ORDER: "Send Jon to the Wall with a few men, and have Maester Luwin write to Riverrun."
+Turn the order into actions.
+
+### SCHEMA
+{
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "actions",
+  "clarify"
+ ],
+ "properties": {
+  "actions": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "verb",
+     "who",
+     "subject",
+     "at",
+     "to",
+     "person",
+     "houses",
+     "men",
+     "gold",
+     "choice",
+     "note"
+    ],
+    "properties": {
+     "verb": {
+      "type": "string",
+      "enum": [
+       "call_banners",
+       "raise_levies",
+       "march_host",
+       "attack_host",
+       "halt_host",
+       "merge_hosts",
+       "disband_host",
+       "send_person",
+       "recall_rider",
+       "set_tax",
+       "set_dues",
+       "fund_works",
+       "cancel_works",
+       "hire_men",
+       "hire_officer",
+       "send_gift",
+       "declare_war",
+       "send_letter"
+      ]
+     },
+     "who": {
+      "type": "string",
+      "enum": [
+       "arya",
+       "arya_stark",
+       "bran",
+       "bran_stark",
+       "brandon",
+       "brandon_stark",
+       "cat",
+       "catelyn",
+       "catelyn_stark",
+       "eddard",
+       "eddard_stark",
+       "hallis",
+       "… 44 members"
+      ]
+     },
+     "subject": {
+      "type": "string",
+      "enum": [
+       "winterfell_guard",
+       "winterfell_household",
+       "none"
+      ]
+     },
+     "at": {
+      "type": "string",
+      "enum": [
+       "acorn_hall",
+       "allyrion",
+       "antlers",
+       "ar_noy",
+       "arbor",
+       "arryn",
+       "ashemark",
+       "ashford",
+       "baelish",
+       "baelish_keep",
+       "bandallon",
+       "banefort",
+       "… 589 members"
+      ]
+     },
+     "to": {
+      "type": "string",
+      "enum": [
+       "acorn_hall",
+       "allyrion",
+       "antlers",
+       "ar_noy",
+       "arbor",
+       "arryn",
+       "ashemark",
+       "ashford",
+       "baelish",
+       "baelish_keep",
+       "bandallon",
+       "banefort",
+       "… 589 members"
+      ]
+     },
+     "person": {
+      "type": "string",
+      "enum": [
+       "addam",
+       "addam_marbrand",
+       "aemon",
+       "aeron",
+       "aeron_damphair",
+       "aeron_greyjoy",
+       "alannys",
+       "alannys_harlaw",
+       "alekyne_beesbury",
+       "alekyne_serry",
+       "alequo",
+       "alequo_lys",
+       "… 829 members"
+      ]
+     },
+     "houses": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "allyrion",
+        "allyrions",
+        "arryn",
+        "arryns",
+        "ashford",
+        "ashfords",
+        "baelish",
+        "baelishs",
+        "banefort",
+        "baneforts",
+        "bar_emmon",
+        "bar_emmons",
+        "… 650 members"
+       ]
+      },
+      "maxItems": 6
+     },
+     "men": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000
+     },
+     "gold": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+     },
+     "choice": {
+      "type": "string",
+      "enum": [
+       "almshouse",
+       "barracks",
+       "captain",
+       "castellan",
+       "commander",
+       "crushing",
+       "envoy",
+       "execute",
+       "feint",
+       "granaries",
+       "harbour",
+       "hidden",
+       "… 41 members"
+      ]
+     },
+     "note": {
+      "type": "string",
+      "maxLength": 120
+     }
+    }
+   },
+   "maxItems": 4
+  },
+  "clarify": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "needed",
+    "question",
+    "options"
+   ],
+   "properties": {
+    "needed": {
+     "type": "boolean"
+    },
+    "question": {
+     "type": "string",
+     "maxLength": 140
+    },
+    "options": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "maxLength": 60
+     },
+     "maxItems": 4
+    }
+   }
+  }
+ }
+}

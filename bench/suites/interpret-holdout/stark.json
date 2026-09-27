@@ -1,0 +1,94 @@
+{
+ "house": "stark",
+ "about": "Eddard Stark at Winterfell, the Host of Winterfell (4,000) standing there under Robb, Jaime Lannister a prisoner in the cells. (hold-out: orders written apart from the pre-parser, and never tuned against)",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "host_of_winterfell",
+   "owner": "stark",
+   "name": "The Host of Winterfell",
+   "at": "stark",
+   "men": 4000,
+   "commander": "robb_stark"
+  },
+  {
+   "op": "character",
+   "id": "robb_stark",
+   "with": "host_of_winterfell"
+  },
+  {
+   "op": "character",
+   "id": "jaime_lannister",
+   "status": "imprisoned",
+   "loc": "stark"
+  }
+ ],
+ "items": [
+  {
+   "id": "stark-z01",
+   "text": "Jon, ride north and join the Night's Watch.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "jon_snow",
+       "to": "nights_watch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-z02",
+   "text": "Have Hodor carry Bran to the godswood.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "stark-z03",
+   "text": "Raise five hundred men at Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "moat_cailin",
+       "men": 500
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-z04",
+   "text": "Lady Catelyn will go to Riverrun to see her father.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "catelyn_stark",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-z05",
+   "text": "Plant a spy in the Dreadfort.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "plant_spy",
+      "params": {
+       "house": "bolton"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

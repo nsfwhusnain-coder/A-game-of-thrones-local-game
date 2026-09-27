@@ -1,0 +1,77 @@
+{
+ "house": "lannister",
+ "about": "Tywin Lannister at Casterly Rock, the Host of the Rock (12,000) there under Ser Kevan, Edmure Tully a prisoner at the Rock. (hold-out: orders written apart from the pre-parser, and never tuned against)",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "host_of_the_rock",
+   "owner": "lannister",
+   "name": "The Host of the Rock",
+   "at": "lannister",
+   "men": 12000,
+   "commander": "kevan_lannister"
+  },
+  {
+   "op": "character",
+   "id": "kevan_lannister",
+   "with": "host_of_the_rock"
+  },
+  {
+   "op": "character",
+   "id": "edmure_tully",
+   "status": "imprisoned",
+   "loc": "lannister"
+  }
+ ],
+ "items": [
+  {
+   "id": "lannister-z01",
+   "text": "Send Ser Amory to the riverlands with his riders.",
+   "expect": {
+    "clarify": true
+   }
+  },
+  {
+   "id": "lannister-z02",
+   "text": "Tell my son Jaime to hold the kingsroad.",
+   "expect": {
+    "letter": "jaime_lannister"
+   }
+  },
+  {
+   "id": "lannister-z03",
+   "text": "Pay the Iron Bank what we owe.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "lannister-z04",
+   "text": "Muster the westermen at the Golden Tooth.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "lefford"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-z05",
+   "text": "Tax the smallfolk harder.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "high"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,795 @@
+{
+ "house": "greyjoy",
+ "about": "Balon Greyjoy at Pyke, the Iron Fleet at anchor, three thousand ironborn ready under Victarion; Theon a ward at Winterfell.",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "ironborn_host",
+   "owner": "greyjoy",
+   "name": "The Ironborn",
+   "at": "greyjoy",
+   "men": 3000,
+   "commander": "victarion_greyjoy"
+  },
+  {
+   "op": "character",
+   "id": "victarion_greyjoy",
+   "with": "ironborn_host"
+  }
+ ],
+ "items": [
+  {
+   "id": "greyjoy-01",
+   "text": "Call the banners of the Iron Islands to Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-02",
+   "text": "Raise five thousand men on Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "greyjoy",
+       "men": 5000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-03",
+   "text": "Send the Iron Fleet to Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "iron_fleet",
+       "to": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-04",
+   "text": "Victarion is to take the Iron Fleet to Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "iron_fleet",
+       "to": "mallister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-05",
+   "text": "Asha should sail to Deepwood Motte.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "asha_greyjoy",
+       "to": "glover"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-06",
+   "text": "Send Theon to Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "theon_greyjoy",
+       "to": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-07",
+   "text": "Declare war on the Starks.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-08",
+   "text": "Declare war on House Lannister.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "lannister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-09",
+   "text": "We do not sow.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "greyjoy-10",
+   "text": "Pay the iron price.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "greyjoy-11",
+   "text": "Hold a feast at Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hold_feast",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-12",
+   "text": "Build more longships at Lordsport.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "warships"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-13",
+   "text": "Raise the taxes on the thralls.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "high"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-14",
+   "text": "Withhold our dues to the Iron Throne.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_dues",
+      "params": {
+       "status": "withholding"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-15",
+   "text": "Send a raven to Lord Tywin.",
+   "expect": {
+    "letter": "tywin_lannister"
+   }
+  },
+  {
+   "id": "greyjoy-16",
+   "text": "Write to Robb Stark demanding the return of my son.",
+   "expect": {
+    "letter": "robb_stark"
+   }
+  },
+  {
+   "id": "greyjoy-17",
+   "text": "Plant spies at Winterfell.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "plant_spy",
+      "params": {
+       "house": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-18",
+   "text": "Find out the secrets of House Stark.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "gather_secrets",
+      "params": {
+       "house": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-19",
+   "text": "Hire three hundred sellswords at Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "at": "greyjoy",
+       "men": 300,
+       "kind": "sellswords"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-20",
+   "text": "Send Dagmer Cleftjaw with a hundred men to Torrhen's Square.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "dagmer_cleftjaw",
+       "to": "tallhart",
+       "men": 100
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-21",
+   "text": "Aeron is to go to Old Wyk.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "aeron_greyjoy",
+       "to": "drumm"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-22",
+   "text": "Send Maester Wendamyr to Harlaw.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "maester_wendamyr",
+       "to": "harlaw"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-23",
+   "text": "March the host on Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "ironborn_host",
+       "to": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-24",
+   "text": "Take the host to the Stony Shore.",
+   "expect": {
+    "clarify": true
+   }
+  },
+  {
+   "id": "greyjoy-25",
+   "text": "Halt the host.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "halt_host",
+      "params": {
+       "army": "ironborn_host"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-26",
+   "text": "Disband the host; the reaving season is over.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "disband_host",
+      "params": {
+       "army": "ironborn_host"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-27",
+   "text": "Merge the Iron Fleet with the host.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "merge_hosts",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-28",
+   "text": "Make Victarion commander of the Iron Fleet.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "victarion_greyjoy",
+       "role": "commander"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-29",
+   "text": "Find me a new captain.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_officer",
+      "params": {
+       "role": "captain"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-30",
+   "text": "Send five hundred gold to Lord Harlaw.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_gift",
+      "params": {
+       "to": "rodrik_harlaw",
+       "gold": 500
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-31",
+   "text": "Strengthen the walls of Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "walls",
+       "holding": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-32",
+   "text": "Send Euron away from the islands.",
+   "expect": {
+    "clarify": true
+   }
+  },
+  {
+   "id": "greyjoy-33",
+   "text": "What is dead may never die.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "greyjoy-34",
+   "text": "Send Asha to Deepwood Motte with two hundred men.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "asha_greyjoy",
+       "to": "glover",
+       "men": 200
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-35",
+   "text": "Raise the levies of the isles and send them to Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "greyjoy",
+       "to": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-36",
+   "text": "Lower the taxes.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "low"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-37",
+   "text": "Send Theon with ten men to Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "theon_greyjoy",
+       "to": "greyjoy",
+       "men": 10
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-38",
+   "text": "Hold a tourney on Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hold_tourney",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-39",
+   "text": "Recall Theon.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "recall_rider",
+      "params": {
+       "character": "theon_greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-40",
+   "text": "Grant nothing to the greenlanders.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "greyjoy-h01",
+   "text": "Victarion, sail the Iron Fleet to Deepwood Motte.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "iron_fleet",
+       "to": "glover"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-h02",
+   "text": "Send the host against Torrhen's Square.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "ironborn_host",
+       "to": "tallhart"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-h03",
+   "text": "Asha is to take thirty men to Deepwood Motte.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "asha_greyjoy",
+       "to": "glover",
+       "men": 30
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-h04",
+   "text": "Summon the lords of the isles to Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-h05",
+   "text": "Write to my son Theon at Winterfell.",
+   "expect": {
+    "letter": "theon_greyjoy"
+   }
+  },
+  {
+   "id": "greyjoy-h06",
+   "text": "Levy three thousand ironborn on Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "greyjoy",
+       "men": 3000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-h07",
+   "text": "Our tribute to the Iron Throne is withheld.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_dues",
+      "params": {
+       "status": "withholding"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-h08",
+   "text": "Hire a steward for Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_officer",
+      "params": {
+       "role": "steward"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-h09",
+   "text": "Send Aeron to Harlaw.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "aeron_greyjoy",
+       "to": "harlaw"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-h10",
+   "text": "The Drowned God will decide.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "greyjoy-x01",
+   "text": "Victarion, take the ironborn to Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "ironborn_host",
+       "to": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-x02",
+   "text": "Dagmer is to sail to Torrhen's Square with fifty men.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "dagmer_cleftjaw",
+       "to": "tallhart",
+       "men": 50
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-x03",
+   "text": "Call the Harlaws, the Drumms and the Goodbrothers to Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-x04",
+   "text": "Send word to my brother Euron.",
+   "expect": {
+    "letter": "euron_greyjoy"
+   }
+  },
+  {
+   "id": "greyjoy-x05",
+   "text": "Plant spies in Winterfell.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "plant_spy",
+      "params": {
+       "house": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-y01",
+   "text": "Send the Iron Fleet to Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "iron_fleet",
+       "to": "mallister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-y02",
+   "text": "Summon Lord Harlaw to Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-y03",
+   "text": "Aeron must bless the fleet before it sails.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "greyjoy-y04",
+   "text": "Raise every man of Pyke who can pull an oar.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "greyjoy-y05",
+   "text": "Tell Theon to come home.",
+   "expect": {
+    "letter": "theon_greyjoy"
+   }
+  }
+ ]
+}

@@ -1,0 +1,7 @@
+{
+ "kind": "interpret",
+ "fingerprint": "stark|march_the_host_to_winterfell",
+ "model": "hand-written",
+ "note": "A model that lets a command fall to the story (the host already stands at Winterfell): the rules' reading stands, and its receipt says why it cannot be done — an order is never silently dropped.",
+ "reply": "{\"actions\":[],\"clarify\":{\"needed\":false,\"question\":\"\",\"options\":[]}}"
+}

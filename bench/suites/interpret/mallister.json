@@ -1,0 +1,819 @@
+{
+ "house": "mallister",
+ "about": "Jason Mallister at Seagard, a sworn house of Riverrun; eight hundred of his men stand at Seagard under Patrek.",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "seagard_host",
+   "owner": "mallister",
+   "name": "The Seagard Host",
+   "at": "mallister",
+   "men": 800,
+   "commander": "patrek_mallister"
+  }
+ ],
+ "items": [
+  {
+   "id": "mallister-01",
+   "text": "Raise a thousand levies at Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "mallister",
+       "men": 1000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-02",
+   "text": "March our men to Riverrun.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "seagard_host",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-03",
+   "text": "Send Patrek to Riverrun.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "patrek_mallister",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-04",
+   "text": "Patrek is to ride to the Twins with a score of knights.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "patrek_mallister",
+       "to": "frey",
+       "men": 20
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-05",
+   "text": "Send a raven to Lord Hoster at Riverrun.",
+   "expect": {
+    "letter": "hoster_tully"
+   }
+  },
+  {
+   "id": "mallister-06",
+   "text": "Write to Walder Frey about the crossing.",
+   "expect": {
+    "letter": "walder_frey"
+   }
+  },
+  {
+   "id": "mallister-07",
+   "text": "Hire two hundred sellswords at Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "at": "mallister",
+       "men": 200,
+       "kind": "sellswords"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-08",
+   "text": "Repair the harbour at Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "harbour",
+       "holding": "mallister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-09",
+   "text": "Strengthen the walls of Seagard against the ironborn.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "walls",
+       "holding": "mallister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-10",
+   "text": "Raise the taxes.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "high"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-11",
+   "text": "Pay our dues to Riverrun.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_dues",
+      "params": {
+       "status": "paying"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-12",
+   "text": "Delay the tribute to Riverrun this season.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_dues",
+      "params": {
+       "status": "late"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-13",
+   "text": "Send five hundred dragons to Lord Walder Frey.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_gift",
+      "params": {
+       "to": "walder_frey",
+       "gold": 500
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-14",
+   "text": "Plant spies among the Greyjoys.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "plant_spy",
+      "params": {
+       "house": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-15",
+   "text": "Declare war on House Frey.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-16",
+   "text": "Hold a feast at Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hold_feast",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-17",
+   "text": "Find me a maester.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_officer",
+      "params": {
+       "role": "maester"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-18",
+   "text": "Make Patrek commander of the Seagard host.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "patrek_mallister",
+       "role": "commander"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-19",
+   "text": "Halt our host.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "halt_host",
+      "params": {
+       "army": "seagard_host"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-20",
+   "text": "Disband our levies.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "disband_host",
+      "params": {
+       "army": "seagard_host"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-21",
+   "text": "Build a rookery at Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "rookery",
+       "holding": "mallister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-22",
+   "text": "Keep watch on the sea for longships.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "mallister-23",
+   "text": "Seagard will hold.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "mallister-24",
+   "text": "March the host to the Twins.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "seagard_host",
+       "to": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-25",
+   "text": "Take our men to Raventree Hall to aid Lord Blackwood.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "seagard_host",
+       "to": "blackwood"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-26",
+   "text": "Send Patrek to Pinkmaiden.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "patrek_mallister",
+       "to": "piper"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-27",
+   "text": "Send a raven to Ser Denys at the Shadow Tower.",
+   "expect": {
+    "letter": "denys_mallister"
+   }
+  },
+  {
+   "id": "mallister-28",
+   "text": "Find out what Lord Walder Frey is hiding.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "gather_secrets",
+      "params": {
+       "house": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-29",
+   "text": "Hire fifty men-at-arms.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "men": 50
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-30",
+   "text": "Raise all our levies and march them to Riverrun.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "mallister",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-31",
+   "text": "Lower taxes for the winter.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "low"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-32",
+   "text": "Send Patrek with forty men to guard the ford at the Twins.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "patrek_mallister",
+       "to": "frey",
+       "men": 40
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-33",
+   "text": "Merge our hosts.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "merge_hosts",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-34",
+   "text": "Attack the Twins.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "seagard_host",
+       "to": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-35",
+   "text": "Ride.",
+   "expect": {
+    "clarify": true
+   }
+  },
+  {
+   "id": "mallister-36",
+   "text": "Hold a tourney at Seagard for Patrek's name day.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hold_tourney",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-37",
+   "text": "Send the host to Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "seagard_host",
+       "to": "mallister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-38",
+   "text": "Pay the Riverrun dues, but late.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_dues",
+      "params": {
+       "status": "late"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-39",
+   "text": "Declare war on the ironborn.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-40",
+   "text": "I will ride to Riverrun myself.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "jason_mallister",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-h01",
+   "text": "Patrek, take the host to Riverrun.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "seagard_host",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-h02",
+   "text": "Levy five hundred men at Seagard and send them to the Twins.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "mallister",
+       "men": 500,
+       "to": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-h03",
+   "text": "Build a stable at Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "stables",
+       "holding": "mallister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-h04",
+   "text": "Tell Lord Tully we will come.",
+   "expect": {
+    "letter": "hoster_tully"
+   }
+  },
+  {
+   "id": "mallister-h05",
+   "text": "Give Lord Frey two hundred dragons.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_gift",
+      "params": {
+       "to": "walder_frey",
+       "gold": 200
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-h06",
+   "text": "We shall ride to Riverrun.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "jason_mallister",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-h07",
+   "text": "Set spies on the Freys.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "plant_spy",
+      "params": {
+       "house": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-h08",
+   "text": "Stop the march.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "halt_host",
+      "params": {
+       "army": "seagard_host"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-h09",
+   "text": "Hire thirty men-at-arms at Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "at": "mallister",
+       "men": 30
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-h10",
+   "text": "Our dues to Riverrun are to be paid on time.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_dues",
+      "params": {
+       "status": "paying"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-x01",
+   "text": "Patrek, take our men to Riverrun and put them under Lord Hoster's banner.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "seagard_host",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-x02",
+   "text": "Strengthen the walls of Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "walls",
+       "holding": "mallister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-x03",
+   "text": "Write to Lord Walder and remind him of his oaths to Riverrun.",
+   "expect": {
+    "letter": "walder_frey"
+   }
+  },
+  {
+   "id": "mallister-x04",
+   "text": "Declare war on House Frey for their treachery at the ford.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-x05",
+   "text": "Pray for my son's safe return.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "mallister-y01",
+   "text": "Ride out with the host to the Twins, Patrek.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "seagard_host",
+       "to": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-y02",
+   "text": "Send a gift of five hundred dragons to Lord Tully.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_gift",
+      "params": {
+       "to": "hoster_tully",
+       "gold": 500
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-y03",
+   "text": "Build a new harbour at Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "harbour",
+       "holding": "mallister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-y04",
+   "text": "Hold a tourney to celebrate my son's name day.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hold_tourney",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "mallister-y05",
+   "text": "Recall Patrek to Seagard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "recall_rider",
+      "params": {
+       "character": "patrek_mallister"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

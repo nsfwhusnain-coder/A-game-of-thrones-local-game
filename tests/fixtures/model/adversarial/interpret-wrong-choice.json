@@ -1,0 +1,10 @@
+{
+ "kind": "interpret",
+ "note": "A choice that is not the verb's own: taxes are not \"sellswords\".",
+ "args": {
+  "text": "Lower the taxes."
+ },
+ "reply": "{\"actions\":[{\"verb\":\"set_tax\",\"who\":\"none\",\"subject\":\"none\",\"at\":\"none\",\"to\":\"none\",\"person\":\"none\",\"houses\":[],\"men\":0,\"gold\":0,\"choice\":\"sellswords\",\"note\":\"\"}],\"clarify\":{\"needed\":false,\"question\":\"\",\"options\":[]}}",
+ "expect": "refuse",
+ "problem": "is not one of"
+}

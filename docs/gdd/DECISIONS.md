@@ -279,3 +279,86 @@ the host's place: it is at its castle, with its road planned, until the turn wal
 
 **Why.** One definition per action is what lets the interpreter (B6) and the minds (B7) choose among real actions, the
 engine resolve them the same way whoever chose, and every order get its receipt.
+
+## D-016 · 2026-09-27 · The interpreter's action is one flat record (WP B6)
+
+**What.** 04 §4.3 gives an action `verb, who, subject, to, men, note`. The registry's verbs need more: a house (war,
+spies, secrets, a grant), a person of another house (a letter, a gift, a prisoner's fate), a sum of gold, a place where
+something is done that is not where anyone goes (a muster, a hiring, works), and a small word of the verb's own (a tax
+level, a verdict, an office, a kind of works, a march's secrecy). So every action is `verb, who, subject, at, to,
+person, houses[], men, gold, choice, note`, every field required (strict mode) and unused ones `"none"`, `[]`, `0`,
+`""`. `who` is an enum of the house's people and the wards it keeps; `subject` its hosts; `at`/`to` every place (and
+`party:<id>` for the enemy hosts it knows of); `person` everyone living; `houses` every house; `choice` one enum of every
+verb's small words — `take_the_black`, not `wall`, because `wall` is a prefix of `walls` (04 §3.1). The check refuses a
+choice that is not the verb's own, a verb without what it cannot do without, a person the order never names sent on the
+road, men the order never asked for, a letter made into a ride, a hiring the order never asked for, a question with no
+words, and prose in another script. A letter is the verb `send_letter`; its words are the order's own.
+
+**Why.** One schema for every verb keeps the grammar small and the few-shot examples short; the enums still carry every
+name the world knows, and the check says in words what the schema cannot.
+
+## D-017 · 2026-09-27 · When the model is asked (WP B6)
+
+**What.** The pre-parser's reading skips the model when it is *sure*: every clause of the order yielded something (a
+prayer or a hope counts), there is no question, every action is lawful now, and something was read (an action or a
+letter). Otherwise the model reads the order with the pre-parse as a hint. The model's reading replaces the rules' —
+except when the model leaves to the story an order the rules read as an action: then the rules' reading stands, and its
+receipt says why it cannot be done (04 §4.4: an order is never silently dropped). A call that fails (no server, an
+unreadable answer, a failed check twice) gives the rules' reading. On the mock provider the rules' reading is the whole
+reading. An order for part of a host ("three thousand spears" from a host of four thousand) is never sure: splitting a
+host is a verb of phase C (07 §12), so the rules march the whole host and the model decides. A march with no host in
+the field is read, and refused with that reason, rather than dropped.
+
+**Why.** 04 §4.1: most orders never need a model. On the suite 88 % are read alone, all of them right; on orders it had
+never seen, the pre-parser read 60–84 % alone at 93–100 % precision (D-019), and the receipt shows the lord what will be
+done before the turn, so a misreading is seen and corrected in the order's words.
+
+## D-018 · 2026-09-27 · Clarifications: chips that patch, chips that add words (WP B6)
+
+**What.** A question the rules ask carries the action it leaves open (`pending`: the verb and the params already read)
+and answers that patch it (`{ label, patch }`: "200 men" → `{ men: 200 }`, "Ser Rodrik Cassel" → `{ character }`): one
+click completes the reading, no model asked. A question the model asks has plain answers: a click adds the answer to
+the order's words ("Send someone to the Wall — Ser Rodrik Cassel") and the order is read again. The chip chosen is shown
+under the order ("You answered: 200 men"). An order still waiting on its question at the turn is not done: its result
+is "could not be done: the order was not clear — Who should go".
+
+**Why.** A patch is exact where the rules know what is missing; the model's options are free text, and the order's own
+words are the record the player sees and can edit.
+
+## D-019 · 2026-09-27 · The interpret suite, and an honest hold-out (WP B6)
+
+**What.** 04 §13 asks for 200 orders; the suite has 300 (60 each for Stark, Lannister, Mallister, the Night's Watch and
+Greyjoy, each house with a fixed setup: its host, a prisoner), in `bench/suites/interpret/`. The first 200 were written
+with the pre-parser; each of three hold-outs after them was written apart, measured once, then tuned against and folded
+into the suite: **64 % (50 orders), 84 % (25), 80 % (25) exact before tuning**. A fourth hold-out of 25 stands in
+`bench/suites/interpret-holdout/`, measured once (84 % exact; 60 % read alone, 93 % of those right) and never tuned
+against. When it is tuned against, it joins the suite and a fresh one is written. The truest hold-out is the owner's
+own orders: every model call is in `llm-log.jsonl`, the seed of the fine-tuning set of phase H.
+
+**Why.** A score on orders the rules were written for says little about the orders a player will write. The gate in CI
+is on both: ≥ 95 % on the suite, ≥ 80 % on the hold-out, ≥ 60 % read alone at ≥ 98 % precision on the suite, every
+action with a receipt — and the mock through the whole call path must read the suite as the rules do.
+
+## D-020 · 2026-09-27 · Readings, receipts and the turn (WP B6)
+
+**What.** An order is read once for its words (`order.parsed`, `order.parsedFor`); every unexecuted order's receipt
+(`order.receipt`: lines `{ ok: true | 'warn' | false | 'ask' | 'story', text }`) is its reading tried in order on one copy
+of the world — the second order sees the first done — rolling the copy's own dice, so reading orders never spends the
+save's. The turn performs exactly that reading through the verbs; nothing is read twice. Levies raised by a written
+order walk in over days, as before. Retired: `planOrders`, `readOrdersByRule`, `executeActions`, `previewOrders`,
+`postLetters` and the old orders prompt (the model's `op` actions); their tests now go through readings. A command said
+in an audience to one of the house's own people is read by the pre-parser with them as the one addressed, and done
+through the verbs. The envoy's answer (`resolveEnvoys`) is weighed for the one the reading writes to. Letters and envoys
+stay as they are until WP B10.
+
+**Why.** The receipt must be what happens (P2): the same reading, the same verbs, the same world.
+
+## D-021 · 2026-09-27 · Names a lord uses (WP B6)
+
+**What.** Heads of houses answer to the title the realm gives them: "Lord Tully", "Lady Arryn", "Lord Hoster" (a lord's
+first name only when no other lord shares it), "the Lord Commander" and "Lord Commander Mormont". The peoples of the
+realm name their houses ("the ironborn", "northmen", "wildlings", "the Watch"); "the Queen"/"her grace" is the King's
+wife; "the Neck" is Moat Cailin. The orders list may take up to 40 % of the drawer's height, since receipts and chips
+make each order taller.
+
+**Why.** These are the names players write; each was a misreading on the suite or a hold-out.

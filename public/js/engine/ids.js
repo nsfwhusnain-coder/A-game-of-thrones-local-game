@@ -56,16 +56,34 @@ export function personAliases(state, { alive = true } = {}) {
   for (const [f, id] of first) if (id && f.length > 2 && !['the', 'old', 'young', 'black', 'red', 'little', 'big'].includes(f)) put(map, f, id);
   // offices follow their holders
   const crown = Object.values(state.houses || {}).find((h) => h.rank === 'crown'); const king = crown && state.characters?.[crown.lord];
-  if (king?.alive) for (const a of ['the_king', 'his_grace', 'her_grace', 'the_crown']) put(map, a, king.id);
+  if (king?.alive) for (const a of ['the_king', 'his_grace', 'the_crown']) put(map, a, king.id);
+  // the King's wife is the Queen (a queen who rules in her own right is "the Queen" and "her grace" by the line above)
+  const queen = king?.alive && (king.sex === 'f' ? king : state.characters?.[king.spouse]);
+  if (queen?.alive) for (const a of ['the_queen', 'her_grace', 'queen']) put(map, a, queen.id);
+  // a head of house by the title the realm gives them: "Lord Tully", "Lady Arryn", "Lord Hoster", "Lord Commander
+  // Mormont" (a lord's first name only when no other lord shares it)
+  const heads = Object.values(state.houses || {}).map((h) => [h, state.characters?.[h.lord]]).filter(([, c]) => c?.alive);
+  const given = (c) => slug(c.name.replace(/^(Ser|Maester|Septa|Lord|Lady|Prince|Princess|King|Queen|Khal) /, '').split(' ')[0]);
+  const lordsNamed = new Map(); for (const [, c] of heads) lordsNamed.set(given(c), (lordsNamed.get(given(c)) || 0) + 1);
+  for (const [h, c] of heads) {
+    const title = c.sex === 'f' ? 'lady' : 'lord';
+    put(map, `${title}_${slug(h.name)}`, c.id);
+    if (lordsNamed.get(given(c)) === 1) put(map, `${title}_${given(c)}`, c.id);
+    if (h.id === 'nights_watch') for (const a of ['lord_commander', 'the_lord_commander', `lord_commander_${slug(c.name.split(' ').at(-1))}`]) put(map, a, c.id);
+  }
   return map;
 }
-/** Every name of every house: id, "House X", the name, and the plural ("the Freys"). */
+// "war on the ironborn", "spies among the wildlings": a people, for the house that speaks for it
+const PEOPLES = { ironborn: 'greyjoy', ironmen: 'greyjoy', northmen: 'stark', wildlings: 'free_folk', free_folk: 'free_folk', westermen: 'lannister', rivermen: 'tully', dornishmen: 'martell', dornish: 'martell', valemen: 'arryn', stormlanders: 'baratheon_se', reachmen: 'tyrell', crows: 'nights_watch', black_brothers: 'nights_watch', the_watch: 'nights_watch', dothraki: 'dothraki' };
+/** Every name of every house: id, "House X", the name, the plural ("the Freys"), and the people it leads ("the ironborn"). */
 export function houseAliases(state) {
   const map = new Map();
   for (const h of Object.values(state.houses || {})) put(map, h.id, h.id);
   for (const h of Object.values(state.houses || {})) {
     const n = slug(h.name); put(map, n, h.id); put(map, 'house_' + n, h.id); put(map, n + 's', h.id); put(map, 'the_' + n + 's', h.id);
   }
+  // the peoples of the realm by the names they go by, for the house that leads them
+  for (const [alias, id] of Object.entries(PEOPLES)) if (state.houses?.[id]) { put(map, alias, id); put(map, 'the_' + alias, id); }
   return map;
 }
 

@@ -29,8 +29,11 @@ test('orders: receipt, then the turn does it; halt and call back work over the w
   await api(`/games/${id}/orders`, { orders: [{ id: 'a', text: 'Send Jory Cassel to Moat Cailin with fifty men.' }, { id: 'b', text: 'Send Jon Snow to Castle Black.' }, { id: 'c', text: 'Send a raven to Lady Lysa Arryn at the Eyrie about Jon Arryn.' }] });
   const pv = await api(`/games/${id}/orders/preview`, {});
   const by = Object.fromEntries(pv.orders.map((o) => [o.id, o]));
-  assert.match(by.a.preview.join(' '), /Jory Cassel rides for Moat Cailin with 50 men/);
-  assert.match(by.c.preview.join(' '), /raven flies to Lysa Arryn/);
+  const said = (o) => o.receipt.map((l) => l.text).join(' ');
+  assert.match(said(by.a), /Jory Cassel rides for Moat Cailin with 50 men/);
+  assert.ok(by.a.receipt.every((l) => l.ok === true), 'every line of the receipt is a ✓');
+  assert.match(said(by.c), /raven flies to Lysa Arryn/);
+  assert.equal(by.a.parsed.via, 'rules', 'a plain order needs no model');
   const r = await api(`/games/${id}/advance`, { span: '1d', orders: pv.orders });
   const s = r.state;
   const co = Object.values(s.parties).find((a) => a.commander === 'jory_cassel');
@@ -43,6 +46,22 @@ test('orders: receipt, then the turn does it; halt and call back work over the w
   assert.equal(h.state.parties[co.id].march, undefined);
   const b = await api(`/games/${id}/act`, { kind: 'recall', character: 'jon_snow' });
   assert.equal(rideTo(b.state, 'jon_snow'), 'stark');
+});
+
+test('an order the steward must ask about: the question, a chip, and the answered order done', async () => {
+  const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+  await api(`/games/${id}/orders`, { orders: [{ id: 'a', text: 'Hire sellswords at Winterfell.' }, { id: 'b', text: 'Pray for the old gods to keep us.' }] });
+  const pv = await api(`/games/${id}/orders/preview`, {});
+  const a = pv.orders.find((o) => o.id === 'a');
+  assert.equal(a.receipt[0].ok, 'ask'); assert.match(a.receipt[0].text, /How many men/);
+  assert.deepEqual(a.parsed.clarify.options.map((o) => o.label), ['50 men', '200 men', '500 men']);
+  assert.equal(pv.orders.find((o) => o.id === 'b').receipt[0].ok, 'story');
+  const r = await api(`/games/${id}/orders/a/answer`, { option: 1 });
+  const done = r.orders.find((o) => o.id === 'a');
+  assert.equal(done.chosen, '200 men'); assert.equal(done.receipt[0].ok, true); assert.match(done.receipt.map((l) => l.text).join(' '), /\b200\b/);
+  await assert.rejects(api(`/games/${id}/orders/a/answer`, { option: 9 }), /no such answer/);
+  const t = await api(`/games/${id}/advance`, { span: '1d', orders: r.orders });
+  assert.match(t.state.orders.find?.((o) => o.id === 'a')?.result?.join(' ') || t.turn.carried.map((c) => c.result.join(' ')).join(' '), /\b200\b/);
 });
 
 test('works: one path, and a duplicate is refused with its reason', async () => {

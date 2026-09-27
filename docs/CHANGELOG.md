@@ -3,6 +3,32 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B6: your orders are read when you write them (WP B6)
+
+- **Each order gets its receipt as soon as you write it**, line by line: ✓ what will be done ("Jory Cassel rides for
+  Moat Cailin with 50 men"), ⚠ what will be done with a warning ("Only 12,000 could be found of the 20,000 asked for"),
+  ✗ what cannot be done and why ("The treasury holds 60,000 dragons, not 60,000,000"). Each receipt is tried after the
+  orders above it, so a second order sees the first done. The turn then does exactly what the receipts said.
+- **When an order is missing one thing, your steward asks** — "How many men?", "Who should go?", "Raise the taxes, or
+  lower them?" — with the answers as chips under the order. One click and the order is complete; the receipt updates.
+- **Most orders are read without the model at all**, by rules that know your people by name, byname, title and kinship
+  ("my wife", "the maester", "Lord Tully", "Lord Commander Mormont"), your hosts by their banners, every place by any
+  name it goes by, and numbers as you dictate them ("two hundred and fifty", "a score of knights"). Only what the rules
+  cannot read is put to the model — which may only choose among the actions the engine can do, with the names of this
+  world — and its reading is checked before it counts; if it fails, the rules' reading stands.
+- Better readings: "Send Jory to meet Lady Catelyn at the Twins" sends Jory, not Catelyn; "Kevan, march on the Twins"
+  marches the host Ser Kevan leads; "I will lead the host myself" puts you at its head; "Write to my son Theon at
+  Winterfell" writes to Theon, not to Lord Stark; "Offer Lord Frey ten thousand dragons for his crossing" is a proposal
+  by raven, not a gift; "Call the Harlaws and the Drumms to Pyke" calls only those; "Pray for my son's safe return" is
+  left to the story instead of asking where to send him; "March the host to Riverrun" with no host in the field says so.
+- A command you give in an audience to one of your own people ("Jory, ride to the Twins") is read the same way.
+- For the owner: `npm run bench -- --suite interpret --reader model` measures your model on 300 labelled orders (and
+  `--holdout` on 25 it was never tuned on); `--record tests/fixtures/model/interpret` keeps its answers as replay tests.
+- Owner to verify: write "Hire sellswords at Winterfell" — the receipt asks how many, click "200 men" and the line turns
+  ✓; write "Send someone to the Wall" and pick a name; write "Spend sixty million dragons on the Iron Throne" — ✗ with
+  the reason; end the turn — each order's result is its receipt. With the model running, write something the rules
+  cannot read ("Bring three thousand spears to White Harbor") and hover the receipt: "Read by your maester".
+
 ## 2026-09-27 — B4: every action is a verb, with a receipt (WP B4)
 
 - **Every action you take has one definition, and tells you what it did.** Marching a host, raising levies, calling

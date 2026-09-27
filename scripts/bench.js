@@ -10,6 +10,14 @@
 //   npm run bench                         # everything, against config.json
 //   npm run bench -- --only audiences     # just the audiences (fast)
 //   npm run bench -- --model qwen3.8-27b-64k --effort low
+//
+// The interpret suite (docs/gdd/04-ai-system.md §13): 275 labelled orders for five houses, and a hold-out
+//   npm run bench -- --suite interpret                    # the game's own path: the rules, the model where needed
+//   npm run bench -- --suite interpret --reader model     # every order put to the model (the 95 % gate)
+//   npm run bench -- --suite interpret --reader rules     # the pre-parser alone (the 60 % gate; no model)
+//   npm run bench -- --suite interpret --holdout          # the orders the pre-parser was never tuned on
+//   npm run bench -- --suite interpret --reader model --record tests/fixtures/model/interpret
+//                                                         # keep the model's replies as replay fixtures for CI
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -17,6 +25,40 @@ import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, all) => (x.startsWith('--') ? [...a, [x.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true]] : a), []));
+
+if (args.suite === 'interpret') { await interpretBench(); process.exit(0); }
+async function interpretBench() {
+  const { runSuite, report, loadSuite } = await import('../bench/lib/interpret.js');
+  const { interpretOrder } = await import('../server/orders/interpret.js');
+  const { parseOrder } = await import('../server/orders/parse.js');
+  const { runCall } = await import('../server/ai/client.js');
+  const { readingOf, default: call } = await import('../server/ai/calls/interpret.js');
+  const { loadConfig } = await import('../server/llm.js');
+  const cfg = { ...loadConfig(), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.provider ? { provider: args.provider } : {}), ...(args.mock ? { provider: 'mock' } : {}) };
+  const reader = ['rules', 'model'].includes(args.reader) ? args.reader : 'interpreter';
+  const recordTo = typeof args.record === 'string' ? path.resolve(args.record) : null;
+  let recorded = 0;
+  const log = (house, text) => (kind, messages, reply) => {
+    if (!recordTo || kind !== 'interpret') return;
+    const ctx = { house, text }; fs.mkdirSync(recordTo, { recursive: true });
+    const fp = call.fingerprint(ctx);
+    fs.writeFileSync(path.join(recordTo, `${fp.replace(/[^a-z0-9_]+/g, '-').slice(0, 80)}.json`), JSON.stringify({ kind, fingerprint: fp, model: cfg.model || 'unknown', note: `recorded by the bench, ${new Date().toISOString().slice(0, 10)}`, reply }, null, 1) + '\n');
+    recorded++;
+  };
+  const read = reader === 'rules' ? (s, text, house) => parseOrder(s, text, { house })
+    : reader === 'model' ? async (s, text, house) => { const r = await runCall('interpret', s, { text, house }, { cfg, provider: cfg.provider, log: log(house, text) }); return r.value ? { ...readingOf(r.value, s, { house }), via: r.via } : { actions: [], story: true, via: r.via }; }
+      : (s, text, house) => interpretOrder(s, text, { house, cfg, provider: cfg.provider, log: log(house, text) });
+  const suites = loadSuite(args.holdout ? path.join(ROOT, 'bench', 'suites', 'interpret-holdout') : undefined);
+  const who = reader === 'rules' ? 'the pre-parser' : `${reader === 'model' ? 'every order to the model' : 'the rules, then the model'} — ${cfg.provider === 'mock' ? 'mock' : cfg.model || '(server default)'}`;
+  console.log(`Interpret ${args.holdout ? 'hold-out' : 'suite'} — ${who}`);
+  const r = await runSuite(read, { suites, only: typeof args.house === 'string' ? args.house.split(',') : null });
+  const text = `# ${report(r, { title: `Interpret ${args.holdout ? 'hold-out' : 'suite'}`, reader: who }).replace(/^## /, '')}\n_${new Date().toISOString().slice(0, 16)} · provider ${cfg.provider}${cfg.provider === 'mock' ? '' : ` · ${cfg.baseUrl}`}${recordTo ? ` · ${recorded} replies recorded to ${path.relative(ROOT, recordTo)}` : ''}_\n`;
+  const by = reader === 'rules' ? 'rules' : `${reader}-${slugOf(cfg.provider === 'mock' ? 'mock' : cfg.model || 'model')}`;
+  const out = path.join(ROOT, 'bench', `interpret-${by}-${new Date().toISOString().slice(0, 10)}${args.holdout ? '-holdout' : ''}.md`);
+  fs.writeFileSync(out, text);
+  console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`);
+}
+function slugOf(s) { return String(s).toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-|-$/g, ''); }
 
 // run in a scratch copy of the saves so the player's games are never touched
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-bench-'));

@@ -1,0 +1,878 @@
+{
+ "house": "stark",
+ "about": "Eddard Stark at Winterfell, the Host of Winterfell (4,000) standing there under Robb, Jaime Lannister a prisoner in the cells.",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "host_of_winterfell",
+   "owner": "stark",
+   "name": "The Host of Winterfell",
+   "at": "stark",
+   "men": 4000,
+   "commander": "robb_stark"
+  },
+  {
+   "op": "character",
+   "id": "robb_stark",
+   "with": "host_of_winterfell"
+  },
+  {
+   "op": "character",
+   "id": "jaime_lannister",
+   "status": "imprisoned",
+   "loc": "stark"
+  }
+ ],
+ "items": [
+  {
+   "id": "stark-01",
+   "text": "Send Jon Snow to the Wall.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "jon_snow",
+       "to": "nights_watch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-02",
+   "text": "Jon should ride for Castle Black with a few men of the household.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "jon_snow",
+       "to": "nights_watch",
+       "men": 10
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-03",
+   "text": "Send Ser Rodrik Cassel with fifty men to White Harbor to inspect the fleet.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "rodrik_cassel",
+       "to": "manderly",
+       "men": 50
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-04",
+   "text": "Call the banners. Every lord of the North is to muster at Winterfell.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-05",
+   "text": "Summon my bannermen to Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-06",
+   "text": "Raise two thousand levies at Winterfell under Robb.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "stark",
+       "men": 2000,
+       "commander": "robb_stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-07",
+   "text": "March the Host of Winterfell to Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_winterfell",
+       "to": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-08",
+   "text": "Robb is to take the host south to the Neck.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_winterfell",
+       "to": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-09",
+   "text": "Hold a feast for my bannermen.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hold_feast",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-10",
+   "text": "Raise the taxes on my lands.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "high"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-11",
+   "text": "Lower the taxes; the smallfolk must eat before winter.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "low"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-12",
+   "text": "Fill the granaries at Winterfell before the snows.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "granaries",
+       "holding": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-13",
+   "text": "Repair the walls of Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "walls",
+       "holding": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-14",
+   "text": "Hire two hundred men-at-arms at Winterfell.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "at": "stark",
+       "men": 200
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-15",
+   "text": "Find me a master of whisperers.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_officer",
+      "params": {
+       "role": "spymaster"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-16",
+   "text": "Make Jory Cassel my captain of the guard.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "jory_cassel",
+       "role": "captain"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-17",
+   "text": "Send a raven to Lady Lysa at the Eyrie.",
+   "expect": {
+    "letter": "lysa_arryn"
+   }
+  },
+  {
+   "id": "stark-18",
+   "text": "Write to my brother Benjen at Castle Black.",
+   "expect": {
+    "letter": "benjen_stark"
+   }
+  },
+  {
+   "id": "stark-19",
+   "text": "Declare war on House Lannister.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "lannister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-20",
+   "text": "Send a gift of two thousand dragons to Lord Walder Frey.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_gift",
+      "params": {
+       "to": "walder_frey",
+       "gold": 2000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-21",
+   "text": "Disband the Host of Winterfell; the men are needed for the harvest.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "disband_host",
+      "params": {
+       "army": "host_of_winterfell"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-22",
+   "text": "The host is to halt and make camp.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "halt_host",
+      "params": {
+       "army": "host_of_winterfell"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-23",
+   "text": "Pray at the heart tree for Bran's recovery.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "stark-24",
+   "text": "Tell my lords I am grateful for their loyalty.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "stark-25",
+   "text": "Send my wife to Riverrun to see her father.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "catelyn_stark",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-26",
+   "text": "Maester Luwin should go to Oldtown.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "luwin",
+       "to": "hightower"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-27",
+   "text": "Send Theon Greyjoy home to Pyke.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "theon_greyjoy",
+       "to": "greyjoy"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-28",
+   "text": "Plant spies in the household of House Bolton.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "plant_spy",
+      "params": {
+       "house": "bolton"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-29",
+   "text": "Find out what secrets the Lannisters are hiding.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "gather_secrets",
+      "params": {
+       "house": "lannister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-30",
+   "text": "Grant Moat Cailin to House Reed.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "grant_holding",
+      "params": {
+       "holding": "moat_cailin",
+       "house": "reed"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-31",
+   "text": "Gather all the men of the North into one host at Winterfell.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "stark"
+      }
+     },
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-32",
+   "text": "Release Ser Jaime Lannister.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "judge_prisoner",
+      "params": {
+       "character": "jaime_lannister",
+       "verdict": "release"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-33",
+   "text": "Ransom the Kingslayer to his father.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "judge_prisoner",
+      "params": {
+       "character": "jaime_lannister",
+       "verdict": "ransom"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-34",
+   "text": "Send Arya and Sansa to King's Landing.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "arya_stark",
+       "to": "baratheon"
+      }
+     },
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "sansa_stark",
+       "to": "baratheon"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-35",
+   "text": "Robb should ride to the Twins with twenty riders.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "robb_stark",
+       "to": "frey",
+       "men": 20
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-36",
+   "text": "March on Riverrun and lift the siege.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_winterfell",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-37",
+   "text": "Build a rookery at Winterfell.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "rookery",
+       "holding": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-38",
+   "text": "Pay our dues to the Iron Throne in full.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_dues",
+      "params": {
+       "status": "paying"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-39",
+   "text": "Send someone to Winterfell.",
+   "expect": {
+    "clarify": true
+   }
+  },
+  {
+   "id": "stark-40",
+   "text": "Jory is to take ten men and escort my daughters to King's Landing.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "jory_cassel",
+       "to": "baratheon",
+       "men": 10
+      }
+     },
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "sansa_stark",
+       "to": "baratheon"
+      }
+     },
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "arya_stark",
+       "to": "baratheon"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-h01",
+   "text": "I want Ser Rodrik to hurry down to Moat Cailin and hold it.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "rodrik_cassel",
+       "to": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-h02",
+   "text": "Muster the North's levies at the Dreadfort.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "bolton"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-h03",
+   "text": "Bring three thousand spears to White Harbor.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "men": 3000,
+       "to": "manderly"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-h04",
+   "text": "Luwin must write to Riverrun.",
+   "expect": {
+    "letter": "hoster_tully"
+   }
+  },
+  {
+   "id": "stark-h05",
+   "text": "Let the Host of Winterfell rest where it stands.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "halt_host",
+      "params": {
+       "army": "host_of_winterfell"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-h06",
+   "text": "Sansa is to travel to the Eyrie with Septa Mordane.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "sansa_stark",
+       "to": "arryn"
+      }
+     },
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "septa_mordane",
+       "to": "arryn"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-h07",
+   "text": "Name Vayon Poole my steward once more.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "vayon_poole",
+       "role": "steward"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-h08",
+   "text": "Ease the burden of taxes on the smallfolk.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "low"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-h09",
+   "text": "Take the host to Castle Cerwyn.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_winterfell",
+       "to": "cerwyn"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-h10",
+   "text": "Hire fifty sellswords in White Harbor.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "at": "manderly",
+       "men": 50,
+       "kind": "sellswords"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-x01",
+   "text": "Robb, lead the host north to the Last Hearth.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_winterfell",
+       "to": "umber"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-x02",
+   "text": "Send Jory Cassel and twenty guards to meet Lady Catelyn at the Twins.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "jory_cassel",
+       "to": "frey",
+       "men": 20
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-x03",
+   "text": "Have Maester Luwin send a raven to Lord Umber asking for his men.",
+   "expect": {
+    "letter": "greatjon_umber"
+   }
+  },
+  {
+   "id": "stark-x04",
+   "text": "Execute the Kingslayer.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "judge_prisoner",
+      "params": {
+       "character": "jaime_lannister",
+       "verdict": "execute"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-x05",
+   "text": "Tell the smallfolk that winter is coming and they should store what grain they can.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "stark-y01",
+   "text": "Lord Arryn is dead; send Ser Rodrik to the Eyrie to pay our respects.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "rodrik_cassel",
+       "to": "arryn"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-y02",
+   "text": "Robb should march the host to the Twins and demand passage.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_winterfell",
+       "to": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-y03",
+   "text": "Order the Umbers and the Karstarks to Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "moat_cailin"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "stark-y04",
+   "text": "Let Bran and Rickon stay at Winterfell.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "stark-y05",
+   "text": "Send two hundred men to reinforce Moat Cailin.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "men": 200,
+       "to": "moat_cailin"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

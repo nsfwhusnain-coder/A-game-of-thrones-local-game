@@ -1,0 +1,14 @@
+{
+ "kind": "interpret",
+ "note": "The natural names a model writes are members of the enums, and become ids: \"jon\", \"the_wall\", \"maester_luwin\", \"riverrun\".",
+ "args": {
+  "text": "Send Jon to the Wall with a few men, and have Maester Luwin write to Riverrun."
+ },
+ "reply": "{\"actions\":[{\"verb\":\"send_person\",\"who\":\"jon\",\"subject\":\"none\",\"at\":\"none\",\"to\":\"the_wall\",\"person\":\"none\",\"houses\":[],\"men\":10,\"gold\":0,\"choice\":\"none\",\"note\":\"\"},{\"verb\":\"send_letter\",\"who\":\"none\",\"subject\":\"none\",\"at\":\"none\",\"to\":\"none\",\"person\":\"lord_tully\",\"houses\":[],\"men\":0,\"gold\":0,\"choice\":\"none\",\"note\":\"\"}],\"clarify\":{\"needed\":false,\"question\":\"\",\"options\":[]}}",
+ "expect": "accept",
+ "canonical": {
+  "actions.0.who": "jon_snow",
+  "actions.0.to": "nights_watch",
+  "actions.1.person": "hoster_tully"
+ }
+}

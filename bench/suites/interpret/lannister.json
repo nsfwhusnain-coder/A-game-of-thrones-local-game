@@ -1,0 +1,852 @@
+{
+ "house": "lannister",
+ "about": "Tywin Lannister at Casterly Rock, the Host of the Rock (12,000) there under Ser Kevan, Edmure Tully a prisoner at the Rock.",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "host_of_the_rock",
+   "owner": "lannister",
+   "name": "The Host of the Rock",
+   "at": "lannister",
+   "men": 12000,
+   "commander": "kevan_lannister"
+  },
+  {
+   "op": "character",
+   "id": "kevan_lannister",
+   "with": "host_of_the_rock"
+  },
+  {
+   "op": "character",
+   "id": "edmure_tully",
+   "status": "imprisoned",
+   "loc": "lannister"
+  }
+ ],
+ "items": [
+  {
+   "id": "lannister-01",
+   "text": "Call the banners of the West to Casterly Rock.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "lannister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-02",
+   "text": "Raise ten thousand men at Casterly Rock.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "lannister",
+       "men": 10000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-03",
+   "text": "March the Host of the Rock to the Golden Tooth.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_the_rock",
+       "to": "lefford"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-04",
+   "text": "Send Ser Kevan to King's Landing.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "kevan_lannister",
+       "to": "baratheon"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-05",
+   "text": "Tyrion should ride for the Wall.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "tyrion_lannister",
+       "to": "nights_watch"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-06",
+   "text": "Send Jaime back to Casterly Rock.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "jaime_lannister",
+       "to": "lannister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-07",
+   "text": "Hire five hundred sellswords at Lannisport.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_men",
+      "params": {
+       "at": "lannisport",
+       "men": 500,
+       "kind": "sellswords"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-08",
+   "text": "Send a thousand gold dragons to Lord Walder Frey.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_gift",
+      "params": {
+       "to": "walder_frey",
+       "gold": 1000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-09",
+   "text": "Declare war on House Tully.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-10",
+   "text": "We go to war with the Starks.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "declare_war",
+      "params": {
+       "house": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-11",
+   "text": "Raise the taxes across the Westerlands.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "high"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-12",
+   "text": "Hold a tourney at Casterly Rock in honour of my son.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hold_tourney",
+      "params": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-13",
+   "text": "Build warships at Lannisport.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "warships"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-14",
+   "text": "Strengthen the walls of Casterly Rock.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "walls",
+       "holding": "lannister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-15",
+   "text": "Make Ser Amory Lorch commander of my host.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "amory_lorch",
+       "role": "commander"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-16",
+   "text": "Send a raven to my daughter the Queen.",
+   "expect": {
+    "letter": "cersei_lannister"
+   }
+  },
+  {
+   "id": "lannister-17",
+   "text": "Write to Lord Hoster Tully demanding the release of my son.",
+   "expect": {
+    "letter": "hoster_tully"
+   }
+  },
+  {
+   "id": "lannister-18",
+   "text": "Send Edmure Tully to the Wall.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "judge_prisoner",
+      "params": {
+       "character": "edmure_tully",
+       "verdict": "wall"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-19",
+   "text": "Execute Edmure Tully.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "judge_prisoner",
+      "params": {
+       "character": "edmure_tully",
+       "verdict": "execute"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-20",
+   "text": "Ransom Edmure back to his father.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "judge_prisoner",
+      "params": {
+       "character": "edmure_tully",
+       "verdict": "ransom"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-21",
+   "text": "Plant spies in the household of House Stark.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "plant_spy",
+      "params": {
+       "house": "stark"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-22",
+   "text": "Dig up whatever secrets House Baratheon keeps.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "gather_secrets",
+      "params": {
+       "house": "baratheon"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-23",
+   "text": "March the host on Riverrun.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_the_rock",
+       "to": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-24",
+   "text": "Lead the host to Harrenhal.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_the_rock",
+       "to": "whent"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-25",
+   "text": "Kevan is to take the host to the Golden Tooth.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_the_rock",
+       "to": "lefford"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-26",
+   "text": "Halt the Host of the Rock.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "halt_host",
+      "params": {
+       "army": "host_of_the_rock"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-27",
+   "text": "Disband the host and send the men home.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "disband_host",
+      "params": {
+       "army": "host_of_the_rock"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-28",
+   "text": "Hire a new steward.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_officer",
+      "params": {
+       "role": "steward"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-29",
+   "text": "Find me a spymaster in Lannisport.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_officer",
+      "params": {
+       "role": "spymaster",
+       "at": "lannisport"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-30",
+   "text": "Send Lancel to Casterly Rock.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "lancel_lannister",
+       "to": "lannister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-31",
+   "text": "Fund a new harbour at Lannisport.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "harbour"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-32",
+   "text": "Lower the taxes, the smallfolk grumble.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "low"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-33",
+   "text": "Pay the crown's dues in full.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_dues",
+      "params": {
+       "status": "paying"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-34",
+   "text": "Withhold our tribute to King's Landing.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_dues",
+      "params": {
+       "status": "withholding"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-35",
+   "text": "A Lannister always pays his debts.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "lannister-36",
+   "text": "Remind my bannermen who rules the West.",
+   "expect": {
+    "story": true
+   }
+  },
+  {
+   "id": "lannister-37",
+   "text": "Send men.",
+   "expect": {
+    "clarify": true
+   }
+  },
+  {
+   "id": "lannister-38",
+   "text": "Tyrion is to go to Casterly Rock with fifty men as an escort.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "tyrion_lannister",
+       "to": "lannister",
+       "men": 50
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-39",
+   "text": "Call up four thousand men at Casterly Rock and march them to the Golden Tooth.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "lannister",
+       "men": 4000,
+       "to": "lefford"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-40",
+   "text": "Send a raven to every lord of the Westerlands: they are to bring their levies to Casterly Rock.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "lannister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-h01",
+   "text": "Kevan, march on the Twins.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_the_rock",
+       "to": "frey"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-h02",
+   "text": "Muster the Westerlands at the Golden Tooth.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "call_banners",
+      "params": {
+       "at": "lefford"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-h03",
+   "text": "Lancel should return to King's Landing.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "lancel_lannister",
+       "to": "baratheon"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-h04",
+   "text": "Pay Lord Frey a thousand dragons for his friendship.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_gift",
+      "params": {
+       "to": "walder_frey",
+       "gold": 1000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-h05",
+   "text": "Put Edmure Tully to death.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "judge_prisoner",
+      "params": {
+       "character": "edmure_tully",
+       "verdict": "execute"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-h06",
+   "text": "Stand the host down.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "disband_host",
+      "params": {
+       "army": "host_of_the_rock"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-h07",
+   "text": "Send word to Ser Jaime to come home.",
+   "expect": {
+    "letter": "jaime_lannister"
+   }
+  },
+  {
+   "id": "lannister-h08",
+   "text": "Expand the harbour at Lannisport.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "fund_works",
+      "params": {
+       "template": "harbour"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-h09",
+   "text": "Have Tyrion ride to Riverrun with an escort of twenty men.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "tyrion_lannister",
+       "to": "tully",
+       "men": 20
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-h10",
+   "text": "Restore the usual taxes.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "normal"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-x01",
+   "text": "Ser Kevan is to take the Host of the Rock to the Golden Tooth.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_the_rock",
+       "to": "lefford"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-x02",
+   "text": "Raise five thousand more men at Lannisport.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "raise_levies",
+      "params": {
+       "at": "lannisport",
+       "men": 5000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-x03",
+   "text": "Offer Lord Frey ten thousand dragons for the use of his crossing.",
+   "expect": {
+    "letter": "walder_frey"
+   }
+  },
+  {
+   "id": "lannister-x04",
+   "text": "Dismiss the host; the harvest needs hands.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "disband_host",
+      "params": {
+       "army": "host_of_the_rock"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-x05",
+   "text": "Have my spymaster find out what Lord Hoster is hiding.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "gather_secrets",
+      "params": {
+       "house": "tully"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-y01",
+   "text": "Send Ser Amory Lorch with three hundred riders to Harrenhal.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "amory_lorch",
+       "to": "whent",
+       "men": 300
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-y02",
+   "text": "I will lead the host to the Golden Tooth myself.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "march_host",
+      "params": {
+       "army": "host_of_the_rock",
+       "to": "lefford",
+       "commander": "tywin_lannister"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-y03",
+   "text": "Lower the taxes in the Westerlands.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "set_tax",
+      "params": {
+       "level": "low"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-y04",
+   "text": "Ransom Edmure Tully to his father for fifty thousand dragons.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "judge_prisoner",
+      "params": {
+       "character": "edmure_tully",
+       "verdict": "ransom"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "lannister-y05",
+   "text": "Hire a new maester for Casterly Rock.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "hire_officer",
+      "params": {
+       "role": "maester"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

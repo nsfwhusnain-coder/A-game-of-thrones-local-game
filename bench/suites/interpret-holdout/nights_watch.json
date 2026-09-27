@@ -1,0 +1,75 @@
+{
+ "house": "nights_watch",
+ "about": "Jeor Mormont, Lord Commander, at Castle Black; three hundred rangers stand ready there under Benjen Stark. (hold-out: orders written apart from the pre-parser, and never tuned against)",
+ "setup": [
+  {
+   "op": "army_create",
+   "id": "the_rangers",
+   "owner": "nights_watch",
+   "name": "The Rangers",
+   "at": "nights_watch",
+   "men": 300,
+   "commander": "benjen_stark"
+  }
+ ],
+ "items": [
+  {
+   "id": "nights_watch-z01",
+   "text": "Send Yoren to King's Landing to find recruits.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "send_person",
+      "params": {
+       "character": "yoren",
+       "to": "baratheon"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-z02",
+   "text": "Send a raven to Winterfell asking for men.",
+   "expect": {
+    "letter": "eddard_stark"
+   }
+  },
+  {
+   "id": "nights_watch-z03",
+   "text": "Disband the rangers.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "disband_host",
+      "params": {
+       "army": "the_rangers"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-z04",
+   "text": "Name Bowen Marsh Lord Steward.",
+   "expect": {
+    "actions": [
+     {
+      "verb": "appoint_office",
+      "params": {
+       "character": "bowen_marsh",
+       "role": "steward"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "nights_watch-z05",
+   "text": "Let the men rest.",
+   "expect": {
+    "story": true
+   }
+  }
+ ]
+}

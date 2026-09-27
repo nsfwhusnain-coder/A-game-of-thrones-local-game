@@ -32,7 +32,9 @@ import { regencyTick } from '../public/js/shared/regency.js';
 import { outcomeFor, standing } from '../public/js/shared/standing.js';
 import { emit, fact, asEvent, flush, redate, factById } from '../public/js/engine/facts/log.js';
 import { VERBS, perform, told, verbOfKind } from '../public/js/engine/actions/registry.js';
-import { carryOutOrders, readOrdersByRule, executeActions, named, previewOrders, orderEvents, advanceMusters, ravenDays } from './orders.js';
+import { carryOutOrders, readOrders, answerOrder, named, orderEvents, advanceMusters, ravenDays } from './orders.js';
+import { interpretOrder } from './orders/interpret.js';
+import { parseOrder } from './orders/parse.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -320,21 +322,36 @@ const AGENT_SOURCE = { hand: 'The doings of the realm', weaver: 'A custom of the
 
 const consolidating = new Map(); // save id -> promise (memory is compressed in the background)
 
-// The receipt for written orders: read and tried on a copy of the world as soon as they are written (orders.js)
+// The receipt for written orders: read and tried on a copy of the world as soon as they are written (orders.js).
+// Each order is read by the rules, and by the model only when the rules cannot (orders/interpret.js); every model call
+// is logged with the rest (llm-log.jsonl), so a misreading can be found and a fine-tuning set built from it.
+const interpreter = (id, state, cfg) => (text) => interpretOrder(state, text, { cfg, log: (kind, messages, response) => logLLM(id, kind, messages, response) });
 const previewing = new Map(); // save id -> promise
 export async function previewOrderPlans(id) {
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const job = (async () => {
     const cfg = loadConfig(); const state = loadState(id);
-    const ask = cfg.provider === 'mock' ? null : async (msgs) => (await askJson(id, 'orders', msgs, cfg, { maxTokens: 900 })).obj;
-    if (!(await withDice(state, () => previewOrders(state, ask)))) return state.orders;
-    // the player may have edited or removed orders meanwhile: a receipt is kept only for the text it was read from
+    await readOrders(state, interpreter(id, state, cfg)); // the model, if asked, is asked here
+    // the player may have edited or removed orders meanwhile: a reading is kept only for the words it was read from;
+    // what was edited is read now, and every receipt is tried again in the order the orders stand
     const fresh = loadState(id); const read = new Map(state.orders.map((o) => [o.id, o]));
-    for (const o of fresh.orders) { const r = read.get(o.id); if (r?.plan && r.planFor === o.text) Object.assign(o, { plan: r.plan, planFor: r.planFor, preview: r.preview }); }
+    for (const o of fresh.orders) { const r = read.get(o.id); if (r?.parsed && r.parsedFor === o.text) Object.assign(o, { parsed: r.parsed, parsedFor: r.parsedFor }); }
+    await readOrders(fresh, interpreter(id, fresh, cfg));
     saveState(id, fresh); return fresh.orders;
   })().finally(() => previewing.delete(id));
   previewing.set(id, job);
   return { orders: await job };
+}
+/** The lord answers an order's question (a chip under it): the reading is patched, or the words added and read again. */
+export async function answerOrderQuestion(id, orderId, option) {
+  if (previewing.has(id)) await previewing.get(id).catch(() => {});
+  const cfg = loadConfig(); const state = loadState(id);
+  const o = state.orders.find((x) => x.id === orderId); if (!o) throw httpError(404, 'no such order');
+  if (!answerOrder(o, Number(option))) throw httpError(400, 'no such answer');
+  // the answered order keeps its patched reading; its receipt (and every later order's) is tried again
+  await readOrders(state, interpreter(id, state, cfg));
+  saveState(id, state);
+  return { orders: state.orders };
 }
 
 export async function advance(id, { span = 'auto', orders } = {}) {
@@ -361,7 +378,7 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   const chronicle = readChronicle(id);
   // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
   // so they truly happen; the story model is told what was done and narrates what follows.
-  const carried = await carryOutOrders(state, cfg.provider === 'mock' ? null : async (msgs) => (await askJson(id, 'orders', msgs, cfg, { maxTokens: 900 })).obj).catch((e) => { console.warn('orders:', e.message); return []; });
+  const carried = await carryOutOrders(state, interpreter(id, state, cfg)).catch((e) => { console.warn('orders:', e.message); return []; });
   // a turn runs until the next thing that matters (a host arrives, a foe draws near, an answer lands…), at most a moon
   let turnReason = null;
   if (!span || span === 'auto' || span === 'turn') { const n = nextTurnLength(state); span = `${n.days}d`; turnReason = n.reason; }
@@ -714,10 +731,14 @@ async function talkWith(id, state, cfg, charId, message) {
   // the audience is a fact (who spoke with whom, and where); what was said stays in the conversation
   emit(state, 'audience_held', { actors: [lordId, c.id], houses: [p, c.house], place: resolvePlaceId(c.loc) || partyOf(state, c)?.at || null, data: { verdict: stance.verdict || null }, vis: { scope: 'houses', houses: [p, c.house] }, cause: { type: 'order', ref: 'audience' }, text: `${lord?.name || `The lord of House ${state.houses[p].name}`} speaks with ${c.name}.` });
   let { applied, rejected } = applyChanges(state, changes, { source: c.name, protectPlayer: true, mayMove: ownMan ? mayMove : [], cause: { type: 'intent', ref: c.id } });
-  // the model forgot to act on a plain command to a servant: read it by rule, with the servant as the one addressed
+  // a plain command to one of the house's own people, said to their face, is an order: read by the rules, with them
+  // as the one addressed ("ride to the Twins" means them), and carried out through the verbs like a written one
   if (ownMan && c.id !== state.houses[p].lord && !applied.some((a) => ['travel', 'ride', 'recruit', 'hire'].includes(a.op))) {
-    const plan = readOrdersByRule(state, [{ text: message }], c.id);
-    if (plan.actions.length) { const res = executeActions(state, plan.actions); for (const t of res[1] || []) (t.startsWith('could not') ? rejected : applied).push(t.startsWith('could not') ? { change: plan.actions[0], reason: t } : { op: plan.actions[0].op, text: t }); }
+    const read = parseOrder(state, message, { addressee: c.id });
+    for (const a of read.clarify ? [] : read.actions) {
+      const r = perform(state, a.verb, { params: a.params, source: { type: 'order', ref: 'audience' } });
+      for (const l of r.receipt) (r.ok ? applied.push({ op: a.verb, text: l.text.replace(/\.$/, '') }) : rejected.push({ change: { verb: a.verb, ...a.params }, reason: `could not be done: ${l.text.replace(/\.$/, '')}` }));
+    }
   }
   const turn = state.meta.turn;
   state.chats[charId] = [...(state.chats[charId] || []), { role: 'player', text: message, date: dateStr(state.meta.date), turn }, { role: 'npc', text: reply, date: dateStr(state.meta.date), turn, applied: applied.map((a) => a.text), mood: stance.moodWord, ...(stance.verdict ? { verdict: stance.verdict } : {}) }];

@@ -1,0 +1,7 @@
+{
+ "kind": "interpret",
+ "fingerprint": "stark|send_two_hundred_men_to_reinforce_moat_cailin",
+ "model": "hand-written",
+ "note": "A bad answer: a march with no host. The check refuses it, and the rules' reading stands.",
+ "reply": "{\"actions\":[{\"verb\":\"march_host\",\"who\":\"none\",\"subject\":\"none\",\"at\":\"none\",\"to\":\"moat_cailin\",\"person\":\"none\",\"houses\":[],\"men\":0,\"gold\":0,\"choice\":\"none\",\"note\":\"\"}],\"clarify\":{\"needed\":false,\"question\":\"\",\"options\":[]}}"
+}

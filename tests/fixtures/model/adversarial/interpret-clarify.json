@@ -1,0 +1,9 @@
+{
+ "kind": "interpret",
+ "note": "A question is an answer: no actions, one short question, choices to pick.",
+ "args": {
+  "text": "Send someone to the Wall."
+ },
+ "reply": "{\"actions\":[],\"clarify\":{\"needed\":true,\"question\":\"Who should ride for the Wall?\",\"options\":[\"Jon Snow\",\"Ser Rodrik Cassel\"]}}",
+ "expect": "accept"
+}
