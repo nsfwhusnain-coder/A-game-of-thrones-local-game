@@ -90,6 +90,10 @@ server/
   game.js     the turn pipeline (advance), audiences (talk), councils, direct actions (act), saves, undo
   llm.js      OpenAI-compatible client: streaming (SSE), thinking on/off, continuation on cut-off, JSON repair, progress phases, mock mode
   prompts.js  every prompt: world primer, JSON rules, scene style, world digest, personas, turn prompt, audience prompt, council
+              (buildJumpPrompt takes { agent, brief }: same prefix for every agent of the swarm, one charge at the end)
+  agents.js   THE SWARM: the five charges (Maester, Hand, Weaver, Whisperer, Bard), the briefs they hand each
+              other in plain English, and the whitelist of ops each one may emit
+  lore.js     the Citadel's shelves: a dependency-free BM25 index over the game's lore plus anything in lore/
   orders.js   free-text orders → engine actions (model-read, rule-read fallback) → executed before the story turn
 public/js/shared/        the deterministic engine (runs on the server; the client imports it for display)
   world.js    state creation, place resolution, applyChanges() and every change op, calendar, realm helpers, generateKin
@@ -97,7 +101,12 @@ public/js/shared/        the deterministic engine (runs on the server; the clien
   vassals.js  vassal temper, the banners, field service, the player as a vassal (liege calls)
   petitions.js decisions the realm brings (petitions) and applyPetitionFx() — the effect language of decisions
   plots.js    the living world: canon story threads, rising threats, churn, opportunities; threadsDigest() for the prompt
-  warfare.js  march days, battle odds, siege estimates
+  warfare.js  march days, battle odds, siege estimates (the war room now states what the road will cost)
+  rules.js    THE RULE LANGUAGE: tokenizer, Pratt parser and a step-budgeted interpreter for the sandboxed
+              formulas the Weaver writes with inject_rule. No eval, ever: a rule is data, it goes in the save
+  chokepoints.js the hard places (the Neck, the Green Fork, the Bloody Gate, the Golden Tooth, the Boneway,
+              the Wall) as polyline barriers with gates, leave, tolls and winter; plus roadCongestion()
+  psyche.js   hidden stress and paranoia on every named person, surfaced only as behaviour, never as a number
   diplomacy.js disposition of characters toward the player
   people.js   sex, succession (heirOf)
 public/js/ui/            the interface
@@ -409,6 +418,25 @@ quiet' every day.
   reports the player's people arriving or returning. Travellers are given as "near X, ~N days to go".
 - **Model:** Qwen3.6 35B A3B UD-Q4_K_XL is the default in config.json (llama-swap profile `qwen3.6-35b-a3b`, -ncmoe 26, about
   10.9 GB of VRAM). Measured: prompt ~2,000 tokens/s, writing ~50 tokens/s, warm turns ~30-40 s with longer, richer replies.
+
+## 4e. Pax Historia session (2026-09-27): the swarm, runtime mechanics, geography and minds
+
+Read **[docs/PAX-HISTORIA.md](PAX-HISTORIA.md)** first — it is the full account, including the
+deviations from the brief and why, and the four-month plan for what is left. In short:
+
+1. **`inject_rule`** — the model writes new economies into the world in a sandboxed formula
+   language (`shared/rules.js`), settled every moon by `economy.js settle()`, shown to the player
+   in the Economy window as *Customs of your realm*. Deliberately **not** `eval`: a rule must be
+   data so it can be saved, migrated, refused and shown.
+2. **The swarm** (`server/agents.js`, `runSwarm()` in `game.js`) — five agents share one cached
+   prompt prefix and hand each other plain English, never ops. Settings → *Who writes the turn*.
+3. **The living map** (`map3d/life.js`) — refugees, carts, outriders, deserters and ravens, all
+   read from the state, walking every frame; and roads that clog where people are fleeing.
+4. **The lore matrix** — `shared/chokepoints.js` (geography with a price), `server/lore.js` (BM25
+   retrieval), `shared/psyche.js` (stress and paranoia as behaviour).
+
+Tests: 100 passing. **None of the UI work has been seen in a browser** — this sandbox has no
+Chromium. Look at it before claiming it works.
 
 ## 5. In the middle of (when this was written)
 

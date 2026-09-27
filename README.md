@@ -60,6 +60,20 @@ If a reply is cut off, the game asks the model to finish it. If the model spends
 
 ## What's in the game
 
+- **The model designs mechanics, not just prose.** A network of informants paid in stolen Lannister
+  gold becomes a real line in your steward's ledger, settled every moon, saved with the game — written
+  by the chronicler at runtime in a sandboxed formula language, and capped so the story can never mint gold.
+- **Five voices write each turn,** not one: the Maester says what is possible, the Hand plays every other
+  house, the Weaver invents the mechanics, the Whisperer hides things in the world, and only then the Bard
+  writes the chronicle — and the Bard is never shown the machinery.
+- **Geography that bites:** the Neck, the Twins' bridge, the Bloody Gate, the Golden Tooth, the Boneway.
+  March without leave and you pay in days, in men and in heart. Winter makes every mountain worse.
+- **Minds that break:** hidden stress and paranoia on every named person, shown only as behaviour — a lord
+  who cannot sleep, who reads treason into a courtesy, who is found on the floor of the solar at dawn.
+- **A living map:** refugees leaving a sacked town, carts between prosperous holdings, outriders ahead of a
+  host, deserters slipping away, ravens carrying the letters that were really sent — and a host that must
+  push through a countryside on the move marches 30% slower.
+
 - **A campaign you can win and lose.** Your house has a **standing** in the realm — lands, swords, gold, sway,
   blood and good order, scored out of a hundred and shown in the Realm window. A story can end: the line fails,
   the house is broken, a crown of your own is won, or the Iron Throne is taken and kept. The end screen gives
@@ -219,6 +233,7 @@ config.json            your model settings (git-ignored)
 The map geography is derived from *A Song of Ice and Fire Speculative World Map*, GIS files by **cadaei**, based on the maps of **Tear** (Cartographers' Guild) and **theMountainGoat**, released under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) via [mapbox/GOT-Inspired-Map](https://github.com/mapbox/GOT-Inspired-Map). The data was projected, simplified and annotated for this game. The derived files (`data-src/got-inspired-map/`, `public/data/atlas.js`) are shared under the same licence and must not be used commercially. The world of A Song of Ice and Fire, its places and its characters are © George R. R. Martin. This is a non-commercial fan project.
 - **Scenarios:** add an entry to `public/data/scenarios.js`.
 
-See [docs/DESIGN.md](docs/DESIGN.md) for the design contract (which systems the engine owns and which the story
+See [docs/PAX-HISTORIA.md](docs/PAX-HISTORIA.md) for the swarm and the runtime rule language (how the
+model designs mechanics rather than only narrating them), [docs/DESIGN.md](docs/DESIGN.md) for the design contract (which systems the engine owns and which the story
 model owns), [docs/REVIEW.md](docs/REVIEW.md) for a full code and design review with the bugs found and fixed,
 and [docs/ROADMAP.md](docs/ROADMAP.md) for the phased development plan.
