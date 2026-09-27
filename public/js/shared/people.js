@@ -1,10 +1,14 @@
-// Shared rules about people: gender inference and succession.
-const FEMALE = new Set(['catelyn_stark', 'sansa_stark', 'arya_stark', 'lyarra_stark', 'lyanna_stark', 'minisa_whent', 'maege_mormont', 'dacey_mormont', 'meera_reed', 'donella_hornwood', 'barbrey_dustin', 'ygritte', 'val', 'cersei_lannister', 'myrcella_baratheon', 'selyse_florent', 'shireen_baratheon', 'melisandre', 'brienne_tarth', 'jeyne_westerling', 'lysa_arryn', 'anya_waynwood', 'olenna_tyrell', 'margaery_tyrell', 'arianne_martell', 'ellaria_sand', 'obara_sand', 'asha_greyjoy', 'daenerys_targaryen', 'shella_whent', 'arwyn_oakheart', 'joanna_lannister', 'cassana_estermont', 'rhaella_targaryen', 'elia_martell', 'rhaenys_targaryen', 'alannys_harlaw', 'mellario']);
+// Shared rules about people: sex and succession.
+// Every character carries `sex` ('m' | 'f') from the data (data/characters.js WOMEN, data/families.js) or from whoever
+// created them (the generated lords and kin). Old saves carried `gender`; a character the story invented may carry
+// neither, and only then is the title read.
 export function isFemale(c) {
   if (!c) return false;
+  if (c.sex) return c.sex === 'f';
   if (c.gender) return c.gender === 'f';
-  return FEMALE.has(c.id) || /\b(lady|queen|princess|spearwife|septa|maid|daughter|wife|mother|widow|khaleesi)\b/i.test(c.title || '');
+  return /\b(lady|queen|princess|spearwife|septa|maid|daughter|wife|mother|widow|khaleesi)\b/i.test(c.title || '');
 }
+export const sexOf = (c) => (isFemale(c) ? 'f' : 'm');
 
 /** Pronouns for the engine's own text, so Lady Mormont is not written "he". */
 export function pronouns(c) {
