@@ -203,6 +203,9 @@ of the Daynes of High Hermitage).
 
 `engine/politics/commitments.js`.
 
+> *Implemented in WP B10* ([DECISIONS D-034](DECISIONS.md)): eight kinds the engine can act on and judge; sincerity,
+> acting on it, judging and voiding as §9.2. Guest right (§9.3) comes with the beats that need it (D1–D2).
+
 ### 9.1 Kinds
 
 `march_to {place}` · `send_men {men, to, by}` · `join_war {war, side}` · `stay_neutral {war}` · `pay {amount, by}` ·

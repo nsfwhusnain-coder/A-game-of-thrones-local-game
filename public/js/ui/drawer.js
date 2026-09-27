@@ -183,7 +183,7 @@ async function renderLetters(body) {
   const s = app.state;
   const LABEL = { 'in flight': ['underway', 'In flight'], delivered: ['done', 'Delivered'], answered: ['answered', 'Answered'] };
   const today = s.meta.date.year * 360 + (s.meta.date.month - 1) * 30 + (s.meta.date.day - 1);
-  const sent = (s.post || []).slice(0, 12).map((x) => { const [c, l] = LABEL[x.status] || ['', x.status]; return `<div class="errand"><span class="ost ${c}">${l}</span><div class="grow"><b>To ${esc(x.toName)}</b> <span class="muted">· sent ${esc(x.sent.replace(/, \d+ AC$/, ''))}${x.status === 'in flight' ? ` · lands in ~${Math.max(1, x.arriveDay - today)} ${x.arriveDay - today === 1 ? 'day' : 'days'}` : ''}</span><div class="muted" style="font-size:0.8rem">${esc(x.text.slice(0, 140))}${x.text.length > 140 ? '…' : ''}</div></div></div>`; }).join('');
+  const sent = (s.post || []).filter((x) => !x.reply).slice(0, 12).map((x) => { const [c, l] = LABEL[x.status] || ['', x.status]; return `<div class="errand"><span class="ost ${c}">${l}</span><div class="grow"><b>To ${esc(x.toName)}</b> <span class="muted">· sent ${esc(x.sent.replace(/, \d+ AC$/, ''))}${x.status === 'in flight' ? ` · lands in ~${Math.max(1, x.arriveDay - today)} ${x.arriveDay - today === 1 ? 'day' : 'days'}` : ''}</span><div class="muted" style="font-size:0.8rem">${esc(x.text.slice(0, 140))}${x.text.length > 140 ? '…' : ''}</div></div></div>`; }).join('');
   body.innerHTML = `<h4>Received</h4>${s.ravens.map(ravenHtml).join('') || '<p class="muted">No ravens have come.</p>'}${sent ? `<h4 style="margin-top:1rem">Sent</h4>${sent}` : ''}`;
   if (s.ravens.some((r) => !r.read)) { try { const r = await api(`/games/${app.saveId}/ravens/read`, { body: {} }); s.ravens = r.ravens; app.renderTop?.(); } catch { /* */ } }
 }
@@ -241,7 +241,7 @@ function temperHtml(c) {
   const s = app.state; if (c.house === s.meta.player) return '';
   const { tags, sway } = natureTags(temperament(c));
   const m = s.moods?.[c.id]; const fresh = m && m.turn === s.meta.turn;
-  const mood = fresh ? moodWord(m) : 'composed';
+  const mood = fresh ? (m.word || moodWord(m)) : 'composed'; // the server sends the word a face shows, not the numbers
   const pips = fresh && m.full ? `<span class="pips" title="Patience left">${Array.from({ length: m.full }, (_, i) => `<i class="${i < m.patience ? 'on' : ''}"></i>`).join('')}</span>` : '';
   return `<div class="temper"><span class="mood m-${mood.replace(/\s.*/, '')}">${esc(mood)}</span>${pips}<span class="tags">${esc(tags.slice(0, 4).join(' · '))}${sway.length ? ` <span class="muted">— moved by ${esc(sway.slice(0, 2).join(', '))}</span>` : ''}</span></div>`;
 }
@@ -250,6 +250,12 @@ function msgHtml(m, c) {
   if (m.role === 'player') return `<div class="msg player"><div class="who">You · ${esc(m.date || '')}${m.via === 'raven' ? ' · sent by raven' : ''}</div>${esc(m.text)}</div>`;
   // a letter's answer is on the wing: it is read when the raven lands, not before
   if (m.pending) return `<div class="msg npc pending"><div class="who">${icon('raven', 'tg-ico')} ${esc(sp?.name || '')}</div><i>Your raven is on the wing. An answer may come by ${esc(m.date || 'a few days')} — it will reach your Letters and the chronicle when it lands.</i></div>`;
+  // the advisor's answer: an opening, then headings (a line in capitals) with their points ("- ")
+  if (m.advisor) {
+    const lines = String(m.text).split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const html = lines.map((l) => (/^- /.test(l) ? `<li>${esc(l.slice(2))}</li>` : /^[A-Z][A-Z ,'’-]{3,}$/.test(l) ? `</ul><h5 class="adv-h">${esc(l)}</h5><ul class="adv-l">` : `<p class="beat say">${esc(l)}</p>`)).join('');
+    return `<div class="msg npc advisor" data-speaker="${sp?.id || ''}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}</div><div class="beats"><ul class="adv-l">${html}</ul></div></div>`.replace(/<ul class="adv-l"><\/ul>/g, '');
+  }
   // a reply is a small scene: what you see them do, and what they say
   const bs = beats(m.text);
   // narration reads as a novel's prose; speech is set in quotation marks
@@ -306,17 +312,17 @@ function renderCouncil(body) {
   body.innerHTML = `<div class="chat">
     <div class="chat-head"><div class="council-faces">${ids.map((i) => `<img src="${por(s.characters[i], 40)}" title="${esc(s.characters[i].name)}">`).join('')}</div><div style="flex:1;margin-left:0.8rem"><div class="title" style="font-family:var(--display);color:var(--gold2)">Council</div><div class="sub muted" style="font-size:0.78rem">${ids.map((i) => esc(s.characters[i].name.split(' ')[0])).join(', ')}</div></div><button class="btn small" data-action="close-chat">✕</button></div>
     <div class="chat-log" id="chat-log">${log.length ? log.map((m) => msgHtml(m, null)).join('') : '<div class="muted" style="font-style:italic">Your counsellors take their seats. What would you put before them?</div>'}</div>
-    <div class="quick-asks">${['Give me a full accounting of our strength.', 'What threats face us?', 'What should we do this moon?', 'Can we afford a war?'].map((q) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+    <div class="quick-asks">${ADVISOR_ASKS(s).map((q) => `<button data-q="${esc(q)}" data-advisor="1" title="One of them answers at length">${esc(q)}</button>`).join('')}</div>
     <div class="chat-input"><textarea id="chat-text" rows="3" placeholder="Put a question to the council…"></textarea><div class="chat-btns"><button class="btn primary" id="chat-send">Ask</button>${log.some((m) => m.role === 'npc') ? '<button class="btn ghost" id="chat-listen" title="Say nothing — let them go on among themselves">Let them talk</button>' : ''}</div></div></div>`;
   const logEl = $('#chat-log'); logEl.scrollTop = logEl.scrollHeight;
-  const send = async (text, listen = false) => {
+  const send = async (text, listen = false, advisor = false) => {
     text = listen ? '' : (text ?? $('#chat-text').value).trim(); if ((!text && !listen) || app.busy) return;
     if (!listen) $('#chat-text').value = '';
     logEl.insertAdjacentHTML('beforeend', `${listen ? '' : `<div id="pending-msg">${msgHtml({ role: 'player', text, date: dateStr(s.meta.date) })}</div>`}<div class="msg npc" id="typing"><i>${listen ? 'You say nothing. They go on among themselves…' : 'The council deliberates…'}</i></div>`); logEl.scrollTop = 1e9;
     const stop = waitStatus('The council', true);
     try {
       app.busy = true;
-      const r = await api(`/games/${app.saveId}/council`, { body: { members: ids, message: text } });
+      const r = await api(`/games/${app.saveId}/council`, { body: { members: ids, message: text, advisor } });
       const before = (app.state.chats['council:' + [...ids].sort().join(',')] || []).length;
       app.setState(r.state, { keepDrawer: true });
       if (app.drawerTab === 'audience') { renderCouncil(body); const fresh = [...body.querySelectorAll('.msg.npc')].slice(-Math.max(1, (r.replies || []).length)); playScene(fresh); }
@@ -325,5 +331,11 @@ function renderCouncil(body) {
   $('#chat-send').onclick = () => send();
   const ls = $('#chat-listen'); if (ls) ls.onclick = () => send('', true);
   $('#chat-text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
-  $$('.quick-asks button', body).forEach((b) => b.onclick = () => send(b.dataset.q));
+  $$('.quick-asks button', body).forEach((b) => b.onclick = () => send(b.dataset.q, false, !!b.dataset.advisor));
+}
+// the advisor's questions (04 §8.4): one counsellor answers each at length
+function ADVISOR_ASKS(s) {
+  const p = s.meta.player; const home = s.holdings[s.houses[p].seat]?.pos;
+  const big = Object.values(s.houses).filter((h) => h.id !== p && h.liege !== p && s.holdings[h.seat] && home).map((h) => [h, Math.hypot(s.holdings[h.seat].pos[0] - home[0], s.holdings[h.seat].pos[1] - home[1]) / 400 - (Number(h.figures?.levies?.v) || 0) / 10000]).sort((a, b) => a[1] - b[1])[0]?.[0];
+  return ['Summarise what has happened since we began.', 'What threatens us most, and what should we do first?', ...(big ? [`How do we stand against ${/^the /i.test(big.name) ? big.name : `House ${big.name}`}?`] : []), 'Can we afford a war? For how long?', 'Who among our vassals is least loyal, and why?', 'What would my father have done?'];
 }

@@ -360,6 +360,11 @@ lively; default light = one hook per ~2 weeks of game time). **Goal:** when the 
 
 ### 8.1 Audience (face to face)
 
+> *Implemented in WP B10* ([DECISIONS D-034–D-036](DECISIONS.md)): `server/ai/calls/audience.js` (this schema; the
+> verdict limits `agrees_to` to the request read from the words), `server/ai/calls/council.js` (council and advisor, §8.4),
+> `server/letters.js` (§8.2: read and answered on the day a letter lands), `server/ai/context/officers.js` (B-15). The
+> letter call of §8.3 comes with the minds' letters (D6).
+
 Context: persona (history, nature, speech manner from `data/demeanours.js` / `voices.js`), mood (`temperament.js`
 moods), what they know (their house's knowledge, *including the true state of musters and hosts they would know* —
 fixes B-15), their opinion of the player's lord and why, their open commitments, the engine's **verdict** for this line

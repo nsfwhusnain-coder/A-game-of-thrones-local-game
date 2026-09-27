@@ -113,7 +113,7 @@ export const DIPLOMACY = [
       return { post: id, to: c.name, days };
     },
     receipt: (state, i, d) => [{ ok: true, text: `A raven flies to ${d.to} (~${d.days} ${d.days === 1 ? 'day' : 'days'}).`, eta: d.days }],
-    // the post is the player's letters; lords write to each other when letters are their own things (WP B10)
-    facts: ['letter_sent'], mind: { allowed: false, until: 'B10' },
+    // the post is the lord's letters, each answered when it lands (server/letters.js)
+    facts: ['letter_sent'], mind: { allowed: false, until: 'D6' }, // lords write when they have something to ask (09 §2.4, D-036)
   },
 ];

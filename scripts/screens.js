@@ -146,6 +146,29 @@ const SCENARIOS = {
       });
     } };
   },
+  // an audience that binds (WP B10): asked to come to Moat Cailin, Theon Greyjoy gives his word — the promise, and what
+  // the engine records of it, under his answer
+  async audience() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 298 });
+    await api(`/games/${id}/talk`, { character: 'theon_greyjoy', message: 'Theon, you are the bravest of my wards. Will you ride to Moat Cailin within the fortnight and hold it for me? I will give you 500 gold dragons.' });
+    return { id, focus: state.holdings.stark.pos, dist: 900, page: async (page) => {
+      await page.evaluate(async () => { const d = await import('/js/ui/drawer.js'); d.openChat('theon_greyjoy'); });
+      await page.waitForTimeout(1200);
+    } };
+  },
+  // the council's advisor (WP B10): one counsellor answers at length from what their office truly knows
+  async advisor() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 298 });
+    const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
+    await api(`/games/${id}/act`, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 3000 });
+    await api(`/games/${id}/advance`, { span: '7d', orders: [] });
+    const members = ['luwin', 'rodrik_cassel', 'vayon_poole'];
+    await api(`/games/${id}/council`, { members, message: 'What threatens us most, and what should we do first?', advisor: true });
+    return { id, focus: state.holdings.stark.pos, dist: 900, page: async (page) => {
+      await page.evaluate(async (ids) => { const d = await import('/js/ui/drawer.js'); d.openCouncil(ids); }, members);
+      await page.waitForTimeout(1200);
+    } };
+  },
   // beginning a chronicle, ironman or not (WP B3)
   async begin() {
     return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); } };

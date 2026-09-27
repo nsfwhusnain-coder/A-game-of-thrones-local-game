@@ -531,3 +531,48 @@ memories stay on the server (`secretHidden` tells the sheet there is more to kno
 maester's estimate (two significant figures) and no ledgers; only the player's own knowledge; no minds, no replies not
 yet arrived, no secret pacts; turn records without the minds' counsel or the engine's applied operations. `hiddenTruths`
 checks invariant 10 over a view, in the tests and over a six-week game.
+
+## D-034 · 2026-09-27 · Promises the engine keeps: what can be promised, and how it is judged (WP B10)
+
+**What.** 08 §9.1 lists sixteen kinds of commitment; B10 implements the eight the engine can both act on through its
+verbs and judge from the state: `march_to {place}`, `send_men {place, men}`, `attend {place}`, `pay {gold}`,
+`release {captive}`, `swear_fealty`, `join_war`, `stay_neutral` (`engine/politics/commitments.js`). The rest (marry,
+betroth, hand_over, grant, keep_secret, hold, open_gate, deliver_letter) come with the verbs that can keep them.
+Sincerity is rolled once, in secret: `0.25 + 0.55 × honesty + relation/400 − 0.25 under duress (a 'yield') ± 0.15`;
+a promise meant (≥ 0.5) is acted on from the next turn's first day through the maker's verbs (a host marched, levies
+raised to the place, a gift sent, a prisoner released, fealty sworn, war declared on the promisee's enemy); one not
+meant is never acted on. It is judged every turn after the marches: kept as soon as it stands kept (a host within 40
+miles of the place; the gold sent; the captive free…), broken on its due day (relation −15 private, −25 witnessed,
+−40 public with an `oathbreaker` mark), `stay_neutral` broken the moment the maker goes to war on the promisee, void when
+the maker dies or is taken. Every step is a fact. The player's view carries promises made to or by their house, without
+their sincerity.
+
+**What the model may promise.** The audience call's `agrees_to` enum is the request the engine read from the lord's
+words (`requestOf`: a place and "men/host/banners" → `march_to`, with a number → `send_men`; "come/attend" → `attend`;
+"release" and a captive of theirs → `release`; a sum asked → `pay`; fealty, alliance, truce → `swear_fealty`,
+`join_war`, `stay_neutral`; "within the fortnight / ten days / a moon" → the days), and only under an `agree` or `yield`
+verdict; every other verdict has `maxItems: 0`. The target is that request's place or person. A proposal agreed (an
+alliance, a truce, fealty) is still settled by the engine as before (`holdToVerdict`), never by the model.
+
+## D-035 · 2026-09-27 · Audiences, letters and councils change nothing but through the engine (WP B10)
+
+**What.** The old audience and council replies carried `changes` — figures, pacts, marches, relations — applied to the
+world from the model's words (a breach of 03 §1 the audit flagged). Both are now constrained calls (`calls/audience.js`,
+`calls/council.js`) whose only effects are what the engine derives: the verdict's settlement of a proposal, the
+commitments of `agrees_to`, a secret let slip under a `yield` (learned by the lord's house by confession). The lord's
+own people are ordered, not asked: their words are read by the order interpreter with them as the addressee and done
+through the verbs *before* they answer, and the answer is told what they are about to do. Letters are things
+(`server/letters.js`, in `state.post`): a letter is read and weighed on the day it lands, in the world of that day, by
+the audience call in letter mode; the answer is a letter too, flying back the same number of days, delivered to the
+inbox, the conversation and the chronicle when it lands; its promises are private and date from its writing. Words in
+a written order that name a lord of another house and were not read as anything the engine can do go as such a letter.
+The old answers written when the letter was sent (`pendingReplies`) are still delivered for older saves. The council's
+officers speak from what their office truly knows (the steward the ledger, the master-at-arms the hosts and the
+muster, the maester the letters, the season and the muster, the spymaster the reports and spies); the advisor is one
+of them, chosen by the question, answering at length under headings.
+
+## D-036 · 2026-09-27 · Lords write letters with their goals (WP D6, not B10)
+
+**What.** Minds may not yet choose `send_letter`: a lord's letter needs something to ask or offer, which the goals and
+the NPC-to-NPC diplomacy of 09 §2.1 and §2.4 (WP D6) give. Until then the realm's lords answer the lord's letters and
+keep or break what they promise; they do not start correspondence.

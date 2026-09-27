@@ -46,6 +46,11 @@ export function nextTurnLength(state) {
   }
   // an answer to a letter lands
   for (const r of state.pendingReplies || []) add(r.arrivesDay - today, `a raven from ${state.characters[r.char]?.name || 'afar'}`);
+  // …or the answer to one of the lord's letters (server/letters.js): due back when the raven has flown both ways
+  for (const l of state.post || []) {
+    if (l.reply && l.status === 'in flight') add(l.arriveDay - today, `a raven from ${state.characters[l.from]?.name || 'afar'}`);
+    else if (!l.reply && !l.answered && l.status === 'in flight' && state.characters[l.to]?.house !== state.meta.player) add(l.arriveDay + (l.days || 1) - today, `a raven from ${state.characters[l.to]?.name || 'afar'}`);
+  }
   // hosts and great companies coming to the player's lands; guests arriving at their hall
   const mineHold = Object.values(state.holdings).filter((h) => h.owner === p);
   for (const a of Object.values(state.parties)) {

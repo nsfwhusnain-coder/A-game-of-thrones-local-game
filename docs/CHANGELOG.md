@@ -3,6 +3,27 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-27 — B10: a lord's word binds (WP B10)
+
+- **What a lord promises in an audience, he is held to.** Ask Roose Bolton to bring his men to Moat Cailin within the
+  fortnight; if he agrees, the promise is recorded under his answer ("promises to bring his men to Moat Cailin within
+  14 days"). If he meant it, his men turn for Moat Cailin the next day; if he did not — and whether he did is his
+  secret — they do not. On the day it falls due the promise is kept or broken, the chronicle says which, and a broken
+  promise costs him your house's regard. A lord who refuses promises nothing; one who names a price has not yet agreed.
+- **Letters are real.** A letter to someone far away flies for days; it is read and weighed the day it lands, in the
+  mood and the world of that day, and the answer flies back and arrives in your Letters, the conversation and the
+  chronicle when it lands. Words in your orders to a lord of another house go as such a letter.
+- **Your own people do what you command and tell you so.** Commands in an audience with your own people are carried
+  out, and their answer describes what they are about to do.
+- **Your officers know the truth.** Ask Maester Luwin how the banners stand: who has come, who is on the road and how
+  far, who has not answered. The council speaks from what each office knows; the new questions under the council
+  ("What threatens us most?", "Can we afford a war?") are answered at length by the counsellor who knows the matter.
+- The model no longer changes anything in an audience, a letter or a council: everything that happens goes through the
+  game's own rules.
+- Owner to verify: call the banners, end a week, bring Roose Bolton to Winterfell (or ask any lord at your court), and
+  ask him for his men somewhere within a fortnight; see the promise under his answer and, over the next weeks, in the
+  chronicle. Write to Lysa Arryn and watch the raven go and come back.
+
 ## 2026-09-27 — B9: every house knows only what has reached it (WP B9)
 
 - **News travels.** What happens within sight of your castles, your sworn lords' castles and your hosts you know at

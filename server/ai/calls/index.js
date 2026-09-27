@@ -4,5 +4,7 @@ import probe from './probe.js';
 import interpret from './interpret.js';
 import mind from './mind.js';
 import narrate from './narrate.js';
+import audience from './audience.js';
+import council from './council.js';
 
-export const CALLS = { probe, interpret, mind, narrate };
+export const CALLS = { probe, interpret, mind, narrate, audience, council };

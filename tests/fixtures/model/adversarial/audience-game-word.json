@@ -1,0 +1,7 @@
+{
+ "kind": "audience",
+ "note": "A game word in the scene.",
+ "reply": "{\"beats\": [{\"kind\": \"speech\", \"text\": \"My men's morale is high; they will march.\"}], \"outcome\": {\"agrees_to\": [], \"asks_for\": \"\", \"reveals\": \"none\", \"mood\": \"guarded\"}}",
+ "expect": "refuse",
+ "problem": "not a word of the realm"
+}
