@@ -56,7 +56,7 @@ The first launch builds the map, which takes a few seconds. It is cached in your
 
 If a reply is cut off, the game asks the model to finish it. If the model spends its whole budget thinking, the game asks again without thinking. Broken JSON (raw quotes inside dialogue, stray commas) is repaired where possible, and the model is asked once more if not.
 
-**Model advice:** the simulator juggles hundreds of ids and must return valid JSON, so bigger instruct models do much better. Roughly 24B–70B, or a strong MoE. Larger context lets it see the whole world at once. Keep the temperature around 0.7–0.9.
+**Model advice:** the simulator juggles hundreds of ids and must return valid JSON, so bigger instruct models do much better. Roughly 24B–70B, or a strong MoE. Larger context lets it see the whole world at once. Keep the temperature around 0.7–0.9. If your endpoint exposes several loaded models, Settings can route each council seat separately: a quick model can serve the clerks while a stronger prose model writes as the Bard.
 
 ## What's in the game
 

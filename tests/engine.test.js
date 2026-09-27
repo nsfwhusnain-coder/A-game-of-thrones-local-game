@@ -946,7 +946,9 @@ test('a camp fills day by day, then takes the road instead of marching while men
   assert.equal(host.march?.pending, true);
   assert.equal(host.at, 'stark');
   const events = advanceMusters(s, 14);
-  assert.ok(events.length > 2 && events.every((e, i) => !i || e.day > events[i - 1].day));
+  assert.equal(events.length, 1, 'the chronicle gets one dated muster scene, not a card for every dawn');
+  assert.ok(events[0].day > 1 && host.musterMotion.from < host.musterMotion.to);
+  assert.ok(host.musterMotion.start < host.musterMotion.end, 'playback carries the day-by-day growth');
   assert.equal(host.muster, undefined);
   assert.equal(host.march.to, 'hardhome');
   assert.equal(host.men, 1400);
@@ -1018,4 +1020,13 @@ test('a great column churns a wet road to mud, and a summer without marches heal
   logisticsTick(s, 120);
   assert.ok(roadSlowdown(s, from, to) < mud);
   assert.ok(cut > marchDays(a, from, to, s).days);
+});
+
+import { chronicleNeedsRewrite } from '../server/agents.js';
+test('the chronicler rejects occurrence lists but accepts grounded scenes', () => {
+  assert.equal(chronicleNeedsRewrite({ summary: 'Things happened.', events: [{ title: 'A battle', text: 'The north won.', details: '', importance: 4 }] }), true);
+  assert.equal(chronicleNeedsRewrite({
+    summary: 'All morning the wounded came south beneath torn grey banners, bringing a victory that tasted more of marsh water and blood than glory. The castle kitchens fell silent when the count was read aloud.',
+    events: [{ title: 'Grey banners at the causeway', importance: 4, text: 'Catelyn hears the column before she sees it: cart axles crying in the ruts, then the slow slap of wet wool. Ser Rodrik dismounts beneath the gatehouse and gives her the names of the dead.', details: 'Rain runs from his whiskers onto the list in his hand. Behind him, three riderless horses are led into the yard, and no one reaches for their bridles.' }],
+  }), false);
 });

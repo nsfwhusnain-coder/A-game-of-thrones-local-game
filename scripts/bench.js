@@ -23,7 +23,7 @@ fs.cpSync(path.join(ROOT, 'server'), path.join(work, 'server'), { recursive: tru
 fs.symlinkSync(path.join(ROOT, 'public'), path.join(work, 'public'));
 fs.mkdirSync(path.join(work, 'saves'));
 const base = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'utf8')); } catch { return {}; } })();
-const cfg = { ...base, ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.effort ? { reasoningEffort: args.effort === 'default' ? '' : args.effort } : {}), ...(args.thinking ? { thinking: args.thinking } : {}), ...(args.mock ? { provider: 'mock' } : {}) };
+const cfg = { ...base, ...(process.env.WC_PROVIDER ? { provider: process.env.WC_PROVIDER } : {}), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.effort ? { reasoningEffort: args.effort === 'default' ? '' : args.effort } : {}), ...(args.thinking ? { thinking: args.thinking } : {}), ...(args.mock ? { provider: 'mock' } : {}) };
 fs.writeFileSync(path.join(work, 'config.json'), JSON.stringify(cfg, null, 2));
 process.chdir(work);
 const game = await import(path.join(work, 'server/game.js'));
@@ -60,6 +60,11 @@ if (!args.only || args.only === 'turns') {
     const story = `${t.summary} ${t.events.map((e) => `${e.title} ${e.text} ${e.details || ''}`).join(' ')}`.toLowerCase();
     const followed = orders.map((o) => { const keys = o.toLowerCase().match(/\b(rodrik|white harbor|tully|riverrun|levies|feast|moat cailin|robb|frey|twins)\b/g) || []; return keys.some((k) => story.includes(k)) || (t.applied || []).some((a) => keys.some((k) => String(a.text).toLowerCase().includes(k))) || (t.carried || []).length > 0 && keys.some((k) => JSON.stringify(t.carried).toLowerCase().includes(k)); });
     add('turn completes', !t.salvaged); add('reply parses first try', firstOk && !retried); add('orders appear in the story', followed.every(Boolean));
+    let written = null; try { written = extractJson(calls.at(-1)?.response || ''); } catch { /* already scored above */ }
+    const scenes = (written?.events || []).filter((e) => Number(e.importance ?? 2) >= 2);
+    const grounded = scenes.filter((e) => String(e.details || '').trim().length >= 55 && `${e.text || ''} ${e.details || ''}`.length >= 150);
+    add('model events are grounded scenes', !scenes.length || grounded.length > scenes.length / 2);
+    add('chronicle avoids game vocabulary', !/\b(?:game|turn|tick|stat|buff|debuff|supply (?:meter|points?)|morale points?|mechanic)\b/i.test(`${written?.summary || ''} ${JSON.stringify(written?.events || [])}`));
     const [lo, hi] = { '1d': [0, 4], '1w': [1, 6], '1m': [2, 8] }[span] || [2, 11];
     add(`events in range for ${span}`, main.length >= lo && main.length <= hi);
     log(`- **${span}**: ${secs(ms)}${t.usage ? ` · prompt ${t.usage.prompt_tokens} (cached ${t.usage.prompt_tokens_details?.cached_tokens ?? '?'}) · reply ${t.usage.completion_tokens}` : ''} · ${t.salvaged ? 'SALVAGED' : firstOk && !retried ? 'parsed' : 'parsed after repair/retry'} · ${main.length} story events, ${t.events.filter((e) => e.bg).length} background · orders followed: ${followed.map((f) => (f ? '✓' : '✗')).join(' ')}`);

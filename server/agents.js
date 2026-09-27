@@ -151,6 +151,15 @@ export function briefFromApplied(applied, head) {
   return `${head}\n${out.join('\n')}`;
 }
 
+/** A chronicle is witnessed scenes, not release notes. Quiet turns may remain quiet. */
+export function chronicleNeedsRewrite(out = {}) {
+  const events = Array.isArray(out.events) ? out.events.filter((e) => !e.bg && Number(e.importance ?? 2) >= 2) : [];
+  if (!events.length) return false;
+  const thin = events.filter((e) => `${e.text || ''} ${e.details || ''}`.trim().length < 150 || String(e.details || '').trim().length < 55);
+  const mechanical = events.filter((e) => /\b(?:game|turn|tick|stat|buff|debuff|supply (?:meter|points?)|morale points?|mechanic)\b/i.test(`${e.text || ''} ${e.details || ''}`));
+  return String(out.summary || '').trim().length < 100 || mechanical.length > 0 || thin.length > events.length / 2;
+}
+
 export function briefFromWhispers(obj) {
   const w = Array.isArray(obj?.whispers) ? obj.whispers : [];
   return w.length ? `WHAT MOVES BENEATH THE SURFACE (write around it — the player may not learn it plainly)\n${w.slice(0, 4).map((x) => '- ' + String(x).slice(0, 220)).join('\n')}` : '';

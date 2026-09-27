@@ -6,7 +6,7 @@ import { chat, extractJson, extractField, loadConfig, estimateTokens, readReplie
 import { buildJumpPrompt, buildChatPrompt, buildSuggestPrompt, buildConsolidatePrompt, buildCouncilPrompt, engineFacts } from './prompts.js';
 import { createInitialState, migrateState, applyChanges, placePos, placeName, addDays, dateStr, SPANS, spanOf, resolvePlaceId, dayNumber, findChar, nearestHolding } from '../public/js/shared/world.js';
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
-import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
+import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied, chronicleNeedsRewrite } from './agents.js';
 import { chokepointToll, roadCongestion } from '../public/js/shared/chokepoints.js';
 import { logisticsTick } from '../public/js/shared/logistics.js';
 import { psycheTick } from '../public/js/shared/psyche.js';
@@ -197,6 +197,7 @@ async function runSwarm(id, state, cfg, ctx) {
       maxTokens: isBard ? cfg.maxTokens : Math.min(cfg.maxTokens, agent === 'hand' ? 1800 : 900),
       temperature: isBard ? cfg.temperature : Math.min(cfg.temperature, 0.6), // the clerks are sober; the Bard is not
       agent, agentLabel: AGENT_LABELS[agent], agentStep: i + 1, agentTotal: agents.length,
+      ...(cfg.agentModels?.[agent] ? { cfgOverride: { model: cfg.agentModels[agent] } } : {}),
     }).catch((e) => ({ obj: null, error: e.message }));
     last = r.raw || last;
     const obj = r.obj;
@@ -218,7 +219,16 @@ async function runSwarm(id, state, cfg, ctx) {
 
   // The Bard is told what happened, not what was decided: the engine's own receipts.
   if (!bard) return { obj: null, raw: last, error: 'the chronicler wrote nothing', text: '' };
-  const out = bard.obj || null;
+  let out = bard.obj || null;
+  if (chronicleNeedsRewrite(out)) {
+    const correction = `${briefs.join('\n\n')}\n\nYOUR FIRST DRAFT READ LIKE AN OCCURRENCE LIST. Rewrite the whole JSON once. Keep every engine-set fact, date, victor and loss unchanged, but make each important event a witnessed scene: a named point of view, physical surroundings, a human choice and its immediate cost. Give each details field at least two grounded sentences. Never mention rules, turns, points or meters.`;
+    const rr = await askJson(id, 'jump', build('bard', correction), cfg, {
+      spanDays, streamText: true, maxTokens: cfg.maxTokens, temperature: cfg.temperature,
+      agent: 'bard', agentLabel: 'The chronicler sands the dry ink away', agentStep: agents.length, agentTotal: agents.length,
+      ...(cfg.agentModels?.bard ? { cfgOverride: { model: cfg.agentModels.bard } } : {}),
+    }).catch((e) => ({ obj: null, error: e.message }));
+    if (rr.obj) { bard = rr; out = rr.obj; }
+  }
   return { obj: out ? { summary: out.summary, events: out.events, threads: out.threads, changes: [] } : null, raw: bard.raw || last, error: bardErr || bard.error, text: bard.text };
 }
 const AGENT_SOURCE = { hand: 'The doings of the realm', weaver: 'A custom of the realm', whisperer: 'Whispers and letters' };

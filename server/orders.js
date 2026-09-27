@@ -537,9 +537,12 @@ export function advanceMusters(state, days) {
       const add = Math.min(m.remaining, Math.max(1, Math.round(m.daily)));
       a.units = addUnits(unitsOf(state, a), unitsFor(state, { owner: a.owner, composition: a.composition }, add));
       a.men += add; m.remaining -= add; lastDay = day;
-      if (a.owner === state.meta.player || a.serving === state.meta.player) events.push({ day, title: `${a.name} grows beneath the walls`, text: `${add.toLocaleString('en-GB')} more men reach the camp from the fields. ${a.name} now numbers ${a.men.toLocaleString('en-GB')}.`, details: m.remaining > 0 ? `${m.remaining.toLocaleString('en-GB')} men are still expected before the host takes the road.` : 'The last village contingent has come in; the muster is complete.', where: a.at || state.houses[a.owner]?.seat || null, importance: 2, type: 'war', houses: [a.owner] });
     }
     a.musterMotion = { start: Math.max(0, firstDay - 1) / Math.max(1, days), end: Math.max(firstDay, lastDay) / Math.max(1, days), from: startMen, to: a.men };
+    if (a.men > startMen && (a.owner === state.meta.player || a.serving === state.meta.player)) {
+      const added = a.men - startMen;
+      events.push({ day: lastDay, title: `${a.name} grows beneath the walls`, text: `${added.toLocaleString('en-GB')} more men reach the camp from the fields over ${Math.max(1, lastDay - firstDay + 1)} day${lastDay === firstDay ? '' : 's'}. ${a.name} now numbers ${a.men.toLocaleString('en-GB')}.`, details: m.remaining > 0 ? `${m.remaining.toLocaleString('en-GB')} men are still expected before the host takes the road.` : 'The last village contingent has come in; the muster is complete.', where: a.at || state.houses[a.owner]?.seat || null, importance: 2, type: 'war', houses: [a.owner] });
+    }
     if (m.remaining <= 0) {
       const to = m.to; delete a.muster;
       if (to && to !== a.at) {

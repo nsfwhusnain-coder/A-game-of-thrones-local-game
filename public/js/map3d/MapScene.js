@@ -834,6 +834,13 @@ export class MapScene {
       const a = this.state?.armies[id]; if (!a) continue;
       let p = rec.view?.known === 'reported' ? rec.view.pos : a.pos, heading = null;
       if (rec.view?.known === 'reported') rec.anim = null;
+      // Muster camps visibly fill as the dated reel advances; the final army count is not shown
+      // at dawn before those men have walked in from the fields.
+      if (this.reelHold && a.musterMotion && rec.view?.known === 'seen' && a.type !== 'fleet') {
+        const m = a.musterMotion; const f = clamp(((this.reelF ?? 0) - m.start) / Math.max(0.02, m.end - m.start), 0, 1);
+        const men = Math.round(m.from + (m.to - m.from) * f); const b = rec.label.el.querySelector('b');
+        if (b) b.textContent = `${a.owner === this.state.meta.player ? '' : '~'}${fmt(men)}`;
+      }
       if (rec.anim) {
         const t = rec.anim.scrub ? clamp(this.reelHold ? ((this.reelF ?? 0) - (rec.anim.start || 0)) / Math.max(0.02, (rec.anim.end ?? 1) - (rec.anim.start || 0)) : 1, 0, 1) : clamp((now - rec.anim.t0) / rec.anim.dur, 0, 1); const e = rec.anim.scrub ? t : t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
         p = pointAlong(rec.anim.path, e); const p2 = pointAlong(rec.anim.path, Math.min(1, e + 0.02)); heading = Math.atan2(p2[1] - p[1], p2[0] - p[0]);

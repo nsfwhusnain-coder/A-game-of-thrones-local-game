@@ -61,6 +61,7 @@ export const DEFAULT_CONFIG = {
   baseUrl: 'http://localhost:1234/v1', // LM Studio default. Ollama: http://localhost:11434/v1  llama.cpp: http://localhost:8080/v1
   apiKey: '',
   model: '',                          // leave empty to use the server's loaded model
+  agentModels: {},                    // optional: { hand: 'fast-model', bard: 'prose-model' }
   temperature: 0.85,
   maxTokens: 6000,                    // max tokens for a single response
   contextTokens: 32768,               // your model's context window (e.g. 262144 for 256k)
@@ -390,10 +391,10 @@ function mockResponse(messages, opts) {
     const house = m ? m[1] : 'stark';
     const bannerCall = /CALL THE BANNERS|banner/i.test(last.split("PLAYER'S ORDERS")[1] || '');
     obj = {
-      summary: 'Mock simulation: the realm turns slowly. Ravens fly, lords feast, and rumours spread along the Kingsroad.',
+      summary: 'The realm turns beneath a pale autumn sky. Robert’s northbound court sends ravens ahead of its wheels, while stewards in distant halls count grain by candlelight and wonder how much will remain when strangers reach their gates.\n\nNo great sword is drawn, yet the roads carry the first weight of choices already made.',
       events: [
-        { title: 'Ravens over the Kingsroad', text: 'Word spreads that the King rides north. Innkeepers along the Kingsroad lay in stores.', where: 'kings_landing', importance: 2, type: 'court', houses: ['baratheon'] },
-        { title: 'A report from the steward', text: 'The steward counts the stores and finds them somewhat lower than expected after the harvest.', where: house, importance: 1, type: 'economy', houses: [house] },
+        { title: 'Ravens over the Kingsroad', text: 'A black-winged shadow crosses the rushes before the raven beats down into the yard. The message beneath its claw bears the crowned stag: the King rides north, and his household comes behind him.', details: 'At the nearest inn, the keeper stands amid flour dust and orders his daughters to salt the last sides of pork. Wheel rims are heard after dark now, and every traveller asks how far it is to Winterfell.', where: 'kings_landing', importance: 2, type: 'court', houses: ['baratheon'] },
+        { title: 'A report from the steward', text: 'By the light of one tallow candle, the steward drags a blunt finger down the harvest roll. The figures end sooner than they did last year.', details: 'He breaks the wax upon the lord’s small seal and orders the lower bins opened first. In the yard below, two carters argue over a sack that has split in the mud.', where: house, importance: 1, type: 'economy', houses: [house] },
       ],
       changes: [
         { op: 'figure', house, field: 'treasury', delta: 1200, source: 'Steward\'s ledger' },
