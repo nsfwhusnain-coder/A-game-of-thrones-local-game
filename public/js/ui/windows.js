@@ -5,6 +5,7 @@ import { whereabouts } from '../shared/roads.js';
 import { standing, standingWord } from '../shared/standing.js';
 import { regencyLine } from '../shared/regency.js';
 import { unitsText } from '../shared/units.js';
+import { provisionState, logisticsText } from '../shared/logistics.js';
 import { liveRules } from '../shared/rules.js';
 import { project, PROJECT_TEMPLATES, RESOURCES, TAX_LEVELS, SEASONS, tradeModifier } from '../shared/economy.js';
 import { SKILL_NAMES, SKILL_ICONS } from '../../data/families.js';
@@ -567,17 +568,17 @@ function armySheet(id) {
       <div class="s"><div class="k">${a.type === 'fleet' ? 'Crews' : 'Men'}</div><div class="v">${mine ? '' : '~'}${fmt(a.men)}</div></div>
       ${a.ships ? `<div class="s"><div class="k">Ships</div><div class="v">${fmt(a.ships)}</div></div>` : ''}
       <div class="s"><div class="k">Morale</div><div class="v">${a.morale}</div>${meter(a.morale, '#c9a44a')}</div>
-      <div class="s"><div class="k">Supply</div><div class="v">${a.supply}</div>${meter(a.supply, '#7fb85a')}</div>
+      ${a.type === 'fleet' ? '' : (() => { const p = provisionState(s, a); return `<div class="s"><div class="k">Provisions</div><div class="v">${p.days} days</div><small>${p.wagons} wagons · ${p.horses} horses</small></div>`; })()}
     </div>
-    <div class="kv"><span class="k">Position</span><span>${a.march ? `marching to ${esc(placeName(s, a.march.to))}${(() => { const d = s.holdings[a.march.to]?.pos; return d ? ` · ~${marchDays(a, a.pos, d).days} days away` : ''; })()}` : a.at ? esc(placeName(s, a.at)) : 'in the field'}</span>
-    <span class="k">Composition</span><span>${esc(a.composition || '—')}</span><span class="k">Reported</span><span>${esc(a.asOf || '')}</span></div>
+    <div class="kv"><span class="k">Position</span><span>${a.march?.pending ? `mustering at ${esc(placeName(s, a.at))}; then ${esc(placeName(s, a.march.to))}` : a.march ? `marching to ${esc(placeName(s, a.march.to))}${(() => { const d = s.holdings[a.march.to]?.pos; return d ? ` · ~${marchDays(a, a.pos, d, s).days} days away` : ''; })()}` : a.at ? esc(placeName(s, a.at)) : 'in the field'}</span>
+    <span class="k">Composition</span><span>${esc(a.composition || '—')}</span>${a.type === 'fleet' ? '' : `<span class="k">Baggage</span><span>${esc(logisticsText(s, a))}</span>`}<span class="k">Reported</span><span>${esc(a.asOf || '')}</span></div>
     ${cmd ? `<h4>Commander</h4>${charRow(cmd)}` : ''}
     ${(() => {
       const with_ = Object.values(s.characters).filter((c) => c.loc === 'army:' + a.id && c.alive && c.id !== a.commander);
       // only what the house knows: seen hosts as they are, reported ones where the word put them
       const known = viewOfArmies(s);
-      const foes = Object.values(s.armies).filter((b) => atWar(s, a.owner, b.owner) && known.has(b.id)).map((b) => { const k = known.get(b.id); const seen = k.known === 'seen'; const bb = seen ? b : { ...b, pos: k.pos, men: k.men, morale: 70, supply: 80, commander: null }; return { b: bb, seen, m: marchDays(a, a.pos, bb.pos), o: battleOdds(s, a, bb) }; }).sort((x, y) => x.m.days - y.m.days).slice(0, 4);
-      const targets = a.type === 'fleet' ? [] : Object.values(s.holdings).filter((h) => atWar(s, a.owner, h.owner)).map((h) => ({ h, m: marchDays(a, a.pos, h.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
+      const foes = Object.values(s.armies).filter((b) => atWar(s, a.owner, b.owner) && known.has(b.id)).map((b) => { const k = known.get(b.id); const seen = k.known === 'seen'; const bb = seen ? b : { ...b, pos: k.pos, men: k.men, morale: 70, supply: 80, commander: null }; return { b: bb, seen, m: marchDays(a, a.pos, bb.pos, s), o: battleOdds(s, a, bb) }; }).sort((x, y) => x.m.days - y.m.days).slice(0, 4);
+      const targets = a.type === 'fleet' ? [] : Object.values(s.holdings).filter((h) => atWar(s, a.owner, h.owner)).map((h) => ({ h, m: marchDays(a, a.pos, h.pos, s) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
       // what it is made of (seen hosts only), and the banners in it
       const banners = Object.entries(a.contingents || {}).filter(([, n]) => n > 0).map(([h, n]) => `${esc(s.houses[h]?.name || h)} ${n.toLocaleString('en-GB')}`);
       return (a.owner === p || known.get(a.id)?.known === 'seen' ? `<h4>The host</h4><div class="muted" style="font-size:0.88rem">${esc(unitsText(s, a))}${banners.length ? `<br>Banners: House ${esc(s.houses[a.owner]?.name)}, ${banners.join(', ')}` : ''}</div>` : '')

@@ -22,7 +22,7 @@ export function whereabouts(state, c) {
   if (String(c.loc || '').startsWith('army:')) {
     const a = state.armies[c.loc.slice(5)]; if (!a) return { text: 'in the field' };
     const dest = a.march?.to && state.holdings[a.march.to];
-    const days = dest ? marchDays(a, a.pos, dest.pos).days : 0;
+    const days = dest ? marchDays(a, a.pos, dest.pos, state).days : 0;
     return { text: `with ${a.name} (${a.men.toLocaleString('en-GB')} men)${dest ? ` · marching to ${dest.name}, ~${days} days` : a.at ? ` at ${placeName(state, a.at)}` : ''}`, place: a.at, to: a.march?.to, days, men: a.men };
   }
   return { text: placeName(state, c.loc), place: c.loc };

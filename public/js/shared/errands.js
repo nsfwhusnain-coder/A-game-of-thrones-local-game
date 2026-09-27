@@ -39,7 +39,7 @@ export function underway(state) {
     const foe = String(a.march.to).startsWith('army:') && state.armies[String(a.march.to).slice(5)];
     const dest = foe ? foe.pos : state.holdings[a.march.to]?.pos; if (!dest) continue;
     const party = Object.values(state.characters).filter((c) => c.alive && c.loc === 'army:' + a.id).map((c) => c.name);
-    out.push({ kind: 'march', id: a.id, who: a.name, text: `${fmt(a.men)} men${party.length ? ` with ${party.slice(0, 3).join(', ')}` : ''}, ${foe ? `after ${foe.name}` : `marching to ${placeName(state, a.march.to)}`}`, days: marchDays(a, a.pos, dest).days });
+    out.push({ kind: 'march', id: a.id, who: a.name, text: `${fmt(a.men)} men${party.length ? ` with ${party.slice(0, 3).join(', ')}` : ''}, ${foe ? `after ${foe.name}` : `marching to ${placeName(state, a.march.to)}`}`, days: marchDays(a, a.pos, dest, state).days });
   }
   for (const v of Object.values(state.houses)) {
     if (v.liege !== p || v.obligations?.levies !== 'called') continue;

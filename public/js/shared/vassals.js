@@ -111,7 +111,7 @@ export function vassalTick(state, days, touched = new Set()) {
             for (const c of riding) { c.loc = 'army:' + a.id; delete c.travel; }
           }
           const gathering = Math.ceil(Math.max(0, men - first) / daily);
-          const road = a && musterPos && ob.muster !== v.seat ? marchDays(a, seatPos, musterPos).days : 0;
+          const road = a && musterPos && ob.muster !== v.seat ? marchDays(a, seatPos, musterPos, state).days : 0;
           const text = `${lordName} answers the call. ${first.toLocaleString()} men have pitched camp beneath ${state.holdings[v.seat]?.name || 'his walls'}; ${Math.max(0, men - first).toLocaleString()} more are walking in from the fields over about ${gathering} days${riding.length ? `, with ${riding.map((c) => c.name).join(' and ')} riding beside him` : ''}${road ? `. When the muster is full they will march for ${state.holdings[ob.muster]?.name || 'the muster'} (~${road} days on the road)` : ''}.`;
           if (mine) events.push({ day: answerDay, title: `House ${v.name} begins to muster`, text, details: `The ${v.name} camp will grow each day at ${state.holdings[v.seat]?.name || 'their seat'} before it takes the road.`, where: v.seat, importance: 3, type: 'war', houses: [v.id] });
         } else {

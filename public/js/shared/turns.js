@@ -35,7 +35,7 @@ export function playbackMoments(events, spanDays) {
 function posAfter(state, a, d) {
   const to = a.march && (String(a.march.to).startsWith('army:') ? state.armies[String(a.march.to).slice(5)]?.pos : state.holdings[a.march.to]?.pos);
   if (!to) return a.pos;
-  const m = marchDays(a, a.pos, to).days; const f = Math.min(1, d / Math.max(1, m));
+  const m = marchDays(a, a.pos, to, state).days; const f = Math.min(1, d / Math.max(1, m));
   return [a.pos[0] + (to[0] - a.pos[0]) * f, a.pos[1] + (to[1] - a.pos[1]) * f];
 }
 /** The next moment worth stopping for: { days, reason }. */
@@ -47,7 +47,7 @@ export function nextTurnLength(state) {
     if (!a.march || !commandable(state, a) || (a.serving && a.owner !== p && !/following/.test(a.status || ''))) continue;
     const foe = String(a.march.to).startsWith('army:') && state.armies[String(a.march.to).slice(5)];
     const to = foe ? foe.pos : state.holdings[a.march.to]?.pos; if (!to) continue;
-    add(marchDays(a, a.pos, to).days, `${a.name} ${foe ? `reaches ${foe.name}` : `reaches ${placeName(state, a.march.to)}`}`);
+    add(marchDays(a, a.pos, to, state).days, `${a.name} ${foe ? `reaches ${foe.name}` : `reaches ${placeName(state, a.march.to)}`}`);
   }
   // A camp filling from the fields is itself a reason to look again tomorrow.
   // Without this, auto turns can jump over the visible growth of a muster.
@@ -57,7 +57,7 @@ export function nextTurnLength(state) {
   // a great bannerman's host reaches the muster (the host grows before the lord's eyes)
   for (const a of Object.values(state.armies)) {
     if (!a.serving || a.serving !== p || !a.march || a.men < 2000 || String(a.march.to).startsWith('army:')) continue;
-    const to = state.holdings[a.march.to]; if (to) add(marchDays(a, a.pos, to.pos).days, `${state.characters[a.commander]?.name || a.name}'s host reaches ${to.name}`);
+    const to = state.holdings[a.march.to]; if (to) add(marchDays(a, a.pos, to.pos, state).days, `${state.characters[a.commander]?.name || a.name}'s host reaches ${to.name}`);
   }
   // an answer to a letter lands
   for (const r of state.pendingReplies || []) add(r.arrivesDay - today, `a raven from ${state.characters[r.char]?.name || 'afar'}`);
@@ -66,7 +66,7 @@ export function nextTurnLength(state) {
   for (const a of Object.values(state.armies)) {
     if (!a.march || commandable(state, a)) continue;
     const dest = state.holdings[a.march.to];
-    if (dest?.owner === p && (a.public || a.party || a.men >= 500)) add(marchDays(a, a.pos, dest.pos).days, `${a.party ? state.characters[a.commander]?.name || a.name : a.name} arrives at ${dest.name}`);
+    if (dest?.owner === p && (a.public || a.party || a.men >= 500)) add(marchDays(a, a.pos, dest.pos, state).days, `${a.party ? state.characters[a.commander]?.name || a.name : a.name} arrives at ${dest.name}`);
   }
   // an enemy host comes within striking distance of the player's hosts or lands
   const foes = Object.values(state.armies).filter((b) => !commandable(state, b) && b.type !== 'fleet' && atWar(state, state.meta.player, b.owner));

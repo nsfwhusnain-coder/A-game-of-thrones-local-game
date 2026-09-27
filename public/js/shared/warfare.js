@@ -3,6 +3,7 @@
 import { realmOf, placeName } from './world.js';
 import { mounted } from './units.js';
 import { roadWarnings } from './chokepoints.js';
+import { baggagePace, provisionState, roadSlowdown } from './logistics.js';
 
 import { MILES_PER_UNIT } from "../../data/geography.js"; // ~1.85 miles per game unit on the atlas
 export { MILES_PER_UNIT };
@@ -25,7 +26,9 @@ export function strength(state, a) {
   const cav = /horse|cavalry|screamer|knight|rider/i.test(a.composition || '') ? 1.15 : 1;
   const quality = /men-at-arms|knights|heavy|gold cloak|unsullied|golden company/i.test(a.composition || '') ? 1.15 : /levies|farmers|smallfolk|wildling/i.test(a.composition || '') ? 0.85 : 1;
   const m = commanderMartial(state, a);
-  return a.men * ((a.morale ?? 70) / 100) * (0.75 + m / 40) * (0.6 + 0.4 * (a.supply ?? 80) / 100) * cav * quality;
+  const provisions = provisionState(state, a);
+  const fed = provisions.hungry ? 0.62 : provisions.days < 1 ? 0.75 : provisions.days < 3 ? 0.9 : 1;
+  return a.men * ((a.morale ?? 70) / 100) * (0.75 + m / 40) * fed * cav * quality;
 }
 
 export function battleOdds(state, att, def, { fort = 0, terrain = 1 } = {}) {
@@ -35,11 +38,15 @@ export function battleOdds(state, att, def, { fort = 0, terrain = 1 } = {}) {
   return { attacker: Math.round(p * 100), sa: Math.round(sa), sd: Math.round(sd) };
 }
 
-export function marchDays(a, from, to) {
+export function marchDays(a, from, to, state = null) {
   const d = Math.hypot(to[0] - from[0], to[1] - from[1]) * MILES_PER_UNIT * 1.12;
-  const sp = a.type === 'fleet' ? SPEED.fleet : (mounted(null, a) || (/horse|cavalry|screamer|rider/i.test(a.composition || '') && !a.units)) && a.men < 8000 ? SPEED.horse : SPEED.foot;
-  const slow = (a.men > 15000 ? 0.8 : 1) * (a.secrecy === 'hidden' ? 0.85 : 1); // by night and off the roads is slower
-  return { miles: Math.round(d), days: Math.max(1, Math.round(d / (sp * slow))) };
+  const sp = a.type === 'fleet' ? SPEED.fleet : (mounted(state, a) || (/horse|cavalry|screamer|rider/i.test(a.composition || '') && !a.units)) && a.men < 8000 ? SPEED.horse : SPEED.foot;
+  const winter = state?.world?.season === 'winter';
+  const near = state && Object.values(state.holdings).sort((x, y) => Math.hypot(x.pos[0] - from[0], x.pos[1] - from[1]) - Math.hypot(y.pos[0] - from[0], y.pos[1] - from[1]))[0];
+  const cold = winter && ['north', 'wall', 'beyond'].includes(near?.region);
+  const slow = (a.men > 15000 ? 0.8 : 1) * (a.secrecy === 'hidden' ? 0.85 : 1)
+    * baggagePace(a) * (1 - roadSlowdown(state, from, to)) * (cold ? 0.62 : winter ? 0.85 : 1);
+  return { miles: Math.round(d), days: Math.max(1, Math.round(d / Math.max(2, sp * slow))) };
 }
 
 /** Months a besieged holding can hold out: food, garrison and walls. */
@@ -80,7 +87,7 @@ export function warRoom(state) {
   }
   // marches under way
   for (const a of armies.filter((x) => x.dest)) {
-    const m = marchDays(a, a.pos, a.dest);
+    const m = marchDays(a, a.pos, a.dest, state);
     // geography is not negotiable: what the road makes them pay is stated before they walk it
     const road = a.type === 'fleet' ? [] : roadWarnings(state, a, a.pos, a.dest);
     lines.push(`MARCH: ${a.name} → ${a.destName || 'destination'}: ~${m.miles} miles, ~${m.days} more days.${road.length ? ` ON THE WAY — ${road.join(' ')}` : ''}`);
@@ -89,7 +96,7 @@ export function warRoom(state) {
   const p = state.meta.player;
   for (const a of armies.filter((x) => x.owner === p && x.type !== 'fleet' && x.men > 500)) {
     const foes = armies.filter((b) => atWar(state, a.owner, b.owner) && b.men > 300)
-      .map((b) => ({ b, m: marchDays(a, a.pos, b.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
+      .map((b) => ({ b, m: marchDays(a, a.pos, b.pos, state) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
     if (foes.length) lines.push(`${a.name} (${a.men}): nearest enemies — ${foes.map(({ b, m }) => `${b.name} ${b.men} at ${b.at ? placeName(state, b.at) : 'the field'} (~${m.days} days' march; odds if attacking ~${battleOdds(state, a, b).attacker}%)`).join('; ')}.`);
   }
   return lines;

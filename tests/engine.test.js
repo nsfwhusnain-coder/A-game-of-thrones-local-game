@@ -966,3 +966,56 @@ test('an explicit order makes scattered bannermen follow the great host and merg
   assert.equal(s.armies.hb, undefined);
   assert.equal(s.armies.north.men, 9000);
 });
+
+// ── Logistics: meals and roads, not a free supply percentage ──
+import { ensureBaggage, logisticsTick, provisionState, roadSlowdown } from '../public/js/shared/logistics.js';
+test('a host eats carried provisions by men and horses', () => {
+  const s = fresh(); s.armies = {};
+  apply(s, [{ op: 'army_create', id: 'host', owner: 'stark', name: 'Host', at: 'stark', men: 5000, composition: 'Northern levies with riders' }]);
+  const a = s.armies.host; a.at = null; a.pos = [30, 30];
+  const bag = ensureBaggage(s, a); const before = bag.provisions;
+  logisticsTick(s, 1);
+  assert.ok(bag.provisions < before);
+  assert.ok(provisionState(s, a).days < before / 5000);
+});
+
+test('foraging strips persistent land and a second hungry passage costs men', () => {
+  const s = fresh(); s.armies = {};
+  apply(s, [{ op: 'army_create', id: 'host', owner: 'lannister', name: 'Westermen', at: 'stark', men: 10000 }]);
+  const a = s.armies.host; a.at = null; a.pos = [...s.holdings.stark.pos]; a.motion = { from: [...a.pos] };
+  const bag = ensureBaggage(s, a); bag.provisions = 0;
+  s.logistics = { roads: {}, land: Object.fromEntries(Object.values(s.holdings).map((h) => [h.id, { initial: Math.max(1000, h.population * 3), forage: h.id === 'stark' ? Math.round(Math.max(1000, h.population * 3) * 0.36) : 0, passes: 0, stripped: 0 }])) };
+  const first = logisticsTick(s, 1);
+  assert.ok(first.events.some((e) => /strip/i.test(e.title)));
+  const men = a.men; bag.provisions = 0; for (const l of Object.values(s.logistics.land)) l.forage = 0;
+  logisticsTick(s, 8);
+  assert.ok(a.men < men, 'bare land must not feed the next passage');
+  assert.ok(s.logistics.land.stark.stripped >= 1);
+});
+
+test('winter beyond the Wall ends a hungry campaign faster than summer', () => {
+  const make = (season) => {
+    const s = fresh(); s.armies = {}; s.world.season = season;
+    apply(s, [{ op: 'army_create', id: 'host', owner: 'stark', name: 'Lost Host', at: 'hardhome', men: 6000 }]);
+    const a = s.armies.host; a.at = null; a.pos = [...s.holdings.hardhome.pos]; a.motion = { from: [...a.pos] };
+    ensureBaggage(s, a).provisions = 0;
+    s.logistics = { roads: {}, land: Object.fromEntries(Object.values(s.holdings).map((h) => [h.id, { initial: Math.max(1000, h.population * 3), forage: 0, passes: 2, stripped: 2 }])) };
+    logisticsTick(s, 6); return a.men;
+  };
+  assert.ok(make('winter') < make('summer'));
+});
+
+test('a great column churns a wet road to mud, and a summer without marches heals it', () => {
+  const s = fresh(); s.armies = {}; s.world.season = 'autumn';
+  apply(s, [{ op: 'army_create', id: 'host', owner: 'stark', name: 'Northern Host', at: 'stark', men: 18000 }]);
+  const a = s.armies.host; const from = [...s.holdings.stark.pos], to = [...s.holdings.moat_cailin.pos];
+  a.at = null; a.motion = { from }; a.pos = to;
+  logisticsTick(s, 10);
+  const mud = roadSlowdown(s, from, to);
+  assert.ok(mud > 0.05);
+  const cut = marchDays(a, from, to, s).days;
+  a.motion = null; a.at = 'moat_cailin'; s.world.season = 'summer';
+  logisticsTick(s, 120);
+  assert.ok(roadSlowdown(s, from, to) < mud);
+  assert.ok(cut > marchDays(a, from, to, s).days);
+});

@@ -18,6 +18,7 @@ import { loreBlock } from './lore.js';
 import { project, SEASONS } from '../public/js/shared/economy.js';
 import { warRoom, marchDays } from '../public/js/shared/warfare.js';
 import { unitsText } from '../public/js/shared/units.js';
+import { logisticsText, roadText } from '../public/js/shared/logistics.js';
 import { retinuesDigest } from '../public/js/shared/retinues.js';
 import { briefFor } from '../public/data/briefs.js';
 import { vassalTemper } from '../public/js/shared/vassals.js';
@@ -220,9 +221,11 @@ function figuresLine(h) {
 function armyLine(state, a) {
   const cmd = a.commander ? (state.characters[a.commander]?.name || a.commander) : '—';
   const near = nearestHolding(state, a.pos); const to = a.march && !String(a.march.to).startsWith('army:') && state.holdings[a.march.to];
-  const where = a.at ? `at ${placeName(state, a.at)}` : `on the road near ${placeName(state, near)}${to ? `, ~${marchDays(a, a.pos, to.pos).days} days from ${to.name}` : a.destName ? ` toward ${a.destName}` : ''}`;
+  const where = a.at ? `at ${placeName(state, a.at)}` : `on the road near ${placeName(state, near)}${to ? `, ~${marchDays(a, a.pos, to.pos, state).days} days from ${to.name}` : a.destName ? ` toward ${a.destName}` : ''}`;
   const riding = Object.values(state.characters).filter((c) => c.alive && c.loc === 'army:' + a.id && c.id !== a.commander).map((c) => c.id);
-  return `${a.id} | ${a.name} | ${a.owner}${a.serving ? ` (serving ${a.serving})` : ''} | ${a.type}${a.ships ? ` ${a.ships} ships` : ''} | ${fmt(a.men)} men${a.type !== 'fleet' ? ` (${unitsText(state, a)})` : ''} | cmd:${cmd}${riding.length ? ` | with: ${riding.slice(0, 6).join(', ')}` : ''} | ${where} | ${a.status || ''} | morale ${a.morale} supply ${a.supply}${a.march ? ` | ORDERED to march on ${placeName(state, a.march.to)} (the engine moves it at marching pace unless you army_move it yourself, e.g. if intercepted)` : ''}`;
+  const road = a.march && a.dest && !a.march.pending ? ` | ${roadText(state, a.pos, a.dest)}` : '';
+  const food = a.type !== 'fleet' ? ` | baggage: ${logisticsText(state, a)}` : '';
+  return `${a.id} | ${a.name} | ${a.owner}${a.serving ? ` (serving ${a.serving})` : ''} | ${a.type}${a.ships ? ` ${a.ships} ships` : ''} | ${fmt(a.men)} men${a.type !== 'fleet' ? ` (${unitsText(state, a)})` : ''} | cmd:${cmd}${riding.length ? ` | with: ${riding.slice(0, 6).join(', ')}` : ''} | ${where} | ${a.status || ''} | morale ${a.morale}${food}${road}${a.march ? ` | ${a.march.pending ? 'WILL march when its muster is full' : 'ORDERED to march'} on ${placeName(state, a.march.to)} (the engine moves it; do not teleport it)` : ''}`;
 }
 
 export function playerSheet(state) {

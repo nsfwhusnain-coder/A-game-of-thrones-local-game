@@ -8,6 +8,7 @@ import { createInitialState, migrateState, applyChanges, placePos, placeName, ad
 import { settle, initEconomy, seasonTick, PROJECT_TEMPLATES, TAX_LEVELS } from '../public/js/shared/economy.js';
 import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
 import { chokepointToll, roadCongestion } from '../public/js/shared/chokepoints.js';
+import { logisticsTick } from '../public/js/shared/logistics.js';
 import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
 import { retinueTick } from '../public/js/shared/retinues.js';
@@ -296,18 +297,18 @@ export async function advance(id, { span = 'auto', orders } = {}) {
     // when in the turn this host is on the road (the map replays it in step with the story's days)
     // a host raised during the turn (a lord answering on day 9) sets out that day, and marches only the days left
     const born = Math.min(spanInfo.days - 1, Math.max(0, a.bornDay || 0)); const left = Math.max(1, spanInfo.days - born);
-    { const tgt = String(to).startsWith('army:') ? state.armies[String(to).slice(5)]?.pos : placePos(to, state.holdings); const md = tgt ? marchDays(a, a.pos, tgt).days : left; a.motion = { start: born / spanInfo.days, end: Math.min(1, (born + md) / Math.max(1, spanInfo.days)), from: [...a.pos] }; a.arriveDay = md <= left ? born + md : null; }
+    { const tgt = String(to).startsWith('army:') ? state.armies[String(to).slice(5)]?.pos : placePos(to, state.holdings); const md = tgt ? marchDays(a, a.pos, tgt, state).days : left; a.motion = { start: born / spanInfo.days, end: Math.min(1, (born + md) / Math.max(1, spanInfo.days)), from: [...a.pos] }; a.arriveDay = md <= left ? born + md : null; }
     // a host may be ordered against another host: it follows it wherever it goes, and the engine fights them when they meet
     if (String(to).startsWith('army:')) {
       const foe = state.armies[String(to).slice(5)];
       if (!foe) { delete a.march; a.status = 'holding'; continue; }
-      const m = marchDays(a, a.pos, foe.pos); const f = Math.min(1, left / Math.max(1, m.days));
+      const m = marchDays(a, a.pos, foe.pos, state); const f = Math.min(1, left / Math.max(1, m.days));
       a.pos = [a.pos[0] + (foe.pos[0] - a.pos[0]) * f, a.pos[1] + (foe.pos[1] - a.pos[1]) * f]; a.dest = foe.pos; a.destName = foe.name; a.at = null; a.status = f >= 1 ? 'engaging' : 'pursuing'; a.movedTurn = state.meta.turn;
       if (f >= 1) delete a.march;
       continue;
     }
     const dest = placePos(to, state.holdings); if (!dest) { delete a.march; continue; }
-    const m = marchDays(a, a.pos, dest);
+    const m = marchDays(a, a.pos, dest, state);
     let f = Math.min(1, left / Math.max(1, m.days));
     // ── What lies in the way ────────────────────────────────────────────────────────────────
     // The Neck, the Green Fork, the Bloody Gate, the Golden Tooth, the passes into Dorne: a host
@@ -337,6 +338,10 @@ export async function advance(id, { span = 'auto', orders } = {}) {
       delete a.march;
     }
   }
+  // Bread and horse-fodder are physics, not a mood bar: granaries fill wagons, armies forage,
+  // stripped land stays stripped, winter kills, and every heavy column cuts up tomorrow's road.
+  const lg = logisticsTick(state, spanInfo.days);
+  vt.events.push(...lg.events); applied.push(...lg.applied);
   // The road is not safe: outlaws, foragers, floods and snow — and now and then a friend
   const rd = roadEncounters(state, spanInfo.days);
   vt.events.push(...rd.events); applied.push(...rd.applied);
@@ -827,14 +832,14 @@ export function act(id, body) {
       const a = state.armies[body.army]; if (!a || (a.owner !== p && a.serving !== p)) throw httpError(400, 'not your host');
       if (String(body.to).startsWith('army:')) {
         const foe = state.armies[String(body.to).slice(5)]; if (!foe) throw httpError(400, 'no such host');
-        const m = marchDays(a, a.pos, foe.pos);
+        const m = marchDays(a, a.pos, foe.pos, state);
         a.march = { to: 'army:' + foe.id, since: state.meta.turn }; a.dest = foe.pos; a.destName = foe.name; a.at = null; a.status = 'pursuing';
         addOrder(`${a.name} marches to attack ${foe.name} (House ${state.houses[foe.owner]?.name}, ~${foe.men} men), ~${m.days} days away${body.intent ? ' — ' + body.intent : ''}.`, '[The engine will fight this battle when the hosts meet; narrate the approach.]', 'underway');
         break;
       }
       const to = resolvePlaceId(body.to) || body.to; body.to = to;
       const dest = placePos(to, state.holdings); if (!dest) throw httpError(400, 'unknown destination');
-      const m = marchDays(a, a.pos, dest);
+      const m = marchDays(a, a.pos, dest, state);
       a.march = { to: body.to, since: state.meta.turn }; a.dest = dest; a.destName = placeName(state, body.to); a.at = null; a.status = 'marching';
       addOrder(`${a.name} marches on ${placeName(state, body.to)} (~${m.miles} miles, ~${m.days} days)${body.intent ? ' — ' + body.intent : ''}.`, '', 'underway');
       break;
