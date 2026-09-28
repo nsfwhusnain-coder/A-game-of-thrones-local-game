@@ -10,7 +10,7 @@ import { PROJECT_TEMPLATES } from '../../shared/economy.js';
 import { MILES_PER_UNIT } from '../../../data/geography.js';
 import { dayNumber } from '../time.js';
 import { hostsKnownTo } from '../knowledge.js';
-import { canonLocked } from '../../shared/plots.js';
+import { canonLocked, canonAhead } from '../../shared/plots.js';
 
 // How long a house lets pass before doing the same thing again (days): a tourney is an event of the year, a feast of
 // the season; taxes are not changed every week, nor gifts sent, nor a son sent riding off each Monday.
@@ -120,7 +120,8 @@ const CANDIDATES = {
     if (!LORDSHIP(w) && w.me.rank !== 'order') return []; // the Watch sends its recruiters south
     const crown = Object.values(w.state.houses).find((h) => h.rank === 'crown')?.seat;
     const locked = canonLocked(w.state); // those a near beat of the story needs where they are (engine/world/beats.js)
-    const people = Object.values(w.state.characters).filter((c) => c.alive && c.house === w.house && !locked.has(c.id) && c.id !== w.actor.id && (c.age ?? 20) >= 16 && (c.roles || []).some((r) => ERRAND.includes(r)) && !/imprisoned|captive|hostage/.test(c.status || '') && !String(c.loc || '').startsWith('party:')).slice(0, 2);
+    // of the household: at one of the house's own holdings (a ward at another lord's hearth is not the lord's to send)
+    const people = Object.values(w.state.characters).filter((c) => c.alive && c.house === w.house && !locked.has(c.id) && w.holdings.includes(c.loc) && c.id !== w.actor.id && (c.age ?? 20) >= 16 && (c.roles || []).some((r) => ERRAND.includes(r)) && !/imprisoned|captive|hostage/.test(c.status || '') && !String(c.loc || '').startsWith('party:')).slice(0, 2);
     const courts = [...new Set([w.liege?.seat, ...w.friends.slice(0, 2).map((h) => h.seat), w.me.rank === 'order' ? crown : null])].filter((p) => p && w.state.holdings[p] && p !== w.seat);
     return people.flatMap((c) => courts.map((p) => ({ params: { character: c.id, to: p, men: 20 }, leader: c.id, target: p })));
   },
@@ -132,7 +133,8 @@ const CANDIDATES = {
   hold_feast: (w) => (LORDSHIP(w) ? [{ params: {} }] : []),
   hold_tourney: (w) => (LORDSHIP(w) && ['crown', 'paramount', 'major'].includes(w.me.rank) ? [{ params: {} }] : []),
   // (the Wall's verdict is "take_the_black" as a choice: "wall" is a prefix of the works' "walls")
-  judge_prisoner: (w) => w.prisoners.flatMap((c) => ['release', 'ransom', 'wall', 'execute'].map((v) => ({ params: { character: c.id, verdict: v }, target: c.id, choice: v === 'wall' ? 'take_the_black' : v }))),
+  // a prisoner the story still has a part for is kept for it (the Imp for his trial by combat) — see canonAhead
+  judge_prisoner: (w) => { const kept = canonAhead(w.state); return w.prisoners.filter((c) => !kept.has(c.id)).flatMap((c) => ['release', 'ransom', 'wall', 'execute'].map((v) => ({ params: { character: c.id, verdict: v }, target: c.id, choice: v === 'wall' ? 'take_the_black' : v }))); },
   // the lenders' levers and a steward's prudence (06 §7, §10)
   call_debt: (w) => (w.state.economy?.loans || []).filter((l) => l.lender === w.house && l.amount > 0 && !l.called && w.rel(l.debtor) <= -40).map((l) => ({ params: { debtor: l.debtor, months: 3 }, target: l.debtor })),
   repay: (w) => [...new Set((w.state.economy?.loans || []).filter((l) => l.debtor === w.house && l.amount > 0 && l.pays === 'coin' && w.gold > l.amount * 3).map((l) => l.lender))].map((x) => ({ params: { lender: x }, choice: x })),

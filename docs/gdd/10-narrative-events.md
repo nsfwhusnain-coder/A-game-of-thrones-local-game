@@ -68,6 +68,11 @@ winter. The table below is authoritative. *(B-19 — the Purple Wedding before t
 Windows are *target* windows for Canon gravity. "Player" column: what the player gets if they are that house (a Matter
 or an interrupt), else the beat runs through minds/engine.
 
+*Implemented (WP D2):* sixty beats in `public/data/beats.js`, in fifteen threads — the rows below plus `young_wolf`
+(W3, W5, W9, W11, W12, W16), `riverrun` (W17) and `omens` (W7 and the white ravens of §4.10). The books' order where
+threads touch is `BOOK_ORDER` in the same file. Q9 is `scripts/canon.js` (and `tests/q9-canon.test.js`); what the
+playtest found and fixed is [DECISIONS.md#D-052](DECISIONS.md).
+
 ### 4.1 The King rides north (`kings_ride`)
 
 | # | Beat | Window | Trigger / requires | Engine effects | Player | Alternates |

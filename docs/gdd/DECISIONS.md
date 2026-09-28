@@ -868,3 +868,29 @@ ransoms, `embargo`) and the price index of §6.3.
   (a lord does not send a named person on an errand); the player is never bound — what the player does may make a beat
   take its alternate or lapse.
 
+## D-052 · 2026-09-28 · The full canon: 60 beats, and what keeps the chain whole (WP D2)
+
+- **Sixty beats in fifteen threads**, one per row of 10 §4 where the row is a thing that happens (K3 and K4, the
+  betrothal and Lysa's letter, stay inside the King's matter at Winterfell; the Tourney is one beat, not two; T1–T2, I3
+  and H4 were already there; D6 is three rumours from Essos). New threads: `young_wolf` (the Green Fork to Karstark's
+  justice), `riverrun` (Hoster's death) and `omens` (the red comet and the Citadel's white ravens). Effects stay functions
+  returning ops (D-051); the verbs' way still waits.
+- **What the playtest found and what now holds the chain** — each was a real break, not a tuning:
+  - the boar came before the Hand reached King's Landing (he rides at a household's pace): under Canon it now waits for
+    the Hand at court, and for the Riverlands to burn, as in the books;
+  - Lord Walder died of his years before his bridge was needed: under Canon the years spare anyone a beat still to come
+    names (`canonAhead`) — the story kills them, or the window passes;
+  - the realm's lords sued for peace in the War of the Five Kings in its second moon: the wars the canon begins
+    (`lannister_vs_tully`, `war_of_five_kings`, `ironborn_reaving`, the Watch's) are not settled by the realm's minds
+    under Canon; the player may still sue;
+  - Lady Lysa ransomed the Imp before his trial, and Lord Hoster released his own son: the minds do not judge a prisoner
+    the canon still needs, and a captive is held in the captor's camp, not his own hall;
+  - Lord Balon sent his son away from Winterfell on an errand: a lord sends only the household at his own holdings;
+  - a beaten host fled across the sea to its island seat: a refuge must be reachable on foot.
+- **The Whispering Wood under Canon is the books' outcome**; if the war has already taken the Kingslayer another way, the
+  beat bends (the river lords bring him in chains) and the thread goes on.
+- **Seasons:** under Canon the Citadel's white ravens of 299 (autumn) and 300 (winter) are beats; the dice's season clock
+  waits until 301. Loose and Sandbox keep the dice.
+- **Q9 measure:** a beat counts as fired only when it fired as written (an alternate is "bent", not fired); a beat is due
+  once its window has closed or it has happened. `scripts/canon.js` runs it; one house runs in CI, three nightly.
+

@@ -44,7 +44,8 @@ export const leaderOf = (w, side) => (side === 'A' ? w.attackers[0] : w.defender
 // what moves a war's score, and for whom: [points, the side's house or null]
 function weigh(state, f) {
   const d = f.data || {};
-  const partyOwner = (id) => state.parties[id]?.owner || null;
+  // a winner is a host (the engine's battles) or a house (a battle the story tells)
+  const partyOwner = (id) => state.parties[id]?.owner || (state.houses[id] ? id : null);
   switch (f.kind) {
     case 'battle': return d.winner ? [10 + (d.wiped ? 5 : 0), partyOwner(d.winner) || f.houses[0]] : null;
     case 'sea_battle': return d.winner ? [6, partyOwner(d.winner) || f.houses[0]] : null;
@@ -140,6 +141,11 @@ export function makePeace(state, w, terms, { conceder = null, cause } = {}) {
   return { tribute };
 }
 
+// The wars the canon itself begins: under Canon gravity the realm's lords fight them on rather than make peace, until
+// the story ends them (the War of the Five Kings is not settled in its second moon). The player may still sue.
+const CANON_WARS = new Set(['lannister_vs_tully', 'war_of_five_kings', 'ironborn_reaving', 'watch_vs_wildlings']);
+const canonHeld = (state, w) => CANON_WARS.has(w.id) && (state.meta.settings?.canonGravity || 'canon') === 'canon';
+
 /** The losing side of a lopsided war sues for peace (weekly): the lord answers it as a matter; the realm's lords weigh it. */
 function suesForPeace(state, r) {
   const events = []; const today = dayNumber(state.meta.date); const p = state.meta.player;
@@ -150,6 +156,7 @@ function suesForPeace(state, r) {
     const L = leaderOf(w, loser), W = leaderOf(w, winner);
     w.offered = today;
     if (L === p) continue; // the lord sues for himself, or fights on
+    if (canonHeld(state, w) && W !== p) continue;
     if (W === p) {
       const LH = state.houses[L]; const { ops, tribute } = peaceOps(state, w, { conceder: loser });
       applyChanges(state, [{ op: 'decision', id: `peace_${w.id}`, title: `House ${LH?.name} sues for peace`, from: LH?.lord, days: 14,
