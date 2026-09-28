@@ -29,6 +29,7 @@ import { VERBS, perform, told, verbOfKind } from '../public/js/engine/actions/re
 import { carryOutOrders, readOrders, answerOrder, orderEvents } from './orders.js';
 import { interpretOrder } from './orders/interpret.js';
 import { runMinds, knownTo } from './minds.js';
+import { directWeek, thinWeek } from './director.js';
 import { narrateTurn, narratorOn } from './narrator.js';
 import { deliverLetters, reveal } from './letters.js';
 import { replyText, promisesIn } from './ai/calls/audience.js';
@@ -284,13 +285,13 @@ export async function answerOrderQuestion(id, orderId, option) {
  * Let the days pass (03 §6.2). opts: { span ('auto' = until something happens), orders, onSegment(segment) — each
  * week as soon as it is told (the SSE stream), stopWanted() → the day the lord asked to stop on, if he has }.
  */
-export async function advance(id, { span = 'auto', orders, onSegment = null, stopWanted = null, stopAt = null, replayMinds = null } = {}) {
+export async function advance(id, { span = 'auto', orders, onSegment = null, stopWanted = null, stopAt = null, replayMinds = null, replayHooks = null } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
   // everything the engine rolls this turn comes from this save's dice (server/dice.js), awaits and all
-  return withDice(state, () => advanceWith(id, state, cfg, { span, orders, onSegment, stopWanted, stopAt, replayMinds }));
+  return withDice(state, () => advanceWith(id, state, cfg, { span, orders, onSegment, stopWanted, stopAt, replayMinds, replayHooks }));
 }
 
 /**
@@ -306,9 +307,9 @@ export async function stopHere(id, day) {
   const days = spanOf(t.span).days;
   if (d < 1 || d >= days) throw httpError(400, `the turn ran ${days} day${days > 1 ? 's' : ''}: stop on one of days 1–${days - 1}`);
   await undo(id, { turns: 1 });
-  return advance(id, { span: t.span, stopAt: d, replayMinds: t.minds || [] });
+  return advance(id, { span: t.span, stopAt: d, replayMinds: t.minds || [], replayHooks: t.hooks || [] });
 }
-async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replayMinds = null, onSegment = null, stopWanted = null }) {
+async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replayMinds = null, replayHooks = null, onSegment = null, stopWanted = null }) {
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o.text) })).filter((o) => o.text.trim()); }
   // the world as it stands before the turn is kept for undo, orders and all (they come back to be changed and given
   // again); the old single undo point of earlier versions is no longer needed
@@ -335,7 +336,7 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   const recent = readFacts(id, { from: turn - 2 });
   const known = (h) => knownTo(state, recent, h, { limit: 6 });
   const deliver = async (st) => [...deliverReplies(st), ...await deliverLetters(st, { provider: cfg.provider, cfg, log, known }).catch((e) => { console.warn('letters:', e.message); return []; })];
-  const touched = new Set(); const applied = [], rejected = [], cards = [], mindsRecord = [], segments = [], narrated = [], meanwhile = [];
+  const touched = new Set(); const applied = [], rejected = [], cards = [], mindsRecord = [], hooksRecord = [], segments = [], narrated = [], meanwhile = [];
   const eyes = { foes: sightedFoes(state) };
   let stopped = null, ran = 0;
   const ms = { orders: 0, minds: 0, engine: 0, narrate: 0 }; const t0 = Date.now(); const clock = (k, t) => { ms[k] += Date.now() - t; };
@@ -352,7 +353,11 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
         .catch((e) => { console.warn('minds:', e.message); return { cards: [], record: [] }; }) : { cards: [], record: [] };
       clock('minds', tm);
       mindsRecord.push(...minds.record.map((r) => ({ ...r, segment: seg })));
-      const segCards = minds.cards.map((c) => ({ ...c, day: ran + 1 }));
+      // ── THE DIRECTOR (04 §7; server/director.js): a story hook on the week's first day, if one is due
+      const hooked = await directWeek(state, { cfg, provider: cfg.provider, log, replay: replayHooks?.filter((h) => h.segment === seg) || null })
+        .catch((e) => { console.warn('director:', e.message); return { cards: [], record: [] }; });
+      hooksRecord.push(...hooked.record.map((r) => ({ ...r, segment: seg })));
+      const segCards = [...minds.cards, ...hooked.cards].map((c) => ({ ...c, day: ran + 1 }));
       // ── THE DAYS (server/turn/day.js): the engine's rules, one day at a time
       state.meta.clock = { turn, from: day0 + 1, to: segFrom };
       onProgress({ agentLabel: 'The days pass', phase: 'working' });
@@ -369,6 +374,9 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
       ran += d;
       const segTo = day0 + ran;
       state.meta.clock = { turn, from: day0 + 1, to: segTo };
+      // no whole week passes with nothing of note in the realm (09 §9): a hook of the dice's on its last day
+      const quiet = thinWeek(state, { from: segFrom, to: segTo, day: ran, whole: segDays === 7 && d === 7, had: hooked.record.length > 0 });
+      hooksRecord.push(...quiet.record.map((r) => ({ ...r, segment: seg }))); segCards.push(...quiet.cards);
       // news travels (engine/knowledge.js): what the house hears of late is told on the day its word arrives, or waits
       let told = [...holdNews(state, foldAnswers(segCards)), ...newsDue(state)].sort((a, b) => a.day - b.day);
       // what the house has seen of other hosts; the post; the week's books (06), and the steward's notes
@@ -410,7 +418,7 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   const narration = narrated.length ? narrated.reduce((a, r) => ({ stories: a.stories + r.stories, told: a.told + r.told, again: a.again + r.again, plain: a.plain + r.plain, problems: Object.fromEntries([...new Set([...Object.keys(a.problems), ...Object.keys(r.problems)])].map((k) => [k, (a.problems[k] || 0) + (r.problems[k] || 0)])), groups: [...a.groups, ...(r.groups || [])], small: [...a.small, ...(r.small || [])].slice(0, 16), via: r.via, ...(r.key ? { key: r.key } : {}) }), { stories: 0, told: 0, again: 0, plain: 0, problems: {}, groups: [], small: [] }) : null;
   const summary = [...cards.filter((c) => c.narrated).sort((a, b) => b.importance - a.importance).slice(0, 4).map((c) => c.text), ...meanwhile.slice(0, 1)].join(' ');
   const record = {
-    carried, ...(mindsRecord.length ? { minds: mindsRecord } : {}), turn, dateFrom, date: dateStr(state.meta.date), span: `${days}d`,
+    carried, ...(mindsRecord.length ? { minds: mindsRecord } : {}), ...(hooksRecord.length ? { hooks: hooksRecord } : {}), turn, dateFrom, date: dateStr(state.meta.date), span: `${days}d`,
     ...(stopped ? { until: stopped.text, stopped: stopped.major ? 'major' : 'minor' } : until ? { until } : {}), ...(stopAt ? { stoppedAt: days } : {}),
     segments, orders: state.orders, summary: stripForeignScript(summary), ...(narration ? { narration } : {}), ...(meanwhile.length ? { meanwhile: meanwhile.join(' ') } : {}),
     events, applied, rejected, ledger: state.houses[p].ledger.at(-1), ms: { ...ms, total: Date.now() - t0 },

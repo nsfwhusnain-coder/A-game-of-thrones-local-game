@@ -356,6 +356,11 @@ lively; default light = one hook per ~2 weeks of game time). **Goal:** when the 
 - **Schema:** `{ "hooks": [ { "hook": enum(eligible hook ids), "params": {…enums…}, "why": string ≤ 120 } ], maxItems 2 }`.
 - The Director never touches canon-locked entities and never creates deaths of named characters.
 
+*(B12, implemented: the catalogue is `public/data/hooks.js` (81 hooks), the engine's side `public/js/engine/director.js`
+(`eligibleHooks`, `applyHook`, `pickHook`), the call `server/ai/calls/director.js` (schema `{hooks: [{hook, place, why}]}`:
+the place is chosen from the hook's own places, not free params), and its place in the jump `server/director.js`. The
+Director asks on a week's first day when its cadence is due, not only on the first segment; see DECISIONS D-040.)*
+
 ## 8. Voices: audiences, letters, council, advisor, counsel, polish
 
 ### 8.1 Audience (face to face)

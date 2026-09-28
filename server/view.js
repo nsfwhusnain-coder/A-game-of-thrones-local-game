@@ -74,7 +74,7 @@ export function playerView(state) {
 /** A turn record as the player may read it: the chronicle, not the engine's workings. */
 export function viewTurn(t) {
   if (!t || typeof t !== 'object') return t;
-  const { minds, applied, rejected, invariants, ...rest } = t;
+  const { minds, hooks, applied, rejected, invariants, ...rest } = t;
   return rest;
 }
 
@@ -105,6 +105,6 @@ export function hiddenTruths(state, view) {
   if ((view.commitments || []).some((c) => 'sincerity' in c)) out.push('10: how much a promise was meant is sent');
   if ((view.post || []).some((l) => l.reply && l.status === 'in flight')) out.push('10: an answer still on the road is sent');
   for (const h of Object.keys(view.knowledge || {})) if (h !== me) out.push(`10: House ${h}'s knowledge is sent`);
-  for (const t of view.history || []) if (t.minds) out.push(`10: turn ${t.turn}'s minds are sent`);
+  for (const t of view.history || []) if (t.minds || t.hooks) out.push(`10: turn ${t.turn}'s minds or hooks are sent`);
   return out;
 }
