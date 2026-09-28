@@ -5,6 +5,7 @@
 import { random } from '../rng.js';
 import { actorOf, worldView, miles } from './options.js';
 import { dayNumber } from '../time.js';
+import { goalsOf } from './goals.js';
 
 const RANK = { crown: 40, paramount: 30, major: 18, order: 18, tribe: 18, exile: 14, minor: 8, city_state: 8, company: 8 };
 
@@ -32,6 +33,9 @@ export function scoreActors(state, { player = state.meta.player } = {}) {
     if ((state.post || []).some((x) => x.to === c.id && x.arriveDay != null && x.arriveDay <= today && today - x.arriveDay <= 14)) add(25, 'a raven from the player arrived');
     if (w.liege && w.me.obligations?.levies === 'called') add(15, 'their liege has called the banners');
     if (w.atWar) add(10, 'at war');
+    // a great aim of their own (data/goals.js): the story's movers are weighed a little higher
+    const great = goalsOf(state, c).find((g) => g.priority >= 3);
+    if (great) add(5, `pursues ${great.text.split(/[,:—]/)[0]}`, false);
     // how near to the player's realm
     const seat = w.seat && state.holdings[w.seat];
     if (seat && pRegion && seat.region === pRegion) add(10, 'in the player\'s country', false);

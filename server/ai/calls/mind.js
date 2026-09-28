@@ -12,6 +12,7 @@ import { temperament } from '../../../public/js/shared/temperament.js';
 import { whereabouts } from '../../../public/js/shared/roads.js';
 import { dateStr, getRelation } from '../../../public/js/shared/world.js';
 import { AGENDAS } from '../../../public/data/agendas.js';
+import { goalsOf } from '../../../public/js/engine/minds/goals.js';
 import { VOICES } from '../../../public/data/voices.js';
 import { system } from '../context/primer.js';
 import { promisesOf, promiseText } from '../../../public/js/engine/politics/commitments.js';
@@ -58,7 +59,9 @@ export default {
     const choices = [...new Set(picks.map((p) => p.choice).filter(Boolean))].sort();
     const T = temperament(c); const h = state.houses[c.house];
     const agenda = AGENDAS.find((a) => a.who === c.id && (!a.when || a.when(state)));
-    const wants = [agenda?.aim || VOICES[c.id]?.wants].filter(Boolean);
+    // what they want: their goals (data/goals.js; engine/minds/goals.js), else the story's agenda or their voice's
+    const goals = goalsOf(state, c).slice(0, 2).map((g) => g.text);
+    const wants = goals.length ? goals : [agenda?.aim || VOICES[c.id]?.wants].filter(Boolean);
     const rel = Object.values(state.houses).filter((x) => x.id !== c.house && state.characters[x.lord]?.alive).map((x) => [x, getRelation(state, c.house, x.id)]).filter(([, v]) => Math.abs(v) >= 20).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 6);
     const label = (id) => { const names = [...targets.canon].filter(([, v]) => v === id).map(([k]) => k); return names.length ? `[${names.slice(0, 2).join('|')}]` : `[${id}]`; };
     const optionLines = opts.options.map((o) => {

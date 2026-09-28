@@ -3,6 +3,18 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — D6: goals — what the realm's lords want, and how their houses go about it
+
+- **A hundred goals for the realm's people**: Tywin wants the crown in his grandson's hand and every insult answered;
+  Walder Frey wants respect and the toll; Doran wants justice for Elia, in time; Randyll Tarly wants the war he is
+  given, won. Everyone else who speaks for a house wants what their rank and their nature want.
+- **The lords work at what they want**: when nothing presses, a lord takes the next step of his aim — Hightower builds,
+  Redwyne launches ships, Walder raises the toll — and the story's great movers are weighed a little higher.
+- **Twenty-three more houses have ways of their own**: the Karstarks never last to a muster, the Umbers roaring after
+  wildlings, Blackwood and Bracken eyeing each other across the river, Tarly's discipline, Redwyne's fleet closing enemy
+  ports, the Dothraki who must ride.
+- Owner to verify: play a few moons as any house and read the chronicle — the realm's lords act in character.
+
 ## 2026-09-28 — D5: house openings — every house has its situation, levers and news
 
 - **Twelve more houses written by hand**: Manderly, Mormont, Karstark, Umber, Blackwood, Bracken, Tarly, Redwyne,

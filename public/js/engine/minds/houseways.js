@@ -8,6 +8,7 @@ import { temperament } from '../../shared/temperament.js';
 import { HOUSE_WAYS } from '../../../data/voices.js';
 import { optionsFor, HOLD } from './options.js';
 import { supplyOf } from '../military/supply.js';
+import { archetype, goalsOf } from './goals.js';
 
 // ── helpers over the options: the first lawful pick of a verb that fits ──
 const finder = (opts) => (verb, fit = () => true) => {
@@ -57,6 +58,9 @@ const CALM = [
     (T.wits >= 0.6 && prefer(f, 'fund_works', ['market', 'roads', 'harbour', 'granaries', 'walls'])) || f('hold_feast')), () => 'The realm is at peace and your coffers full: a lord is seen to be generous, or builds.'],
   ['envoy', (w, f) => !w.atWar && chance(0.12) && f('send_person'), () => 'A lord keeps his friends close: send one of your household to their court.'],
 ];
+// a lord works at what they want when nothing presses (engine/minds/goals.js): the first lawful next step of their
+// most pressing goal
+const GOAL = ['goal', (w, f) => { if (!chance(0.25)) return null; for (const g of goalsOf(w.state, w.actor)) for (const v of g.steps) { const got = f(v); if (got) return got; } return null; }, (w) => `You work at what you want: ${goalsOf(w.state, w.actor)[0]?.text || 'your house\'s good'}.`];
 
 // ── each great house's own ways, tried before the common rules (09 §2.2; data/voices.js HOUSE_WAYS) ──
 const WAYS = {
@@ -115,16 +119,86 @@ const WAYS = {
   free_folk: [
     ['clans', (w, f) => chance(0.3) && f('raise_levies'), () => 'Gather every clan of the free folk before the dead come: none will come alone.'],
   ],
+  // ── the great bannermen and the houses beyond the sea (WP D6) ──
+  velaryon: [
+    ['tides', (w, f) => !w.atWar && chance(0.2) && prefer(f, 'fund_works', ['warships', 'harbour']), () => 'The Lords of the Tides live by their ships: build them.'],
+  ],
+  karstark: [
+    ['first_to_answer', (w, f) => f('answer_call'), (w) => `House ${w.liege?.name} calls: a Karstark is never last to the muster.`, 'pressing'],
+    ['vengeance', (w, f) => w.kinHeld.length && (f('raise_levies') || f('call_banners')), (w) => `${w.kinHeld[0].name} is taken: the Karstarks do not forgive.`, 'pressing'],
+  ],
+  umber: [
+    ['wildlings', (w, f) => w.threatened.length && (f('raise_levies') || f('hire_men')), () => 'Wildlings on your lands: the Umbers meet them with axes.', 'pressing'],
+    ['loud', (w, f) => f('answer_call'), () => 'The Starks call: the Greatjon comes roaring.', 'pressing'],
+  ],
+  harlaw: [
+    ['books', (w, f) => !w.atWar && chance(0.2) && prefer(f, 'fund_works', ['market', 'walls']), () => 'The Reader keeps Harlaw rich and quiet while louder men shout.'],
+  ],
+  blackwood: [
+    ['feud', (w, f) => w.rel('bracken') <= -30 && chance(0.1) && f('raise_levies', (p) => p.target === w.seat), () => 'The Brackens are across the river, as they have always been: keep your archers ready.'],
+    ['old_gods', (w, f) => f('answer_call'), (w) => `Riverrun calls: the Blackwoods answer, and remember who did not.`, 'pressing'],
+  ],
+  bracken: [
+    ['feud', (w, f) => w.rel('blackwood') <= -30 && chance(0.1) && f('raise_levies', (p) => p.target === w.seat), () => 'The Blackwoods took what was yours: keep your horsemen ready.'],
+    ['horses', (w, f) => !w.atWar && chance(0.15) && f('hire_men'), () => 'Stone Hedge breeds the best horses in the Riverlands: mount men on them.'],
+  ],
+  mallister: [
+    ['seagard', (w, f) => !w.atWar && chance(0.2) && prefer(f, 'fund_works', ['walls', 'warships']), () => 'Seagard was built against the ironborn: keep its walls high and its ships ready.'],
+  ],
+  royce: [
+    ['bronze', (w, f) => f('answer_call'), () => 'Bronze Yohn answers his liege — and tells her what he thinks of her.', 'pressing'],
+    ['runes', (w, f) => !w.atWar && chance(0.2) && f('hold_tourney'), () => 'The Royces are the Vale\'s first knights: hold the lists and prove it.'],
+  ],
+  waynwood: [
+    ['steady', (w, f) => !w.atWar && chance(0.15) && f('send_gift', (p) => p.target === w.liege?.lord), () => 'Keep the Vale\'s lords together; a gift to the Eyrie keeps the peace.'],
+  ],
+  corbray: [
+    ['lady_forlorn', (w, f) => !w.atWar && chance(0.15) && f('hold_tourney'), () => 'Lady Forlorn is a sword for the lists: let the Vale see it.'],
+  ],
+  marbrand: [
+    ['marches', (w, f) => f('answer_call'), () => 'Ashemark guards the West\'s marches: when Casterly Rock calls, you ride first.', 'pressing'],
+  ],
+  lefford: [
+    ['golden_tooth', (w, f) => (w.threatened.length || warNear(w)) && prefer(f, 'fund_works', ['walls']), () => 'The Golden Tooth is the West\'s gate: make it stronger while there is time.', 'pressing'],
+  ],
+  crakehall: [
+    ['boar', (w, f) => f('answer_call'), () => 'The Crakehalls ride where the Lannisters point.', 'pressing'],
+  ],
+  hightower: [
+    ['beacon', (w, f) => !w.atWar && chance(0.2) && prefer(f, 'fund_works', ['market', 'harbour', 'walls']), () => 'Oldtown grows rich in peace: build, trade, and let others bleed.'],
+  ],
+  redwyne: [
+    ['fleet', (w, f) => w.atWar && f('blockade'), () => 'The Redwyne fleet is the Reach\'s sword at sea: close the enemy\'s ports.', 'pressing'],
+    ['wine', (w, f) => !w.atWar && chance(0.2) && prefer(f, 'fund_works', ['warships', 'harbour']), () => 'Arbor gold pays for ships: keep the fleet the strongest after the King\'s.'],
+  ],
+  tarly: [
+    ['discipline', (w, f) => f('answer_call'), (w) => `House ${w.liege?.name} calls: Lord Randyll answers at once, and in good order.`, 'pressing'],
+    ['drill', (w, f) => !w.atWar && chance(0.15) && f('hire_men'), () => 'Discipline wins wars: keep men drilled and ready.'],
+  ],
+  florent: [
+    ['stannis', (w, f) => (w.state.wars || []).some((x) => x.status !== 'ended' && [...x.attackers, ...x.defenders].includes('baratheon_ds')) && f('raise_levies', (p) => p.target === w.seat), () => 'Your niece\'s lord husband is at war: the Florents stand ready.', 'pressing'],
+  ],
+  rowan: [
+    ['golden_tree', (w, f) => f('answer_call'), () => 'The Rowans serve the Reach honestly: answer the call.', 'pressing'],
+  ],
+  dayne: [
+    ['starfall', (w, f) => w.threatened.length && f('raise_levies'), () => 'Starfall holds for its young lord: raise the spears.', 'pressing'],
+  ],
+  yronwood: [
+    ['bloodroyal', (w, f) => !w.atWar && chance(0.15) && (f('hire_men') || f('hold_feast')), () => 'The Yronwoods were kings before the Martells: keep your strength, and let Sunspear remember it.'],
+  ],
+  dothraki: [
+    ['khalasar', (w, f) => w.atWar && f('march_host', (p) => w.foes.includes(w.state.holdings[p.target]?.owner)), () => 'A khalasar that does not ride is not a khalasar: ride, and take.', 'pressing'],
+  ],
+  targaryen: [
+    ['the_blood', (w, f) => chance(0.15) && f('send_person'), () => 'The last dragons must find friends: send word to those who remember.'],
+  ],
+  stone_crows: [
+    ['clans', (w, f) => w.threatened.length && f('raise_levies'), () => 'The Stone Crows take what passes on the high road.', 'pressing'],
+  ],
 };
 
-// ── lords without a house's ways of their own play their nature ──
-function archetype(T) {
-  if (T.ambition >= 0.7) return 'ambitious';
-  if (T.courage >= 0.8) return 'martial';
-  if (T.courage <= 0.4) return 'cautious';
-  if (T.honesty >= 0.7 || T.sway?.duty) return 'dutiful';
-  return 'steady';
-}
+// ── lords without a house's ways of their own play their nature (engine/minds/goals.js archetype) ──
 const ARCHETYPE = {
   ambitious: [['ambition', (w, f) => !w.atWar && chance(0.25) && (prefer(f, 'fund_works', ['mines', 'market', 'roads']) || f('set_tax', (p) => p.choice === 'high')), () => 'An ambitious lord builds his house\'s fortune, whatever the smallfolk say.']],
   martial: [['arms', (w, f) => !w.atWar && chance(0.15) && (f('hold_tourney') || f('hire_men')), () => 'A lord who loves a fight keeps men and horses ready, and a tourney now and then.']],
@@ -139,7 +213,7 @@ export function rulesFor(state, actorId) {
   const c = state.characters[actorId]; const T = temperament(c);
   const own = [...(WAYS[c.house] || []), ...(ARCHETYPE[archetype(T)] || [])];
   const pressing = own.filter((r) => r[3] === 'pressing'); const calm = own.filter((r) => r[3] !== 'pressing');
-  return { T, rules: [...pressing, ...PRESSING, ...calm, ...CALM], archetype: archetype(T) };
+  return { T, rules: [...pressing, ...PRESSING, ...calm, ...CALM, GOAL], archetype: archetype(T) };
 }
 
 /**

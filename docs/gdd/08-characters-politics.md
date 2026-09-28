@@ -122,6 +122,11 @@ Each notable character carries 1–3 `goals` (from `data/agendas.js`, expanded t
 office-holder): `{ id, text, kind, target, steps: [verbs], priority, canon: bool }`. Goals feed the Mind's context and
 salience ([04](04-ai-system.md) §5). Full living-world treatment in [09-living-world.md](09-living-world.md) §2.
 
+*Implemented (WP D6):* `public/data/goals.js` — 100 goals of 78 people (`G(text, kind, steps, { target, priority, canon })`), with
+`RANK_GOALS` and `NATURE_GOALS` for everyone else who speaks for a house (`engine/minds/goals.js` `goalsOf`). A mind is
+told its top two goals as what it wants; the house's ways try a goal's steps when nothing else fits (the `goal` rule,
+last before holding); a priority-3 goal weighs +5 in salience. `tests/goals.test.js`.
+
 ## 5. Life: ageing, health and death
 
 - **Ageing:** yearly on the 1st of the 1st moon (as now).
