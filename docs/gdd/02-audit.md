@@ -131,7 +131,7 @@ Severity: **P0** breaks the game or its core promise · **P1** visibly wrong, fr
 | B-20 | P1 | The model's status writes overwrite engine states (Host of Winterfell shown `holding` mid-march). | `army_update.status` is free text; UI and turn logic read it. | A6 |
 | B-21 | P2 | Nature tags wrong: Eddard Stark is "brave, proud, shrewd, **cunning, cold-blooded, unfriendly**". | `temperament.js` derives tags by regex over prose ("cold when angered" → cold-blooded). | A10 |
 | B-22 | P2 | Pronoun errors in engine text ("Maege… riding with him", "Barbrey Dustin writes that his", "Catelyn Stark is not himself"). | Hard-coded `he/his/him/man` in `vassals.js`, `psyche.js`, `retinues.js`, `treachery.js`. | A10 |
-| B-23 | P2 | Non-canon regents (Ser Gerold "Darkstar" Dayne rules for Edric Dayne). | `regency.js chooseRegent` picks "the ablest adult of the blood" with no canon override. | D4 |
+| B-23 | P2 | Non-canon regents (Ser Gerold "Darkstar" Dayne rules for Edric Dayne). | `regency.js chooseRegent` picks "the ablest adult of the blood" with no canon override. | D4 — ✅ canon regents, `NOT_REGENT` |
 | B-24 | P2 | Canon lords die early from random age/illness rolls (Hoster Tully in 298). | `game.js` natural-death roll ignores canon death windows. | D4 |
 | B-25 | P2 | The turn-end reason can be false ("until Manderly's host reaches Winterfell" — it was pursuing elsewhere). | `turns.js` reads the stale `march.to`. | B2 |
 | B-26 | P2 | JSON unreadable on single quotes (2–3 agents per turn). | Free-form JSON. Fixed by schema-constrained decoding ([04](04-ai-system.md) §3). | B1 |

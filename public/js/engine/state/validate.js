@@ -7,6 +7,7 @@
 //   4  a host's contingents add up to its men
 //   8  every letter in flight lands after it was sent
 //   9  what a house has learned it learned after it happened, and a secret only by a spy, a scheme or a confession
+//  11  under Canon gravity no one the story keeps died of chance before their time (engine/people/life.js)
 // (10 — the player's view holds no hidden truth — is the server's: server/view.js `hiddenTruths`; 5–7 need commitments
 // and the segmented jump: WP B10–B11.)
 import { JUNCTIONS } from '../../../data/geography.js';
@@ -14,6 +15,8 @@ import { KINDS, STATES, idOf, ref } from '../parties.js';
 import { ACTIVITIES } from '../activity.js';
 import { landmassOf } from '../geo.js';
 import { capacityOf } from '../military/supply.js';
+import { CANON_DEATHS, CANON_PROTECTED } from '../../../data/fates.js';
+import { dateOfDay } from '../time.js';
 
 const finite = (p) => Array.isArray(p) && p.length === 2 && p.every((x) => typeof x === 'number' && isFinite(x));
 const isPlace = (state, id) => !!(state.holdings?.[id] || JUNCTIONS[id]);
@@ -91,6 +94,19 @@ export const INVARIANTS = {
         if (n.scope === 'secret' && !SECRET_WAYS.has(n.via)) out.push(`9: House ${house} knows the secret ${id} by ${n.via}`);
       }
       for (const p of k.pending || []) if (!(p.day > p.happened)) out.push(`9: House ${house} waits for news of day ${p.happened} that came on day ${p.day}`);
+    }
+    return out;
+  },
+  11: function canonFates(state) {
+    const out = [];
+    if ((state.meta?.settings?.canonGravity || 'canon') !== 'canon') return out;
+    // chance is the rules' own doing (the years, a wound, a battle); a beat or the lord's own order may kill anyone
+    const DELIBERATE = new Set(['beat', 'order', 'intent', 'Your decision', 'Your tourney']);
+    for (const c of Object.values(state.characters)) {
+      if (c.alive || c.diedDay == null || DELIBERATE.has(c.diedBy)) continue;
+      const d = dateOfDay(c.diedDay); const ym = d.year * 12 + d.month - 1; const w = CANON_DEATHS[c.id];
+      if (w && ym < w.from[0] * 12 + w.from[1] - 1) out.push(`11: ${c.name} died of ${c.cause || 'chance'} in ${d.month}/${d.year}, before the story's time for it (${w.cause})`);
+      if (CANON_PROTECTED.includes(c.id) && d.year <= 300) out.push(`11: ${c.name}, whom the story carries through 300 AC, died of ${c.cause || 'chance'} in ${d.month}/${d.year}`);
     }
     return out;
   },

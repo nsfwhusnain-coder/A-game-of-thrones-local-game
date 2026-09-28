@@ -848,7 +848,7 @@ function applyOne(state, ch, ctx) {
       const c = state.characters[cid]; const out = [];
       const was = { alive: c.alive, status: c.status, house: c.house, title: c.title, spouse: c.spouse, secret: c.secretKnown };
       const where = () => resolvePlaceId(c.loc) || partyOf(state, c)?.at || null;
-      if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; c.diedTurn = state.meta?.turn ?? 0; c.cause = ch.cause || c.cause || null; leaveParty(state, c); out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
+      if (ch.alive === false && c.alive) { c.alive = false; c.status = 'dead'; c.diedTurn = state.meta?.turn ?? 0; c.diedDay = dayNumber(state.meta.date); c.diedBy = ctx.cause?.type || ctx.source || null; if (c.wound) delete c.wound; c.cause = ch.cause || c.cause || null; leaveParty(state, c); out.push('has died' + (ch.cause ? ` (${ch.cause})` : '')); }
       if (ch.loc || ch.location || ch.with) {
         const raw = ch.with || ch.loc || ch.location;
         const army = findArmy(state, idOf(raw) ?? String(raw));

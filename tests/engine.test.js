@@ -568,9 +568,12 @@ test('a child lord is ruled for: the mother takes the regency, and gives it up a
   assert.equal(incapacity(s, 'arryn')?.kind, 'minority');
   const reg = chooseRegent(s, 'arryn');
   assert.equal(reg?.id, 'lysa_arryn');
+  // (the scenario seats her already: unseat her to see the regency begin — the test once passed only on another
+  // house's regency, the Darkstar's over Starfall, which B-23 forbids)
+  delete s.houses.arryn.regent;
   const r = regencyTick(s, 30);
   assert.equal(s.houses.arryn.regent, 'lysa_arryn');
-  assert.ok(r.events.some((e) => /regency/i.test(e.title)));
+  assert.ok(r.events.some((e) => /Lysa Arryn takes the regency/.test(e.title)));
   assert.equal(speakerFor(s, 'arryn').id, 'lysa_arryn');
   assert.ok(underRegency(s, 'arryn'));
   assert.match(regencyLine(s, 'arryn'), /Lysa Arryn rules as regent/);

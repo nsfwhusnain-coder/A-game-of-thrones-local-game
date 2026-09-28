@@ -8,7 +8,7 @@
 import { unitsOf } from '../../shared/units.js';
 import { temperament } from '../../shared/temperament.js';
 import { difficultyOf } from '../../../data/balance.js';
-import { CANON_DEATHS, CANON_PROTECTED } from '../../../data/fates.js';
+import { keptByStory } from '../people/life.js';
 import { groundAt, paceOf, planRoute } from '../movement.js';
 import { idOf, settle } from '../parties.js';
 import { landmassOf } from '../geo.js';
@@ -138,16 +138,8 @@ export function fallBack(state, p) {
 }
 
 // ── The story's people (§7.3; 08 §5) ─────────────────────────────────────────────────────────────────────────────────
-const ymOf = (d) => d.year * 12 + (d.month - 1);
-/** Whether the story keeps this person from death in a battle today: 'canon' (their end is later), 'protected', or null. */
-export function keptByStory(state, c, { playerBattle = false } = {}) {
-  const g = state.meta.settings?.canonGravity || 'canon';
-  if (g === 'sandbox' || !c) return null;
-  const w = CANON_DEATHS[c.id]; const now = ymOf(state.meta.date);
-  if (w && now <= w.to[0] * 12 + w.to[1] - 1 && (g === 'canon' || w.pillar)) return 'canon';
-  if (g === 'canon' && CANON_PROTECTED.includes(c.id) && !(playerBattle && c.house === state.meta.player)) return 'protected';
-  return null;
-}
+// (whether the story keeps someone from death is the life engine's: engine/people/life.js)
+export { keptByStory };
 const FIGHTING = /lord|heir|knight|kingsguard|commander|captain|master_at_arms|ruler|bastard/;
 const fights = (c) => FIGHTING.test((c.roles || []).join(' ')) && (c.age ?? 30) >= 15 && (c.sex !== 'f' || /knight|captain|commander/.test((c.roles || []).join(' ')));
 

@@ -156,6 +156,13 @@ salience ([04](04-ai-system.md) §5). Full living-world treatment in [09-living-
   deliberate orders, nor from a battle the player placed them in; the player's choices always have teeth. Under Loose
   and Sandbox there is no protection.
 
+*Implemented (WP D4):* `engine/people/life.js` — wounds heal in 30–90 days (one in twelve festers), weekly fevers,
+winter chills and frailty after 60/70, `keptByStory` (canon windows and protected characters by gravity, moved here from
+the battle engine) guarding every death of chance: the years, wounds, illness, the lists and battle; under Canon those a
+beat still to come names are spared as well (`canonAhead`). The windows live in `data/fates.js` rather than on the
+characters (DECISIONS D-054). Invariant 11 (`engine/state/validate.js`) fails the soak if anyone the story keeps died of
+chance before their time. `tests/life.test.js`.
+
 ## 6. Succession
 
 `shared/people.js heirOf` is kept and extended with explicit laws per house (`houses.js law`):
@@ -198,6 +205,10 @@ Lysa Arryn for Robert Arryn; Cersei (Queen Regent) for Joffrey after Robert's de
 Where the books name none (e.g. Edric Dayne), `chooseRegent` must prefer the house's castellan/steward/maester or the
 mother over a cadet-branch adult, and must never choose a character flagged `outlaw` or `other_branch` (Gerold Dayne is
 of the Daynes of High Hermitage).
+
+*Implemented (WP D4):* `data/fates.js` `CANON_REGENTS` (Lysa; Cersei for Joffrey and Tommen) and `NOT_REGENT` (the
+Darkstar); `chooseRegent` takes the named regent, then the late lord's widow of whatever house, siblings, uncles and
+aunts, then the seat's sworn officers, and only then other kin — never another branch's man or an outlaw.
 
 ## 9. Commitments (promises that bind the engine)
 

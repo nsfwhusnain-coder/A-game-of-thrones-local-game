@@ -25,3 +25,9 @@ export const CANON_DEATHS = {
 // is one of its beats: never of *random* causes (a battle they were merely present at), though the player's own orders
 // have teeth
 export const CANON_PROTECTED = ['jaime_lannister', 'gregor_clegane', 'sansa_stark', 'arya_stark', 'bran_stark', 'rickon_stark', 'jon_snow', 'tyrion_lannister', 'daenerys_targaryen', 'tommen_baratheon', 'myrcella_baratheon'];
+
+// Regents the books name (08 §8; B-23): the lord's minority is ruled by them while they live and are free.
+export const CANON_REGENTS = { robert_arryn: 'lysa_arryn', joffrey_baratheon: 'cersei_lannister', tommen_baratheon: 'cersei_lannister' };
+// Those a house would never give the seal to, whatever their blood or skill: another branch's man, an outlaw.
+export const NOT_REGENT = { gerold_dayne: 'of the Daynes of High Hermitage, and outlawed for his killings' };
+
