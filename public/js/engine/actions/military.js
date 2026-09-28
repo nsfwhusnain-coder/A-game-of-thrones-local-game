@@ -10,6 +10,15 @@ import { emit } from '../facts/log.js';
 import { raiseForLiege } from '../../shared/vassals.js';
 import { summon, waitForBanners, musterOf } from '../military/muster.js';
 import { dayNumber } from '../time.js';
+import { STANDING } from '../military/battle.js';
+import { seesParty } from '../knowledge.js';
+
+const STANDING_SAID = {
+  favourable: 'it will give battle when the odds are with it, hold its ground when they are even, and fall back when they are against it.',
+  always: 'it will give battle to any enemy host that comes within reach, whatever the odds.',
+  avoid: 'it will fall back before any enemy host, and fight only if it is caught.',
+  hold: 'it will hold its ground and fight only if attacked.',
+};
 import { foldTrain } from '../military/supply.js';
 
 const fmtN = (n) => Math.round(n).toLocaleString('en-GB');
@@ -240,7 +249,7 @@ export const MILITARY = [
   },
   {
     id: 'attack_host', family: 'military', label: 'March against a host',
-    params: { army: 'party:own', to: 'party:foe', intent: 'text?' },
+    params: { army: 'party:own', to: 'party:foe', intent: 'text?', surprise: 'boolean?' },
     legal: (state, i) => {
       const a = hostOf(state, i); if (!a) return { code: 'not_yours', text: 'That host is not yours to command.' };
       const foe = partyAt(state, i.params.to); if (!foe || foe.id === a.id) return { code: 'no_foe', text: 'There is no such host to march against.' };
@@ -250,12 +259,29 @@ export const MILITARY = [
     start: (state, i) => {
       const a = hostOf(state, i); const foe = partyAt(state, i.params.to); const m = marchDays(a, a.pos, foe.pos, state);
       a.march = { to: ref(foe.id), since: state.meta.turn }; planRoute(state, a, foe.pos, ref(foe.id), { toName: foe.name }); settle(state, a);
+      // a surprise only while the enemy has no eyes on the host (07 §7.4): seen, it is only an attack
+      const unseen = !seesParty(state, foe.owner, a);
+      if (i.params.surprise && unseen) a.surprise = true; else delete a.surprise;
       emit(state, 'set_out', { actors: [a.commander], houses: [a.owner, foe.owner], pos: a.pos, data: { party: a.id, against: foe.id, days: m.days }, cause: i.source });
-      return { host: a.id, foe: foe.id, days: m.days };
+      return { host: a.id, foe: foe.id, days: m.days, surprise: !!i.params.surprise, unseen };
     },
-    receipt: (state, i, d) => { const a = state.parties[d.host], foe = state.parties[d.foe]; return [{ ok: true, text: `${a.name} marches to bring ${foe.name} (House ${state.houses[foe.owner]?.name}, ~${fmtN(foe.men)} men) to battle — ~${d.days} days away.`, eta: d.days }]; },
+    receipt: (state, i, d) => { const a = state.parties[d.host], foe = state.parties[d.foe]; return [{ ok: true, text: `${a.name} marches to bring ${foe.name} (House ${state.houses[foe.owner]?.name}, ~${fmtN(foe.men)} men) to battle — ~${d.days} days away.`, eta: d.days }, ...(d.surprise ? [{ ok: d.unseen ? true : 'warn', text: d.unseen ? 'They have no eyes on you: if the host is not seen on the road, it falls on them unawares.' : `${foe.name} has eyes on the host: there will be no surprise.` }] : [])]; },
     said: (state, i, d) => { const a = state.parties[d.host], foe = state.parties[d.foe]; return { status: 'underway', note: '[The engine will fight this battle when the hosts meet; narrate the approach.]', text: `${a.name} marches to attack ${foe.name} (House ${state.houses[foe.owner]?.name}, ~${foe.men} men), ~${d.days} days away${i.params.intent ? ' — ' + i.params.intent : ''}.` }; },
     facts: ['set_out'], mind: { allowed: true },
+  },
+  {
+    // the host card's standing orders (07 §7.1): what the host does when an enemy comes within reach, whoever begins it
+    id: 'set_standing_orders', family: 'military', label: 'Standing orders',
+    params: { army: 'party:own', engage: 'text' },
+    legal: (state, i) => {
+      const a = hostOf(state, i); if (!a) return { code: 'not_yours', text: 'That host is not yours to command.' };
+      if (!STANDING[i.params.engage]) return { code: 'engage', text: `Standing orders are one of: ${Object.values(STANDING).join('; ')}.` };
+      return null;
+    },
+    start: (state, i) => { const a = hostOf(state, i); a.standing = i.params.engage; return { host: a.id, engage: a.standing }; },
+    receipt: (state, i, d) => [{ ok: true, text: `${state.parties[d.host].name}: ${STANDING_SAID[d.engage]}` }],
+    said: (state, i, d) => ({ status: 'done', text: `${state.parties[d.host].name} has new standing orders: ${STANDING[d.engage].toLowerCase()}.` }),
+    facts: [], mind: { allowed: false },
   },
   {
     id: 'halt_host', family: 'military', label: 'Halt a host',

@@ -4,10 +4,13 @@
 // castle besieges it; the siege runs on the castle's stores and walls, or the attackers storm it if they
 // have the numbers. The story model narrates around this, and is told the results next turn.
 import { applyChanges } from './world.js';
-import { atWar, battleOdds, siegeEstimate } from './warfare.js';
+import { atWar, siegeEstimate } from './warfare.js';
 import { contingentsHoldBack } from './treachery.js';
 import { random } from '../engine/rng.js';
-import { settle } from '../engine/parties.js';
+import { settle, ref } from '../engine/parties.js';
+import { resolveBattle, reckon, stanceOf, escapes, fallBack, refugeOf } from '../engine/military/battle.js';
+import { groundAt } from '../engine/movement.js';
+import { seesParty } from '../engine/knowledge.js';
 import { fact } from '../engine/facts/log.js';
 import { fedByRations } from '../engine/military/supply.js';
 
@@ -30,43 +33,36 @@ function homeOf(state, a) {
 }
 const nameOf = (state, id) => state.characters[id]?.name || null;
 
-// ── Battles ──
-function fight(state, att, def, days, r) {
-  const place = nearestHolding(state, def.pos);
-  const atHold = def.at && state.holdings[def.at] && state.holdings[def.at].owner === def.owner ? state.holdings[def.at] : null;
+// ── Battles (engine/military/battle.js decides; this applies it) ──
+const fmt = (n) => Math.round(n).toLocaleString('en-GB');
+function fight(state, att, def, days, r, { surprise = false, caught = false, stances = {} } = {}) {
   // treachery on the field: lords in secret talks with the enemy hold their men back — or turn them
-  const betray = []; const eff = { [att.id]: att.men, [def.id]: def.men };
+  const betray = []; const held = { [att.id]: 0, [def.id]: 0 }; const turned = { [att.id]: 0, [def.id]: 0 };
   for (const [side, other] of [[att, def], [def, att]]) for (const b of contingentsHoldBack(state, side, r)) {
-    eff[side.id] -= b.men; if (b.turn) eff[other.id] += b.men; betray.push({ ...b, side, other });
+    held[side.id] += b.men; if (b.turn) turned[other.id] += b.men; betray.push({ ...b, side, other });
   }
-  const odds = battleOdds(state, { ...att, men: Math.max(1, eff[att.id]) }, { ...def, men: Math.max(1, eff[def.id]) }, { fort: atHold ? Math.min(2, (atHold.fort || 0) * 0.3) : 0 });
-  const p = odds.attacker / 100;
-  const attWins = r() < p;
-  const [win, lose] = attWins ? [att, def] : [def, att];
-  const margin = Math.abs((attWins ? p : 1 - p) - 0.5) * 2; // 0 = a coin toss, 1 = a foregone conclusion
-  const winLoss = Math.round(win.men * rnd(0.04, 0.12, r) * (1.2 - margin * 0.7));
-  const loseLoss = Math.round(lose.men * rnd(0.18, 0.4, r) * (0.8 + margin * 0.5));
-  const before = { [win.id]: win.men, [lose.id]: lose.men };
+  // the battle is fought with the men who fight: the held-back stand aside, the turncoats change sides for the day
+  const menA = att.men, menD = def.men;
+  att.men = Math.max(1, menA - held[att.id] + turned[att.id]); def.men = Math.max(1, menD - held[def.id] + turned[def.id]);
+  const B = resolveBattle(state, att, def, { r, surprise, caught });
+  att.men = menA; def.men = menD;
+  const { win, lose } = B; const place = B.site.place;
+  const winLoss = Math.min(win.men - 1, B.lost[win.id]); const loseLoss = B.wiped ? lose.men : Math.min(lose.men, B.lost[lose.id]);
   const changes = [];
-  const wiped = lose.men - loseLoss < Math.max(150, before[lose.id] * 0.15);
-  changes.push({ op: 'army_update', army: win.id, delta: -winLoss, morale: Math.min(100, (win.morale ?? 70) + 10), status: 'victorious', cause: 'battle' });
-  if (wiped) changes.push({ op: 'army_destroy', army: lose.id, reason: 'destroyed in battle' });
-  else {
-    changes.push({ op: 'army_update', army: lose.id, delta: -loseLoss, morale: Math.max(5, (lose.morale ?? 70) - 25 - Math.round(margin * 15)), status: 'retreating', cause: 'battle' });
-    const home = homeOf(state, lose); if (home) { lose.march = { to: home, since: state.meta.turn }; lose.route = null; lose.at = null; }
-  }
-  // what the hosts are doing this turn is the engine's word: the loser routed, the victor still in the field
-  win.fought = lose.fought = state.meta.turn; win.state = 'engaged'; lose.state = 'routed';
-  // the fate of the commanders
+  const moraleWin = B.drawn ? -10 : Math.round(10 + 20 * B.m); const moraleLose = B.drawn ? -10 : -Math.round(10 + 20 * B.m);
+  changes.push({ op: 'army_update', army: win.id, delta: -winLoss, morale: clamp((win.morale ?? 70) + moraleWin, 5, 100), cause: 'battle' });
+  if (B.wiped) changes.push({ op: 'army_destroy', army: lose.id, reason: 'destroyed in battle' });
+  else changes.push({ op: 'army_update', army: lose.id, delta: -loseLoss, morale: clamp((lose.morale ?? 70) + moraleLose, 5, 100), cause: 'battle' });
+  // the baggage changes hands
+  if (B.spoils) { win.rations += B.spoils; if (!B.wiped) lose.rations = Math.max(0, lose.rations - B.spoils); }
+  // the fates of the story's people: slain, taken to the victor's host, or hurt
   const fates = [];
-  const lc = lose.commander && state.characters[lose.commander];
-  if (lc?.alive) {
-    const roll = r();
-    if (roll < (wiped ? 0.12 : 0.05)) { changes.push({ op: 'character', id: lc.id, alive: false, cause: `killed in battle near ${place?.name}` }); fates.push(`${lc.name} was slain`); }
-    else if (roll < (wiped ? 0.4 : 0.14)) { changes.push({ op: 'character', id: lc.id, status: 'imprisoned', loc: win.at || place?.id, note: `Taken captive in battle near ${place?.name}` }); fates.push(`${lc.name} was taken captive`); }
+  for (const { c, fate } of B.fates) {
+    const theirs = [win.members || [], win.commander].flat().includes(c.id) ? win : lose; const foe = theirs === win ? lose : win;
+    if (fate === 'slain') { changes.push({ op: 'character', id: c.id, alive: false, cause: `killed in battle near ${place?.name}` }); fates.push(`${c.name} was slain`); }
+    else if (fate === 'captured' && state.parties[foe.id] && !(B.wiped && foe === lose)) { changes.push({ op: 'character', id: c.id, status: 'imprisoned', loc: ref(foe.id), note: `Taken captive in battle near ${place?.name}` }); fates.push(`${c.name} was taken captive`); }
+    else if (fate === 'wounded' || fate === 'captured') { changes.push({ op: 'character', id: c.id, status: 'wounded', note: `Wounded in battle near ${place?.name}` }); fates.push(`${c.name} was wounded`); }
   }
-  const wc = win.commander && state.characters[win.commander];
-  if (wc?.alive && r() < 0.025) { changes.push({ op: 'character', id: wc.id, alive: false, cause: `fell in the hour of victory near ${place?.name}` }); fates.push(`${wc.name} fell in the hour of victory`); }
   // the men who held back or turned leave the host they came with
   for (const b of betray) {
     changes.push({ op: 'army_update', army: b.side.id, delta: -Math.min(b.men, Math.max(0, b.side.men - (b.side === win ? winLoss : loseLoss) - 1)), cause: 'battle' });
@@ -76,20 +72,50 @@ function fight(state, att, def, days, r) {
   }
   const name = `The Battle of ${place?.name || 'the field'}`;
   const W = state.houses[win.owner], L = state.houses[lose.owner];
-  changes.push({ op: 'battle', name, at: place?.id, attacker: att.owner, defender: def.owner, victor: win.owner, losses: { [win.owner]: winLoss, [lose.owner]: wiped ? lose.men : loseLoss }, summary: `${W?.name} defeated ${L?.name}${wiped ? ', whose host was destroyed' : ''}.` });
-  changes.push({ op: 'landmark', name, at: place?.id, kind: 'battle', note: `${W?.name} over ${L?.name}` });
+  if (!B.drawn) {
+    changes.push({ op: 'battle', name, at: place?.id, attacker: att.owner, defender: def.owner, victor: win.owner, losses: { [win.owner]: winLoss, [lose.owner]: loseLoss }, summary: `${W?.name} defeated ${L?.name}${B.wiped ? ', whose host was destroyed' : ''}.` });
+    changes.push({ op: 'landmark', name, at: place?.id, kind: 'battle', note: `${W?.name} over ${L?.name}` });
+  }
   changes.push({ op: 'relation', a: win.owner, b: lose.owner, delta: -8, reason: name });
   const season = state.world?.season || 'summer';
-  const how = pick(margin > 0.6
-    ? [`The ${L?.name} line broke at the first charge and never re-formed.`, `It was over before noon: the ${L?.name} host was outnumbered and outfought, and knew it.`, `${W?.name} had the ground, the numbers and the sun behind them; the ${L?.name} levies ran.`]
-    : margin > 0.25
-      ? [`The fighting lasted until dusk; the ${L?.name} left fell back first, and the rest followed.`, `A flank charge by the ${W?.name} knights decided a hard day.`, `Both hosts bled; the ${L?.name} broke when their banners fell.`]
-      : [`It could have gone either way — the field was a slaughter, and the ${L?.name} yielded it only at nightfall.`, `A near thing: the ${W?.name} reserve came up at the last hour.`, `Neither side will call it a victory; but ${W?.name} held the field.`], r);
+  const how = B.drawn ? pick([`Neither host would yield the field; at dusk both drew off, and the crows had the rest.`, `A long day of slaughter decided nothing: both hosts fell back to count their dead.`], r)
+    : pick(B.broken
+      ? [`The ${L?.name} line broke at the first charge and never re-formed.`, `It was over before noon: the ${L?.name} host was outnumbered and outfought, and knew it.`]
+      : B.m > 0.3 ? [`The fighting lasted until dusk; the ${L?.name} left fell back first, and the rest followed.`, `A flank charge by the ${W?.name} knights decided a hard day.`]
+        : [`It could have gone either way — the ${L?.name} yielded the field only at nightfall.`, `A near thing: the ${W?.name} reserve came up at the last hour.`], r);
   const weather = { summer: 'under a hot sun', autumn: 'in the rain and mud', winter: 'in the snow', spring: 'across flooded fields' }[season];
-  const details = `${how} Fought ${weather}; ${att.name} (${before[att.id].toLocaleString('en-US')}) against ${def.name} (${before[def.id].toLocaleString('en-US')}). ${W?.name} lost ~${winLoss.toLocaleString('en-US')}; ${L?.name} lost ~${(wiped ? before[lose.id] : loseLoss).toLocaleString('en-US')}${wiped ? ' — the host is no more' : ' and are falling back'}.${fates.length ? ' ' + fates.join('; ') + '.' : ''}`;
-  const p0 = state.meta.player; const mine = [win.owner, lose.owner].includes(p0);
-  const event = fact(state, 'battle', { title: `${W?.name} victorious near ${place?.name}`, text: `${win.name} ${wiped ? 'destroyed' : 'defeated'} ${lose.name}${fates.length ? '; ' + fates[0] : ''}.`, details, where: place?.id, importance: mine ? 5 : 4, type: 'war', houses: [win.owner, lose.owner], day: 1 + Math.floor(r() * days) }, { actors: [att.commander, def.commander], data: { attacker: att.id, defender: def.id, winner: win.id, loser: lose.id, wiped, lost: { [win.id]: winLoss, [lose.id]: wiped ? before[lose.id] : loseLoss } }, pos: place?.pos });
-  return { changes, event };
+  const ground = { forest: 'among the trees', marsh: 'in the bogs', hills: 'on broken hills', mountains: 'in the high passes', open: 'on open ground' }[B.site.ground] || '';
+  const decided = B.decided.length ? ` What decided it: ${B.decided.join(' and ')}.` : '';
+  const spoils = B.spoils ? ` ${W?.name} took the ${L?.name} baggage.` : '';
+  const details = B.drawn
+    ? `${how} Fought ${ground} ${weather}; ${att.name} (${fmt(att.men)}) against ${def.name} (${fmt(def.men)}). ${W?.name} lost ~${fmt(winLoss)}; ${L?.name} ~${fmt(loseLoss)}.${fates.length ? ' ' + fates.join('; ') + '.' : ''}`
+    : `${how} Fought ${ground} ${weather}${surprise ? ', the attack falling on an enemy who did not see it coming' : ''}; ${att.name} (${fmt(att.men)}) against ${def.name} (${fmt(def.men)}). ${W?.name} lost ~${fmt(winLoss)}; ${L?.name} lost ~${fmt(loseLoss)}${B.pursuit ? ' (many cut down in the pursuit)' : ''}${B.wiped ? ' — the host is no more' : ' and are falling back'}.${spoils}${decided}${fates.length ? ' ' + fates.join('; ') + '.' : ''}`;
+  const mine = [win.owner, lose.owner].includes(state.meta.player);
+  const report = { outcome: B.outcome, odds: Math.round(B.odds * 100) / 100, fortune: Math.round(B.fortune * 100) / 100, ground: B.site.ground, surprise, caught, stances, decided: B.decided, pursuit: Math.round(B.pursuit * 100) / 100, spoils: B.spoils, power: { [att.id]: Math.round(B.a.power), [def.id]: Math.round(B.d.power) } };
+  const title = B.drawn ? `A bloody draw near ${place?.name}` : `${W?.name} victorious near ${place?.name}`;
+  const text = B.drawn ? `${att.name} and ${def.name} fought near ${place?.name} until neither could fight on.` : `${win.name} ${B.wiped ? 'destroyed' : B.broken ? 'routed' : 'defeated'} ${lose.name}${fates.length ? '; ' + fates[0] : ''}.`;
+  const event = fact(state, 'battle', { title, text, details, where: place?.id, importance: mine ? 5 : 4, type: 'war', houses: [win.owner, lose.owner], day: days > 1 ? 1 + Math.floor(r() * days) : 1 }, { actors: [att.commander, def.commander], data: { attacker: att.id, defender: def.id, winner: B.drawn ? null : win.id, loser: B.drawn ? null : lose.id, wiped: B.wiped, lost: { [win.id]: winLoss, [lose.id]: loseLoss }, ...report }, pos: place?.pos });
+  if (B.broken && !B.wiped) fact(state, 'rout', { title: `${lose.name} routed`, text: `${lose.name} breaks and flees the field near ${place?.name}.`, where: place?.id, houses: [lose.owner, win.owner], day: event.day }, { actors: [lose.commander], data: { party: lose.id }, alongside: event.fact });
+  return { changes, event, B };
+}
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// the enemy hosts a host has already stood off or fallen back from, while they stay in reach: told once, not daily
+const faces = (p, q) => Array.isArray(p.facing) && p.facing.includes(q.id);
+const face = (p, q) => { p.facing = [...new Set([...(Array.isArray(p.facing) ? p.facing : []), q.id])]; };
+
+/** A host that will not give battle falls back toward a friendly holding (07 §7.1). */
+function withdraw(state, p, foe) {
+  const to = fallBack(state, p); if (!to) return [];
+  // a company of riders slipping away is no news; a host refusing battle is
+  if (p.men < 500 && ![p.owner, foe.owner].includes(state.meta.player)) return [];
+  const f = fact(state, 'withdrew', { title: `${p.name} will not give battle`, text: `${p.name} falls back before ${foe.name}, making for ${state.holdings[to]?.name}.`, where: to, houses: [p.owner, foe.owner], day: 1 }, { actors: [p.commander], data: { party: p.id, from: foe.id, to }, cause: { type: 'rule', ref: 'battle' } });
+  return [p.owner, foe.owner].includes(state.meta.player) ? [f] : [];
+}
+/** Two hosts in reach of each other, and neither will attack. */
+function standOff(state, a, b) {
+  const place = nearestHolding(state, a.pos);
+  return fact(state, 'stand_off', { title: `${a.name} and ${b.name} face each other`, text: `${a.name} and ${b.name} stand in sight of each other near ${place?.name}; neither will begin it.`, where: place?.id, houses: [a.owner, b.owner], day: 1 }, { actors: [a.commander, b.commander], data: { a: a.id, b: b.id }, cause: { type: 'rule', ref: 'battle' } });
 }
 
 // ── Sieges ──
@@ -182,14 +208,46 @@ export function resolveWarfare(state, days, { skip = new Set(), r = random } = {
   pairs.sort((x, y) => x[0] - y[0]);
   for (const [, a, b] of pairs) {
     if (fought.has(a.id) || fought.has(b.id) || !state.parties[a.id] || !state.parties[b.id]) continue;
-    // the side that marched into the other attacks; else the stronger one does
     const aMoving = a.march && !b.march, bMoving = b.march && !a.march;
-    const [att, def] = aMoving ? [a, b] : bMoving ? [b, a] : a.men >= b.men ? [a, b] : [b, a];
-    const res = fight(state, att, def, days, r);
+    let att, def, caught = false; const stances = {};
+    if (a.kind === 'fleet') [att, def] = aMoving ? [a, b] : bMoving ? [b, a] : a.men >= b.men ? [a, b] : [b, a];
+    else {
+      // each commander takes his stance (engine/military/battle.js): give battle, hold his ground, or fall back
+      const oa = reckon(state, a, b).odds, ob = reckon(state, b, a).odds;
+      // a host with nowhere to fall back to (it stands in its refuge already) holds its ground: cornered
+      const cornered = (p, st) => (st === 'withdraw' && (!refugeOf(state, p) || p.at === refugeOf(state, p)) ? 'hold' : st);
+      const sa = cornered(a, stanceOf(state, a, b, oa)), sb = cornered(b, stanceOf(state, b, a, ob)); stances[a.id] = sa; stances[b.id] = sb;
+      if (sa === 'attack' && sb === 'attack') [att, def] = aMoving ? [a, b] : bMoving ? [b, a] : oa >= ob ? [a, b] : [b, a];
+      else if (sa === 'attack') [att, def] = [a, b];
+      else if (sb === 'attack') [att, def] = [b, a];
+      else {
+        // no one gives battle: whoever means to fall back does, and the rest stand and watch each other
+        for (const [p, q, st] of [[a, b, sa], [b, a, sb]]) if (st === 'withdraw' && !faces(p, q)) events.push(...withdraw(state, p, q));
+        if (sa !== 'withdraw' && sb !== 'withdraw' && !faces(a, b)) events.push(standOff(state, a, b));
+        face(a, b); face(b, a);
+        continue;
+      }
+      if (stances[def.id] === 'withdraw') {
+        if (escapes(state, def, att, r)) { events.push(...withdraw(state, def, att)); face(def, att); fought.add(def.id); continue; }
+        caught = true;
+      }
+    }
+    // an attack the defender never saw coming: a host that marched unseen, in the woods (07 §7.4)
+    const surprise = !!att.surprise || (groundAt(def.pos) === 'forest' && !seesParty(state, def.owner, att));
+    const res = fight(state, att, def, days, r, { surprise, caught, stances });
     // the battle tells its own fact; the dead, the taken and the broken hosts are recorded on the battle's day
     const out = applyChanges(state, res.changes, { source: 'The field of battle', battleHouses: new Set([a.owner, b.owner]), spanDays: days, told: ['battle'], on: res.event.day, alongside: res.event.fact, cause: { type: 'rule', ref: 'battle' } });
     applied.push(...out.applied); events.push(res.event); fought.add(a.id); fought.add(b.id);
+    // after the battle (07 §7.5): the loser falls back toward a friendly holding; after a draw, both do
+    const { win, lose, drawn } = res.B;
+    for (const p of drawn ? [win, lose] : [lose]) if (state.parties[p.id] && p.kind !== 'fleet' && p.kind !== 'garrison') fallBack(state, p);
+    delete att.surprise;
+    for (const p of [win, lose]) if (state.parties[p.id]) { p.fought = state.meta.turn; p.facing = (p.facing || []).filter((x) => x !== (p === win ? lose : win).id); }
+    if (state.parties[win.id] && !drawn) win.state = 'engaged';
+    if (state.parties[lose.id] && !drawn) lose.state = 'routed';
   }
+  // hosts no longer face anyone they faced
+  for (const p of Object.values(state.parties)) if (p.facing) { p.facing = p.facing.filter((x) => state.parties[x] && dist(p.pos, state.parties[x].pos) <= CONTACT); if (!p.facing.length) delete p.facing; }
   // sieges: hosts that sit before an enemy castle, and did not just fight
   const byHold = new Map();
   for (const a of armies()) {

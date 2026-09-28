@@ -46,6 +46,8 @@ export const KINDS = {
   camp_fever: K(2, 'disaster', 'houses'), // the flux in a camp that has sat too long
   battle: K(4, 'war', 'public', (f, s) => `House ${nameOf(s, f.data.attacker)} and House ${nameOf(s, f.data.defender)} meet in battle${f.place ? ` near ${placeOf(s, f.place)}` : ''}${f.data.winner ? `; the field is House ${nameOf(s, f.data.winner)}'s` : ''}.`),
   rout: K(4, 'war'),
+  withdrew: K(3, 'war', 'local'),     // a host that would not give battle falls back (engine/military/battle.js)
+  stand_off: K(3, 'war', 'local'),    // two hosts in reach, and neither will begin it
   captured_in_battle: K(4, 'war', 'public', (f, s) => `${nm(who(s, f))} is taken captive on the field.`),
   slain_in_battle: K(4, 'war', 'public', (f, s) => `${nm(who(s, f))} is slain${f.data.cause ? ` — ${f.data.cause}` : ''}.`),
   siege_begun: K(4, 'war'),

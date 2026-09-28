@@ -344,6 +344,15 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       return;
     }
     if (RE.merge.test(t) || (/\b(merge|join|combine|unite)\b/.test(t) && (hosts.length >= 2 || (hosts.length && MY_HOST.test(t))))) { A('merge_hosts', { ...(hosts.length > 1 ? { armies: hosts } : {}), ...hostName(clause) }); return; }
+    // standing orders (07 §7.1): what the host does when an enemy comes within reach
+    const engage = /\b(avoid|refuse|shun) (a )?(battle|a fight|the enemy)|\bdo not (give|offer) battle\b|\bfall back (before|if)\b/.test(t) ? 'avoid'
+      : /\bhold (its|your|our|the|their) ground\b|\bdefend only\b|\bdo not attack\b/.test(t) ? 'hold'
+        : /\b(always|whatever the odds)\b[^.]*\b(engage|attack|fight|give battle)\b|\b(engage|attack|fight|give battle)\b[^.]*\bwhatever the odds\b/.test(t) ? 'always'
+          : /\b(engage|give battle|fight) (only )?(if|when) the odds\b/.test(t) ? 'favourable' : null;
+    if (engage) {
+      const a = hostMeant() || bigHost(); if (a) A('set_standing_orders', { army: a.id, engage }); else need('Which host are these orders for?', hostPick(), { verb: 'set_standing_orders', params: { engage } });
+      return;
+    }
     if (RE.wait.test(t)) {
       const a = hostMeant() || bigHost(); if (a) A('wait_banners', { army: a.id }); else need('Which host should wait for the banners?', hostPick(), { verb: 'wait_banners', params: {} });
       return;
@@ -377,7 +386,7 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     // (a castle's garrison is fought by marching on the castle, not as a host in the field)
     const foes = Object.values(state.parties).filter((a) => isForce(a) && a.kind !== 'garrison' && !commands(state, house, a) && a.men > 0);
     const foeNamed = foes.find((a) => hosts.includes(a.id) || (housesNamed.includes(a.owner) && /\b(host|army|forces|men|camp)\b/.test(t)) || others.some((c) => a.commander === c.id && /\b(host|army|forces)\b/.test(t)));
-    if (RE.attack.test(t) && foeNamed && (hostMeant() || bigHost())) { A('attack_host', { army: (hostMeant() || bigHost()).id, to: 'party:' + foeNamed.id, intent: 'bring them to battle' }); return; }
+    if (RE.attack.test(t) && foeNamed && (hostMeant() || bigHost())) { A('attack_host', { army: (hostMeant() || bigHost()).id, to: 'party:' + foeNamed.id, intent: 'bring them to battle', ...(/\b(surprise|unawares|ambush|by night|at night|unseen)\b/.test(t) ? { surprise: true } : {}) }); return; }
     // a host to a place: named, or "my host", or — when no one of the house is sent — the lord's host
     const to = dest() || ((RE.attack.test(t) || /\b(march|advance) (?:on|against|upon)\b/.test(t)) && housesNamed.length ? state.houses[housesNamed[0]]?.seat : null);
     // "send someone", "a rider must go": a person the order does not name is a question, not the host

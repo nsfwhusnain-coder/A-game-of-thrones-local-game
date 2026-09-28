@@ -43,6 +43,22 @@ function terrain() {
   T = f;
   return T;
 }
+// ── The ground a battle is fought on (07 §7.2) ──────────────────────────────────────────────────────────────────────
+// the atlas's forests, marshes, hills and mountains without the roads through them (a road through a wood is still a wood)
+const GROUND = ['open', 'forest', 'marsh', 'hills', 'mountains'];
+let G = null;
+function groundGrid() {
+  if (G) return G;
+  const { GW, GH } = raster(); const g = new Uint8Array(GW * GH);
+  const paint = (cells, v) => { for (const c of cells) if (g[c] < v) g[c] = v; };
+  for (const x of FORESTS) paint(polyCells(x.pts), 1);
+  for (const x of SWAMPS) paint(polyCells(x.pts), 2);
+  for (const x of MOUNTAIN_RANGES) paint(polyCells(x.pts), (x.h ?? 0.5) >= 0.6 ? 4 : 3);
+  G = g; return G;
+}
+/** 'open' | 'forest' | 'marsh' | 'hills' | 'mountains' at a point ('water' off the land). */
+export const groundAt = (p) => { const c = cellOf(p); return c < 0 ? 'water' : GROUND[groundGrid()[c]]; };
+
 /** The time factor of the ground at a point (Infinity on water and on the Wall). */
 export const groundFactor = (p) => { const g = cellOf(p); return g < 0 ? Infinity : terrain()[g]; };
 

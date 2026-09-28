@@ -8,6 +8,7 @@ export { MILES_PER_UNIT };
 import { ROAD_FACTOR } from '../../data/balance.js';
 import { estimate, paceOf, daysLeft } from '../engine/movement.js';
 import { forces } from '../engine/parties.js';
+import { reckon } from '../engine/military/battle.js';
 
 export function atWar(state, a, b) {
   if (!a || !b || a === b) return false;
@@ -29,11 +30,10 @@ export function strength(state, a) {
   return a.men * ((a.morale ?? 70) / 100) * (0.75 + m / 40) * (0.6 + 0.4 * (a.supply ?? 80) / 100) * cav * quality;
 }
 
-export function battleOdds(state, att, def, { fort = 0, terrain = 1 } = {}) {
-  const sa = strength(state, att);
-  const sd = strength(state, def) * (1 + fort * 0.45) * terrain;
-  const p = sa ** 2 / (sa ** 2 + sd ** 2); // Lanchester-ish: numbers matter quadratically
-  return { attacker: Math.round(p * 100), sa: Math.round(sa), sd: Math.round(sd) };
+/** The odds of a field battle as the engine will fight it (engine/military/battle.js): the attacker's chance, in %. */
+export function battleOdds(state, att, def) {
+  const k = reckon(state, att, def);
+  return { attacker: Math.round((k.win + k.draw / 2) * 100), win: Math.round(k.win * 100), draw: Math.round(k.draw * 100), odds: Math.round(k.odds * 100) / 100, sa: Math.round(k.a.power), sd: Math.round(k.d.power) };
 }
 
 export function marchDays(a, from, to, state = null) {
