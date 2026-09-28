@@ -128,6 +128,32 @@ const SCENARIOS = {
       await page.waitForTimeout(500);
     } };
   },
+  // battle (WP C4): the Host of Casterly Rock, ordered to engage whatever the odds, marches on Riverrun at war with the
+  // Tullys and meets their banners — the battle card says what decided it, and the host card shows its standing orders
+  async battle() {
+    const { id } = await api('/games', { scenario: 'agot_298', house: 'lannister', seed: 7 });
+    await api(`/games/${id}/act`, { kind: 'call_banners', vassals: [], at: 'lannister', ownLevies: 15000 });
+    let s = await api(`/games/${id}`);
+    const host = Object.values(s.parties).find((a) => a.owner === 'lannister' && a.kind === 'host' && a.at === 'lannister');
+    await api(`/games/${id}/act`, { verb: 'declare_war', params: { house: 'tully' } });
+    await api(`/games/${id}/act`, { verb: 'set_standing_orders', params: { army: host.id, engage: 'always' } });
+    await api(`/games/${id}/act`, { kind: 'march', army: host.id, to: 'tully' });
+    for (let t = 0; t < 10; t++) {
+      const { turn } = await api(`/games/${id}/advance`, { span: '7d', orders: [] });
+      const fought = (turn.events || []).find((e) => /victorious|bloody draw/i.test(e.title));
+      if (!fought) continue;
+      s = await api(`/games/${id}`);
+      return { id, focus: s.parties[host.id]?.pos || s.holdings.tully.pos, dist: 900, page: async (page) => {
+        await page.evaluate(async ([hid, title]) => {
+          const m = await import('/js/ui/windows.js'); m.openSheet('army', hid);
+          const card = [...document.querySelectorAll('#drawer-body .story')].find((x) => x.textContent.includes(title));
+          card?.querySelector('.story-rec')?.setAttribute('open', ''); card?.scrollIntoView({ block: 'start' });
+        }, [host.id, fought.title]);
+        await page.waitForTimeout(500);
+      } };
+    }
+    throw new Error('no battle in ten weeks');
+  },
   // the economy (WP C1): a moon's accounts in the Treasury window — rents, trade, tribute, the household, the field
   async economy() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 7 });

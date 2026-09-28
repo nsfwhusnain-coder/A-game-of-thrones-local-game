@@ -126,7 +126,8 @@ import { applyChanges as apply } from '../public/js/shared/world.js';
 test('hosts at war in contact fight: losses, a rout, a battlefield on the map', () => {
   const s = fresh();
   apply(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['stark'] }, { op: 'army_create', id: 'n1', owner: 'stark', name: 'N', at: 'tully', men: 10000 }, { op: 'army_create', id: 'l1', owner: 'lannister', name: 'L', at: 'tully', men: 10000 }]);
-  const r = resolveWarfare(s, 30, { r: () => 0.3 });
+  s.parties.l1.standing = 'always'; // evenly matched, only a host ordered to engage whatever the odds begins it
+  const r = resolveWarfare(s, 30, { r: () => 0.9 }); // (a fortunate day: evenly matched, it could have been a draw)
   assert.equal(r.events.length, 1);
   const total = (s.parties.n1?.men || 0) + (s.parties.l1?.men || 0);
   assert.ok(total < 20000 && total > 10000);

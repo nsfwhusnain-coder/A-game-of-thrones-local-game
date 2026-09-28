@@ -743,3 +743,26 @@ ransoms, `embargo`) and the price index of §6.3.
 - **The minds**: a lord whose host is short or starving marches it to the nearest of his own holdings (the house ways'
   `bread` rule); the nearest home is always among a host's places to go.
 
+## D-046 · 2026-09-28 · Battles by stance and by the ground; the story keeps its people (WP C4)
+
+**What.** `engine/military/battle.js` decides; `shared/battles.js` applies it. Departures from 07 §7:
+- **Stances are a rule, not a mind call.** Each commander's stance comes from the host's standing orders, else from his
+  courage: attack at odds 1.2 (1.0 if bold, 1.5 if cautious), fall back below 0.7, else hold. A per-battle model call
+  (§7.1's "the commander's mind is consulted") was left out: battles happen inside the day loop, where a model call
+  would stall a streamed week, and the weekly minds already choose whom to march against (`attack_host`, which always
+  attacks). The lord's own hosts default to *Engage if the odds favour us*.
+- **Neither attacks → a stand-off.** Two hosts that both hold stand in sight of each other, told once. In the old engine
+  every contact was a battle.
+- **Cornered**: a host whose refuge is where it stands cannot fall back and holds its ground.
+- **Falling back**: a host gets clear with a chance of 0.2 + 0.5 × its pace ÷ its pursuer's (0.1–0.9); caught, it
+  fights at ×0.85, and the report says so.
+- **The day's fortune**: ±12 % a side is ±24 % on the odds taken together, one draw of the dice, so the war room's
+  chances are exact: at even odds ~29 % a victory each way and ~42 % a bloody draw; at 1.4 a certain victory. Upsets
+  come from what the war room cannot see (a turncoat's men, surprise, hunger), not from the dice.
+- **Surprise** (×1.6 in the first of two phases, so ×1.26 over the day) when an `attack_host` order asks for it and the
+  enemy has no eyes on the host, or when the attacker falls on a host in a wood that does not see it.
+- **The story's people**: `data/fates.js` holds 08 §5's canon deaths and protected people. Jaime Lannister is added
+  to the protected: his capture in the Whispering Wood is a beat of the story.
+- **Rivers and fords** (×1.4) and **raids** (§7.6) are not yet: the atlas has no fords for the engine to read (C6
+  brings the coasts and the raids). Night attacks are a surprise.
+

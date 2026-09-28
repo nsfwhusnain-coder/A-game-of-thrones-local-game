@@ -3,6 +3,23 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — C4: battles by stance, ground and surprise
+
+- **Standing orders.** Each of your hosts has them on its card: *Engage if the odds favour us* (the default), *Always
+  engage*, *Avoid battle*, *Hold ground* — or write "The host is to avoid battle".
+- **Lords choose whether to fight.** A bold lord gives battle at even odds, a cautious one only with the odds well in
+  hand; outmatched, a host falls back toward a friendly castle — and a slow one may be caught on the march. Two hosts
+  that will neither of them begin it stand and watch each other.
+- **Arms and ground.** Knights are worth four levies in the open and half that among the trees; bowmen on a hill are
+  worth more; clansmen in their mountains most of all. A hungry host fights at seven-tenths.
+- **Surprise.** "Attack Lord Jaime's host by surprise" — if they have no eyes on you, you fall on them unawares; in a
+  wood, a host that does not see you coming is surprised anyway.
+- **What follows.** A victory, a rout or a bloody draw; the pursuit; the loser's baggage taken; lords slain, taken
+  captive (they ride with the victor's host) or wounded — though the story keeps its people for their own ends (Robert
+  does not die in a skirmish before his boar). The battle's record says what decided it.
+- Owner to verify: as Lannister, declare war on the Tullys, raise 15,000 at the Rock, set the host to *Always engage*
+  and march on Riverrun; when the battle comes, open its record in the chronicle and read what decided it.
+
 ## 2026-09-28 — C3: supply — bread, forage and the stripped land
 
 - **A host carries its bread.** Seven days on the men's backs and a wagon to every forty men: a host sets out with about

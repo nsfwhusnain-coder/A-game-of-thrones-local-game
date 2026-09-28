@@ -21,6 +21,7 @@ import { forces, partyOf, placeOf, membersOf, together, statusText, sworn } from
 import { daysLeft } from '../engine/movement.js';
 import { musterOf } from '../engine/military/muster.js';
 import { supplyOf, supplyText, provinceOf } from '../engine/military/supply.js';
+import { STANDING } from '../engine/military/battle.js';
 import { dayNumber, dateOfDay } from '../engine/time.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
@@ -576,6 +577,7 @@ function armySheet(id) {
     </div>
     <div class="kv"><span class="k">Position</span><span>${a.march ? `bound for ${esc(a.route?.toName || placeName(s, a.march.to))}${(() => { const d = daysLeft(a) ?? (s.holdings[a.march.to]?.pos && marchDays(a, a.pos, s.holdings[a.march.to].pos, s).days); return d ? ` · ~${Math.max(1, Math.round(d))} days away${a.route ? ` (${fmt(a.route.miles)} miles by the road it takes)` : ''}` : ''; })()}` : a.at ? esc(placeName(s, a.at)) : 'in the field'}</span>
     ${mine && a.kind === 'host' && supplyOf(s, a).days != null ? (() => { const sp = supplyOf(s, a); const land = provinceOf(s, a); return `<span class="k">Supply</span><span>${esc(supplyText(s, a))} · ${fmt(sp.wagons)} wagons, eats ${fmt(sp.need)} rations a day${land?.devastation >= 20 ? ` · the lands about ${esc(land.name)} are ${land.devastation >= 70 ? 'stripped bare' : 'picked over'}` : ''}</span>`; })() : ''}
+    ${mine && a.kind === 'host' ? `<span class="k">Standing orders</span><span><select class="standing" data-standing="${a.id}" title="What the host does when an enemy host comes within reach">${Object.entries(STANDING).map(([k, v]) => `<option value="${k}"${(a.standing || 'favourable') === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></span>` : ''}
     <span class="k">Composition</span><span>${esc(a.composition || '—')}</span><span class="k">Reported</span><span>${esc(a.asOf || '')}</span></div>
     ${cmd ? `<h4>Commander</h4>${charRow(cmd)}` : ''}
     ${(() => {
@@ -615,6 +617,7 @@ function musterHtml(a) {
   </div>
   ${m.road.length + m.expected.length ? `<div class="row-actions">${w ? `<span class="muted grow">Waiting for the banners: ${Math.round(w.share * 100)}% of the men called, or ${when(w.until)}${w.to ? `; then to ${esc(placeName(s, w.to))}` : ''}</span>` : ''}<button class="btn small" data-march="${a.id}" title="March now: the banners still coming will follow the host wherever it goes">March now — the banners will follow</button>${w ? '' : `<button class="btn small" data-wait-banners="${a.id}" title="Hold here until eight in ten of the men called are with the host (or the last expected is overdue), then march where it was bound">Wait for the banners</button>`}</div>` : ''}`;
 }
+document.addEventListener('change', (e) => { const sel = e.target.closest('select[data-standing]'); if (sel) doVerb('set_standing_orders', { army: sel.dataset.standing, engage: sel.value }, { after: () => renderSheet() }); });
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-wait-banners]'); if (b) doVerb('wait_banners', { army: b.dataset.waitBanners, share: 0.8 }, { after: () => renderSheet() }); });
 
 function houseSheet(id) {

@@ -267,6 +267,16 @@ The winner holds the field (a landmark `battle` marker for a year), may pursue (
 wagons, coin carried). The loser retreats toward the nearest friendly holding. Captives go to the victor's leader's host
 as `members` with status `captive`.
 
+*Implemented in WP C4* (`engine/military/battle.js`, applied by `shared/battles.js`; [DECISIONS.md#D-046](DECISIONS.md)):
+power and odds as §7.2 (foot are levies, men-at-arms or clansmen by the host's make-up; walls count ×1 + 0.1 a course
+for a defender at his own holding); the day's fortune ±24 % on the odds, taken together; outcomes by the fortunate odds
+— 1.1 a victory, 2.5 a crushing one (a rout), between 1/1.1 and 1.1 a bloody draw after which both fall back; stances
+by rule for every commander (no model call); standing orders on the host card (the player's hosts default to *Engage
+if the odds favour us*); a host with nowhere to fall back to holds its ground; one falling back gets clear by its pace
+against its pursuer's, or is caught and fights at ×0.85; surprise when ordered and unseen, or in a wood unseen; lords'
+fates as §7.3 with `data/fates.js`; captives ride in the victor's host; the baggage changes hands; the report is the
+battle fact's data and its details (what decided it). Raids (§7.6) and rivers and fords wait for C5–C6.
+
 ### 7.6 Raids
 
 Order `raid` on a region: each day the raiding party burns/plunders one holding's lands in reach (not its castle):

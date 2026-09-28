@@ -59,7 +59,8 @@ export async function narrateTurn(state, cards, { provider = 'mock', cfg, log, o
     out.push({
       title: e.headline, text: e.line, details: e.scene, pov: e.pov, where: s.place, importance: s.importance, type: s.type,
       houses: s.houses, day: s.days[0], fact: s.facts[0].id, facts: s.facts.map((f) => f.id), narrated: true,
-      record: mine.map((c) => c.text).filter(Boolean),
+      // the record keeps the engine's own words, the battle report's (what decided it) among them
+      record: mine.map((c) => [c.text, c.details].filter(Boolean).join(' ')).filter(Boolean),
       ...(mine.some((c) => c.mine) ? { mine: true } : {}), ...(order ? { order } : {}), ...(mine.find((c) => c.at)?.at ? { at: mine.find((c) => c.at).at } : {}),
     });
     record.told++;
