@@ -376,6 +376,13 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       if (mode === 'hidden' && places.length && RE.march.test(t)) A('march_host', { army: a.id, to: dest() });
       return;
     }
+    // a siege (07 §8.3): storm the walls, or offer the castle terms — the castle named, else the one the host sits before
+    const besieged = () => places.find((id) => state.holdings[id]?.siege) || Object.values(state.parties).find((a) => a.besieging && commands(state, house, a))?.besieging || places[0];
+    if (/\b(storm|scale|carry) (?:the )?(walls|castle|keep|gates?)\b|\bstorm (?!\w+'s host)[a-z]/.test(t) && besieged()) { A('storm', { holding: besieged() }); return; }
+    if (/\b(offer|give|send) (?:\w+ )?terms\b|\b(demand|bid) (?:its |their |the castle'?s? )?(surrender|yield)\b|\b(call on|summon) [^.]*\bto (yield|surrender)\b/.test(t) && besieged()) {
+      const terms = /\bhostage/.test(t) ? 'yield_hostages' : /\b(swear|fealty|bend the knee|sworn)\b/.test(t) ? 'yield_and_swear' : /\b(unconditional|without terms|no terms|at (?:my|our) mercy)\b/.test(t) ? 'unconditional' : 'march_out_with_arms';
+      A('offer_terms', { holding: besieged(), terms }); return;
+    }
     // the house's people called back from the road (the verb says so if they are not on it)
     if (RE.recall.test(t) && (own.length || others.length)) { for (const c of own.length ? own : others) A('recall_rider', { character: c.id }); return; }
     // who goes: the house's people the order names (or the one it is said to, or the lord himself), else whoever is sent

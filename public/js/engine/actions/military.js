@@ -1,7 +1,7 @@
 // Military verbs (docs/gdd/07-military.md §12): calling the banners, raising the levies, marching, joining and
 // disbanding hosts, and how openly they go. Each is the one way the engine does the thing, for the player and — once
 // the minds of WP B7 choose verbs — for every other lord; nothing here assumes the actor is the player.
-import { applyChanges, resolvePlaceId, placeName, placePos, slug, dateStr, nearestHolding, sendHome } from '../../shared/world.js';
+import { applyChanges, resolvePlaceId, placeName, placePos, slug, dateStr, nearestHolding, sendHome, realmOf } from '../../shared/world.js';
 import { ref, isRef, idOf, partyAt, joinParty, moveMembers, settle, forces, isForce, sworn, membersOf, disband } from '../parties.js';
 import { planRoute } from '../movement.js';
 import { marchDays } from '../../shared/warfare.js';
@@ -11,6 +11,11 @@ import { raiseForLiege } from '../../shared/vassals.js';
 import { summon, waitForBanners, musterOf } from '../military/muster.js';
 import { dayNumber } from '../time.js';
 import { STANDING } from '../military/battle.js';
+import { TERMS, weighTerms, yieldOn, rulesOf, stormOdds } from '../military/siege.js';
+import { random } from '../rng.js';
+
+// the hosts of this house's realm that sit before this castle
+const besiegersOf = (state, house, h) => Object.values(state.parties).filter((a) => a.besieging === h.id && a.men > 0 && realmOf(state, a.owner) === realmOf(state, house)).sort((a, b) => b.men - a.men);
 import { seesParty } from '../knowledge.js';
 
 const STANDING_SAID = {
@@ -282,6 +287,52 @@ export const MILITARY = [
     receipt: (state, i, d) => [{ ok: true, text: `${state.parties[d.host].name}: ${STANDING_SAID[d.engage]}` }],
     said: (state, i, d) => ({ status: 'done', text: `${state.parties[d.host].name} has new standing orders: ${STANDING[d.engage].toLowerCase()}.` }),
     facts: [], mind: { allowed: false },
+  },
+  {
+    // offer a besieged castle terms (07 §8.3): the castellan weighs them there and then — the commonest way castles fall
+    id: 'offer_terms', family: 'military', label: 'Offer terms',
+    params: { holding: 'holding:foe', terms: 'text' },
+    legal: (state, i) => {
+      const h = state.holdings[resolvePlaceId(i.params.holding) || i.params.holding];
+      if (!h) return { code: 'no_place', text: 'There is no such castle.' };
+      if (!besiegersOf(state, i.house, h).length) return { code: 'not_besieged', text: `No host of yours sits before ${h.name}: there is no one to offer terms.` };
+      if (!TERMS[i.params.terms]) return { code: 'terms', text: `Terms are one of: ${Object.values(TERMS).join('; ')}.` };
+      if (h.siege?.offered && dayNumber(state.meta.date) - h.siege.offered < 7) return { code: 'too_soon', text: `${h.name} answered your terms not a week ago: give them time to grow hungry.` };
+      return null;
+    },
+    start: (state, i) => {
+      const h = state.holdings[resolvePlaceId(i.params.holding) || i.params.holding]; const bes = besiegersOf(state, i.house, h);
+      const w = weighTerms(state, h, bes, i.params.terms, random);
+      if (h.siege) h.siege.offered = dayNumber(state.meta.date);
+      emit(state, 'terms_offered', { actors: [state.houses[i.house].lord, w.castellan?.id], houses: [i.house, h.owner], place: h.id, data: { holding: h.id, terms: i.params.terms, accepted: w.accepted }, cause: i.source, text: `House ${state.houses[i.house].name} offers ${h.name} terms: to ${TERMS[i.params.terms]}.` });
+      if (!w.accepted) { emit(state, 'terms_refused', { actors: [w.castellan?.id], houses: [i.house, h.owner], place: h.id, data: { holding: h.id, terms: i.params.terms }, cause: i.source, text: `${w.castellan?.name || 'The castellan'} refuses the terms: ${h.name} will hold.` }); return { holding: h.id, accepted: false, castellan: w.castellan?.name, why: w.why }; }
+      const y = yieldOn(state, h, bes[0], i.params.terms, { how: 'terms' });
+      applyChanges(state, y.changes, { source: 'Terms', cause: i.source });
+      return { holding: h.id, accepted: true, castellan: w.castellan?.name, why: w.why, text: y.events[0]?.text };
+    },
+    receipt: (state, i, d) => [{ ok: d.accepted ? true : 'warn', text: d.accepted ? `${d.text}${d.why ? ` (${d.why})` : ''}` : `${d.castellan || 'The castellan'} refuses your terms: ${state.holdings[d.holding].name} will hold. Try again when they are hungrier.` }],
+    said: (state, i, d) => ({ status: 'done', text: d.accepted ? d.text : `${state.holdings[d.holding].name} refused the terms offered.` }),
+    facts: ['terms_offered', 'terms_refused', 'holding_fell'], mind: { allowed: false },
+  },
+  {
+    // storm the walls now (07 §8.3): heavy losses, and it fails often — by design
+    id: 'storm', family: 'military', label: 'Storm the walls',
+    params: { holding: 'holding:foe' },
+    legal: (state, i) => {
+      const h = state.holdings[resolvePlaceId(i.params.holding) || i.params.holding];
+      if (!h) return { code: 'no_place', text: 'There is no such castle.' };
+      if (!besiegersOf(state, i.house, h).length) return { code: 'not_besieged', text: `No host of yours sits before ${h.name}.` };
+      if (rulesOf(h).noStorm) return { code: 'no_storm', text: `${h.name} cannot be taken by storm: only hunger, terms or treachery will do it.` };
+      return null;
+    },
+    start: (state, i) => {
+      const h = state.holdings[resolvePlaceId(i.params.holding) || i.params.holding]; const bes = besiegersOf(state, i.house, h);
+      for (const a of bes) a.storm = h.id; // the day's siege tick carries it out
+      return { holding: h.id, odds: Math.round(stormOdds(state, h, bes) * 100) / 100 };
+    },
+    receipt: (state, i, d) => [{ ok: d.odds >= 1.2 ? true : 'warn', text: `The host will storm ${state.holdings[d.holding].name} at dawn — ${d.odds >= 1.5 ? 'the walls should fall' : d.odds >= 1 ? 'it may fail, and it will be bloody' : 'the odds are against it; many will die below the walls'}.` }],
+    said: (state, i, d) => ({ status: 'underway', text: `The host prepares to storm ${state.holdings[d.holding].name}.` }),
+    facts: ['storm_assault'], mind: { allowed: false },
   },
   {
     id: 'halt_host', family: 'military', label: 'Halt a host',

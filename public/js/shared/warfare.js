@@ -9,6 +9,7 @@ import { ROAD_FACTOR } from '../../data/balance.js';
 import { estimate, paceOf, daysLeft } from '../engine/movement.js';
 import { forces } from '../engine/parties.js';
 import { reckon } from '../engine/military/battle.js';
+import { siegeView } from '../engine/military/siege.js';
 
 export function atWar(state, a, b) {
   if (!a || !b || a === b) return false;
@@ -44,18 +45,10 @@ export function marchDays(a, from, to, state = null) {
   return { miles: Math.round(d), days: Math.max(1, Math.round(d / paceOf(state, a))) };
 }
 
-/** Months a besieged holding can hold out: food, garrison and walls. */
+/** Months a besieged holding can hold out, its garrison and walls, and whether it can be stormed (engine/military/siege.js). */
 export function siegeEstimate(state, holding, besiegers) {
-  const owner = state.houses[holding.owner];
-  const food = Math.min(Number(owner?.figures?.food?.v) || 6, 24);
-  // a seat is stocked better than an outlying holdfast, and granaries are the whole point of a granary
-  const seat = holding.seatOf ? 1.25 : 1;
-  const granary = (holding.buildings || []).some((b) => /granar/i.test(b)) ? 1.6 : 1;
-  const garrison = holding.garrison ?? Math.round((owner?.figures?.menAtArms?.v || 200) * 0.5);
-  const b = besiegers.reduce((s, a) => s + a.men, 0);
-  const storm = holding.fort >= 4 ? (b > garrison * 12 ? 'storming possible at terrible cost' : 'cannot be stormed; only starved or betrayed') : b > garrison * 6 ? 'can be stormed' : 'storming would be bloody';
-  const stored = holding.siege?.stores;
-  return { months: stored != null ? Math.round(stored * 10) / 10 : Math.max(0.5, Math.round(food * (holding.fort >= 4 ? 1.2 : 0.8) * seat * granary * 10) / 10), garrison, besiegers: b, storm };
+  const v = siegeView(state, holding, besiegers);
+  return { months: v.months, garrison: v.garrison, besiegers: besiegers.reduce((s, a) => s + a.men, 0), storm: v.storm + (v.starve ? `; ${v.starve}` : ''), fort: v.fort };
 }
 
 /** A textual war-room report for the prompt and the UI. */

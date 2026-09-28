@@ -3,6 +3,22 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — C5: sieges — terms, storms, treachery and relief
+
+- **The great castles are what the books say.** Storm's End, Pyke and Dragonstone cannot be starved without ships before
+  them; the Eyrie is fed down the high road until winter; Winterfell's hot springs stretch its winter stores; Casterly
+  Rock, the Eyrie and Storm's End cannot be stormed at all; Harrenhal is too great to hold with a few hundred men;
+  Moat Cailin cannot be taken from the south up the causeway; before Riverrun the besiegers lie in divided camps, and a
+  relieving host catches them at a disadvantage.
+- **Offer terms** from the castle's card (march out with arms, swear and keep the castle, give hostages, or yield
+  without terms): a craven castellan takes them early, a proud one late or never — and hunger changes minds.
+- **Storm the walls** — dear, and it fails often; the castle's card says whether it can be done.
+- **Treachery.** Bribe a castellan, and when your host sits before his walls a postern opens in the night.
+- **Relief.** When a host comes to lift the siege, the besiegers hear of it: the realm's lords storm before it comes,
+  stand and fight, or break camp.
+- Owner to verify: as Lannister, declare war on the Tullys and march on Wayfarer's Rest; when the siege begins, open the
+  castle's card and offer terms; then try the same before Riverrun and read what the card says of a storm.
+
 ## 2026-09-28 — C4: battles by stance, ground and surprise
 
 - **Standing orders.** Each of your hosts has them on its card: *Engage if the odds favour us* (the default), *Always

@@ -69,13 +69,15 @@ PLACES OFTEN NAMED: Winterfell [stark|winterfell] · Castle Black [nights_watch|
 YOUR TREASURY: 120,000 dragons · unraised levies 16,000
 ACTIONS ALLOWED:
 - call_banners: summon sworn lords to muster at [at] (all of them, or the [houses] named)
-- raise_levies: raise your own levies at your holding [at]: [men] (0 = all that can be found), leader [who], marching on to [to], host name in [note]
+- raise_levies: raise your levies at your holding [at]: [men] (0 = all), leader [who], marching on to [to], host name in [note]
 - march_host: a host [subject] marches to [to]; [who] to lead it if the order names a new leader; its aim in [note]
-- wait_banners: a host [subject] waits where it stands until the banners called to it are in, then goes on
+- wait_banners: a host [subject] waits until the banners called to it are in
 - attack_host: a host [subject] marches against an enemy host [to = party:…]; [note] "surprise" to fall on them unawares
 - set_standing_orders: a host [subject] meeting an enemy [choice: favourable|always|avoid|hold]
+- offer_terms: terms to a castle you besiege [at] [choice]
+- storm: storm a castle you besiege [at]
 - halt_host: a host [subject] stops where it stands
-- merge_hosts: hosts standing in one place join into one ([subject]: one of them, or none for all there); leader [who]; name in [note]
+- merge_hosts: hosts in one place join ([subject]: one, or none for all there); leader [who]; name in [note]
 - disband_host: a host [subject] is sent home
 - send_person: one of your people [who] rides to [to] with [men] men of the household (0 = alone)
 - recall_rider: one of your people on the road [who] turns back
@@ -134,6 +136,8 @@ Turn the order into actions.
        "wait_banners",
        "attack_host",
        "set_standing_orders",
+       "offer_terms",
+       "storm",
        "halt_host",
        "merge_hosts",
        "disband_host",
@@ -282,7 +286,7 @@ Turn the order into actions.
        "envoy",
        "execute",
        "faith",
-       "… 51 members"
+       "… 55 members"
       ]
      },
      "note": {

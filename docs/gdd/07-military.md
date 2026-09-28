@@ -327,6 +327,16 @@ moons").
 - **Treachery:** a scheme (bribe the castellan, a postern opened) — `treachery.js` + `bribe`.
 - **Lifted:** besiegers withered below the strength to ring the walls (existing rule).
 
+*Implemented in WP C5* (`engine/military/siege.js`, `data/fortresses.js`; [DECISIONS.md#D-047](DECISIONS.md)): the
+fortress table's rules (Storm's End, Pyke and Dragonstone fed by sea until a fleet of the besiegers' side lies within
+~55 miles; the Eyrie by the high road until winter; Winterfell's winter stores ×1.3; Harrenhal's walls count 2 under
+1,500 men; Moat Cailin's causeway ×0.4 from the south; Riverrun's divided camps ×0.75); starvation (the garrison
+yields without terms); `offer_terms` weighed by the castellan's nature, the odds, the stores and relief — and the realm's
+lords offer terms once a week; `storm` (the realm's lords storm weekly at odds ≥ 1.3 once the engines are built); a
+castellan who took the besiegers' gold (`bribe`) opens a postern; relief within three days is announced, and the realm's
+besiegers storm before it, stand, or lift the siege. The Red Keep and the Hightower as keeps within cities, and the Rock's
+sea caves, wait.
+
 ## 9. The sea
 
 `engine/military/naval.js` (new; `fleet` parties exist today but cannot carry, blockade or raid).

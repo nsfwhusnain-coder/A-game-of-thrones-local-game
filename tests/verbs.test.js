@@ -42,6 +42,12 @@ test('every card action of earlier versions and every kind of written order is a
 
 // Each verb, done where it may be done, and refused where it may not. `setup` prepares the world and returns the
 // params; `refuse` returns params (or changes the world) so that the verb must be refused, with the refusal's code.
+// a Stark host sitting before an enemy castle, at war with its lord (the siege verbs, WP C5)
+const siegeOf = (s, hold, foe = 'lannister') => {
+  applyChanges(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['stark'], defenders: [foe] }]);
+  const id = host(s, 'sg', 'stark', hold, 12000); s.parties[id].besieging = hold; s.holdings[hold].siege = { by: 'stark', days: 10, stores: 4 };
+  return { holding: hold, terms: 'march_out_with_arms' };
+};
 const CASES = {
   call_banners: { ok: () => ({ vassals: 'all', at: 'stark', ownLevies: 1000 }), no: () => [{ vassals: ['no_such_house'], at: 'stark' }, 'no_vassals'] },
   answer_call: { house: 'umber', player: 'stark', ok: (s) => { applyChanges(s, [{ op: 'obligation', house: 'umber', levies: 'called', muster: 'stark' }]); return {}; }, no: () => [{}, 'not_called'] },
@@ -51,6 +57,8 @@ const CASES = {
   halt_host: { ok: (s) => { const id = host(s, 'h1', 'stark', 'stark', 3000); perform(s, 'march_host', { params: { army: id, to: 'moat_cailin' } }); return { army: id }; }, no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 3000) }, 'not_marching'] },
   wait_banners: { ok: (s) => { const id = host(s, 'h1', 'stark', 'stark', 3000); perform(s, 'call_banners', { params: { vassals: 'all', at: 'stark' } }); return { army: id }; }, no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 3000) }, 'none_coming'] },
   set_standing_orders: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000), engage: 'avoid' }), no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 3000), engage: 'charge blindly' }, 'engage'] },
+  offer_terms: { ok: (s) => siegeOf(s, 'lannister'), no: (s) => [{ holding: 'lannister', terms: 'march_out_with_arms' }, 'not_besieged'] },
+  storm: { ok: (s) => { siegeOf(s, 'frey', 'tully'); return { holding: 'frey' }; }, no: (s) => [siegeOf(s, 'lannister') && { holding: 'lannister' }, 'no_storm'] },
   merge_hosts: { ok: (s) => { host(s, 'h1', 'stark', 'stark', 3000); host(s, 'h2', 'stark', 'stark', 500); return {}; }, no: (s) => { host(s, 'h1', 'stark', 'stark', 3000); host(s, 'h2', 'stark', 'moat_cailin', 500); return [{}, 'apart']; } },
   disband_host: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000) }), no: (s) => [{ army: host(s, 'foe', 'lannister', 'lannister', 3000) }, 'not_yours'] },
   set_secrecy: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000), mode: 'feint', to: 'tully' }), no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 3000), mode: 'invisible' }, 'mode'] },

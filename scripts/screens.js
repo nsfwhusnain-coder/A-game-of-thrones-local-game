@@ -154,6 +154,28 @@ const SCENARIOS = {
     }
     throw new Error('no battle in ten weeks');
   },
+  // a siege (WP C5): the Host of Casterly Rock before the walls of Wayfarer's Rest (House Vance) — the castle's card with its stores,
+  // what a storm would cost, and the terms to offer its castellan
+  async siege() {
+    const { id } = await api('/games', { scenario: 'agot_298', house: 'lannister', seed: 7 });
+    await api(`/games/${id}/act`, { kind: 'call_banners', vassals: [], at: 'lannister', ownLevies: 15000 });
+    let s = await api(`/games/${id}`);
+    const host = Object.values(s.parties).find((a) => a.owner === 'lannister' && a.kind === 'host' && a.at === 'lannister');
+    await api(`/games/${id}/act`, { verb: 'declare_war', params: { house: 'tully' } });
+    await api(`/games/${id}/act`, { verb: 'set_standing_orders', params: { army: host.id, engage: 'always' } });
+    await api(`/games/${id}/act`, { kind: 'march', army: host.id, to: 'vance' });
+    for (let t = 0; t < 14; t++) {
+      await api(`/games/${id}/advance`, { span: '7d', orders: [] });
+      s = await api(`/games/${id}`);
+      const h = Object.values(s.holdings).find((x) => x.siege && x.siege.by === 'lannister');
+      if (!h) continue;
+      return { id, focus: h.pos, dist: 700, page: async (page) => {
+        await page.evaluate(async (hid) => { const m = await import('/js/ui/windows.js'); m.openSheet('holding', hid); }, h.id);
+        await page.waitForTimeout(500);
+      } };
+    }
+    throw new Error('no siege in fourteen weeks');
+  },
   // the economy (WP C1): a moon's accounts in the Treasury window — rents, trade, tribute, the household, the field
   async economy() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 7 });

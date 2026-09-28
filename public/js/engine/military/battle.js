@@ -40,7 +40,7 @@ const breadOf = (state, p) => {
  * heart, bread, ground, walls, surprise, the realm's difficulty for the player).
  * ctx: { role: 'attacker' | 'defender', ground, surprise, fort, caught (a host caught falling back) }
  */
-export function powerOf(state, p, { role = 'attacker', ground = 'open', surprise = false, fort = 0, caught = false } = {}) {
+export function powerOf(state, p, { role = 'attacker', ground = 'open', surprise = false, fort = 0, caught = false, divided = false } = {}) {
   const u = unitsOf(state, p); const foot = footOf(p);
   const rough = ground === 'forest' || ground === 'marsh'; const high = ground === 'hills' || ground === 'mountains';
   const w = {
@@ -60,6 +60,7 @@ export function powerOf(state, p, { role = 'attacker', ground = 'open', surprise
     // surprise is worth ×1.6 in the first of the battle's two phases: over the day, the square root of it
     surprise: surprise ? Math.sqrt(1.6) : 1,
     caught: caught ? 0.85 : 1,
+    divided: divided ? 0.75 : 1,       // a siege host in its camps across the rivers (Riverrun)
     difficulty: p.owner === state.meta.player ? difficultyOf(state).odds : 1,
   };
   const power = Object.values(parts).reduce((x, v) => x * v, 1);
@@ -166,7 +167,7 @@ export function fatesOf(state, p, side, { broken = false, playerBattle = false, 
 }
 
 // ── The battle (§7.2, §7.5) ──────────────────────────────────────────────────────────────────────────────────────────
-const NAMES = { men: 'numbers and arms', commander: 'generalship', heart: 'the men\'s heart', bread: 'hunger', ground: 'the ground', walls: 'the walls', surprise: 'surprise', caught: 'being caught on the march', difficulty: 'fortune' };
+const NAMES = { men: 'numbers and arms', commander: 'generalship', heart: 'the men\'s heart', bread: 'hunger', ground: 'the ground', walls: 'the walls', surprise: 'surprise', caught: 'being caught on the march', divided: 'the besiegers divided in their camps', difficulty: 'fortune' };
 /** What decided a battle, in the winner's favour: the two factors furthest from even. */
 export function decisive(win, lose) {
   return Object.keys(win.parts).map((k) => [k, win.parts[k] / Math.max(1e-9, lose.parts[k])]).filter(([, x]) => x > 1.04)
@@ -177,10 +178,10 @@ export function decisive(win, lose) {
  * Fight a battle: `att` attacks `def`. Returns { outcome, win, lose, odds, fortune, lost: {id: men}, pursuit, fates,
  * decided, site, spoils, wiped, broken, a, d } — the numbers only; the caller applies them (shared/battles.js).
  */
-export function resolveBattle(state, att, def, { r, surprise = false, caught = false } = {}) {
+export function resolveBattle(state, att, def, { r, surprise = false, caught = false, divided = false } = {}) {
   const site = siteOf(state, att, def);
   const a = powerOf(state, att, { role: 'attacker', ground: site.ground, surprise });
-  const d = powerOf(state, def, { role: 'defender', ground: site.ground, fort: site.fort, caught });
+  const d = powerOf(state, def, { role: 'defender', ground: site.ground, fort: site.fort, caught, divided });
   const odds = a.power / Math.max(1, d.power);
   // the day's fortune: ±12 % a side, taken together (the war room's chances reckon the same)
   const fortune = 1 + 2 * NOISE * (2 * r() - 1);

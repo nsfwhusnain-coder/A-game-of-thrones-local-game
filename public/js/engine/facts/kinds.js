@@ -56,6 +56,9 @@ export const KINDS = {
   storm_assault: K(4, 'war'),
   holding_fell: K(4, 'war'),
   siege_lifted: K(4, 'war'),
+  relief_near: K(3, 'war', 'houses'),   // a relieving host within three days of a besieged castle (engine/military/siege.js)
+  terms_offered: K(2, 'war', 'houses'),
+  terms_refused: K(3, 'war', 'houses'),
   raid: K(3, 'war', 'local'),
   village_burned: K(2, 'war', 'local'),
   blockade: K(3, 'war'),

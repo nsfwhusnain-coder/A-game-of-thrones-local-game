@@ -30,11 +30,12 @@ const CHOICE_OF = {
   judge_prisoner: ['release', 'ransom', 'take_the_black', 'execute'], set_secrecy: ['open', 'hidden', 'feint'],
   borrow: Object.keys(LENDERS), repay: Object.keys(LENDERS), embargo: ['impose', 'lift'],
   set_standing_orders: ['favourable', 'always', 'avoid', 'hold'],
+  offer_terms: ['march_out_with_arms', 'yield_and_swear', 'yield_hostages', 'unconditional'],
 };
 const CHOICES = [...new Set(Object.values(CHOICE_OF).flat())].sort();
 // what each verb cannot do without ('person|houses': one of them)
 const NEEDS = {
-  march_host: ['subject', 'to'], attack_host: ['subject', 'to'], halt_host: ['subject'], wait_banners: ['subject'], disband_host: ['subject'], set_standing_orders: ['subject', 'choice'],
+  march_host: ['subject', 'to'], attack_host: ['subject', 'to'], halt_host: ['subject'], wait_banners: ['subject'], disband_host: ['subject'], set_standing_orders: ['subject', 'choice'], offer_terms: ['at', 'choice'], storm: ['at'],
   set_secrecy: ['subject', 'choice'], send_person: ['who', 'to'], recall_rider: ['who'], set_tax: ['choice'],
   set_dues: ['choice'], fund_works: ['choice'], cancel_works: ['choice'], hire_men: ['men'], hire_officer: ['choice'],
   send_gift: ['gold', 'person|houses'], appoint_office: ['who', 'choice'], grant_holding: ['at', 'houses'],
@@ -45,13 +46,15 @@ const NEEDS = {
 // how the dossier explains each verb, with the fields it uses
 const MEANS = {
   call_banners: 'summon sworn lords to muster at [at] (all of them, or the [houses] named)',
-  raise_levies: 'raise your own levies at your holding [at]: [men] (0 = all that can be found), leader [who], marching on to [to], host name in [note]',
+  raise_levies: 'raise your levies at your holding [at]: [men] (0 = all), leader [who], marching on to [to], host name in [note]',
   march_host: 'a host [subject] marches to [to]; [who] to lead it if the order names a new leader; its aim in [note]',
   attack_host: 'a host [subject] marches against an enemy host [to = party:…]; [note] "surprise" to fall on them unawares',
   set_standing_orders: 'a host [subject] meeting an enemy [choice: favourable|always|avoid|hold]',
+  offer_terms: 'terms to a castle you besiege [at] [choice]',
+  storm: 'storm a castle you besiege [at]',
   halt_host: 'a host [subject] stops where it stands',
-  wait_banners: 'a host [subject] waits where it stands until the banners called to it are in, then goes on',
-  merge_hosts: 'hosts standing in one place join into one ([subject]: one of them, or none for all there); leader [who]; name in [note]',
+  wait_banners: 'a host [subject] waits until the banners called to it are in',
+  merge_hosts: 'hosts in one place join ([subject]: one, or none for all there); leader [who]; name in [note]',
   disband_host: 'a host [subject] is sent home',
   set_secrecy: 'a host [subject] marches openly, hidden, or behind a feint toward [to] [choice: open|hidden|feint]',
   send_person: 'one of your people [who] rides to [to] with [men] men of the household (0 = alone)',
@@ -262,6 +265,8 @@ export function valueOf(parse, ctx) {
         a.subject = memberOf(ctx.hosts, q.army); a.to = place(q.to); a.who = memberOf(ctx.own, q.commander); a.note = q.intent || ''; if (q.mode) a.choice = q.mode; break;
       case 'attack_host': a.subject = memberOf(ctx.hosts, q.army); a.to = ctx.foes.includes(q.to) ? q.to : 'none'; if (q.surprise) a.note = 'surprise'; break;
       case 'set_standing_orders': a.subject = memberOf(ctx.hosts, q.army); a.choice = q.engage; break;
+      case 'offer_terms': a.at = place(q.holding); a.choice = q.terms; break;
+      case 'storm': a.at = place(q.holding); break;
       case 'merge_hosts': a.subject = memberOf(ctx.hosts, q.armies?.[0]); a.who = memberOf(ctx.own, q.commander); a.note = q.name || ''; break;
       case 'send_person': a.who = memberOf(ctx.own, q.character); a.to = place(q.to); a.men = q.men || 0; break;
       case 'recall_rider': a.who = memberOf(ctx.own, q.character); break;
@@ -313,6 +318,8 @@ export function readingOf(value, state, { house = state.meta.player } = {}) {
         case 'march_host': return { army: id(a.subject), to: id(a.to), ...(id(a.who) ? { commander: a.who } : {}), ...(a.note ? { intent: a.note } : {}) };
         case 'attack_host': return { army: id(a.subject), to: id(a.to), intent: a.note || 'bring them to battle', ...(/surpris|unawares|ambush|night/i.test(a.note || '') ? { surprise: true } : {}) };
         case 'set_standing_orders': return { army: id(a.subject), engage: id(a.choice) };
+        case 'offer_terms': return { holding: id(a.at), terms: id(a.choice) || 'march_out_with_arms' };
+        case 'storm': return { holding: id(a.at) };
         case 'halt_host': case 'wait_banners': case 'disband_host': return { army: id(a.subject) };
         case 'set_secrecy': return { army: id(a.subject), mode: id(a.choice), ...(id(a.to) ? { to: a.to } : {}) };
         case 'merge_hosts': return { ...(id(a.subject) ? { armies: [a.subject] } : {}), ...(id(a.who) ? { commander: a.who } : {}), ...(a.note ? { name: a.note } : {}) };
