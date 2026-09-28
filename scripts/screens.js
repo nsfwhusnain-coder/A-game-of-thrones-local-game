@@ -372,8 +372,9 @@ const SCENARIOS = {
   // the map's modes at L0 (WP E2): Diplomacy, Knowledge and War beside Realms, each with its key; Stark at war with the West
   ...Object.fromEntries(['political', 'diplomacy', 'knowledge', 'war'].map((m) => [`mode-${m}`, async () => {
     const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });
-    await api(`/games/${id}/act`, { kind: 'declare_war', house: 'lannister', reason: 'for the test' }).catch(() => {});
-    return { id, focus: [720, 1370], dist: 3500, page: async (page) => { await page.click(`#mapmodes [data-mode="${m}"]`); await page.click(`#mapmodes [data-mode="${m}"]`).catch(() => {}); await page.waitForTimeout(1500); } };
+    await api(`/games/${id}/act`, { verb: 'declare_war', params: { house: 'lannister', reason: 'for the test' } });
+    // the whole realm: the opening flight to the seat may land after ours, so fly home again once the mode is set
+    return { id, page: async (page) => { await page.click('#mapmodes button.active'); await page.click(`#mapmodes [data-mode="${m}"]`); await page.waitForTimeout(3000); await page.evaluate(() => window.__wc.map.home()); await page.waitForTimeout(2500); } };
   }])),
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {
