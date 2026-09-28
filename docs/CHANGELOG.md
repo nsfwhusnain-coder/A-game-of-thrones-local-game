@@ -3,6 +3,22 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — D2: the full canon — sixty beats of the books, 298–300 AC
+
+- **The story of the books now runs from the King's progress to the white ravens of winter**: the wolf and the lion on
+  the Trident, Littlefinger's word about the dagger, the Kingslayer's swords in the street, the trial by combat in the
+  Eyrie, Lord Beric's ride, the lions in the Riverlands, King Joffrey crowned, the Green Fork and the Camps, the Young
+  Wolf in the west and his wedding, the Fords, the Kingslayer freed, Karstark's justice, Hoster Tully's funeral, the red
+  comet, Winterfell taken and burned, the Rose and the Lion, Balon's fall, the Viper and the Mountain, Lord Tywin's death,
+  the Great Ranging, the Fist, Craster's Keep, the battle beneath the Wall, Lord Commander Snow, the wine-seller, the
+  maegi, and the rumours of dragons in Qarth and Slaver's Bay.
+- **The chain holds.** Watching from Oldtown for two years, the whole canon now comes to pass in order: the King's death
+  waits for his Hand to reach King's Landing, old Lord Walder lives to see his wedding, the War of the Five Kings is not
+  settled in its second moon, and the Imp is not ransomed before his trial.
+- **Under Canon, the seasons are the Citadel's**: autumn is declared in 299 and winter comes in 300.
+- Owner to verify: `node scripts/canon.js` (three houses, 24 moons each, about three minutes each) prints how many beats
+  fired and passes at 90 %; start a game as Hightower on Canon and jump a year — the ravens should bring the books' news.
+
 ## 2026-09-28 — D1: the beat engine — canon gravity, alternates and lapses
 
 - **Choose how hard the story pulls.** The begin screen has a new choice beside Ironman: *Canon* (the books' great events

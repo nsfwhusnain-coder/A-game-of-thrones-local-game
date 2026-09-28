@@ -11,6 +11,7 @@ import { difficultyOf } from '../../../data/balance.js';
 import { CANON_DEATHS, CANON_PROTECTED } from '../../../data/fates.js';
 import { groundAt, paceOf, planRoute } from '../movement.js';
 import { idOf, settle } from '../parties.js';
+import { landmassOf } from '../geo.js';
 import { supplyOf, fedByRations, feeds, trainOf, capacityOf } from './supply.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -122,8 +123,11 @@ export function escapes(state, runner, chaser, r) {
 
 /** Where a beaten or withdrawing host goes: the nearest holding that will take it in, else home. */
 export function refugeOf(state, p) {
-  const ok = Object.values(state.holdings).filter((h) => feeds(state, p, h)).sort((a, b) => dist(a.pos, p.pos) - dist(b.pos, p.pos));
-  return ok[0]?.id || state.houses[p.owner]?.seat || null;
+  // a beaten host runs on its own feet: a refuge across the water (an ironborn host's islands) is no refuge
+  const land = p.pos ? landmassOf(p.pos, 3) : null; const walk = (h) => land == null || land < 0 || landmassOf(h.pos, 3) === land;
+  const ok = Object.values(state.holdings).filter((h) => h.pos && feeds(state, p, h) && walk(h)).sort((a, b) => dist(a.pos, p.pos) - dist(b.pos, p.pos));
+  const seat = state.holdings[state.houses[p.owner]?.seat];
+  return ok[0]?.id || (seat && walk(seat) ? seat.id : null);
 }
 export function fallBack(state, p) {
   const to = refugeOf(state, p); if (!to || !state.holdings[to]) return null;

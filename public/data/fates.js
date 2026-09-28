@@ -19,8 +19,9 @@ export const CANON_DEATHS = {
   joffrey_baratheon: { from: [300, 1], to: [300, 4], cause: 'poison at his wedding', pillar: true },
   tywin_lannister: { from: [300, 1], to: [300, 5], cause: "his son's crossbow", pillar: true },
   lysa_arryn: { from: [300, 1], to: [300, 8], cause: 'the Moon Door' },
+  oberyn_martell: { from: [300, 2], to: [300, 5], cause: 'the Mountain, in a trial by combat' },
 };
 // the children the story carries through 300 AC — and the Imp, and the Kingslayer, whose capture in the Whispering Wood
 // is one of its beats: never of *random* causes (a battle they were merely present at), though the player's own orders
 // have teeth
-export const CANON_PROTECTED = ['jaime_lannister', 'sansa_stark', 'arya_stark', 'bran_stark', 'rickon_stark', 'jon_snow', 'tyrion_lannister', 'daenerys_targaryen', 'tommen_baratheon', 'myrcella_baratheon'];
+export const CANON_PROTECTED = ['jaime_lannister', 'gregor_clegane', 'sansa_stark', 'arya_stark', 'bran_stark', 'rickon_stark', 'jon_snow', 'tyrion_lannister', 'daenerys_targaryen', 'tommen_baratheon', 'myrcella_baratheon'];

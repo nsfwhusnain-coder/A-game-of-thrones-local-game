@@ -57,6 +57,13 @@ export function lockedNames(s, beats) {
   return out;
 }
 
+/** Everyone a beat still to come names (each thread from its current beat on): under Canon gravity the years spare them. */
+export function namedAhead(s, beats) {
+  const out = new Set();
+  for (const b of beats) if (b.index >= (s.plots?.stages?.[b.thread] || 0) && allowed(s, b)) for (const n of b.names) out.add(n);
+  return out;
+}
+
 /**
  * A day of the canon: each thread's beat fires, fires an alternate, waits, or lapses. Returns { events, changes,
  * decisions, fired, batches } (the changes applied by the caller in batches, each with the beat's cause).

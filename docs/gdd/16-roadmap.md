@@ -80,7 +80,7 @@ validator is the real fix.**
 | WP | Title | Depends | Size | Acceptance |
 |---|---|---|---|---|
 | D1 | Beat engine v2 (schema, triggers, alternates, lapses, canon locks, canon gravity setting); port the 11 threads | B3, B4 | L | `kings-progress`, `canon-order` on the new engine — ✅ `engine/world/beats.js` + `data/beats.js`: windows, triggers (date, arrival, death, after), alternates, lapses, canon locks (the minds do not send the named away), the Canon/Loose/Sandbox choice on the begin screen; `tests/beats.test.js`, `canon.test.js`, `parties.test.js` (DECISIONS D-051) |
-| D2 | The full canon beat set (10 §4: ~60 beats) | D1, C2, C4 | L | Q9 over 24 moons on 3 non-involved houses |
+| D2 | The full canon beat set (10 §4: ~60 beats) | D1, C2, C4 | L | Q9 over 24 moons on 3 non-involved houses — ✅ 60 beats in 15 threads (`data/beats.js`, with `BOOK_ORDER`); the chain made to hold (the boar waits for the Hand and the burning; the years spare those the canon still needs; the canon's wars are not settled by the realm's lords; prisoners the story needs are not judged); seasons by the Citadel's ravens under Canon; `scripts/canon.js` + `tests/q9-canon.test.js`, nightly for Hightower, Redwyne and Dayne (DECISIONS D-052) |
 | D3 | Matters catalogue (~70) from `petitions.js` + beats; model cannot create matters freely | D1 | M | every template renders and resolves; B-28 gone |
 | D4 | Life: canon death windows, protected characters, regents data, health/wounds, ageing | B2 | M | no canon lord dies early under Canon gravity in the soak; `chooseRegent` never picks another branch |
 | D5 | House openings (10 §5) + briefs for every playable house | — | M | every house has a brief; the §5 houses hand-written |

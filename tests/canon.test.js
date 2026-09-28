@@ -5,6 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { THREADS, advanceThreads } from '../public/js/shared/plots.js';
+import { BOOK_ORDER } from '../public/data/beats.js';
 import { addDays } from '../public/js/shared/world.js';
 
 const YM = (s) => { const [y, m] = s.split('-').map(Number); return y * 12 + (m - 1); };
@@ -22,16 +23,22 @@ const WINDOWS = {
   'the_wall.benjen': ['298-09', '298-12'], 'the_wall.wights': ['299-01', '299-03'],
   'dragons.wedding': ['298-08', '298-09'], 'dragons.golden_crown': ['298-10', '298-12'], 'dragons.hatching': ['298-12', '299-03'],
   'ironborn.crown': ['299-03', '299-07'],
+  // the full set (WP D2)
+  'kings_ride.trident': ['298-10', '298-11'], 'kings_ride.hand_at_court': ['298-10', '299-01'], 'catspaw.littlefingers_lie': ['298-10', '298-11'],
+  'the_imp.streets': ['298-11', '298-12'], 'the_imp.trial': ['298-11', '299-01'], 'the_imp.berics_ride': ['298-12', '299-01'],
+  'the_imp.lions': ['298-12', '299-02'], 'last_hunt.joffrey_crowned': ['298-12', '299-01'],
+  'five_kings.rose_lion': ['299-08', '299-12'], 'five_kings.viper': ['300-01', '300-04'], 'five_kings.tywin_dies': ['300-02', '300-05'],
+  'young_wolf.green_fork': ['298-11', '299-03'], 'young_wolf.camps': ['298-11', '299-04'], 'young_wolf.westerlands': ['299-03', '299-08'],
+  'young_wolf.fords': ['299-06', '299-08'], 'young_wolf.kingslayer_freed': ['299-06', '299-09'], 'young_wolf.karstark': ['299-09', '299-11'],
+  'riverrun.hoster': ['299-06', '299-12'], 'omens.comet': ['299-02', '299-04'], 'omens.autumn': ['299-01', '299-12'], 'omens.winter': ['300-01', '300-12'],
+  'the_wall.great_ranging': ['299-02', '299-06'], 'the_wall.fist': ['299-08', '299-11'], 'the_wall.crasters': ['299-09', '300-01'],
+  'the_wall.wildlings_attack': ['300-01', '300-04'], 'the_wall.lord_commander': ['300-01', '300-05'],
+  'dragons.wine_seller': ['298-10', '299-01'], 'dragons.maegi': ['298-12', '299-02'], 'dragons.red_waste': ['299-01', '300-12'],
+  'dragons.qarth': ['299-01', '300-12'], 'dragons.slavers_bay': ['299-01', '300-12'],
+  'ironborn.winterfell_taken': ['299-03', '299-08'], 'ironborn.winterfell_burns': ['299-08', '299-11'], 'ironborn.balon_falls': ['299-10', '300-01'],
 };
-// the books' order, where two threads touch
-const BEFORE = [
-  ['kings_ride.arrival', 'kings_ride.the_fall'], ['kings_ride.southward', 'catspaw.assassin'], ['catspaw.assassin', 'the_imp.seized'],
-  ['the_imp.seized', 'the_imp.burning'], ['the_imp.burning', 'last_hunt.boar'], ['last_hunt.boar', 'last_hunt.coup'],
-  ['last_hunt.coup', 'crown_justice.baelors_sept'], ['last_hunt.banners', 'five_kings.twins'], ['five_kings.twins', 'five_kings.whispering_wood'],
-  ['crown_justice.baelors_sept', 'king_in_north.crowned'], ['five_kings.shadow', 'five_kings.blackwater'],
-  ['five_kings.blackwater', 'five_kings.red_wedding'], ['five_kings.red_wedding', 'five_kings.purple_wedding'],
-  ['dragons.wedding', 'dragons.golden_crown'], ['dragons.golden_crown', 'dragons.hatching'], ['last_hunt.coup', 'ironborn.crown'],
-];
+// the books' order, where two threads touch (public/data/beats.js BOOK_ORDER)
+const BEFORE = BOOK_ORDER;
 
 test('every canon stage is scheduled inside its window of the GDD', () => {
   const ids = THREADS.flatMap((t) => t.stages.map((s) => `${t.id}.${s.id}`));

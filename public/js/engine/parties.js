@@ -118,7 +118,8 @@ export function settle(state, p) {
   // a host that followed a party now gone (beaten, disbanded, folded into another) stops where it is, as the road does
   // at the next day's march (shared/marches.js) — no party follows a ghost between turns either
   if (p.march && idOf(p.march.to) != null && !state.parties?.[idOf(p.march.to)]) { delete p.march; p.route = null; }
-  if (p.fought === state.meta?.turn && (p.state === 'routed' || p.state === 'engaged')) return p.state;
+  // (a host aboard its ships is embarked whatever befell it: it stands on no ground)
+  if (p.fought === state.meta?.turn && (p.state === 'routed' || p.state === 'engaged') && !p.aboard && p.sea?.phase !== 'sailing') return p.state;
   // a host the siege engine put before the walls (shared/battles.js), with no new orders, is besieging while it lasts
   const h = p.besieging && state.holdings?.[p.besieging];
   const besieging = !!(h?.siege && !p.march);

@@ -21,3 +21,18 @@ jobs:
         with:
           name: soak-report
           path: soak-report.md
+  # Q9 (docs/gdd/01-vision.md §7): three houses far from the war, 24 moons of Canon each, the books' beats counted
+  canon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/canon.js --houses hightower,redwyne,dayne --report canon-report.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: canon-report
+          path: canon-report.md

@@ -31,7 +31,7 @@ const record = (s, e, more = {}) => { const { kind = 'canon_beat', actors, data,
 // ── The threads ──
 export { THREADS } from '../../data/beats.js';
 import { THREADS, BEAT_META } from '../../data/beats.js';
-import { beatsOf, runBeats, lockedNames } from '../engine/world/beats.js';
+import { beatsOf, runBeats, lockedNames, namedAhead } from '../engine/world/beats.js';
 
 // ── Threats that grow: rising 0–100 over time and with neglect ──
 export const THREATS = {
@@ -183,6 +183,8 @@ export function advanceThreads(s, threads = THREADS) {
 const BEATS = beatsOf(THREADS, BEAT_META);
 /** The people the canon holds where they are while their beat is near (the minds do not send them away). */
 export const canonLocked = (s) => lockedNames(s, BEATS);
+/** The people the canon still has a part for: under Canon gravity they do not die of their years before it. */
+export const canonAhead = (s) => namedAhead(s, BEATS);
 
 export function worldTick(state, days) {
   const s = state;
