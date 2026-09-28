@@ -44,6 +44,9 @@ function portOf(state, hid, near) {
  */
 export function transportFor(state, hid, men, from, crossing = 5) {
   const need = Math.max(1, Math.ceil(men / SHIP_CARRIES));
+  // the Dothraki will not cross the poison water; a free company buys its passage on merchant ships (WP C7)
+  if (hid === 'dothraki') return { kind: 'none', why: 'the Dothraki will not cross the poison water' };
+  if (state.houses[hid]?.rank === 'company') return { kind: 'hired', by: hid, ships: need, wait: 7 };
   const own = shipsOf(state, hid);
   if (own >= need) return { kind: 'own', by: hid, ships: need, wait: 0 };
   const trips = own > 0 ? Math.ceil(need / own) : 0;
@@ -98,7 +101,7 @@ export function planVoyage(state, a, to, forKey, today) {
     port: port ? { id: port.id, pos: [...port.pos] } : null, kind: t.kind, by: t.by, ships: t.ships || Math.min(shipsOf(state, a.owner), Math.ceil(a.men / SHIP_CARRIES)),
     lender: t.from || null, wait, ready: port ? null : today + wait, start: port || wait || t.kind === 'none' ? null : today,
     landing: land.at, landingName: landingName(state, land.at), path: land.path, days, seaMiles: land.seaMiles,
-    ...(t.kind === 'none' ? { why: 'no ships' } : {}),
+    ...(t.kind === 'none' ? { why: t.why || 'no ships' } : {}),
   };
   return a.sea;
 }

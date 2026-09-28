@@ -6,6 +6,9 @@ import { ref, isRef, idOf, partyAt, joinParty, moveMembers, settle, forces, isFo
 import { planRoute } from '../movement.js';
 import { marchDays, atWar } from '../../shared/warfare.js';
 import { canEmbark, embark, land, aboardOf, sail, raidTargets, startRaid } from '../military/naval.js';
+import { hireRefusal, hire, release, companyHost, priceOf } from '../military/companies.js';
+import { COMPANIES } from '../../../data/companies.js';
+import { needsShips } from '../../shared/sea.js';
 import { unitsOf, unitsFor, addUnits, unitsText } from '../../shared/units.js';
 import { emit } from '../facts/log.js';
 import { raiseForLiege } from '../../shared/vassals.js';
@@ -418,6 +421,30 @@ export const MILITARY = [
     receipt: (state, i, d) => lines(d),
     said: (state, i, d) => ({ status: 'underway', text: (d.lines || []).join('; ') }),
     facts: ['set_out', 'raid'], mind: { allowed: true },
+  },
+  {
+    // hire a free company by contract (07 §10): a moon paid on signing, each moon after from your coin — or it goes
+    id: 'hire_company', family: 'military', label: 'Hire a free company',
+    params: { company: 'house:company', offer: 'number?', to: 'place?' },
+    legal: (state, i) => hireRefusal(state, i.house, i.params.company, i.params.offer ? Math.round(Number(i.params.offer)) : null),
+    cost: (state, i) => ({ gold: i.params.offer ? Math.round(Number(i.params.offer)) : priceOf(state, i.params.company) }),
+    start: (state, i) => {
+      const to = i.params.to ? resolvePlaceId(i.params.to) : null;
+      const h = hire(state, i.house, i.params.company, { offer: i.params.offer ? Math.round(Number(i.params.offer)) : null, to, cause: i.source });
+      return { party: h.party.id, price: h.price, from: h.from, company: i.params.company };
+    },
+    receipt: (state, i, d) => { const p = state.parties[d.party]; const C = COMPANIES[d.company]; return [{ ok: true, text: `${C.name.replace(/^./, (x) => x.toUpperCase())} (${fmtN(p.men)} swords) is yours for ${fmtN(d.price)} dragons a moon — the first paid. It marches for ${placeName(state, p.march?.to || p.at)}${needsShips(p.pos, state.holdings[p.march?.to]?.pos) ? ', by hired ships' : ''}. Miss a moon's pay and it is gone.` }, ...(d.from ? [{ ok: 'warn', text: `It breaks its contract with House ${state.houses[d.from]?.name} to come to you.` }] : [])]; },
+    said: (state, i, d) => ({ status: 'done', text: `${COMPANIES[d.company].name} is hired for ${fmtN(d.price)} dragons a moon.` }),
+    facts: ['sellswords_hired', 'sellswords_turned'], mind: { allowed: true },
+  },
+  {
+    id: 'dismiss_company', family: 'military', label: 'Pay off a free company',
+    params: { company: 'house:company' },
+    legal: (state, i) => { const p = companyHost(state, i.params.company); return p?.contract?.by === i.house ? null : { code: 'not_hired', text: 'That company is not in your pay.' }; },
+    start: (state, i) => { const p = companyHost(state, i.params.company); release(state, p, 'dismissed', i.source); return { company: i.params.company }; },
+    receipt: (state, i, d) => [{ ok: true, text: `${COMPANIES[d.company].name.replace(/^./, (x) => x.toUpperCase())} is paid off and marches away.` }],
+    said: (state, i, d) => ({ status: 'done', text: `${COMPANIES[d.company].name} is dismissed.` }),
+    facts: ['desertion'], mind: { allowed: false },
   },
   {
     id: 'halt_host', family: 'military', label: 'Halt a host',

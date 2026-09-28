@@ -192,6 +192,18 @@ const SCENARIOS = {
       await page.waitForTimeout(500);
     } };
   },
+  // the free companies (WP C7): the Military window's list, the Golden Company in Lannister pay and the Brave Companions
+  // for hire
+  async companies() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'lannister', seed: 7 });
+    await api(`/games/${id}/act`, { verb: 'hire_company', params: { company: 'golden_company' } });
+    return { id, focus: state.holdings.lannister.pos, dist: 1400, page: async (page) => {
+      await page.evaluate(async () => { const m = await import('/js/ui/windows.js'); m.openWindow('military'); });
+      await page.waitForTimeout(400);
+      await page.evaluate(() => { const h = [...document.querySelectorAll('h4')].find((x) => /Free companies/.test(x.textContent)); h?.scrollIntoView({ block: 'center' }); });
+      await page.waitForTimeout(300);
+    } };
+  },
   // the economy (WP C1): a moon's accounts in the Treasury window — rents, trade, tribute, the household, the field
   async economy() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 7 });

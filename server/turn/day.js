@@ -21,6 +21,7 @@ import { regencyTick } from '../../public/js/shared/regency.js';
 import { musterTick } from '../../public/js/engine/military/muster.js';
 import { supplyTick } from '../../public/js/engine/military/supply.js';
 import { seaTick } from '../../public/js/engine/military/naval.js';
+import { irregularsTick } from '../../public/js/engine/military/companies.js';
 import { commitmentsTick } from '../../public/js/engine/politics/commitments.js';
 import { asEvent } from '../../public/js/engine/facts/log.js';
 import { advanceMusters } from '../orders.js';
@@ -65,6 +66,8 @@ export async function engineDay(state, ctx) {
   const mt = marchTick(state, { span: 1, turnStart: day - 1 }); cards.push(...mt.events); applied.push(...mt.applied);
   // the fleets: hosts aboard sail with them, storms, blockades and raids (engine/military/naval.js)
   { const r = seaTick(state, 1, random); cards.push(...r.events); applied.push(...r.applied); }
+  // sellswords paid (or gone), outlaws, the Watch's recruits (engine/military/companies.js)
+  { const r = irregularsTick(state, 1, random); cards.push(...r.events); applied.push(...r.applied); }
   // every host eats (engine/military/supply.js): from friendly stores, its wagons, or the country it stands in
   { const r = supplyTick(state, 1); cards.push(...r.events); applied.push(...r.applied); }
   for (const tick of [roadEncounters, treacheryTick, resolveWarfare]) { const r = tick(state, 1); cards.push(...r.events); applied.push(...r.applied); }

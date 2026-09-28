@@ -813,3 +813,22 @@ ransoms, `embargo`) and the price index of §6.3.
   `blockade` when an enemy port is besieged). The fleet verbs are offered to the order interpreter only for a house that
   has a fleet, and the siege verbs only for one before a castle's walls (the prompt's budget).
 
+## D-049 · 2026-09-28 · Free companies by contract; outlaws as a mark on the land (WP C7)
+
+**What.** `engine/military/companies.js`, `data/companies.js`. Departures from 07 §10:
+- **Only the companies the scenario has.** The Golden Company and the Brave Companions exist as houses in 298; the
+  Second Sons, the Stormcrows and the Windblown come with Essos (WP G). A company's price is a man's wage a moon (the
+  Golden Company 2.5, the Brave Companions 3), paid a moon at a time from the employer's coin — on signing and every
+  thirty days after — outside the ledger's projection (the receipt and the Military window say it).
+- **Loyalty**: every company marches off after one moon unpaid; only a turncoat company (the Brave Companions) goes
+  over, and only for half as much again as its contract; the Golden Company keeps its word.
+- **Hired passage**: a company that must cross the sea buys its passage (a week to find ships, then the voyage).
+  The Dothraki are refused both ships and passage — "the poison water" — and `embark_host` refuses a khalasar.
+- **Outlaw bands are a mark on a holding** (`h.outlaws`), not a party: they rise where war and foraging have laid the
+  land waste (devastation ≥ 40, the land at war), make its roads deadlier (+0.2 danger), take a little prosperity and
+  add unrest each week, and scatter when 500 men of the land's own realm come within ~25 miles, or melt away a moon after
+  the war and the waste are over. A party of their own, hunted over the map, waits for E (the living map).
+- **The Night's Watch** takes 20–30 recruits a moon; no house declares war on it, and it declares war on no one.
+- **The free folk** grow 1 % a moon to 90,000 (the scenario begins them at 60,000, more than 07 §10's 2,000: the host
+  beyond the Wall in 298 is the scenario's). They stay held beyond the Wall until the story moves them (D-022).
+

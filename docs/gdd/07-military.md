@@ -407,6 +407,15 @@ The hosts that cross water on their own (A8's `shared/sea.js`) still do. Wildfir
 - **Dragons:** hatch by beat (Dany's three, 298/299 AC). Mechanically inert until ~301 (growth); present in the world
   as story assets and a secret/rumour vector. Out of combat scope for 298–300.
 
+*Implemented in WP C7* (`engine/military/companies.js`, `data/companies.js`; [DECISIONS.md#D-049](DECISIONS.md)): the
+Golden Company (2.5 a man a moon, keeps its contracts) and the Brave Companions (3, raised at Myr the first time they are
+wanted, go over for half as much again); `hire_company` (a moon on signing, the company marches for the employer's
+seat, by hired passage from Essos) and `dismiss_company`; unpaid a moon, a company marches home; outlaw bands as a mark
+on a holding (devastation ≥ 40 and war: a 15 % chance a week), deadlier roads, a little less prosperity and more unrest
+a week, scattered by 500 of the land's own men; the Watch's 20–30 recruits a moon, and no war made by or on it; the
+free folk host 1 % more a moon, to 90,000; the Dothraki refused ships and passage. The Second Sons, the Stormcrows and
+the Windblown, the Brotherhood without Banners, and dragons wait for G.
+
 ## 11. War and peace (the state of war)
 
 `wars[]` keep sides and add `goal` (casus belli: `free_prisoner`, `claim_throne`, `independence`, `revenge`,

@@ -25,6 +25,7 @@ import { STANDING } from '../engine/military/battle.js';
 import { hullsOf, capacityOf, carriedOf, aboardOf } from '../engine/military/naval.js';
 import { TERMS, fortOf, siegeView } from '../engine/military/siege.js';
 import { FORTRESS } from '../../data/fortresses.js';
+import { COMPANIES } from '../../data/companies.js';
 import { dayNumber, dateOfDay } from '../engine/time.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
@@ -143,7 +144,7 @@ function council() {
 function military() {
   const s = app.state, p = s.meta.player, h = player();
   const vas = vassalsOf(s, p).map((v) => s.houses[v]);
-  const mine = forces(s).filter((a) => a.owner === p || s.houses[a.owner]?.liege === p);
+  const mine = forces(s).filter((a) => a.owner === p || a.serving === p || s.houses[a.owner]?.liege === p);
   const others = forces(s).filter((a) => !mine.includes(a)).sort((a, b) => (app.map?.atWarWith(b.owner) ? 1 : 0) - (app.map?.atWarWith(a.owner) ? 1 : 0));
   const answered = vas.filter((v) => v.obligations?.levies === 'answered').length, refused = vas.filter((v) => v.obligations?.levies === 'refused').length, called = vas.filter((v) => ['called', 'delayed'].includes(v.obligations?.levies)).length;
   return `
@@ -158,9 +159,26 @@ function military() {
     <div class="row-actions"><button class="btn primary" id="call-banners">📯 Call the banners…</button><button class="btn" id="raise-levies">Raise own levies…</button><button class="btn" data-order-tpl="Hire sellswords: ">Hire sellswords</button></div>
     <div id="banners-form" class="hidden"></div>
     <div class="section" style="margin-top:0.8rem"><h4>Your hosts & fleets</h4>${mine.map((a) => armyRow(a) + ((a.owner === p || a.serving === p) ? `<div class="row-actions" style="margin:0.1rem 0 0.5rem 2.3rem"><button class="btn small" data-march="${a.id}">⤳ March…</button>${a.commander && s.characters[a.commander]?.alive ? `<button class="btn small" data-talk="${a.commander}">Commander</button>` : ''}<button class="btn small" data-order-tpl="${esc(a.name)} is to ">Orders…</button><button class="btn small danger" data-disband="${a.id}">Disband</button></div>` : '')).join('') || '<div class="muted">No hosts in the field. Call your banners to raise one.</div>'}</div>
+    ${companiesHtml(s, p)}
     <div class="section"><h4>Vassal levies</h4>${vas.map((v) => `<div class="row clickable" data-house="${v.id}">${sig(v)}<div class="grow"><div class="title">${esc(v.name)}</div><div class="sub">~${fmt(v.figures.levies.v)} levies · ${fmt(v.figures.menAtArms.v)} men-at-arms · ${temperWord(vassalTemper(s, v.id))}</div></div>${obligationPills(v)}</div>`).join('') || '<div class="muted">You have no vassals.</div>'}</div>
     <div class="section"><h4>Known forces</h4>${others.map(armyRow).join('')}</div>`;
 }
+
+// the free companies for hire (07 §10): their swords, their price a moon, and whose coin they take now
+function companiesHtml(s, p) {
+  const rows = Object.entries(COMPANIES).filter(([id]) => s.houses[id]).map(([id, C]) => {
+    const host = Object.values(s.parties).find((x) => x.owner === id && x.kind === 'host' && x.men > 0);
+    const men = host?.men || C.men || 0; const price = Math.round(men * C.price); const by = host?.contract?.by;
+    const status = by === p ? `in your pay · ${fmt(host.contract.price)} a moon` : by ? `in the pay of House ${esc(s.houses[by]?.name)}${C.turncoat ? ` · would come to you for ${fmt(Math.ceil(host.contract.price * 1.5))}` : ' · keeps its contracts'}` : `for hire · ${fmt(price)} a moon`;
+    const act = by === p ? `<button class="btn small" data-dismiss-company="${id}">Pay off</button>` : !by || C.turncoat ? `<button class="btn small" data-hire-company="${id}" data-offer="${by ? Math.ceil(host.contract.price * 1.5) : ''}">Hire</button>` : '';
+    return `<div class="row"><div class="grow"><div class="title">${esc(C.name.replace(/^./, (x) => x.toUpperCase()))} <span class="muted">~${fmt(men)} swords</span></div><div class="sub">${status}</div></div>${act}</div>`;
+  });
+  return rows.length ? `<div class="section"><h4>Free companies</h4>${rows.join('')}<p class="muted" style="font-size:0.78rem">A moon paid on signing and each moon after; miss a moon's pay and the company is gone.</p></div>` : '';
+}
+document.addEventListener('click', (e) => {
+  const h = e.target.closest('[data-hire-company]'); if (h) doVerb('hire_company', { company: h.dataset.hireCompany, ...(h.dataset.offer ? { offer: Number(h.dataset.offer) } : {}) }, { after: () => renderWindow() });
+  const d = e.target.closest('[data-dismiss-company]'); if (d) doVerb('dismiss_company', { company: d.dataset.dismissCompany }, { after: () => renderWindow() });
+});
 
 // ───────────── Economy ─────────────
 // The last moon's accounts summed from the turns' ledgers (turns are often a single day)

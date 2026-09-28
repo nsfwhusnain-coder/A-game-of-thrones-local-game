@@ -6,6 +6,7 @@
 //
 // One action is a flat record (every field required, unused ones "none" / 0 / ""), so one small schema serves every
 // verb; readingOf() turns it into the verb's own params. A letter is the verb send_letter, whose words are the order's.
+import { COMPANIES } from '../../../public/data/companies.js';
 import { obj, str, int, arr, bool, oneOf, enumProp, buildEnum, hasForeignScript, strings } from '../schema.js';
 import { placeAliases, personAliases, houseAliases, slug } from '../../../public/js/engine/ids.js';
 import { VERBS } from '../../../public/js/engine/actions/registry.js';
@@ -31,12 +32,13 @@ const CHOICE_OF = {
   borrow: Object.keys(LENDERS), repay: Object.keys(LENDERS), embargo: ['impose', 'lift'],
   set_standing_orders: ['favourable', 'always', 'avoid', 'hold'],
   offer_terms: ['march_out_with_arms', 'yield_and_swear', 'yield_hostages', 'unconditional'],
+  hire_company: Object.keys(COMPANIES), dismiss_company: Object.keys(COMPANIES),
 };
 const CHOICES = [...new Set(Object.values(CHOICE_OF).flat())].sort();
 const FLEET_VERBS = new Set(['embark_host', 'land_host', 'blockade', 'raid_coast']); const SIEGE_VERBS = new Set(['offer_terms', 'storm']);
 // what each verb cannot do without ('person|houses': one of them)
 const NEEDS = {
-  march_host: ['subject', 'to'], attack_host: ['subject', 'to'], halt_host: ['subject'], wait_banners: ['subject'], disband_host: ['subject'], set_standing_orders: ['subject', 'choice'], offer_terms: ['at', 'choice'], storm: ['at'], embark_host: ['subject'], land_host: ['subject'], blockade: ['subject', 'at'], raid_coast: ['subject', 'at'],
+  march_host: ['subject', 'to'], attack_host: ['subject', 'to'], halt_host: ['subject'], wait_banners: ['subject'], disband_host: ['subject'], set_standing_orders: ['subject', 'choice'], offer_terms: ['at', 'choice'], storm: ['at'], embark_host: ['subject'], land_host: ['subject'], blockade: ['subject', 'at'], raid_coast: ['subject', 'at'], hire_company: ['choice'], dismiss_company: ['choice'],
   set_secrecy: ['subject', 'choice'], send_person: ['who', 'to'], recall_rider: ['who'], set_tax: ['choice'],
   set_dues: ['choice'], fund_works: ['choice'], cancel_works: ['choice'], hire_men: ['men'], hire_officer: ['choice'],
   send_gift: ['gold', 'person|houses'], appoint_office: ['who', 'choice'], grant_holding: ['at', 'houses'],
@@ -57,6 +59,8 @@ const MEANS = {
   land_host: 'a fleet [subject] lands its hosts',
   blockade: 'a fleet [subject] blockades a port [at]',
   raid_coast: 'a fleet [subject] raids the coast about [at]',
+  hire_company: 'hire a free company [choice], [gold] a moon if you name a price',
+  dismiss_company: 'pay off a free company [choice]',
   halt_host: 'a host [subject] stops where it stands',
   wait_banners: 'a host [subject] waits until the banners called to it are in',
   merge_hosts: 'hosts in one place join ([subject]: one, or none for all there); leader [who]; name in [note]',
@@ -278,6 +282,8 @@ export function valueOf(parse, ctx) {
       case 'land_host': a.subject = memberOf(ctx.hosts, q.fleet); break;
       case 'blockade': a.subject = memberOf(ctx.hosts, q.fleet); a.at = place(q.holding); break;
       case 'raid_coast': a.subject = memberOf(ctx.hosts, q.fleet); a.at = place(q.target); break;
+      case 'hire_company': a.choice = q.company; a.gold = q.offer || 0; break;
+      case 'dismiss_company': a.choice = q.company; break;
       case 'merge_hosts': a.subject = memberOf(ctx.hosts, q.armies?.[0]); a.who = memberOf(ctx.own, q.commander); a.note = q.name || ''; break;
       case 'send_person': a.who = memberOf(ctx.own, q.character); a.to = place(q.to); a.men = q.men || 0; break;
       case 'recall_rider': a.who = memberOf(ctx.own, q.character); break;
@@ -335,6 +341,8 @@ export function readingOf(value, state, { house = state.meta.player } = {}) {
         case 'land_host': return { fleet: id(a.subject) };
         case 'blockade': return { fleet: id(a.subject), holding: id(a.at) };
         case 'raid_coast': return { fleet: id(a.subject), target: id(a.at) };
+        case 'hire_company': return { company: id(a.choice), ...(a.gold ? { offer: a.gold } : {}) };
+        case 'dismiss_company': return { company: id(a.choice) };
         case 'halt_host': case 'wait_banners': case 'disband_host': return { army: id(a.subject) };
         case 'set_secrecy': return { army: id(a.subject), mode: id(a.choice), ...(id(a.to) ? { to: a.to } : {}) };
         case 'merge_hosts': return { ...(id(a.subject) ? { armies: [a.subject] } : {}), ...(id(a.who) ? { commander: a.who } : {}), ...(a.note ? { name: a.note } : {}) };
