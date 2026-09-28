@@ -960,7 +960,7 @@ function applyOne(state, ch, ctx) {
           if (joined.length) note('war_joined', { actors: joined.map(lordOf), houses: joined, data: { war: existing.id, houses: joined }, text: `${joined.map((x) => `House ${state.houses[x].name}`).join(', ')} ${joined.length > 1 ? 'join' : 'joins'} ${existing.name}.` });
           return { op, text: `${existing.name} widens` };
         }
-        state.wars.push({ id, name: ch.name || `War of ${state.houses[att[0]].name} against ${state.houses[def[0]].name}`, attackers: att, defenders: def, started: date, status: 'ongoing', note: ch.reason || ch.note || '' });
+        state.wars.push({ id, name: ch.name || `War of ${state.houses[att[0]].name} against ${state.houses[def[0]].name}`, attackers: att, defenders: def, started: date, status: 'ongoing', note: ch.reason || ch.note || '', ...(ch.goal ? { goal: ch.goal } : {}), score: 0 });
         note('war_declared', { actors: [lordOf(att[0]), lordOf(def[0])], houses: [...att, ...def], data: { war: id, attackers: att, defenders: def, reason: ch.reason || null }, text: `${state.wars.at(-1).name}: House ${state.houses[att[0]].name} makes war on House ${state.houses[def[0]].name}.` });
         return { op, text: `WAR: ${state.wars.at(-1).name}` };
       }

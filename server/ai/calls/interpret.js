@@ -33,12 +33,13 @@ const CHOICE_OF = {
   set_standing_orders: ['favourable', 'always', 'avoid', 'hold'],
   offer_terms: ['march_out_with_arms', 'yield_and_swear', 'yield_hostages', 'unconditional'],
   hire_company: Object.keys(COMPANIES), dismiss_company: Object.keys(COMPANIES),
+  sue_for_peace: ['white_peace', 'concede', 'demand'],
 };
 const CHOICES = [...new Set(Object.values(CHOICE_OF).flat())].sort();
-const FLEET_VERBS = new Set(['embark_host', 'land_host', 'blockade', 'raid_coast']); const SIEGE_VERBS = new Set(['offer_terms', 'storm']);
+const FLEET_VERBS = new Set(['embark_host', 'land_host', 'blockade', 'raid_coast']); const SIEGE_VERBS = new Set(['offer_terms', 'storm']); const WAR_VERBS = new Set(['sue_for_peace']);
 // what each verb cannot do without ('person|houses': one of them)
 const NEEDS = {
-  march_host: ['subject', 'to'], attack_host: ['subject', 'to'], halt_host: ['subject'], wait_banners: ['subject'], disband_host: ['subject'], set_standing_orders: ['subject', 'choice'], offer_terms: ['at', 'choice'], storm: ['at'], embark_host: ['subject'], land_host: ['subject'], blockade: ['subject', 'at'], raid_coast: ['subject', 'at'], hire_company: ['choice'], dismiss_company: ['choice'],
+  march_host: ['subject', 'to'], attack_host: ['subject', 'to'], halt_host: ['subject'], wait_banners: ['subject'], disband_host: ['subject'], set_standing_orders: ['subject', 'choice'], offer_terms: ['at', 'choice'], storm: ['at'], embark_host: ['subject'], land_host: ['subject'], blockade: ['subject', 'at'], raid_coast: ['subject', 'at'], hire_company: ['choice'], dismiss_company: ['choice'], sue_for_peace: ['houses'],
   set_secrecy: ['subject', 'choice'], send_person: ['who', 'to'], recall_rider: ['who'], set_tax: ['choice'],
   set_dues: ['choice'], fund_works: ['choice'], cancel_works: ['choice'], hire_men: ['men'], hire_officer: ['choice'],
   send_gift: ['gold', 'person|houses'], appoint_office: ['who', 'choice'], grant_holding: ['at', 'houses'],
@@ -61,6 +62,7 @@ const MEANS = {
   raid_coast: 'a fleet [subject] raids the coast about [at]',
   hire_company: 'hire a free company [choice], [gold] a moon if you name a price',
   dismiss_company: 'pay off a free company [choice]',
+  sue_for_peace: 'offer [houses] peace [choice]',
   halt_host: 'a host [subject] stops where it stands',
   wait_banners: 'a host [subject] waits until the banners called to it are in',
   merge_hosts: 'hosts in one place join ([subject]: one, or none for all there); leader [who]; name in [note]',
@@ -181,7 +183,8 @@ export default {
     // only what this house may do at all (answering a liege's call is a matter of the court for the player)
     // (the fleet's orders only to a house with ships, the siege's only to one before a castle's walls)
     const fleet = hosts.some((a) => a.kind === 'fleet'); const siege = hosts.some((a) => a.besieging);
-    const verbs = verbsFor(p).filter((v) => (!VERBS[v].who || VERBS[v].who(state, { house, verb: v, actor: lord?.id })) && (fleet || !FLEET_VERBS.has(v)) && (siege || !SIEGE_VERBS.has(v)));
+    const atWar = (state.wars || []).some((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].includes(house));
+    const verbs = verbsFor(p).filter((v) => (!VERBS[v].who || VERBS[v].who(state, { house, verb: v, actor: lord?.id })) && (fleet || !FLEET_VERBS.has(v)) && (siege || !SIEGE_VERBS.has(v)) && (atWar || !WAR_VERBS.has(v)));
     const sworn = Object.values(state.houses).filter((h) => h.liege === house);
     const prisoners = Object.values(state.characters).filter((c) => c.alive && /imprisoned|captive|hostage/.test(c.status || '') && (resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner === house));
     // the places the order most likely means: those it names, the lord's own, his lords' seats, the great seats
@@ -284,6 +287,7 @@ export function valueOf(parse, ctx) {
       case 'raid_coast': a.subject = memberOf(ctx.hosts, q.fleet); a.at = place(q.target); break;
       case 'hire_company': a.choice = q.company; a.gold = q.offer || 0; break;
       case 'dismiss_company': a.choice = q.company; break;
+      case 'sue_for_peace': a.houses = [memberOf(ctx.houses, q.house)].filter((m) => m !== 'none'); a.choice = q.terms; break;
       case 'merge_hosts': a.subject = memberOf(ctx.hosts, q.armies?.[0]); a.who = memberOf(ctx.own, q.commander); a.note = q.name || ''; break;
       case 'send_person': a.who = memberOf(ctx.own, q.character); a.to = place(q.to); a.men = q.men || 0; break;
       case 'recall_rider': a.who = memberOf(ctx.own, q.character); break;
@@ -343,6 +347,7 @@ export function readingOf(value, state, { house = state.meta.player } = {}) {
         case 'raid_coast': return { fleet: id(a.subject), target: id(a.at) };
         case 'hire_company': return { company: id(a.choice), ...(a.gold ? { offer: a.gold } : {}) };
         case 'dismiss_company': return { company: id(a.choice) };
+        case 'sue_for_peace': return { house: hs[0] || null, terms: id(a.choice) || 'white_peace' };
         case 'halt_host': case 'wait_banners': case 'disband_host': return { army: id(a.subject) };
         case 'set_secrecy': return { army: id(a.subject), mode: id(a.choice), ...(id(a.to) ? { to: a.to } : {}) };
         case 'merge_hosts': return { ...(id(a.subject) ? { armies: [a.subject] } : {}), ...(id(a.who) ? { commander: a.who } : {}), ...(a.note ? { name: a.note } : {}) };

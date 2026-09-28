@@ -7,6 +7,10 @@ import { MILES_PER_UNIT } from '../../../data/geography.js';
 import { random } from '../rng.js';
 import { emit } from '../facts/log.js';
 import { knowledgeOf, learn } from '../knowledge.js';
+import { GOALS, goalOf, TERMS as PEACE_TERMS, sideOf, leaderOf, weighPeace, makePeace } from '../politics/war.js';
+
+// the war this house and that one fight on opposite sides of
+const warWith = (state, a, b) => (state.wars || []).find((w) => w.status !== 'ended' && sideOf(state, w, a) && sideOf(state, w, b) && sideOf(state, w, a) !== sideOf(state, w, b));
 
 const gold = (h) => Number(h?.figures?.treasury?.v) || 0;
 const spend = (state, house, n, source) => applyChanges(state, [{ op: 'figure', house, field: 'treasury', delta: -n, source }]);
@@ -73,7 +77,7 @@ export const DIPLOMACY = [
   {
     // war, declared: the realm takes sides; a vassal who declares on his liege is in rebellion
     id: 'declare_war', family: 'diplomacy', label: 'Declare war',
-    params: { house: 'house:other', reason: 'text?' },
+    params: { house: 'house:other', reason: 'text?', goal: 'text?' },
     legal: (state, i) => {
       const h = state.houses[i.params.house]; if (!h || i.params.house === i.house) return { code: 'no_target', text: 'Declare war on whom?' };
       // the Night's Watch takes no part in the wars of the realm, and no one makes war on it (07 §10)
@@ -85,7 +89,7 @@ export const DIPLOMACY = [
       const me = state.houses[i.house]; const h = state.houses[i.params.house]; const target = h.id; const ch = [];
       const rebelling = me.liege === target || (realmOf(state, i.house) === realmOf(state, target) && me.liege && state.houses[me.liege]?.id === realmOf(state, target));
       if (me.liege === target) ch.push({ op: 'liege', house: i.house, liege: null });
-      ch.push({ op: 'war', status: 'start', name: `The war of ${me.name} against ${h.name}`, attackers: [i.house], defenders: [target], reason: i.params.reason || 'declared by House ' + me.name });
+      ch.push({ op: 'war', status: 'start', name: `The war of ${me.name} against ${h.name}`, attackers: [i.house], defenders: [target], reason: i.params.reason || 'declared by House ' + me.name, goal: GOALS[i.params.goal] ? i.params.goal : goalOf(i.params.reason) });
       ch.push({ op: 'relation', a: i.house, b: target, delta: -40, reason: 'war declared' });
       applyChanges(state, ch, { source: 'Your declaration', protectPlayer: false, playerChoseAllegiance: true, cause: i.source });
       return { text: `Declare war on House ${h.name}.${i.params.reason ? ' Casus belli: ' + i.params.reason : ''}`, note: `[Already done: war is declared${rebelling ? ' — this is REBELLION against your liege' : ''}. Narrate how each house reacts: who joins whom, who waits.]`, summary: `War is declared on House ${h.name}.${rebelling ? ' You are in rebellion.' : ''}`, rebelling };
@@ -93,6 +97,29 @@ export const DIPLOMACY = [
     receipt: (state, i, d) => [{ ok: d.rebelling ? 'warn' : true, text: d.summary }],
     said: (state, i, d) => ({ status: 'done', text: d.text, note: d.note }),
     facts: ['war_declared', 'fealty_renounced'], mind: { allowed: true },
+  },
+  {
+    // sue for peace (07 §11): the other side's leader weighs the terms by the war's score and his own nature
+    id: 'sue_for_peace', family: 'diplomacy', label: 'Sue for peace',
+    params: { house: 'house:other', terms: 'enum:white_peace|concede|demand' },
+    legal: (state, i) => {
+      const w = warWith(state, i.house, i.params.house); if (!w) return { code: 'not_at_war', text: `You are not at war with House ${state.houses[i.params.house]?.name || '—'}.` };
+      if (!PEACE_TERMS[i.params.terms]) return { code: 'terms', text: `Terms are one of: ${Object.values(PEACE_TERMS).join('; ')}.` };
+      const mySide = sideOf(state, w, i.house); if (leaderOf(w, mySide) !== i.house && leaderOf(w, mySide) !== realmOf(state, i.house)) return { code: 'not_leader', text: `House ${state.houses[leaderOf(w, mySide)]?.name} leads your side of ${w.name}: peace is theirs to make.` };
+      return null;
+    },
+    start: (state, i) => {
+      const w = warWith(state, i.house, i.params.house); const mine = sideOf(state, w, i.house); const theirs = mine === 'A' ? 'D' : 'A';
+      const ans = weighPeace(state, w, theirs, i.params.terms, random);
+      const conceder = i.params.terms === 'concede' ? mine : i.params.terms === 'demand' ? theirs : null;
+      emit(state, 'peace_sued', { actors: [state.houses[i.house].lord, state.houses[leaderOf(w, theirs)]?.lord], houses: [i.house, leaderOf(w, theirs)], data: { war: w.id, terms: i.params.terms, accepted: ans.accepted }, cause: i.source, text: `House ${state.houses[i.house].name} sues for peace in ${w.name}: ${PEACE_TERMS[i.params.terms]}. ${ans.accepted ? 'The terms are taken.' : 'The terms are refused.'}` });
+      if (!ans.accepted) return { accepted: false, war: w.name, why: ans.why, other: leaderOf(w, theirs) };
+      const done = makePeace(state, w, i.params.terms, { conceder, cause: i.source });
+      return { accepted: true, war: w.name, tribute: done.tribute, conceder: conceder === mine ? 'you' : conceder ? 'they' : null, other: leaderOf(w, theirs) };
+    },
+    receipt: (state, i, d) => [{ ok: d.accepted ? true : 'warn', text: d.accepted ? `House ${state.houses[d.other]?.name} takes the terms: ${d.war} is over${d.conceder === 'you' ? `; you pay ${d.tribute.toLocaleString('en-GB')} dragons and free their people` : d.conceder === 'they' ? `; they pay you ${d.tribute.toLocaleString('en-GB')} dragons and free your people` : ', each keeping what it holds'}.` : `House ${state.houses[d.other]?.name} refuses the terms — ${d.why}. The war goes on.` }],
+    said: (state, i, d) => ({ status: 'done', text: d.accepted ? `Peace is made: ${d.war} is over.` : `The peace offered in ${d.war} was refused.` }),
+    facts: ['peace_sued', 'peace_made'], mind: { allowed: false },
   },
   intrigue('spies', 'Plant spies in a household'),
   intrigue('secrets', 'Dig for a house\'s secrets'),

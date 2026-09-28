@@ -23,6 +23,7 @@ import { supplyTick } from '../../public/js/engine/military/supply.js';
 import { seaTick } from '../../public/js/engine/military/naval.js';
 import { irregularsTick } from '../../public/js/engine/military/companies.js';
 import { commitmentsTick } from '../../public/js/engine/politics/commitments.js';
+import { warTick } from '../../public/js/engine/politics/war.js';
 import { asEvent } from '../../public/js/engine/facts/log.js';
 import { advanceMusters } from '../orders.js';
 import { resolvePlaceId } from '../../public/js/shared/world.js';
@@ -80,6 +81,8 @@ export async function engineDay(state, ctx) {
   cards.push(...await ctx.deliver(state));
   // promises kept or broken today, judged after the day's marches (a host that reached Moat Cailin has kept its word)
   cards.push(...commitmentsTick(state).filter((f) => f.houses.includes(state.meta.player)).map((f) => asEvent(state, f, { mine: true })));
+  // the wars reckoned: their score moved by the day's deeds, gone cold, or peace sued for (engine/politics/war.js)
+  cards.push(...warTick(state, random).events.filter((c) => c.houses?.includes(state.meta.player)));
   // the white raven: a season turns on its day
   let season = null;
   const turned = seasonTick(state, 1);
