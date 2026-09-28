@@ -942,6 +942,6 @@ ransoms, `embargo`) and the price index of §6.3.
   season's days even while the Citadel's ravens are held for their beats.
 - **The regional palette is a tint over the atlas' biomes** (six soft pools of colour, on the hills or the plains)
   rather than a new biome table: the worker's climate stays as it was, and the tints are data (`REGION_TINTS`).
-- **Weirwoods are drawn by chance** (about one tree in eighty in the North, one in five hundred south of the Neck), not
+- **Weirwoods are drawn by chance** (about one tree in 250 in the North, one in 1,250 south of the Neck), not
   placed at each godswood: the godswoods are inside the castles, which the settlement models draw.
 

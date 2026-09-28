@@ -93,6 +93,6 @@ export function treeAtlas(T = TILE) {
   for (let j = 0; j < 14; j++) disc(2, T * (0.25 + r() * 0.5), T * (0.2 + r() * 0.35), 1.6, [236, 240, 246], 0);
   // 3 — the weirwood: white bark, a crown of blood-red leaves
   trunk(3, T / 2, T * 0.5, T - 2, 3, [232, 226, 214]);
-  for (let j = 0; j < 20; j++) { const a = r() * Math.PI * 2, d = Math.sqrt(r()) * T * 0.26; disc(3, T / 2 + Math.cos(a) * d, T * 0.34 + Math.sin(a) * d * 0.8, T * (0.09 + r() * 0.06), [150 + r() * 40, 28 + r() * 16, 22], 0.3); }
+  for (let j = 0; j < 20; j++) { const a = r() * Math.PI * 2, d = Math.sqrt(r()) * T * 0.26; disc(3, T / 2 + Math.cos(a) * d, T * 0.34 + Math.sin(a) * d * 0.8, T * (0.09 + r() * 0.06), [124 + r() * 30, 30 + r() * 14, 26], 0.3); }
   return { width: W, height: T, pixels: px };
 }

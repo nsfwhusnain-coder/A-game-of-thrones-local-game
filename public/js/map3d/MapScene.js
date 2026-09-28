@@ -152,7 +152,7 @@ export class MapScene {
           // the season's snow line (11 §5.3): north of it the land is white, the band's edge ragged; the peaks keep theirs
           float camD = length(cameraPosition - vWPos);
           float edge = (dn(vWPos.xz * 0.02) - 0.5) * 90.0 + (dn(vWPos.xz * 0.11) - 0.5) * 24.0;
-          float snowy = 1.0 - smoothstep(uSnowLine - 30.0, uSnowLine + 30.0, vWPos.z + edge);
+          float snowy = (1.0 - smoothstep(uSnowLine - 30.0, uSnowLine + 30.0, vWPos.z + edge)) * smoothstep(${WATER_LEVEL.toFixed(2)}, ${(WATER_LEVEL + 0.5).toFixed(2)}, vWPos.y); // the land only: the sea keeps its own ice
           float canopy = texture2D(uForest, vMapUv).r;
           diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95) * (0.92 + 0.08 * det), snowy * (0.82 - canopy * 0.3));
           // winter's ice on the northern rivers

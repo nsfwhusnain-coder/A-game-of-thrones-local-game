@@ -617,7 +617,7 @@ export function buildForests({ W, H, scale, forest, land, northY = 1120 }, heigh
     const f = forest[i] / 255; if (f < 0.25 || rng() > f * 0.85) continue;
     // pines in the North and scattered through the south; now and then a weirwood, most often in the North
     const north = jy < northY, roll = rng();
-    const kind = roll < (north ? 0.012 : 0.002) ? TREE_KIND.weirwood : north || roll < 0.25 ? TREE_KIND.conifer : TREE_KIND.broadleaf;
+    const kind = roll < (north ? 0.004 : 0.0008) ? TREE_KIND.weirwood : north || roll < 0.25 ? TREE_KIND.conifer : TREE_KIND.broadleaf;
     const s = 0.7 + rng() * 0.6;
     const [w, h] = kind === TREE_KIND.conifer ? [2.2, 3.8] : kind === TREE_KIND.weirwood ? [3.4, 3.8] : [3, 3.4];
     const key = `${Math.floor(jx / tile)},${Math.floor(jy / tile)}`;
