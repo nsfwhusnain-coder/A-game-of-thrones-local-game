@@ -205,6 +205,14 @@ adapted to the party model.
 - **Disease** in camps and sieges: summer 2 %/moon, autumn 3 %, winter 4.5 %, ×1.5 when supply is short (existing siege
   numbers).
 
+*Implemented in WP C3* (`engine/military/supply.js`, numbers in `data/balance.js` SUPPLY; [DECISIONS.md#D-045](DECISIONS.md)):
+rations in man-days (7 on the back, a wagon to every 40 men with 600 each, never more than 40 days); friendly stores
+within two days' march **or the lord of the province the host stands in**; foraging when fewer than five days are
+carried, yield by the province's people, prosperity, season and devastation (linear to nothing at 70) and the host's
+size; starving 1 % a day dead or fallen out and three times the deserters, morale −3; camp fever after seven days in one
+place or at a siege. `supply` (0–100) is derived from it: fed 100, short 75, starving 25. The season's pace (§5) is in
+`engine/movement.js` `seasonPace`. Road wear and mud from the arena branch are left for E (the living map).
+
 ## 7. Battle
 
 `engine/military/battle.js`, grown from `shared/battles.js` (keep its Lanchester core).

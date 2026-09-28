@@ -3,6 +3,22 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — C3: supply — bread, forage and the stripped land
+
+- **A host carries its bread.** Seven days on the men's backs and a wagon to every forty men: a host sets out with about
+  three weeks' rations. The host card and your hosts in the Military window count them in days; the Food figure's
+  tooltip lists each host's.
+- **Fed at home, foraging abroad.** In your own lands, or a friend's, the granaries feed the host and fill its wagons
+  (and the stores fall). In a stranger's country it eats from its wagons, and when they run low it forages — and the
+  land is laid waste: its rents fall, its smallfolk grow angry, and a province stripped bare feeds nobody. **March back
+  through it and the host starves**: men die and desert, and heart goes.
+- **Camps sicken.** A host that sits in one place more than a week, or before a castle's walls, loses men to the flux —
+  more in winter, more when hungry.
+- **Seasons slow the march**: autumn's rains a little, winter a great deal, and the North's winter most of all.
+- **Lords bring hungry hosts home.** A lord whose host is starving marches it back to his own granaries.
+- Owner to verify: as Lannister, raise 12,000 men at Casterly Rock and march them to Riverrun; after five or six weeks,
+  open the host: its rations fall by a day a day, then it forages and "the lands about Riverrun are picked over".
+
 ## 2026-09-28 — C1b: lenders, loans and the price of grain (WP C1, second part)
 
 - **Borrow, repay, and be called to account.** Write "Borrow 50,000 dragons from the Iron Bank for two years": the

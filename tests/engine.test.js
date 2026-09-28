@@ -664,11 +664,15 @@ test('a siege costs the besieger: the camp sickens, and the castle eats its stor
   resolveWarfare(s, 30, { r: () => 0.99 });
   assert.equal(s.holdings.tully.status, 'besieged');
   const stores0 = s.holdings.tully.siege.stores;
-  resolveWarfare(s, 30, { r: () => 0.99 });
+  // the camp's sickness is the supply rules' (engine/military/supply.js), a day at a time
+  for (let d = 0; d < 30; d++) { s.meta.date = { ...s.meta.date, ...dateOfDay(dayNumber(s.meta.date) + 1) }; resolveWarfare(s, 1, { r: () => 0.99 }); supplyTick(s, 1); }
   assert.ok(s.parties.sg.men < men0, 'the camp loses men to the flux and desertion');
   assert.ok(s.holdings.tully.siege.stores < stores0, 'the castle eats');
   assert.ok((s.parties.sg.supply ?? 80) >= 20, 'a foraging host does not starve to nothing');
 });
+
+import { supplyTick } from '../public/js/engine/military/supply.js';
+import { dateOfDay } from '../public/js/engine/time.js';
 
 // ── The rule sandbox: the model designs a mechanic, the engine runs it ──
 import { compile, run, compileRule, evaluateRules, houseScope, liveRules, RuleError } from '../public/js/shared/rules.js';

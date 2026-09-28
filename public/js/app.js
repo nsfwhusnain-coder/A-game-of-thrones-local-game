@@ -21,6 +21,7 @@ import { underway, orderOutcome, STATUS_LABEL } from './shared/errands.js';
 import { nextTurnLength } from './shared/turns.js';
 import { regencyLine, speakerFor, incapacity } from './shared/regency.js';
 import { standing, standingWord, epitaph } from './shared/standing.js';
+import { supplyOf } from './engine/military/supply.js';
 
 app.openChat = openChat; app.openCouncil = openCouncil;
 
@@ -179,7 +180,9 @@ function renderTop() {
   const trend = last ? (last.net >= 0 ? `<span class="up">▲${fmt(Math.abs(Math.round(last.net)))}</span>` : `<span class="down">▼${fmt(Math.abs(Math.round(last.net)))}</span>`) : '';
   const tot = realmTotals(s, h.id);
   const season = SEASONS[s.world?.season || 'summer'];
-  const food = Number(h.figures.food.v) || 0;
+  const food = Math.round((Number(h.figures.food.v) || 0) * 10) / 10;
+  // the hosts in the field eat from their wagons, not the granaries: their days of rations belong beside the stores (12 §5)
+  const rations = Object.values(s.parties).filter((a) => a.owner === h.id && a.kind === 'host').map((a) => ({ a, sp: supplyOf(s, a) })).filter((x) => x.sp.days != null);
   const foodPct = Math.max(0, Math.min(100, (food / 24) * 100));
   const net = (lo, hi) => `${lo >= 0 ? '+' : '−'}${fmt(Math.abs(lo))} … ${hi >= 0 ? '+' : '−'}${fmt(Math.abs(hi))}`;
   const items = [
@@ -187,7 +190,7 @@ function renderTop() {
     { ic: '⚔', k: 'Levies', v: `~${fmt(h.figures.levies.v)}`, sub: `realm ~${fmt(tot.levies)}`, win: 'military', tip: `Your own levies, not yet raised (${h.figures.levies.src}).${h.figures.levies.why ? `\nIt drifts, a little each day, toward what your lands can bear (~${fmt(h.figures.levies.why.bear)} at ${h.figures.levies.why.condition}% of their strength, as prosperity and unrest allow) less the ${fmt(h.figures.levies.why.raised)} men already under arms.` : ''}\nWith every sworn house, if they answer the call: ~${fmt(tot.levies)}` },
     { ic: '🛡', k: 'Men-at-arms', v: fmt(h.figures.menAtArms.v), sub: `guard ${fmt(h.figures.guard.v)}`, win: 'military', tip: 'Standing soldiers in your pay, and your household guard.' },
     { ic: '⛵', k: 'Ships', v: fmt(h.figures.ships.v), sub: `realm ~${fmt(tot.ships)}`, win: 'military', tip: 'Your warships, and those of your whole realm.' },
-    { ic: '🌾', k: 'Food', v: `${food} <small>moons</small>`, bar: foodPct, cls: food < 4 ? 'bad' : food < 10 ? 'warn' : 'good', win: 'economy', tip: `Moons of stores in your granaries (${h.figures.food.src}). Winter will empty them.` },
+    { ic: '🌾', k: 'Food', v: `${food} <small>moons</small>`, bar: foodPct, cls: food < 4 ? 'bad' : food < 10 ? 'warn' : 'good', win: 'economy', tip: `Moons of stores in your granaries (${h.figures.food.src}). Winter will empty them.${rations.map(({ a, sp }) => `\n${a.name}: ${sp.word === 'starving' ? 'starving' : `${Math.floor(sp.days)} days of rations`}`).join('')}` },
     { ic: { summer: '☀', autumn: '🍂', winter: '❄', spring: '🌱' }[s.world?.season || 'summer'] || '❄', k: 'Season', v: season.label, sub: s.world?.season === 'winter' ? 'nothing grows' : s.world?.season === 'autumn' ? 'the harvest wanes' : s.world?.season === 'spring' ? 'the thaw' : 'fields are full', win: 'economy', tip: s.world?.seasonNote || season.note },
   ];
   $('#res-row').innerHTML = items.map((it) => `<div class="res ${it.cls || ''}" data-win-open="${it.win}" title="${esc(it.tip)}"><span class="ic">${it.ic}</span><div class="res-txt"><div class="k">${it.k}</div><div class="v">${it.v}</div>${it.bar !== undefined ? `<div class="res-bar"><i style="width:${it.bar}%"></i></div>` : `<div class="s">${it.sub || ''}</div>`}</div></div>`).join('');

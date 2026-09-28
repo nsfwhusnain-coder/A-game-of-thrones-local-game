@@ -717,3 +717,29 @@ ransoms, `embargo`) and the price index of §6.3.
   recorded on the person (and in a secret fact) for the minds and the audiences to weigh; it is not a binding promise.
 - **An embargo** is a pact of kind `embargo`, both ways, and can be lifted.
 - `hire_sellswords` by company is C7's (07 §10).
+
+## D-045 · 2026-09-28 · Supply: bread in man-days, the lord of the land feeds his own (WP C3)
+
+**What.** `engine/military/supply.js`, run once a day after the marches, grown from the arena branch's
+`shared/logistics.js` and fitted to the parties. Departures from 07 §6:
+- **Friendly stores.** 07 §6 feeds a host from a friendly holding within two days' march. The North's castles are
+  many days apart on the atlas, so a Stark host on its own kingsroad went hungry at home; a host is also fed by the lord
+  of the province it stands in (the nearest holding), if he is friendly: its own house, its realm, a lord sworn to it,
+  or an ally in a war. A holding gives up to a tenth of a man-day a day per head of its people, from its lord's granaries
+  (the house's `food` figure, moons for its people); a castle loads a few days' bread a day, not the whole train. A lord
+  feeds his liege's host freely; another's costs a point of goodwill a week.
+- **"Up to 40 days" with wagons.** A wagon to every forty men with 600 man-days is fifteen days, so a host sets out with
+  twenty-two days (seven on the men's backs); forty is the cap if it has more wagons than that.
+- **Starving**: 1 % a day dead or fallen out, and the deserters (a fifth of a percent a day) three times over — 1.6 % a
+  day, never more than a quarter of the host at once; morale −3 a day. Told once when it begins, and the week's losses on
+  the realm's seventh day.
+- **Disease** is this module's for the hosts of landed houses (the siege camp's own sickness in `shared/battles.js` is
+  kept only for the free folk, khalasars and companies, who live off the land and have no rations).
+- **Horses** graze where there is grass; in winter or on stripped land they eat half a man-day each.
+- **Devastation** heals 0.2–0.4 a day where no forager came (none in winter). Road wear and mud (the arena branch's)
+  wait for E, where the map can show them.
+- **The price index** stays grain only (D-044 hoped for horses, arms and labour here): nothing in the game buys them
+  yet; they come with the sellswords and the arms of C7.
+- **The minds**: a lord whose host is short or starving marches it to the nearest of his own holdings (the house ways'
+  `bread` rule); the nearest home is always among a host's places to go.
+

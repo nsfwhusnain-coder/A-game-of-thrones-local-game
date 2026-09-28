@@ -9,6 +9,7 @@ import { contingentsHoldBack } from './treachery.js';
 import { random } from '../engine/rng.js';
 import { settle } from '../engine/parties.js';
 import { fact } from '../engine/facts/log.js';
+import { fedByRations } from '../engine/military/supply.js';
 
 const CONTACT = 10;      // map units (~18 miles): hosts this close will meet
 const SIEGE_REACH = 7;   // a host this close to an enemy castle sits before its walls
@@ -113,6 +114,8 @@ function besiege(state, h, besiegers, days, r) {
   const season = state.world?.season || 'summer';
   const sickRate = (CAMP_SICKNESS[season] ?? 0.022) * (days / 30);
   for (const a of besiegers) {
+    // a host of a landed house eats and sickens by its rations (engine/military/supply.js), not here
+    if (fedByRations(state, a)) continue;
     const sick = Math.round(a.men * sickRate * (a.supply != null && a.supply < 40 ? 1.8 : 1));
     // morale and supply sag but do not vanish: the camp forages, and a siege can still be held by a sullen host
     if (sick > 0) changes.push({ op: 'army_update', army: a.id, delta: -sick, cause: 'siege camp: flux, cold and desertion', morale: Math.max(25, (a.morale ?? 70) - Math.round((days / 30) * 4)), supply: Math.max(20, (a.supply ?? 80) - Math.round((days / 30) * 8)) });

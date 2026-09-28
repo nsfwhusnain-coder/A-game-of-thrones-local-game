@@ -84,7 +84,10 @@ function placesFor(w, a) {
   const ids = [...new Set([...w.besieged, ...w.threatened, liegeMuster, ...w.holdings, ...enemy, ...w.friends.slice(0, 3).map((h) => h.seat)])]
     .filter((id) => id && state.holdings[id] && id !== a.at && (!a.march || a.march.to !== id));
   // a campaign may be long (Robb marched from Winterfell to the Riverlands), but not across the known world
-  return ids.map((id) => [id, miles(state.holdings[id].pos, a.pos)]).filter(([id, d]) => d < (enemy.includes(id) ? 1600 : 900)).sort((x, y) => x[1] - y[1]).slice(0, 8).map(([id]) => id);
+  const near = ids.map((id) => [id, miles(state.holdings[id].pos, a.pos)]).filter(([id, d]) => d < (enemy.includes(id) ? 1600 : 900)).sort((x, y) => x[1] - y[1]).slice(0, 8).map(([id]) => id);
+  // and always the way home: the nearest of the house's own holdings, where the granaries are (engine/military/supply.js)
+  const home = w.holdings.filter((id) => state.holdings[id] && id !== a.at).sort((x, y) => miles(state.holdings[x].pos, a.pos) - miles(state.holdings[y].pos, a.pos))[0];
+  return home && !near.includes(home) ? [...near, home] : near;
 }
 
 // Houses that are not lordships: an order, a people, exiles, a company, a free city keep no court and levy no taxes

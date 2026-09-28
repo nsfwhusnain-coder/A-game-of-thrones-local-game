@@ -41,6 +41,9 @@ export const KINDS = {
   host_split: K(2, 'war', 'local'),
   host_disbanded: K(2, 'war', 'local', (f, s) => `${f.data.name || nameOf(s, f.data.party)} disbands${f.data.why ? ` — ${f.data.why}` : ''}.`),
   desertion: K(3, 'war', 'houses'),
+  host_hungry: K(3, 'war', 'houses'),    // a host's wagons and the fields about it are both empty (engine/military/supply.js)
+  land_stripped: K(3, 'disaster', 'local'), // foragers have left a province nothing: the next host through it starves
+  camp_fever: K(2, 'disaster', 'houses'), // the flux in a camp that has sat too long
   battle: K(4, 'war', 'public', (f, s) => `House ${nameOf(s, f.data.attacker)} and House ${nameOf(s, f.data.defender)} meet in battle${f.place ? ` near ${placeOf(s, f.place)}` : ''}${f.data.winner ? `; the field is House ${nameOf(s, f.data.winner)}'s` : ''}.`),
   rout: K(4, 'war'),
   captured_in_battle: K(4, 'war', 'public', (f, s) => `${nm(who(s, f))} is taken captive on the field.`),

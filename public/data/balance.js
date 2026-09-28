@@ -43,6 +43,27 @@ export const MUSTER = {
   gatherDays: { north: 12, riverlands: 8, vale: 10, westerlands: 6, reach: 8, stormlands: 9, dorne: 10, crownlands: 7, iron_islands: 5 },
 };
 
+// ── Supply (07 §6; WP C3): a host carries meals, not a percentage. Rations are man-days; engine/military/supply.js ──
+export const SUPPLY = {
+  carried: 7,                                 // days of bread a man carries on his back
+  wagonPer: 40, wagonHolds: 600,              // a wagon to every forty men, six hundred man-days in each
+  maxDays: 40,                                // no train carries more than forty days
+  horseEats: 0.5,                             // man-days a horse eats where there is no grazing (winter, a stripped land)
+  reachDays: 2,                               // a friendly holding within two days' march feeds a host from its stores
+  drawShare: 0.1,                             // man-days a day a holding can spare, per head of its people
+  forageShare: 0.15,                          // man-days a day a province yields foragers, per head, at prosperity 50 in summer
+  forageSeason: { spring: 0.6, summer: 1, autumn: 1.2, winter: 0.15 }, forageNorthWinter: 0.03,
+  forageLow: 5,                               // a host forages when it carries fewer days than this
+  devastationPer1000: 1,                      // devastation a day of foraging adds, per thousand men
+  stripped: 70,                               // a province this devastated yields nothing: the "second passage" rule
+  recover: { spring: 0.3, summer: 0.4, autumn: 0.2, winter: 0 }, // devastation a day the land heals, left alone
+  unrestPer1000: 0.3,                         // unrest a day of foraging adds, per thousand men
+  starving: { attrition: 0.01, desertion: 0.002, desertionTimes: 3, morale: 3 }, // a day with nothing to eat
+  disease: { spring: 0.02, summer: 0.02, autumn: 0.03, winter: 0.045, short: 1.5 }, // of a camp, a moon
+  campAfter: 7,                               // days in one place before a camp sickens
+  season: { autumn: 0.85, winter: 0.6, winterNorth: 0.45, winterBeyond: 0.35 }, // a host's pace by the season (07 §5)
+};
+
 // ── The economy (06; WP C1): one model anchored in the books. `scripts/balance-sim.js` checks it against §5.2 ─────────
 export const ECONOMY = {
   // §4: the people of each region (the holdings carry their domains'); the cities' own figures are fixed, and the rest of

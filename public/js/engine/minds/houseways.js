@@ -7,6 +7,7 @@ import { random } from '../rng.js';
 import { temperament } from '../../shared/temperament.js';
 import { HOUSE_WAYS } from '../../../data/voices.js';
 import { optionsFor, HOLD } from './options.js';
+import { supplyOf } from '../military/supply.js';
 
 // ── helpers over the options: the first lawful pick of a verb that fits ──
 const finder = (opts) => (verb, fit = () => true) => {
@@ -30,6 +31,8 @@ const nearestEnemyHold = (w, a) => w.foes.length ? Object.values(w.state.holding
 const PRESSING = [
   ['relieve', (w, f) => w.besieged.length && f('march_host', (p) => w.besieged.includes(p.target)), (w) => `${w.state.holdings[w.besieged[0]]?.name} is besieged: a lord relieves his own castle or loses his lords' faith.`],
   ['strike', (w, f, T) => w.atWar && f('attack_host', (p) => { const a = w.state.parties[p.host]; const foe = w.state.parties[p.target.slice(6)]; return a && foe && a.men >= foe.men * (1.45 - T.courage * 0.5); }), () => 'The enemy is in reach and the odds are yours: bring them to battle.'],
+  // a host with nothing in its wagons goes back to its own lord's granaries before it starves (engine/military/supply.js)
+  ['bread', (w, f) => { const hungry = w.hosts.filter((a) => supplyOf(w.state, a).word !== 'fed' && !w.holdings.includes(a.march?.to)); return hungry.length && f('march_host', (p) => hungry.some((a) => a.id === p.host) && w.holdings.includes(p.target)); }, (w) => `${w.hosts.find((a) => supplyOf(w.state, a).word !== 'fed')?.name || 'Your host'} is hungry: bring it back to your own granaries before the men desert.`],
   ['defend', (w, f) => w.threatened.length && !strength(w) && (f('call_banners') || f('raise_levies', (p) => p.target === w.threatened[0] || p.target === w.seat)), () => 'An enemy host is near your lands and you have none in the field: call up your men.'],
   // (never on one's own liege: that is rebellion, and treachery has its own rules — shared/treachery.js)
   ['avenge', (w, f, T) => w.kinHeld.length && w.captors.length && (T.pride >= 0.6 || T.sway?.family || T.sway?.vengeance) && (f('declare_war', (p) => w.captors.includes(p.target) && !w.foes.includes(p.target) && p.target !== w.me.liege) || f('call_banners') || f('raise_levies')), (w) => `${w.kinHeld[0].name} is a captive: a lord of your blood answers with force and makes the taker's house pay.`],
