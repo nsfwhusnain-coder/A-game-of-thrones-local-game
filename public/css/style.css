@@ -822,6 +822,7 @@ body:has(#window:not(.hidden)) .mapmodes { right: calc(min(30rem, 36vw) + 1.6rem
 .begin-box { display: flex; flex-direction: column; align-items: stretch; gap: 0.35rem; }
 .ironman { display: flex; align-items: center; justify-content: center; gap: 0.3rem; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-family: var(--display); cursor: pointer; }
 .ironman input { accent-color: var(--gold2, #c9a44a); margin: 0; }
+.ironman select { font: inherit; font-size: 0.7rem; background: transparent; color: var(--muted); border: 1px solid var(--line, #3a3226); border-radius: 3px; padding: 1px 4px; cursor: pointer; }
 .undo-levels { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.8rem 0; }
 .undo-levels .btn { text-align: left; justify-content: flex-start; }
 

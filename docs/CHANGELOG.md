@@ -3,6 +3,19 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — D1: the beat engine — canon gravity, alternates and lapses
+
+- **Choose how hard the story pulls.** The begin screen has a new choice beside Ironman: *Canon* (the books' great events
+  happen on their course unless you change the world), *Loose* (only the pillars — the King's death, the war's outbreak,
+  Robb's banners, the dragons, the ironborn) or *Sandbox* (none).
+- **When you change the world, the story bends rather than breaks.** If the King never reaches Winterfell, Lord Tywin
+  takes the Hand's chain; if Robert dies with Lord Eddard far from King's Landing, the Queen crowns Joffrey quietly
+  instead of the coup in the throne room.
+- **The realm's lords no longer send away the people the story needs next** (the Queen on an errand while the King rides
+  north). You are never held back.
+- Owner to verify: start a game as Stark on *Loose* and play a few moons — the King's visit does not come, the King's
+  death still does; start another on *Canon* and see the progress arrive.
+
 ## 2026-09-28 — C8: the state of war — goals, the score and the peace (Phase C done)
 
 - **Every war has a goal and a score.** The Diplomacy window shows each war's goal ("fought to free a prisoner") and

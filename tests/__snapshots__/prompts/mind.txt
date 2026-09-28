@@ -37,7 +37,7 @@ RELATIONS: Targaryen −100 · Nymeros Martell −70 · Arryn −35 · Baratheon
 WHAT YOU CAN DO NOW (choose one):
 - call_banners — summon your sworn lords to muster: Casterly Rock [lannister|casterly_rock]
 - raise_levies — raise your own levies: Casterly Rock [lannister|casterly_rock]
-- send_person — send one of your household with a small escort: Ser Kevan Lannister → King's Landing [baratheon|kings_landing] leader=kevan_lannister
+- send_person — send one of your household with a small escort: Ser Kevan Lannister → King's Landing [baratheon|kings_landing] leader=kevan_lannister · Ser Amory Lorch → King's Landing [baratheon|kings_landing] leader=amory_lorch
 - set_tax — set the taxes on your smallfolk: choice=low|high
 - set_dues — pay, delay or withhold the dues you owe your liege: choice=late|withholding
 - fund_works — build: at Casterly Rock [lannister|casterly_rock] — choice=warships|granaries|walls|roads|market|men_at_arms
@@ -122,6 +122,7 @@ What do you do now?
   "leader": {
    "type": "string",
    "enum": [
+    "amory_lorch",
     "kevan_lannister",
     "self",
     "none"

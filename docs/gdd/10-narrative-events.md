@@ -43,6 +43,12 @@ Beat = {
 }
 ```
 
+*Implemented (WP D1):* `public/js/engine/world/beats.js` is the engine and `public/data/beats.js` the data — the
+threads' stages with a `BEAT_META` table keyed by `thread.stage` for `pillar`, `trigger` (`date`, `arrival`, `death`,
+`after`), `names`, `alternates` and `lapse`. Windows run from the first day of a stage's moon to the end of its moon +
+grace. `effects` stay functions returning engine ops, facts and matters (the verbs' way is D2's), and the fact-match
+trigger is written as `death` for now ([DECISIONS.md#D-051](DECISIONS.md)). `tests/beats.test.js`.
+
 ### 3.1 Timekeeping
 
 The scenario starts on the **1st day of the 8th moon, 298 AC**. **The books' order is binding; the dates are the

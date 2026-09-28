@@ -10,6 +10,7 @@ import { PROJECT_TEMPLATES } from '../../shared/economy.js';
 import { MILES_PER_UNIT } from '../../../data/geography.js';
 import { dayNumber } from '../time.js';
 import { hostsKnownTo } from '../knowledge.js';
+import { canonLocked } from '../../shared/plots.js';
 
 // How long a house lets pass before doing the same thing again (days): a tourney is an event of the year, a feast of
 // the season; taxes are not changed every week, nor gifts sent, nor a son sent riding off each Monday.
@@ -118,7 +119,8 @@ const CANDIDATES = {
   send_person: (w) => {
     if (!LORDSHIP(w) && w.me.rank !== 'order') return []; // the Watch sends its recruiters south
     const crown = Object.values(w.state.houses).find((h) => h.rank === 'crown')?.seat;
-    const people = Object.values(w.state.characters).filter((c) => c.alive && c.house === w.house && c.id !== w.actor.id && (c.age ?? 20) >= 16 && (c.roles || []).some((r) => ERRAND.includes(r)) && !/imprisoned|captive|hostage/.test(c.status || '') && !String(c.loc || '').startsWith('party:')).slice(0, 2);
+    const locked = canonLocked(w.state); // those a near beat of the story needs where they are (engine/world/beats.js)
+    const people = Object.values(w.state.characters).filter((c) => c.alive && c.house === w.house && !locked.has(c.id) && c.id !== w.actor.id && (c.age ?? 20) >= 16 && (c.roles || []).some((r) => ERRAND.includes(r)) && !/imprisoned|captive|hostage/.test(c.status || '') && !String(c.loc || '').startsWith('party:')).slice(0, 2);
     const courts = [...new Set([w.liege?.seat, ...w.friends.slice(0, 2).map((h) => h.seat), w.me.rank === 'order' ? crown : null])].filter((p) => p && w.state.holdings[p] && p !== w.seat);
     return people.flatMap((c) => courts.map((p) => ({ params: { character: c.id, to: p, men: 20 }, leader: c.id, target: p })));
   },

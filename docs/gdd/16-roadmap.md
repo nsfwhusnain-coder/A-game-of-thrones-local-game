@@ -79,7 +79,7 @@ validator is the real fix.**
 
 | WP | Title | Depends | Size | Acceptance |
 |---|---|---|---|---|
-| D1 | Beat engine v2 (schema, triggers, alternates, lapses, canon locks, canon gravity setting); port the 11 threads | B3, B4 | L | `kings-progress`, `canon-order` on the new engine |
+| D1 | Beat engine v2 (schema, triggers, alternates, lapses, canon locks, canon gravity setting); port the 11 threads | B3, B4 | L | `kings-progress`, `canon-order` on the new engine — ✅ `engine/world/beats.js` + `data/beats.js`: windows, triggers (date, arrival, death, after), alternates, lapses, canon locks (the minds do not send the named away), the Canon/Loose/Sandbox choice on the begin screen; `tests/beats.test.js`, `canon.test.js`, `parties.test.js` (DECISIONS D-051) |
 | D2 | The full canon beat set (10 §4: ~60 beats) | D1, C2, C4 | L | Q9 over 24 moons on 3 non-involved houses |
 | D3 | Matters catalogue (~70) from `petitions.js` + beats; model cannot create matters freely | D1 | M | every template renders and resolves; B-28 gone |
 | D4 | Life: canon death windows, protected characters, regents data, health/wounds, ageing | B2 | M | no canon lord dies early under Canon gravity in the soak; `chooseRegent` never picks another branch |
