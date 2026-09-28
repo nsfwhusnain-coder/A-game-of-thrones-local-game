@@ -60,6 +60,28 @@ const SCENARIOS = {
     for (const span of ['4d', '5d', '6d']) await api(`/games/${id}/advance`, { span, orders: [] });
     return { id, focus: state.holdings.stark.pos, dist: 700, page: async (page) => { await page.click('[data-action="undo"]'); await page.waitForSelector('.undo-levels [data-undo="3"]'); } };
   },
+  // the days pass a week at a time (WP B11): the first weeks' news listed under their dates while the jump goes on, with
+  // the lord's "Stop the days here" (the stream's end is held back so the shot catches it mid-jump)
+  async jump() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+    const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
+    await api(`/games/${id}/act`, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 4000 });
+    return { id, focus: state.holdings.stark.pos, dist: 900, page: async (page) => {
+      await page.evaluate(() => {
+        const ES = window.EventSource;
+        window.EventSource = class extends ES { addEventListener(type, fn, o) { super.addEventListener(type, type === 'done' ? () => {} : type === 'error' ? () => this.close() : fn, o); } };
+      });
+      await page.click('[data-action="advance"]');
+      await page.waitForSelector('#busy-feed .bf-seg', { timeout: 60000 });
+      await page.waitForTimeout(800);
+    } };
+  },
+  // stop here, after the fact (WP B11): a fortnight played, and the undo window offers to stop it on an earlier day
+  async stophere() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+    await api(`/games/${id}/advance`, { span: '14d', orders: [] });
+    return { id, focus: state.holdings.stark.pos, dist: 700, page: async (page) => { await page.click('[data-action="undo"]'); await page.waitForSelector('#stop-here'); await page.selectOption('#stop-day', '9'); } };
+  },
   // a card's action is a verb, and the receipt is what the lord is told (WP B4): the Stark host marches for Moat Cailin
   async receipt() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
@@ -211,7 +233,7 @@ async function main() {
         if (drive) await drive(page);
         await page.waitForTimeout(id ? 4000 : 1500);
         const file = path.join(OUT, `${name}-${w}x${h}.jpg`); // JPEG: small enough to commit beside a pull request
-        await page.screenshot({ path: file, type: 'jpeg', quality: 82, timeout: 180000 }); // SwiftShader draws a forest slowly
+        await page.screenshot({ path: file, type: 'jpeg', quality: 82, timeout: 180000, animations: 'disabled' }); // SwiftShader draws a forest slowly
         console.log(`${file}${errors.length ? `  (page errors: ${errors.join(' | ')})` : ''}`);
         await page.close();
       }

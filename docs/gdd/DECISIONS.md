@@ -576,3 +576,41 @@ of them, chosen by the question, answering at length under headings.
 **What.** Minds may not yet choose `send_letter`: a lord's letter needs something to ask or offer, which the goals and
 the NPC-to-NPC diplomacy of 09 §2.1 and §2.4 (WP D6) give. Until then the realm's lords answer the lord's letters and
 keep or break what they promise; they do not start correspondence.
+
+## D-037 · 2026-09-28 · The day loop runs the old ticks a day at a time; the economy and the post still settle per week (WP B11)
+
+**What.** `server/turn/day.js` `engineDay` runs every rule that makes time pass for one day — the year's turn, the
+banners, the musters, the roads, treachery, battles, field service, the great threads, regencies, retinues, letters
+landing, promises judged, the season — in the order of 03 §6.2, and dates the day's facts on it. The modules are the
+old ones, called with a span of one day (their rewrite is Phase C: C2 musters, C1 movement). Two things are not yet
+daily: the ledger (`settle`) and the post's bookkeeping (`postTick`) are settled at the end of each week for the days
+it ran, because the economy's monthly reckoning is C4's work (06 §3); and the strain of war (`psycheTick`) is reckoned
+once a week, on the realm's seventh days (`day % 7 === 0`), not once per segment — so a jump stopped midweek has lived
+exactly the same days as one that ran on (this is what makes *Stop here* reproduce the days the lord saw).
+
+**Why.** Per-day ticks with a one-day span are what a stoppable, streamable jump needs; a faithful per-day economy
+would change every balance at once, which belongs with the economy rewrite.
+
+## D-038 · 2026-09-28 · Weeks are simulated, told and streamed one after another; the council of agents is retired (WP B11)
+
+**What.** A jump is split into weeks (segments of 7 days, the last shorter). For each: the realm's minds decide on its
+first day (04 §5), the days run one by one (D-037) and stop on an interrupt (05 §4: always on a major one, on a minor
+one only in an "until something happens" jump), the week's news is gathered (09 §7), and the narrator tells it (04
+§6). The week is then sent to the browser at once (`POST /api/games/:id/jump` → a job; `GET …/jump/:job/stream`, SSE
+`segment` / `done` / `error`), which lists its news under its dates and flashes the map where it happened while the
+next week is simulated. The old progress polling stays for "who is deciding" (the `progress` SSE event of 03 §10 is
+not needed). `runSwarm`, `server/agents.js`, the jump prompt and its mock clerks, the Settings choice "Who writes the
+turn" and the dead chat/council prompts are gone; the director (B12) and beats wait for their WPs. The turn records
+its weeks and its timings (`ms.orders/minds/engine/narrate/total`); the timings are kept in the turn's file and not in
+the save, so a replay is still the same world byte for byte.
+
+## D-039 · 2026-09-28 · Stop here: live, or after the fact from the snapshot (WP B11)
+
+**What.** 05 §5's *Stop here* has two forms. **While the days pass**, the busy panel's "Stop the days here" asks the
+running job (`POST …/jump/:job/stop {day}`) to stop at the end of the week being watched; the day loop checks after
+every day. **After the fact**, the undo window offers "Stop the last turn sooner" on any day but the last
+(`POST /api/games/:id/stop {day}`, `game.stopHere`): the turn is undone to its snapshot and played again with the same
+orders and the same minds' recorded choices (a live model's choices are reused, not asked again) as far as that day.
+The dice are the save's and the day loop runs a day at a time, so the days up to the stop come out fact for fact as
+they did (`tests/jump.test.js`); the ledger of the last, shortened week is settled for its shorter span. Ironman
+chronicles cannot be stopped after the fact.

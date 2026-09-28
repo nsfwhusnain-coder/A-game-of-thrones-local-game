@@ -48,7 +48,7 @@ test('a turn replayed from the same save is byte-identical (mock provider)', asy
     const own = makeRng(seedState(seed)); const real = Math.random; Math.random = () => own.next();
     try {
       const turns = [];
-      for (const span of ['7d', '12d', '5d']) turns.push((await game.advance(id, { span })).turn);
+      for (const span of ['7d', '12d', '5d']) { const { ms, ...t } = (await game.advance(id, { span })).turn; assert.ok(ms.total >= 0); turns.push(t); }
       await game.settled(id); // the chronicle's consolidation runs after the turn, in the background: let it write
       return { state: fs.readFileSync(file, 'utf8'), turns: JSON.stringify(turns), facts: fs.readFileSync(log, 'utf8') };
     } finally { Math.random = real; }

@@ -71,7 +71,6 @@ export const DEFAULT_CONFIG = {
   keepRecentTurns: 4,                 // how many recent turns stay verbatim in the prompt
   minds: 6,                           // how many lords of the realm have a mind each week (3 | 6 | 10 | 'off' for the old Hand; 04 §5.1)
   narrator: 'on',                     // 'on' = the narrator tells the turn from its facts, checked against them (04 §6); 'off' = the old Bard
-  swarm: 'lean',                      // 'lean' = the Hand moves the realm, the Bard tells it (default: two calls a turn); 'full' = the five-agent council (Maester, Hand, Weaver, Whisperer, Bard; slow — ~5 calls a turn); 'off' = one monolithic prompt
   promptDetail: 'full',               // 'full' = every house & character each turn; 'lean' = only what's relevant (much faster on laptops)
   extraBody: {},                      // merged into the request body (e.g. {"top_p":0.9,"min_p":0.05})
   stream: true,                       // stream tokens so the game can show progress (thinking / writing)
@@ -383,14 +382,6 @@ function mockResponse(messages, opts) {
     obj = { suggestions: ['Call the banners and muster at the seat.', 'Send a raven to King\'s Landing professing loyalty.', 'Ask the steward for a full accounting of the granaries.', 'Double the watch on the coast.'] };
   } else if (kind === 'consolidate') {
     obj = { chronicle: 'Several turns passed in the mock simulation. Nothing of great note occurred.' };
-  } else if (opts.agent && opts.agent !== 'bard') {
-    // the swarm, offline: each clerk answers in its own shape so the whole pipeline can be exercised
-    const m0 = last.match(/PLAYER HOUSE: ([a-z_]+)/); const h0 = m0 ? m0[1] : 'stark';
-    obj = opts.agent === 'maester' ? { facts: ['(mock) The roads are passable and the season holds.'], impossible: ['(mock) No host can cross the Neck in a day.'], chokepoints: ['(mock) The Neck: swamp, fever and crannogmen.'], opportunities: ['(mock) A weak vassal invites a firm hand.'] }
-      : opts.agent === 'hand' ? { plan: ['(mock) lannister: gathers strength at Casterly Rock'], changes: [{ op: 'relation', a: 'stark', b: 'lannister', delta: -2, reason: 'mock friction' }] }
-        : opts.agent === 'weaver' ? { reasoning: '(mock) nothing this turn', changes: [] }
-          : { whispers: ['(mock) A servant of the Spider counts the ships at White Harbour.'], changes: [{ op: 'chronicle', text: '(mock) A little bird was listening.' }] };
-    void h0;
   } else {
     const m = last.match(/PLAYER HOUSE: ([a-z_]+)/);
     const house = m ? m[1] : 'stark';

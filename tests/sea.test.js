@@ -84,7 +84,8 @@ test('islands-need-ships: Crowl and Mormont answer the call — they wait, sail 
     for (const h of ['crowl', 'mormont']) {
       const a = s.parties[`host_of_house_${h}`]; if (!a) continue; // joined the host, or arrived and stood down
       const where = geo.landmassOf(a.pos, 3);
-      if (turn.events.some((e) => new RegExp(`${s.houses[h].name}'s men land`).test(e.title))) landed[h] = true;
+      // the landing is a fact (its card may be told within a larger story: server/narrator.js)
+      if (game.readFacts(id, { from: turn.turn, to: turn.turn }).some((f) => f.kind === 'landed' && (f.data?.party === `host_of_house_${h}` || f.houses.includes(h)))) landed[h] = true;
       assert.ok(where === home[h] || where === -1 || (where === mainland && landed[h]), `${a.name} stands on ${geo.landmassName(where)} at turn ${t} without having landed`);
       if (a.sea) seen[h].add(a.sea.phase);
       if (a.status === 'at sea') seen[h].add('at sea');

@@ -633,11 +633,14 @@ img[src^="/portraits/"] { object-fit: cover; object-position: 50% 25%; aspect-ra
 .busy.live .busy-inner { text-align: left; font-size: 1rem; width: 100%; }
 .busy.live .raven { display: none; }
 .busy.live #busy-time { font-family: var(--serif); font-size: 0.78rem; margin-top: 0.2rem; }
-.busy-feed { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; max-height: 60vh; overflow: hidden; }
+.busy-feed { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; max-height: 60vh; overflow: auto; }
+.bf-seg { font-family: var(--serif); font-variant: small-caps; letter-spacing: 0.05em; color: var(--gold); font-size: 0.85rem; margin-top: 0.3rem; }
+.busy-stop { margin-top: 0.5rem; align-self: center; }
 .bf-item { padding: 0.45rem 0.6rem; border-left: 3px solid var(--gold); background: rgba(243,231,203,0.94); color: var(--ink); border-radius: 3px; animation: beatIn .45s ease both; font-family: var(--serif); }
 .bf-item:not(:first-child) { opacity: 0.55; }
 .bf-t { font-family: var(--display); font-size: 0.95rem; }
 .bf-x { font-size: 0.85rem; line-height: 1.3; }
+.bf-mw .bf-x { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-style: italic; }
 
 /* the feed, compact: a turn is its date, a line of summary, and its headlines */
 .summary.small { font-size: 0.82rem; font-style: italic; color: var(--muted); line-height: 1.4; margin: 0.2rem 0 0.4rem; }

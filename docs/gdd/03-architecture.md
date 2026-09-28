@@ -343,6 +343,11 @@ jump(state, { span }):                      // span: 'until' | 7 | 14 | 30 | 90 
   record(ctx)                  // turn record + fact log + chronicle + world log; save; background consolidation + cache warm
 ```
 
+*(B11, implemented: the day loop is `server/turn/day.js` `engineDay`, one day at a time in the order above; the
+segments, minds per segment, narration per segment, interrupts and the stream are in `server/game.js` `advanceWith`.
+Departures in DECISIONS D-037–D-039: psyche weekly on the realm's seventh days, the economy still settled per segment,
+director and beats wait for B12.)*
+
 **Segmenting is what makes it fast.** Segment 1 (days 1–7) is simulated and narrated first and streamed to the player,
 who watches it play back (~40–70 s of reading and camera moves) while segment 2 simulates. For the default
 "until something happens" jump there is usually only one segment.
@@ -454,9 +459,10 @@ whitelist. The lock releases when the beat completes, lapses, or canon gravity i
 | `POST /api/games/:id/audience` `{with, text, mode}` | Audience/letter line (streams reply beats). |
 | `POST /api/games/:id/council` `{members, text}` | Council. |
 | `POST /api/games/:id/matters/:mid` `{option | text}` | Answer a matter. |
-| `POST /api/games/:id/jump` `{span}` → `{jobId}` | Start a jump. |
-| `GET /api/games/:id/jump/:jobId/stream` (SSE) | `progress` (phase, who is deciding), `segment` (facts + events + keyframes), `done` (turn record summary), `error`. |
-| `POST /api/games/:id/jump/:jobId/stop` `{day}` | Intervene: stop after `day` (§6.2; 05 §5). |
+| `POST /api/games/:id/jump` `{span}` → `{jobId}` | Start a jump. *(B11: `{span, orders}` → `{job}`; 409 while one runs)* |
+| `GET /api/games/:id/jump/:jobId/stream` (SSE) | `progress` (phase, who is deciding), `segment` (facts + events + keyframes), `done` (turn record summary), `error`. *(B11: `segment` = `{index, days, from, to, events, meanwhile}`; `done` = `{state, turn}` in the player's view; progress stays on `GET …/progress`; keyframes come with E8; a late listener hears the whole jump)* |
+| `POST /api/games/:id/jump/:jobId/stop` `{day}` | Intervene: stop after `day` (§6.2; 05 §5). *(B11)* |
+| `POST /api/games/:id/stop` `{day}` | *(B11)* Stop here after the fact: the last turn is played again from its snapshot with the same orders and minds' choices to `day` (D-039). |
 | `POST /api/games/:id/undo` `{turns: 1}` | Multi-level undo from snapshots (unless ironman). *(B3; `GET …/undo` → `{depth, ironman, turn}`)* |
 | `GET /api/games/:id/facts?from&to&house` | Fact log (dev and the world log UI). *(B3; also `kind`, `limit`; the player's view: no other house's secrets)* |
 | `GET /api/games/:id/turns/:n` | A turn's record (from `turns/`). *(B3)* |

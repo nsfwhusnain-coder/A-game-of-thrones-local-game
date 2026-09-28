@@ -124,8 +124,15 @@ export const centre = (g) => [((g % GW) + 0.5) * CELL, (Math.floor(g / GW) + 0.5
  * The landmass a point stands on: an integer id shared by every point of the same island or continent, or -1 at sea.
  * A point just off the coast (a seat drawn on its shore, a port) belongs to the nearest land within `reach` units.
  */
+const landmasses = new Map(); // a point asked again (a host standing at a castle) is answered from memory
 export function landmassOf(p, reach = 6) {
   if (!p) return -1;
+  const key = `${p[0]},${p[1]},${reach}`; if (landmasses.has(key)) return landmasses.get(key);
+  const v = landmassOfPoint(p, reach);
+  if (landmasses.size > 50000) landmasses.clear();
+  landmasses.set(key, v); return v;
+}
+function landmassOfPoint(p, reach) {
   const { polyComp } = grid();
   for (let i = 0; i < LAND.length; i++) {
     const b = LAND_BOX[i]; if (p[0] < b[0] || p[0] > b[2] || p[1] < b[1] || p[1] > b[3]) continue;
@@ -187,7 +194,7 @@ function seaField(start) {
     }
   }
   const f = { dist, prev }; fields.set(start, f);
-  if (fields.size > 6) fields.delete(fields.keys().next().value); // ~2 MB each
+  if (fields.size > 24) fields.delete(fields.keys().next().value); // ~2 MB each: the realm's few dozen ports
   return f;
 }
 
@@ -208,7 +215,14 @@ export function seaRouteFrom(from, to, s) {
   return { miles: Math.round(pathUnits(path) * MILES_PER_UNIT), path };
 }
 /** Miles by water from a shore near `from` to each of `targets` (world points), Infinity where no way by sea. */
+// voyages are asked for again every day a host waits on its shore: the same question gets the same answer from memory
+const remembered = new Map();
+const recall = (key, make) => { if (remembered.has(key)) return remembered.get(key); const v = make(); if (remembered.size > 4000) remembered.clear(); remembered.set(key, v); return v; };
+const kp = (p) => `${Math.round(p[0] * 100)},${Math.round(p[1] * 100)}`;
 export function seaMilesTo(from, targets) {
+  return [...recall(`miles|${kp(from)}|${targets.map(kp).join(';')}`, () => seaMilesToUncached(from, targets))];
+}
+function seaMilesToUncached(from, targets) {
   const s = shoreCell(from); if (s < 0) return targets.map(() => Infinity);
   const f = seaField(s);
   return targets.map((p) => { const t = shoreCell(p); return t < 0 ? Infinity : (f.dist[t] + Math.hypot(...sub(centre(t), p))) * MILES_PER_UNIT; });
@@ -219,7 +233,11 @@ export function seaMilesTo(from, targets) {
  * men to `to` soonest — days at sea plus days of marching from the beach (the Bay of Seals crossing beats sailing round
  * to White Harbor). Returns { at: [x,y] the landing, path: sea route from `from` to it, seaMiles, landMiles } or null.
  */
-export function bestLanding(from, to, { seaSpeed = 60, landSpeed = 18, roads = 1.12 } = {}) {
+export function bestLanding(from, to, opts = {}) {
+  const v = recall(`landing|${kp(from)}|${kp(to)}|${opts.seaSpeed ?? 60}|${opts.landSpeed ?? 18}|${opts.roads ?? 1.12}`, () => bestLandingUncached(from, to, opts));
+  return v && { ...v, at: [...v.at], path: v.path.map((q) => [...q]) };
+}
+function bestLandingUncached(from, to, { seaSpeed = 60, landSpeed = 18, roads = 1.12 } = {}) {
   const s = shoreCell(from); const target = landmassOf(to); if (s < 0 || target < 0) return null;
   const { comp } = grid(); const f = seaField(s);
   let best = -1, bestLand = -1, bc = Infinity;

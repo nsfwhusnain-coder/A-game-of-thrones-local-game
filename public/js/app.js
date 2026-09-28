@@ -261,10 +261,17 @@ async function chooseUndo() {
   if (u.ironman) { toast('An ironman chronicle cannot be unwritten.', true); return; }
   if (!u.depth) { toast('There is nothing to undo yet.', true); return; }
   const eve = (n) => app.state.history.find((t) => t.turn === u.turn - n + 1)?.dateFrom;
+  const last = app.state.history.find((t) => t.turn === u.turn); const stopDays = parseInt(last?.span, 10) || 0;
   modal(`<h2>Turn back the glass?</h2>
     <p style="line-height:1.5">The world returns to how it stood on the eve of the turn you choose, your orders for it still written. Everything that happened since is unwritten.</p>
     <div class="undo-levels">${Array.from({ length: u.depth }, (_, i) => i + 1).map((n) => `<button class="btn${n === 1 ? ' primary' : ''}" data-undo="${n}">${n === 1 ? 'The last turn' : `The last ${n} turns`}${eve(n) ? `<span class="muted"> — back to ${esc(eve(n))}</span>` : ''}</button>`).join('')}</div>
+    ${stopDays > 1 ? `<h4 style="margin-top:1rem">Or stop the last turn sooner</h4><p class="muted" style="font-size:0.85rem">The turn is played again with the same orders and the same counsels, as far as the day you choose — those days come out as you saw them; the rest is unwritten.</p>
+    <div class="undo-levels"><select id="stop-day">${Array.from({ length: stopDays - 1 }, (_, i) => i + 1).map((d) => `<option value="${d}">Day ${d}</option>`).join('')}</select><button class="btn" id="stop-here">Stop here</button></div>` : ''}
     <div class="settings-actions"><button class="btn ghost" data-action="close-modal">Let it stand</button></div>`);
+  $('#stop-here')?.addEventListener('click', async () => {
+    const day = Number($('#stop-day').value); closeModal(); busy(true, `The turn is played again to day ${day}…`);
+    try { const r = await api(`/games/${app.saveId}/stop`, { body: { day } }); prepareReveal(r.turn); app.setState(r.state); setDrawer('feed'); busy(false); playTurn(r.turn); toast(`The days stopped on day ${day}.`); } catch (e) { toast(e.message, true); } finally { busy(false); }
+  });
   $$('[data-undo]').forEach((b) => b.onclick = async () => {
     const n = Number(b.dataset.undo);
     try { const st = await api(`/games/${app.saveId}/undo`, { body: { turns: n } }); closeModal(); app.setState(st); toast(n === 1 ? 'The last turn has been undone.' : `${n} turns have been undone.`); } catch (e) { toast(e.message, true); }
@@ -472,7 +479,7 @@ async function advance() {
   busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}…`, { live: true });
   try {
     const unreadBefore = app.state.ravens.filter((x) => !x.read).length;
-    const r = await api(`/games/${app.saveId}/advance`, { body: { span, orders: app.state.orders } });
+    const r = await jump({ span, orders: app.state.orders });
     // the hosts march across the map as the replay's days go by
     if (app.map) { app.map.reelHold = true; app.map.reelF = 0; }
     prepareReveal(r.turn); app.setState(r.state); setDrawer('feed');
@@ -491,6 +498,34 @@ async function advance() {
     } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
   } catch (e) { toast(e.message, true); } finally { busy(false); }
+}
+// The days pass as a stream (03 §6.2, §10): each week is sent the moment it is told — its news in the feed, the map
+// flashing where it happened — while the next is simulated; the lord may stop the days on the week he is watching.
+// A server of an older build without the stream is asked the old way.
+async function jump(body) {
+  let job;
+  try { job = (await api(`/games/${app.saveId}/jump`, { body })).job; } catch (e) { if (/not found/i.test(e.message)) return api(`/games/${app.saveId}/advance`, { body }); throw e; }
+  const feed = $('#busy-feed'); let lastDay = 0;
+  const stop = document.createElement('button'); stop.className = 'btn small busy-stop'; stop.textContent = 'Stop the days here'; stop.title = 'The days stop at the end of the week you are watching';
+  stop.onclick = async () => { stop.disabled = true; stop.textContent = 'The days will stop…'; try { await api(`/games/${app.saveId}/jump/${job}/stop`, { body: { day: Math.max(1, lastDay) } }); } catch (e) { toast(e.message, true); } };
+  feed.before(stop);
+  try {
+    return await new Promise((resolve, reject) => {
+      const es = new EventSource(`/api/games/${app.saveId}/jump/${job}/stream`);
+      es.addEventListener('segment', (m) => {
+        const seg = JSON.parse(m.data); lastDay = seg.days?.[1] || lastDay;
+        feed.insertAdjacentHTML('beforeend', `<div class="bf-seg">${esc(seg.from)}${seg.to !== seg.from ? ` – ${esc(seg.to)}` : ''}</div>`);
+        for (const e of (seg.events || []).filter((x) => !x.bg).slice(0, 8)) {
+          feed.insertAdjacentHTML('beforeend', `<div class="bf-item"><div class="bf-t">${esc(e.title)}</div></div>`);
+          const pos = e.where && app.state?.holdings[e.where]?.pos; if (pos && app.map) app.map.flash?.(pos);
+        }
+        if (seg.meanwhile) feed.insertAdjacentHTML('beforeend', `<div class="bf-item bf-mw"><div class="bf-x">${esc(seg.meanwhile)}</div></div>`);
+        feed.scrollTop = feed.scrollHeight; sfx('open');
+      });
+      es.addEventListener('done', (m) => { es.close(); resolve(JSON.parse(m.data)); });
+      es.addEventListener('error', (m) => { es.close(); reject(new Error(m.data ? JSON.parse(m.data).error : 'The stream of days was lost; reload to see where the realm stands.')); });
+    });
+  } finally { stop.remove(); }
 }
 // Matters that came before you this turn, and nothing else
 function showChoices() {
@@ -606,7 +641,6 @@ async function showSettings() {
       <div><label>World detail per turn</label><select id="cfg-detail"><option value="full">Full — every house & person (best with big context & fast GPU)</option><option value="lean">Lean — only what matters to you (much faster on laptops)</option></select></div>
       <div><label>Who tells the turn</label><select id="cfg-narrator"><option value="on">The chronicler — the week's stories told from what truly happened, and checked against it</option><option value="off">The old bard — free prose, lightly checked</option></select><small class="muted">A story the chronicler tells wrongly is told again once, then left in the plain words of the record.</small></div>
       <div><label>How many lords think each week</label><select id="cfg-minds"><option value="3">Three — fastest</option><option value="6">Six — the realm feels alive</option><option value="10">Ten — busiest, slowest</option><option value="off">None — the old Hand moves the realm</option></select><small class="muted">The rest act by their house's ways when something presses them.</small></div>
-      <div><label>Who writes the turn</label><select id="cfg-swarm"><option value="full">The council of five — maester, Hand, weaver, whisperer, bard (richest; five short questions instead of one long one)</option><option value="lean">The Hand and the bard — the realm still moves, and is still well written (faster)</option><option value="off">One voice — the old single prompt (fastest, blandest)</option></select><small class="muted">The council shares one prompt prefix, so a local server reuses its cache between them.</small></div>
       <div><label>Thinking (reasoning models such as Qwen3)</label><select id="cfg-think"><option value="auto">Server default</option><option value="on">On — deeper, slower turns</option><option value="off">Off — fast turns</option></select></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-thinkchat" ${c.thinkInAudiences ? 'checked' : ''}> Also think in audiences &amp; councils (slower replies)</label></div>
       <div><label>Thinking budget (extra tokens)</label><input class="input" id="cfg-tbudget" type="number" value="${c.thinkingBudget ?? 6000}"></div>
@@ -618,7 +652,7 @@ async function showSettings() {
     </div>
     <div class="settings-actions"><button class="btn primary" id="cfg-save">Save</button><button class="btn" id="cfg-test">Test connection</button><button class="btn ghost" id="cfg-models">Fetch models</button></div>
     <div id="cfg-result" class="muted" style="margin-top:0.6rem;white-space:pre-wrap;font-size:0.85rem"></div>`);
-  $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full'; $('#cfg-swarm').value = c.swarm || 'full'; $('#cfg-narrator').value = c.narrator === 'off' || c.narrator === false ? 'off' : 'on'; $('#cfg-minds').value = String(c.minds ?? 6); $('#cfg-think').value = c.thinking || 'auto'; $('#cfg-effort').value = c.reasoningEffort ?? 'low';
+  $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full'; $('#cfg-narrator').value = c.narrator === 'off' || c.narrator === false ? 'off' : 'on'; $('#cfg-minds').value = String(c.minds ?? 6); $('#cfg-think').value = c.thinking || 'auto'; $('#cfg-effort').value = c.reasoningEffort ?? 'low';
   const showScale = (v) => { setUiScale(v); $('#ui-scale-v').textContent = Math.round(v * 100) + '%'; };
   $('#ui-scale').oninput = (e) => showScale(Number(e.target.value));
   $('#ui-scale-reset').onclick = () => { $('#ui-scale').value = 1; showScale(1); };
@@ -645,7 +679,7 @@ async function showSettings() {
   $$('[data-url]').forEach((b) => b.onclick = () => { $('#cfg-url').value = b.dataset.url; });
   const collect = () => {
     let extra = {}; try { extra = JSON.parse($('#cfg-extra').value || '{}'); } catch { toast('Extra parameters are not valid JSON', true); }
-    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, swarm: $('#cfg-swarm').value, narrator: $('#cfg-narrator').value, minds: $('#cfg-minds').value === 'off' ? 'off' : Number($('#cfg-minds').value), thinking: $('#cfg-think').value, thinkInAudiences: $('#cfg-thinkchat').checked, thinkingBudget: Number($('#cfg-tbudget').value) || 0, reasoningEffort: $('#cfg-effort').value, stream: $('#cfg-stream').checked, extraBody: extra };
+    return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, narrator: $('#cfg-narrator').value, minds: $('#cfg-minds').value === 'off' ? 'off' : Number($('#cfg-minds').value), thinking: $('#cfg-think').value, thinkInAudiences: $('#cfg-thinkchat').checked, thinkingBudget: Number($('#cfg-tbudget').value) || 0, reasoningEffort: $('#cfg-effort').value, stream: $('#cfg-stream').checked, extraBody: extra };
   };
   $('#cfg-save').onclick = async () => { const r = await api('/config', { body: collect() }); $('#cfg-url').value = r.baseUrl; toast('Settings saved.'); refreshLLMStatus(); };
   $('#cfg-test').onclick = async () => { await api('/config', { body: collect() }); $('#cfg-result').textContent = 'Testing…'; try { const r = await api('/llm/test', { body: {} }); $('#cfg-result').textContent = `${r.ok ? '✔' : '⚠'} Connected (${r.ms} ms, ${r.model || 'model'})\nJSON schema enforced: ${r.schema ? 'yes' : 'no — update llama.cpp, or the game falls back more often'}\n"The Wall" understood as Castle Black: ${r.prefixSafe ? 'yes' : 'no'}${r.words ? `\nHouse Stark's words: ${r.words}` : ''}${(r.routing || []).map((x) => `\n⚠ ${x}`).join('')}${r.problems?.length ? `\n${r.problems.join('; ')}` : ''}`; } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } refreshLLMStatus(); };

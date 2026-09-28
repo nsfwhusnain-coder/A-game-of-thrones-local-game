@@ -130,3 +130,24 @@ test('the player\'s view over the wire: an unseen host is not sent where it stan
   assert.equal(t.turn.minds, undefined); assert.equal(t.state.minds, undefined);
   assert.equal((await api(`/games/${id}/turns/1`)).minds, undefined, 'the minds\' counsel is kept');
 });
+
+test('the jump streams its weeks over the wire, and the lord can stop it', async () => {
+  const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+  const { job } = await api(`/games/${id}/jump`, { span: '14d', orders: [] });
+  const res = await fetch(`http://127.0.0.1:${PORT}/api/games/${id}/jump/${job}/stream`);
+  assert.match(res.headers.get('content-type'), /text\/event-stream/);
+  const text = await res.text();
+  const events = [...text.matchAll(/event: (\w+)\ndata: (.*)\n\n/g)].map((m) => ({ event: m[1], data: JSON.parse(m[2]) }));
+  const weeks = events.filter((e) => e.event === 'segment');
+  assert.ok(weeks.length >= 1 && weeks[0].data.from, 'the first week is sent with its dates');
+  const done = events.find((e) => e.event === 'done');
+  assert.ok(done, 'the stream ends with the turn');
+  assert.equal(done.data.state.minds, undefined, 'the realm\'s minds keep their counsel on the stream too');
+  assert.equal(done.data.turn.minds, undefined);
+  // stop here, after the fact: the turn is played again as far as day 3
+  if (parseInt(done.data.turn.span, 10) > 3) {
+    const r = await api(`/games/${id}/stop`, { day: 3 });
+    assert.equal(r.turn.span, '3d');
+  }
+  await assert.rejects(api(`/games/${id}/jump/nope/stop`, { day: 2 }), /no such jump/);
+});
