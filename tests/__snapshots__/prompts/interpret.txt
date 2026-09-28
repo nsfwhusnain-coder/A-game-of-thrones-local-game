@@ -74,6 +74,8 @@ ACTIONS ALLOWED:
 - wait_banners: a host [subject] waits until the banners called to it are in
 - attack_host: a host [subject] marches against an enemy host [to = party:…]; [note] "surprise" to fall on them unawares
 - set_standing_orders: a host [subject] meeting an enemy [choice: favourable|always|avoid|hold]
+- hire_company: hire a free company [choice], [gold] a moon if you name a price
+- dismiss_company: pay off a free company [choice]
 - halt_host: a host [subject] stops where it stands
 - merge_hosts: hosts in one place join ([subject]: one, or none for all there); leader [who]; name in [note]
 - disband_host: a host [subject] is sent home
@@ -134,6 +136,8 @@ Turn the order into actions.
        "wait_banners",
        "attack_host",
        "set_standing_orders",
+       "hire_company",
+       "dismiss_company",
        "halt_host",
        "merge_hosts",
        "disband_host",
@@ -275,14 +279,14 @@ Turn the order into actions.
        "avoid",
        "bank_of_oldtown",
        "barracks",
+       "brave_companions",
        "captain",
        "castellan",
        "commander",
        "crushing",
        "envoy",
        "execute",
-       "faith",
-       "… 55 members"
+       "… 57 members"
       ]
      },
      "note": {

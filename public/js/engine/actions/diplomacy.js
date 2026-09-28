@@ -76,6 +76,8 @@ export const DIPLOMACY = [
     params: { house: 'house:other', reason: 'text?' },
     legal: (state, i) => {
       const h = state.houses[i.params.house]; if (!h || i.params.house === i.house) return { code: 'no_target', text: 'Declare war on whom?' };
+      // the Night's Watch takes no part in the wars of the realm, and no one makes war on it (07 §10)
+      if (h.rank === 'order' || state.houses[i.house]?.rank === 'order') return { code: 'watch', text: "The Night's Watch takes no part in the wars of the realm." };
       if ((state.wars || []).some((w) => w.status !== 'ended' && ((w.attackers.includes(i.house) && w.defenders.includes(h.id)) || (w.defenders.includes(i.house) && w.attackers.includes(h.id))))) return { code: 'at_war', text: `You are already at war with House ${h.name}.` };
       return null;
     },

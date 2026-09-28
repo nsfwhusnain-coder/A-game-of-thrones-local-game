@@ -65,6 +65,8 @@ export const KINDS = {
   sea_battle: K(4, 'war'),
   sellswords_hired: K(3, 'war', 'local'),
   sellswords_turned: K(4, 'war'),
+  outlaws_rise: K(2, 'disaster', 'local'),     // a band holds the roads where war laid the land waste (engine/military/companies.js)
+  outlaws_scattered: K(2, 'war', 'local'),
   men_hired: K(2, 'economy', 'local'),   // men-at-arms taken into a house's pay (sellswords have their own kind)
   ambush: K(2, 'war', 'local'),     // outlaws or foragers fall on a small company on the road
   // ── Politics ──

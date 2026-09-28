@@ -58,6 +58,7 @@ export const fleetSpeed = (state, f) => Math.min(...Object.entries(hullsOf(state
 export function canEmbark(state, host, fleet) {
   if (!host || !fleet || fleet.kind !== 'fleet') return 'no such fleet';
   if (host.aboard) return `${host.name} is already aboard`;
+  if (host.owner === 'dothraki' || /khalasar/i.test(host.composition || '')) return 'the Dothraki will not cross the poison water';
   if (fleet.march || host.march) return 'the fleet and the host must both be at rest in the same port';
   if (dist(host.pos, fleet.pos) > 12 && !(host.at && host.at === fleet.at)) return `${fleet.name} is not in port where ${host.name} stands`;
   const room = capacityOf(state, fleet) - carriedOf(state, fleet);

@@ -3,6 +3,19 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — C7: sellswords, outlaws, the Watch and the Dothraki
+
+- **Free companies.** The Military window lists them: the Golden Company (ten thousand swords, 25,000 a moon) and the
+  Brave Companions. Hire one — a moon paid on signing, each moon after — and it marches for your seat (by hired ships from
+  Essos). Miss a moon's pay and it is gone. The Brave Companions go over to anyone who offers half as much again; the
+  Golden Company keeps its word.
+- **Outlaws.** Where war and foraging have laid the land waste, broken men hold the roads: riders are robbed and taken,
+  the smallfolk grow poorer and angrier — until the lord's host rides through and scatters them.
+- **The Watch** takes a couple of dozen recruits a moon and no part in the realm's wars. **The Dothraki** will not cross
+  the poison water.
+- Owner to verify: as Lannister, open Military and hire the Golden Company; follow it across the Narrow Sea; then empty
+  your coffers and watch it march away.
+
 ## 2026-09-28 — C6: the sea — fleets that carry, blockade and reave
 
 - **Fleets carry hosts.** "Put the host aboard the fleet and sail for Storm's End": the host goes aboard in port, sails

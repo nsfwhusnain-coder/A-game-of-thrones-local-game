@@ -45,6 +45,7 @@ function danger(state, h, house) {
   if (atWar(state, house, h.owner)) d += 0.25;
   if ((state.wars || []).some((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].includes(h.owner))) d += 0.1;
   if (['beyond'].includes(h.region)) d += 0.25;
+  if (h.outlaws) d += 0.2; // a band holds these roads (engine/military/companies.js)
   if (state.world?.season === 'winter') d += 0.05;
   return Math.min(0.6, d);
 }
