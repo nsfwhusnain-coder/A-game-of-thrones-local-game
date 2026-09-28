@@ -27,11 +27,15 @@ async function cacheSet(key, val) { try { const db = await idb(); await new Prom
 const hexToRgb = (hex) => { let h = String(hex || '#888').replace('#', ''); if (h.length === 3) h = h.split('').map((c) => c + c).join(''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+// the camera's levels of detail, framing and pan bounds (11 §2–3): map3d/lod.js
+import { LOD, lodOf, layerAlpha, HOME_BOX, KNOWN_BOX, L0_CENTRE } from './lod.js';
+export { LOD, lodOf, layerAlpha };
+
 export class MapScene {
   constructor(container, handlers = {}) {
     this.container = container; this.h = handlers;
     this.mode = 'political'; this.selected = null; this.selectedArmy = null; this.state = null;
-    this.target = new THREE.Vector3(520, 0, 1000); this.dist = 900; this.goal = null;
+    this.target = new THREE.Vector3(L0_CENTRE[0], 0, L0_CENTRE[1]); this.dist = LOD[0]; this.goal = null; this.tween = null; this.zoom = null; this.follow = null; this.lod = 0;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(gfx().dpr, window.devicePixelRatio || 1));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -327,7 +331,20 @@ export class MapScene {
     this.selected = id; this.recolor();
     if (fly && id && this.state?.holdings[id]) this.flyTo(this.state.holdings[id].pos);
   }
-  flyTo(pos, dist) { this.goal = { x: pos[0], z: pos[1], d: dist ?? Math.min(this.dist, 420) }; }
+  /**
+   * Fly the camera to a place (11 §2): ease in and out over 0.9–1.4 s by distance — never faster than a region a second —
+   * and never while the player is dragging the map.
+   */
+  flyTo(pos, dist) {
+    if (this.dragging) return;
+    const to = { x: pos[0], z: pos[1], d: clamp(dist ?? Math.min(this.dist, 420), LOD[3], LOD[0]) };
+    const far = Math.hypot(to.x - this.target.x, to.z - this.target.z) + Math.abs(Math.log(to.d / this.dist)) * 300;
+    const dur = Math.max(clamp(0.9 + far / 2000, 0.9, 1.4), far / 450);
+    this.tween = { from: { x: this.target.x, z: this.target.z, d: this.dist }, to, t: 0, dur };
+    this.goal = null; this.zoom = null;
+  }
+  /** Back to the whole realm (L0), framed on Westeros and the Narrow Sea. */
+  home() { this.flyTo(L0_CENTRE, LOD[0]); }
   flash(pos) { this.pulse(pos, 'flash'); }
 
   // ───────────── settlements ─────────────
@@ -700,10 +717,15 @@ export class MapScene {
     this.camera.aspect = r.width / Math.max(1, r.height); this.camera.updateProjectionMatrix();
   }
   updateCamera() {
-    this.dist = clamp(this.dist, 40, 2700);
-    this.target.x = clamp(this.target.x, 0, WORLD.w); this.target.z = clamp(this.target.z, -100, WORLD.h);
+    this.dist = clamp(this.dist, LOD[3], LOD[0]);
+    this.lod = lodOf(this.dist);
+    // the pan bounds: at L0 the centre stays on Westeros (≥ 40 % of the screen on land); from L1 down, the Known World
+    const w = clamp(this.lod, 0, 1); const lerp = THREE.MathUtils.lerp;
+    this.target.x = clamp(this.target.x, lerp(HOME_BOX.x0, KNOWN_BOX.x0, w), lerp(HOME_BOX.x1, KNOWN_BOX.x1, w));
+    this.target.z = clamp(this.target.z, lerp(HOME_BOX.z0, KNOWN_BOX.z0, w), lerp(HOME_BOX.z1, KNOWN_BOX.z1, w));
     const t = clamp((this.dist - 40) / 1600, 0, 1);
-    const elev = THREE.MathUtils.lerp(0.72, 1.32, Math.pow(t, 0.7)); // radians above the horizon
+    // tilt from straight down: 12° at L0, 38° at L3 (11 §2)
+    const elev = THREE.MathUtils.degToRad(90 - (12 + (this.lod / 3) * 26)); // radians above the horizon
     const ty = this.heightF ? this.groundAt(this.target.x, this.target.z) * (1 - t) : 0;
     this.target.y = THREE.MathUtils.lerp(this.target.y, ty, 0.2);
     this.camera.position.set(this.target.x, this.target.y + Math.sin(elev) * this.dist, this.target.z + Math.cos(elev) * this.dist);
@@ -751,22 +773,21 @@ export class MapScene {
     el.addEventListener('mousedown', (e) => { if (e.detail > 1) e.preventDefault(); }); // no word-select on double click
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('wheel', (e) => {
-      e.preventDefault(); this.goal = null;
-      const r = el.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top;
-      const before = this.screenToGround(mx, my);
-      this.dist *= Math.exp(e.deltaY * 0.0012); this.updateCamera();
-      const after = this.screenToGround(mx, my);
-      this.target.x += before.x - after.x; this.target.z += before.z - after.z; this.updateCamera();
+      e.preventDefault(); this.goal = null; this.tween = null; this.follow = null;
+      // zoom toward the cursor, smoothed: the distance eases toward its goal, the point under the cursor stays put
+      const r = el.getBoundingClientRect(); const sx = e.clientX - r.left, sy = e.clientY - r.top;
+      const d = clamp((this.zoom?.d ?? this.dist) * Math.exp(e.deltaY * 0.0012), LOD[3], LOD[0]);
+      this.zoom = { d, sx, sy };
     }, { passive: false });
     el.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 || !e.isPrimary) return;
-      this.goal = null; this.vel = null; const r = el.getBoundingClientRect();
+      this.goal = null; this.vel = null; this.tween = null; this.zoom = null; this.follow = null; const r = el.getBoundingClientRect();
       drag = { sx: e.clientX, sy: e.clientY, g: this.screenToGround(e.clientX - r.left, e.clientY - r.top), target: e.target, id: e.pointerId }; moved = false; last = null;
     });
     el.addEventListener('pointermove', (e) => {
       const r = el.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top;
       if (drag) {
-        if (!moved && Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 4) { moved = true; try { el.setPointerCapture(drag.id); } catch { /* */ } }
+        if (!moved && Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 4) { moved = true; this.dragging = true; try { el.setPointerCapture(drag.id); } catch { /* */ } }
         if (moved) {
           const g = this.screenToGround(mx, my); const dx = drag.g.x - g.x, dz = drag.g.z - g.z;
           this.target.x += dx; this.target.z += dz; this.updateCamera(); el.style.cursor = 'grabbing';
@@ -792,13 +813,21 @@ export class MapScene {
         else if (hit?.type === 'holding') { this.selectedArmy = null; this.select(hit.id); this.h.onSelect?.(hit.id); }
         else { this.selectedArmy = null; this.select(null); this.h.onSelect?.(null); }
       }
-      drag = null;
+      drag = null; this.dragging = false;
     });
-    el.addEventListener('pointercancel', () => { drag = null; });
+    el.addEventListener('pointercancel', () => { drag = null; this.dragging = false; });
     el.addEventListener('pointerleave', () => this.h.onHover?.(null));
     el.addEventListener('dblclick', (e) => { if (e.target.closest('.lbl')) return; const r = el.getBoundingClientRect(); const g = this.screenToGround(e.clientX - r.left, e.clientY - r.top); this.flyTo([g.x, g.z], Math.max(120, this.dist * 0.5)); });
     this.keys = new Set();
-    window.addEventListener('keydown', (e) => { if (/input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return; this.keys.add(e.key.toLowerCase()); });
+    window.addEventListener('keydown', (e) => {
+      if (/input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;
+      const k = e.key.toLowerCase();
+      // Home: back to your seat (twice: the whole realm); F: follow the selected party (11 §2)
+      if (k === 'home') { const seat = this.state?.holdings[this.state.houses[this.state.meta.player]?.seat]; const near = seat && Math.hypot(this.target.x - seat.pos[0], this.target.z - seat.pos[1]) < 20 && Math.abs(this.dist - LOD[2]) < 40; if (seat && !near) this.flyTo(seat.pos, LOD[2]); else this.home(); return; }
+      if (k === 'f') { this.follow = this.follow ? null : this.selectedArmy || null; return; }
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.tween = null; this.follow = null; }
+      this.keys.add(k);
+    });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
     void cv;
   }
@@ -852,6 +881,24 @@ export class MapScene {
       this.target.x += (this.goal.x - this.target.x) * k; this.target.z += (this.goal.z - this.target.z) * k; this.dist += (this.goal.d - this.dist) * k;
       if (Math.abs(this.goal.x - this.target.x) + Math.abs(this.goal.z - this.target.z) < 0.5 && Math.abs(this.goal.d - this.dist) < 1) this.goal = null;
     }
+    // a flight: eased in and out over its time (flyTo)
+    if (this.tween && !this.dragging) {
+      const T = this.tween; T.t = Math.min(1, T.t + dt / T.dur);
+      const e = T.t < 0.5 ? 4 * T.t ** 3 : 1 - (-2 * T.t + 2) ** 3 / 2;
+      this.target.x = T.from.x + (T.to.x - T.from.x) * e; this.target.z = T.from.z + (T.to.z - T.from.z) * e;
+      this.dist = T.from.d * Math.pow(T.to.d / T.from.d, e);
+      if (T.t >= 1) this.tween = null;
+    }
+    // the wheel's zoom: the distance eases toward its goal, and the ground under the cursor stays under it
+    if (this.zoom) {
+      const Z = this.zoom; const before = this.screenToGround(Z.sx, Z.sy);
+      this.dist += (Z.d - this.dist) * (1 - Math.pow(0.0005, dt)); this.updateCamera();
+      const after = this.screenToGround(Z.sx, Z.sy);
+      this.target.x += before.x - after.x; this.target.z += before.z - after.z;
+      if (Math.abs(Z.d - this.dist) < 0.5) this.zoom = null;
+    }
+    // following a party (F)
+    if (this.follow) { const a = this.state?.parties?.[this.follow]; if (!a?.pos) this.follow = null; else { const k = 1 - Math.pow(0.05, dt); this.target.x += (a.pos[0] - this.target.x) * k; this.target.z += (a.pos[1] - this.target.z) * k; } }
     this.updateCamera();
     if (this.terrainUniforms) this.terrainUniforms.uTime.value = time;
     if (this.waterUniforms) this.waterUniforms.uTime.value = time;

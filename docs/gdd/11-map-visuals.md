@@ -40,6 +40,14 @@ replaced (§5.2).
 - **Fly-to** (playback): ease-in-out 0.9–1.4 s by distance, never faster than 1 region/second; the camera never
   moves while the player is dragging.
 
+*Implemented (WP E1):* `public/js/map3d/lod.js` — `LOD` = [3500, 1200, 460, 160] map units (L0–L3), `lodOf(dist)` the
+continuous level, `layerAlpha(lod, from, to)` a ±0.15 fade; the camera is clamped to [L3, L0] (never into the trees),
+tilts 12° at L0 to 38° at L3, frames L0 on Westeros and the Narrow Sea (`L0_CENTRE`, `HOME_BOX`) and widens its pan
+bounds to the Known World from L1 down. The wheel zooms smoothly toward the cursor (the ground under it stays put);
+`flyTo` eases in and out over 0.9–1.4 s (never faster than about a region a second) and never while dragging; Home
+flies to your seat (again: the whole realm), F follows the selected party. `public/dev/map-lod.html?spot=&lod=&boxes=1`;
+`tests/map-lod.test.js`. The layers of the table below read `layerAlpha` as E2–E7 restyle them.
+
 ## 3. Layers and level of detail
 
 | Layer | L0 | L1 | L2 | L3 |
