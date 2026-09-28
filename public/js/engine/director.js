@@ -107,7 +107,7 @@ export function applyHook(state, id, place, { day = 1, r = random, why = '' } = 
     const ids = { owner: owner.id, place: h.id, lord: lord?.id || null, rival: rival || null };
     const m = tpl.matter;
     const options = m.options.map((o) => ({ label: say(o.label), hint: say(o.hint || ''), fx: bind(o.fx, ids) }));
-    const r2 = applyChanges(s, [{ op: 'decision', title: say(m.title), text: say(m.text), from: lord?.id || s.houses[s.meta.player].lord, where: h.id, options, days: 14 }], { source: 'The realm' });
+    const r2 = applyChanges(s, [{ op: 'decision', title: say(m.title), text: say(m.text), from: bearer(s, owner, lord), where: h.id, options, days: 14 }], { source: 'The realm' });
     applied.push(...r2.applied);
     matter = s.decisions?.at(-1) || null;
     if (matter && m.lapse) matter.lapse = bind(m.lapse, ids);
@@ -116,6 +116,14 @@ export function applyHook(state, id, place, { day = 1, r = random, why = '' } = 
   s.plots = s.plots || {}; s.plots.hooks = { ...(s.plots.hooks || {}), [id]: dayNumber(s.meta.date) };
   s.plots.lastHookDay = dayNumber(s.meta.date);
   return { cards: [card], applied, matter };
+}
+
+// who brings the matter before the lord: the sworn lord of the place, or, in the lord's own holdings, his steward or maester
+function bearer(s, owner, lord) {
+  const me = s.meta.player;
+  if (owner.id !== me && lord) return lord.id;
+  const officer = Object.values(s.characters).find((c) => c.alive && c.house === me && (c.roles || []).some((r) => ['steward', 'maester'].includes(r)));
+  return officer?.id || s.houses[me].lord;
 }
 
 /** Whether a stretch of days was thin: fewer than three facts of note anywhere in the realm (09 §9 point 3). */
