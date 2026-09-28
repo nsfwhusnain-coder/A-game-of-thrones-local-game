@@ -3,6 +3,17 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — D5: house openings — every house has its situation, levers and news
+
+- **Twelve more houses written by hand**: Manderly, Mormont, Karstark, Umber, Blackwood, Bracken, Tarly, Redwyne,
+  Hightower, Florent, Velaryon and Dayne join the fifteen great houses. Every other house now has an opening from its
+  own region and rank — a Northern house reads like the North, a Free City like a Free City — instead of one shared text.
+- **Levers**: the begin screen and "Your situation" name what your house can pull on (White Harbor's ships and silver,
+  the Blackwood–Bracken feud, Dawn).
+- **Your council has heard things**: in the first moons your counsellors know the news of the day (the King's party on
+  the kingsroad, a ranging overdue) — never what is to come.
+- Owner to verify: on the begin screen, pick Manderly, then Glover; hold a council in the first moon and hear the news.
+
 ## 2026-09-28 — D4: life — wounds heal, winter kills the old, and the story keeps its own
 
 - **Wounds heal** in one to three moons — or fester. Before, a wounded lord limped for the rest of the game.

@@ -219,6 +219,11 @@ region and rank.
 | **Dayne** | Edric, a boy; Starfall; Dawn | Dorne's choices | the Sword of the Morning |
 | **Free folk** (experimental) | Mance gathering the clans | the Wall | numbers, giants |
 
+*Implemented (WP D5):* `public/data/briefs.js` — the 27 houses above by hand (situation, strengths, weaknesses, aims,
+`levers`, and `hints`: what the council has heard in the 8th moon of 298, never what is to come), every other house from
+`REGIONS` × `RANKS`. The begin screen and the chronicle's "Your situation" show the levers; the council's dossier
+carries the hints until the year's end. `tests/briefs.test.js` (with a spoiler guard on the hints).
+
 ## 6. Matters (decisions)
 
 A **Matter** is Pax Historia's "catalyst" here: a situation, 2–4 options with visible hints, and *answer in my own words*

@@ -35,6 +35,7 @@ THE COUNCIL:
   Knows the hosts: Winterfell Household 400 at Winterfell; men-at-arms 1,200; the banners: Gathered: Winterfell Household at Winterfell, 400 men..
 - vayon_poole: Vayon Poole, Steward of Winterfell. Nature: careful, honest, meticulous.
   Knows the ledger: coin 120,000 dragons, +9,497 a moon; debt 0; food 30 moons; levies not called 16,000.
+WHAT THE COUNCIL HAS HEARD: The King's party has crossed the Green Fork at the Twins, bound for Winterfell. Men say King Robert means to name a new Hand.
 
 THE LORD ASKS: "Can we afford a war?"
 Answer.

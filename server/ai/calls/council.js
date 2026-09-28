@@ -3,6 +3,7 @@
 // muster, the maester the letters and the season, the spymaster the house's reports and spies. They counsel; they change
 // nothing — what the lord decides becomes an order. As the advisor, one of them answers a question at length, with
 // headings and a few points (the one place the chronicle allows them).
+import { briefFor } from '../../../public/data/briefs.js';
 import { obj, str, arr, oneOf, hasForeignScript, strings } from '../schema.js';
 import { system } from '../context/primer.js';
 import { musterState } from '../context/officers.js';
@@ -62,6 +63,8 @@ export default {
         `DATE: ${dateStr(state.meta.date)}. ${String(state.world?.season || 'summer').replace(/^./, (x) => x.toUpperCase())}.`,
         `THE LORD: ${lord?.name || 'the lord'} of House ${state.houses[p].name}.`,
         `THE COUNCIL:\n${people.map((c) => `- ${c.id}: ${c.name}${c.title ? `, ${c.title}` : ''}. ${VOICES[c.id]?.voice ? `Speaks: ${VOICES[c.id].voice}` : c.traits ? `Nature: ${c.traits}.` : ''}\n  Knows ${officeKnows(state, c).join('; ') || 'the household'}.`).join('\n')}`,
+        // the house's opening (data/briefs.js): what the council has heard in the first moons — news, never what is to come
+        (state.meta.date.year * 12 + state.meta.date.month) <= 298 * 12 + 12 ? `WHAT THE COUNCIL HAS HEARD: ${(briefFor(state.houses[p], state).hints || []).join('. ')}.` : null,
         log.length ? `SAID SO FAR:\n${log.map((m) => `${m.role === 'player' ? 'The lord' : state.characters[m.speaker]?.name || 'A counsellor'}: ${String(m.text).replace(/\s+/g, ' ').slice(0, 240)}`).join('\n')}` : null,
       ].filter(Boolean).join('\n'),
     };
