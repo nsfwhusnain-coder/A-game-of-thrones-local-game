@@ -3,7 +3,7 @@
 // far, who is late and who refused — the maester the letters and the season. A lord's own people are not guessing.
 import { forces, idOf } from '../../../public/js/engine/parties.js';
 import { daysLeft } from '../../../public/js/engine/movement.js';
-import { placeName } from '../../../public/js/shared/world.js';
+import { placeName, dayNumber } from '../../../public/js/shared/world.js';
 
 const n = (x) => Math.round(Number(x) || 0).toLocaleString('en-GB');
 const OFFICERS = ['steward', 'maester', 'master_at_arms', 'captain', 'commander', 'council', 'lord', 'lady', 'heir', 'spymaster', 'knight'];
@@ -20,10 +20,17 @@ export function musterState(state, house) {
   if (at.length) lines.push(`Gathered: ${at.map((a) => `${a.name} at ${placeName(state, a.at)}, ${n(a.men)} men${a.contingents && Object.keys(a.contingents).length ? ` (${Object.entries(a.contingents).map(([h, m]) => `${state.houses[h]?.name || h} ${n(m)}`).join(', ')})` : ''}`).join('; ')}.`);
   const road = hosts.filter((a) => a.march);
   if (road.length) lines.push(`On the road: ${road.map((a) => { const to = idOf(a.march.to) != null ? state.parties[idOf(a.march.to)]?.name : placeName(state, a.march.to); const d = daysLeft(a); return `${state.houses[a.owner]?.name || a.name} ${n(a.men)}${to ? ` for ${to}` : ''}${d != null ? `, ~${Math.max(1, Math.round(d))} days out` : ''}`; }).join('; ')}.`);
-  const by = (s) => called.filter((h) => h.obligations.levies === s).map((h) => h.name);
-  if (by('delayed').length) lines.push(`Late, with excuses: ${by('delayed').join(', ')}.`);
-  if (by('refused').length) lines.push(`Refused: ${by('refused').join(', ')}.`);
-  if (by('called').length) lines.push(`No answer yet: ${by('called').join(', ')}.`);
+  // the rest, by where each lord's answer stands (engine/military/muster.js): days are the engine's own
+  const today = dayNumber(state.meta.date); const inDays = (d) => `~${Math.max(1, Math.round(d - today))} days`;
+  const stage = (st) => called.filter((h) => (h.obligations.stage || (h.obligations.levies === 'called' ? 'letter' : h.obligations.levies)) === st);
+  const gathering = stage('gathering');
+  if (gathering.length) lines.push(`Gathering at their seats: ${gathering.map((h) => `${h.name} ${n(h.obligations.call?.men)} men, setting out in ${inDays(h.obligations.call?.depart)}`).join('; ')}.`);
+  const late = called.filter((h) => h.obligations.levies === 'delayed');
+  if (late.length) lines.push(`Late, with excuses: ${late.map((h) => `${h.name}${h.obligations.call?.retry ? ` (to answer again in ${inDays(h.obligations.call.retry)})` : ''}`).join(', ')}.`);
+  const refused = called.filter((h) => h.obligations.levies === 'refused');
+  if (refused.length) lines.push(`Refused: ${refused.map((h) => h.name).join(', ')}.`);
+  const waiting = [...stage('letter'), ...stage('deliberating')].filter((h) => h.obligations.levies === 'called');
+  if (waiting.length) lines.push(`No answer yet: ${waiting.map((h) => `${h.name}${h.obligations.call?.predicted ? ` (expected with the host in ${inDays(h.obligations.call.predicted)})` : ''}`).join(', ')}.`);
   return lines.join(' ');
 }
 

@@ -1,6 +1,6 @@
 // Side windows & detail sheets (CK3-style panels).
 import { app, $, $$, esc, fmt, placeName, getRelation, api, doVerb, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, confirmModal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
-import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf } from '../shared/world.js';
+import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf, dateStr } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
 import { standing, standingWord } from '../shared/standing.js';
 import { regencyLine } from '../shared/regency.js';
@@ -19,6 +19,8 @@ import { DEMEANOURS } from '../../data/demeanours.js';
 import { profileFor, VOICE_CHOICES, voiceSettings, setVoiceSetting, speak, stopSpeaking } from './voice.js';
 import { forces, partyOf, placeOf, membersOf, together, statusText, sworn } from '../engine/parties.js';
 import { daysLeft } from '../engine/movement.js';
+import { musterOf } from '../engine/military/muster.js';
+import { dayNumber, dateOfDay } from '../engine/time.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
 
@@ -587,9 +589,31 @@ function armySheet(id) {
         + (foes.length ? `<h4>War room — enemy hosts</h4>${foes.map(({ b, m, o, seen }) => `<div class="row clickable" data-army="${b.id}">${seen ? sig(s.houses[b.owner]) : '<span class="unknown-dot"></span>'}<div class="grow"><div class="title">${seen ? esc(b.name) : 'An unconfirmed host'} <span class="muted">~${fmt(b.men)}</span></div><div class="sub">${m.days} days' march (${m.miles} mi) · if you attack: <b style="color:${o.attacker >= 60 ? '#a8e08a' : o.attacker >= 40 ? '#ffe0a0' : '#ec9a8a'}">${o.attacker}%</b></div></div></div>`).join('')}` : '')
         + (targets.length ? `<h4>Enemy holdings in reach</h4>${targets.map(({ h, m }) => { const e = siegeEstimate(s, h, [a]); return `<div class="row clickable" data-hold="${h.id}"><div class="grow"><div class="title">${esc(h.name)}</div><div class="sub">${m.days} days · walls ${h.fort}/6 · a siege would take ~${e.months} moons · ${esc(e.storm)}</div></div></div>`; }).join('')}` : '');
     })()}
+    ${mine && a.owner === p ? musterHtml(a) : ''}
     ${mine && a.kind !== 'fleet' ? `<h4>How it marches</h4><div class="row-actions secrecy"><button class="btn small${(a.secrecy || 'open') === 'open' && !a.feint ? ' on' : ''}" data-secrecy="open" data-army-id="${a.id}" title="On the roads, banners flying: the realm hears of it">Openly</button><button class="btn small${a.secrecy === 'hidden' ? ' on' : ''}" data-secrecy="hidden" data-army-id="${a.id}" title="By night and off the roads, a little slower: the realm loses track of it">In secret</button><button class="btn small${a.feint ? ' on' : ''}" data-feint="${a.id}" title="Spread word that it marches somewhere else">${a.feint ? `Feint: ${esc(s.holdings[a.feint]?.name || '')}` : 'Feint…'}</button></div>` : ''}
     ${mine ? `<hr><div class="row-actions"><button class="btn primary" data-march="${a.id}">⤳ March to…</button><button class="btn" data-order-tpl="${esc(a.name)} is to ">Give orders…</button><button class="btn danger" data-order-tpl="Disband ${esc(a.name)} and send the men home to their fields.">Disband</button></div>` : ''}`;
 }
+
+// The muster (07 §3.4; 12 §8): who is with the host, who is on its road and when they will come, who is still expected
+// and who refused — the engine's own days — and, while the banners are coming, March now or Wait for the banners.
+const STAGE = { letter: 'the raven is on the wing', deliberating: 'weighing the call', gathering: 'gathering at home', delayed: 'delays, with excuses' };
+function musterHtml(a) {
+  const s = app.state; const m = musterOf(s, a.id);
+  if (!m || !(m.present.length + m.road.length + m.expected.length + m.refused.length)) return '';
+  const today = dayNumber(s.meta.date); const when = (d) => (d ? (d <= today ? 'any day now' : `~${d - today} days · ${dateStr(dateOfDay(d))}`) : '—');
+  const name = (h) => `<a href="#" data-house="${h}">${esc(s.houses[h]?.name || h)}</a>`;
+  const rows = (xs, f) => xs.map((x) => `<div class="mu-row">${sig(s.houses[x.house])}<span class="grow">${name(x.house)}</span>${f(x)}</div>`).join('');
+  const here = m.present.reduce((n, x) => n + x.men, 0); const coming = m.road.reduce((n, x) => n + (x.men || 0), 0) + m.expected.reduce((n, x) => n + (x.men || 0), 0);
+  const w = a.wait;
+  return `<h4>The muster <span class="muted">— ${fmt(here)} with the host, ~${fmt(coming)} to come</span></h4><div class="muster">
+    ${m.present.length ? `<div class="mu-h">Present</div>${rows(m.present, (x) => `<span class="mu-n">${fmt(x.men)}</span>`)}` : ''}
+    ${m.road.length ? `<div class="mu-h">On the road</div>${rows(m.road, (x) => `<span class="mu-n">${fmt(x.men)}</span><span class="mu-d">${x.bySea ? 'by sea, when ships are found' : when(x.eta)}</span>`)}` : ''}
+    ${m.expected.length ? `<div class="mu-h">Expected</div>${rows(m.expected, (x) => `<span class="mu-s">${STAGE[x.stage] || ''}</span><span class="mu-d">${x.bySea ? 'then by sea' : when(x.eta)}</span>`)}` : ''}
+    ${m.refused.length ? `<div class="mu-h">Refused</div>${rows(m.refused, () => '<span class="mu-s">stays at home</span>')}` : ''}
+  </div>
+  ${m.road.length + m.expected.length ? `<div class="row-actions">${w ? `<span class="muted grow">Waiting for the banners: ${Math.round(w.share * 100)}% of the men called, or ${when(w.until)}${w.to ? `; then to ${esc(placeName(s, w.to))}` : ''}</span>` : ''}<button class="btn small" data-march="${a.id}" title="March now: the banners still coming will follow the host wherever it goes">March now — the banners will follow</button>${w ? '' : `<button class="btn small" data-wait-banners="${a.id}" title="Hold here until eight in ten of the men called are with the host (or the last expected is overdue), then march where it was bound">Wait for the banners</button>`}</div>` : ''}`;
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-wait-banners]'); if (b) doVerb('wait_banners', { army: b.dataset.waitBanners, share: 0.8 }, { after: () => renderSheet() }); });
 
 function houseSheet(id) {
   const s = app.state; const h = s.houses[id]; if (!h) return '';

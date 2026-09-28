@@ -120,6 +120,7 @@ const RE = {
   spies: /\b(spy|spies|eyes and ears|informers?|agents?)\b/,
   secrets: /\bsecrets?\b/,
   disband: /\b(disband|dismiss|send (?:the |my |our )?(?:men|levies|host|army|troops) home|stand (?:the \w+ |my \w+ |our \w+ )?down)\b/,
+  wait: /\bwait (?:for|on|until) (?:the |my |our |all )?(banners|bannermen|lords|vassals|levies|sworn)\b/,
   halt: /\b(halt|stop (?:the |our |my )?march(?:ing)?|hold (?:where|fast|your ground|position)|make camp|(?:stay|rest|remain|wait) where)\b/,
   merge: /\b(join|merge|combine|unite|bring together|fold)\b[^.]*\b(hosts|armies|forces|into one)\b/,
   attack: /\b(attack|assault|fall upon|fall on|engage|bring (?:\w+ )?to battle|give battle|meet (?:\w+ )?in battle|strike at|crush|destroy)\b/,
@@ -314,6 +315,10 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       return;
     }
     if (RE.merge.test(t) || (/\b(merge|join|combine|unite)\b/.test(t) && (hosts.length >= 2 || (hosts.length && MY_HOST.test(t))))) { A('merge_hosts', { ...(hosts.length > 1 ? { armies: hosts } : {}), ...hostName(clause) }); return; }
+    if (RE.wait.test(t)) {
+      const a = hostMeant() || bigHost(); if (a) A('wait_banners', { army: a.id }); else need('Which host should wait for the banners?', hostPick(), { verb: 'wait_banners', params: {} });
+      return;
+    }
     if (RE.halt.test(t) && (hosts.length || MY_HOST.test(t) || /\bmarch/.test(t))) {
       const a = hostMeant() || forces().find((x) => x.march) || bigHost(); if (a) A('halt_host', { army: a.id }); else need('Which host should halt?', hostPick(), { verb: 'halt_host', params: {} });
       return;

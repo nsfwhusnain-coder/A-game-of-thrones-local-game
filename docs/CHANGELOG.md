@@ -3,6 +3,25 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — C2: the banners come as the realm's lords would bring them (WP C2 — Milestone 1)
+
+- **Calling the banners takes the time it takes.** The raven reaches each lord, he weighs it for a day or three — by his
+  loyalty and his grievances, the harvest, whether his own lands are threatened — and answers, delays with an excuse, or
+  refuses. Those who answer gather their levies at their own seats (twelve days in the wide North, less in the
+  Westerlands) and then march, every man together, for your host wherever it has gone. A quick call brings about two
+  fifths of a lord's levies; a full call nine tenths, but more slowly and less willingly.
+- **The host card shows the muster.** Who is with the host and with how many; who is on the road and the day they will
+  arrive; who is still expected (the raven on the wing, weighing the call, gathering at home) with the day they should
+  come; who refused. The days are the game's own, and they hold: lords arrive within a day or two of the day shown.
+- **March now, or wait for the banners.** *March now* sends the host on its way and the banners follow it; *Wait for the
+  banners* holds it until eight in ten of the men called are in, then it marches where it was bound. You can also
+  write "wait for the banners" as an order.
+- Your officers (ask Maester Luwin) know who is gathering and when they will set out.
+- **Milestone 1** — a truthful turn: the muster becomes one host, the King's progress keeps to the kingsroad, and the
+  chronicle tells only what happened.
+- Owner to verify: as Stark, call the banners; open your host's card over the next weeks and watch lords move from
+  *expected* to *on the road* to *present*, arriving on the days shown; try *Wait for the banners* with a march order.
+
 ## 2026-09-28 — B13: the realm remembers what it knows (WP B13)
 
 - **Lords remember.** When the model speaks for a lord — in his week's decision, in an audience, in answering a

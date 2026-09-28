@@ -100,6 +100,19 @@ const SCENARIOS = {
       await page.evaluate(() => document.querySelector('#cfg-director').scrollIntoView({ block: 'center' }));
     } };
   },
+  // the muster on the host card (WP C2): present, on the road with its day, expected, refused — and March now / Wait
+  async muster() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 7 });
+    const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
+    await api(`/games/${id}/act`, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 4000 });
+    await api(`/games/${id}/advance`, { span: '16d', orders: [] });
+    const s = await api(`/games/${id}`);
+    const host = Object.values(s.parties).find((a) => a.owner === 'stark' && a.kind === 'host' && a.at === 'stark');
+    return { id, focus: s.holdings.stark.pos, dist: 1100, page: async (page) => {
+      await page.evaluate(async (hid) => { const m = await import('/js/ui/windows.js'); m.openSheet('army', hid); }, host.id);
+      await page.waitForSelector('.muster');
+    } };
+  },
   // a card's action is a verb, and the receipt is what the lord is told (WP B4): the Stark host marches for Moat Cailin
   async receipt() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });

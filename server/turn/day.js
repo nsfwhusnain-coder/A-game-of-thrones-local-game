@@ -18,6 +18,7 @@ import { resolveWarfare } from '../../public/js/shared/battles.js';
 import { roadEncounters } from '../../public/js/shared/roads.js';
 import { treacheryTick } from '../../public/js/shared/treachery.js';
 import { regencyTick } from '../../public/js/shared/regency.js';
+import { musterTick } from '../../public/js/engine/military/muster.js';
 import { commitmentsTick } from '../../public/js/engine/politics/commitments.js';
 import { asEvent } from '../../public/js/engine/facts/log.js';
 import { advanceMusters } from '../orders.js';
@@ -55,6 +56,8 @@ export async function engineDay(state, ctx) {
   const cards = []; const applied = [];
   if (state.meta.date.year !== yearBefore) cards.push(...theYears(state, applied));
   const vt = vassalTick(state, 1, ctx.touched); applied.push(...vt.applied); cards.push(...vt.events);
+  // the banners: every called lord's answer, a day at a time (engine/military/muster.js)
+  const mu = musterTick(state, ctx.touched); applied.push(...mu.applied); cards.push(...mu.events);
   cards.push(...advanceMusters(state, 1));
   // every party with somewhere to be walks its road one day (a host raised today sets out today)
   const mt = marchTick(state, { span: 1, turnStart: day - 1 }); cards.push(...mt.events); applied.push(...mt.applied);

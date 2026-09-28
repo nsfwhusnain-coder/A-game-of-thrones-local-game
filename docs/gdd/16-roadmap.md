@@ -67,7 +67,7 @@ validator is the real fix.**
 | WP | Title | Depends | Size | Acceptance |
 |---|---|---|---|---|
 | C1 | Economy rebalance: populations, formulas, prices, the §5.2 targets, lenders (Iron Bank, Lannister receivables), `balance-sim.js` | B1 | L | Q10 |
-| C2 | Muster state machine v2: calls, answers, gathering, contingents with rendezvous, host card data (present / on the road / expected) | B2, B4 | L | `muster-one-host`; ETAs within ±2 days of actual in the soak |
+| C2 | Muster state machine v2: calls, answers, gathering, contingents with rendezvous, host card data (present / on the road / expected) | B2, B4 | L | `muster-one-host`; ETAs within ±2 days of actual in the soak — ✅ `engine/military/muster.js`; the host card's muster and *Wait for the banners*; `tests/muster.test.js` (every lord who marched by land joined within 0–2 days of the day reckoned when he set out) (DECISIONS D-042). **Milestone 1 reached.** |
 | C3 | Supply and logistics: merge branch `arena/01a0e08c-…` `logistics.js` adapted to parties; forage, devastation, disease | C2 | M | a host marched twice through a stripped province starves; the war room shows rations in days |
 | C4 | Battle v2: stances, standing orders, surprise/feints, lords' fates with canon protection, battle report facts | C2, B9 | M | unit tests for the Green Fork, Whispering Wood, Camps set-pieces (canon-like outcomes with canon numbers ≥ 70 % of seeds) |
 | C5 | Sieges v2: fortress table, terms, storm, relief, treachery | C4 | M | Storm's End cannot be starved without a fleet; terms accepted by a craven castellan |
