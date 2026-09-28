@@ -369,6 +369,12 @@ const SCENARIOS = {
   ...Object.fromEntries([['lod0', 'realm', 0], ['lod1', 'winterfell', 1], ['lod2', 'winterfell', 2], ['lod3', 'winterfell', 3], ['lod-kl', 'kings_landing', 2], ['lod-pyke', 'pyke', 1]].map(([name, spot, lod]) => [name, async () => ({
     page: async (page) => { await page.goto(`http://127.0.0.1:${PORT}/dev/map-lod.html?spot=${spot}&lod=${lod}`); await page.waitForFunction(() => document.title === 'ready', null, { timeout: 240000, polling: 500 }); },
   })])),
+  // the map's modes at L0 (WP E2): Diplomacy, Knowledge and War beside Realms, each with its key; Stark at war with the West
+  ...Object.fromEntries(['political', 'diplomacy', 'knowledge', 'war'].map((m) => [`mode-${m}`, async () => {
+    const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+    await api(`/games/${id}/act`, { kind: 'declare_war', house: 'lannister', reason: 'for the test' }).catch(() => {});
+    return { id, focus: [720, 1370], dist: 3500, page: async (page) => { await page.click(`#mapmodes [data-mode="${m}"]`); await page.click(`#mapmodes [data-mode="${m}"]`).catch(() => {}); await page.waitForTimeout(1500); } };
+  }])),
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });

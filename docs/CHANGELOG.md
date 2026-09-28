@@ -3,6 +3,15 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — E2: map modes — Diplomacy that looks like diplomacy, Knowledge and War
+
+- **Diplomacy** now reads at a glance: your enemies in deep red, the hostile in orange, the neutral grey, friends blue,
+  allies gold, and your own realm hatched in gold (B-29: it used to look like the Realms map).
+- **Knowledge** (new): bright where your eyes are, fading where your reports are old, black fog where you know nothing.
+- **War** (new): castles besieged in red, held by an enemy in orange, the land laid waste in brown.
+- **A key** under the map explains each mode.
+- Owner to verify: declare a war and flip between Realms, Diplomacy, Knowledge and War at full zoom-out.
+
 ## 2026-09-28 — E1: the camera — framed on Westeros, never into the trees
 
 - **Zoomed all the way out, you see Westeros and the Narrow Sea**, not half a screen of empty ocean (B-29), and the map

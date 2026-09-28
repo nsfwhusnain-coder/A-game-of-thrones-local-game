@@ -88,6 +88,14 @@ fill; borders stay.
 The mode control (top-right, compact) shows the active mode's icon and a dropdown; a small legend appears
 bottom-centre when a mode other than Realms is active.
 
+*Implemented (WP E2):* `public/js/map3d/modes.js` — the palettes as pure functions (`colorFor`, `diplomacyOf`,
+`knowledgeOf`, `warOf`) with their `LEGENDS`; Diplomacy war red → hostile orange → neutral grey → friendly blue → allied
+gold, your realm hatched gold; Knowledge from what your eyes see now (`engine/knowledge.js eyesOf`) through fresh and old
+reports to fog (the great seats known by common report); War besieged, occupied (held by another than its house of
+old), laid waste (devastation, 07 §5). New buttons Knowledge and War; a key under the map for every mode but Realms.
+`tests/map-modes.test.js` holds each mode's mean colour distance from Realms above a threshold over every holding — the
+pixel-diff of the acceptance, measured on the fills the map draws. Trade lanes (Wealth) come with E6.
+
 ## 5. Terrain and nature
 
 ### 5.1 Palette and biomes (`terrain.worker.js`)

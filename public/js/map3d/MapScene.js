@@ -29,6 +29,8 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // the camera's levels of detail, framing and pan bounds (11 §2–3): map3d/lod.js
 import { LOD, lodOf, layerAlpha, HOME_BOX, KNOWN_BOX, L0_CENTRE } from './lod.js';
+import { colorFor as modeColor, atWarWith as modeAtWar, diplomacyOf, DIPLO } from './modes.js';
+import { eyesOf } from '../engine/knowledge.js';
 export { LOD, lodOf, layerAlpha };
 
 export class MapScene {
@@ -258,30 +260,9 @@ export class MapScene {
   }
   setMode(m) { this.mode = m; this.recolor(); }
 
-  colorFor(holdingId) {
-    const s = this.state; const hd = s.holdings[holdingId]; if (!hd) return [128, 128, 128];
-    const p = s.meta.player;
-    switch (this.mode) {
-      case 'houses': return hexToRgb(s.houses[hd.owner]?.color);
-      case 'diplomacy': {
-        const realm = realmOf(s, hd.owner), mine = realmOf(s, p);
-        if (hd.owner === p) return [80, 200, 90];
-        if (s.houses[hd.owner]?.liege === p || (realm === mine && realm === p)) return [120, 210, 140];
-        if (this.atWarWith(hd.owner)) return [210, 50, 40];
-        if (s.pacts.some((x) => x.status === 'active' && x.type === 'alliance' && [x.a, x.b].includes(p) && [x.a, x.b].includes(realm))) return [70, 130, 220];
-        const r = getRelation(s, p, hd.owner) || getRelation(s, p, realm);
-        return r >= 0 ? [Math.round(200 - r * 1.2), 200, Math.round(130 - r * 0.4)] : [225, Math.round(200 + r * 1.3), Math.round(130 + r * 0.8)];
-      }
-      case 'unrest': { const u = hd.unrest / 100; return [Math.round(90 + 165 * u), Math.round(180 - 140 * u), 60]; }
-      case 'prosperity': { const u = hd.prosperity / 100; return [Math.round(210 - 150 * u), Math.round(110 + 110 * u), 60]; }
-      case 'economy': { const tot = Object.values(hd.resources || {}).reduce((a, b) => a + b, 0) * Math.sqrt(hd.population / 10000); const u = clamp(tot / 25, 0, 1); return [Math.round(60 + 190 * u), Math.round(60 + 150 * u), Math.round(40 + 30 * u)]; }
-      default: return hexToRgb(s.houses[realmOf(s, hd.owner)]?.color);
-    }
-  }
-  atWarWith(houseId) {
-    const s = this.state, p = s.meta.player, realm = realmOf(s, houseId);
-    return s.wars.some((w) => w.status !== 'ended' && ((w.attackers.includes(p) && (w.defenders.includes(houseId) || w.defenders.includes(realm))) || (w.defenders.includes(p) && (w.attackers.includes(houseId) || w.attackers.includes(realm)))));
-  }
+  // each mode's colour for a holding (map3d/modes.js; 11 §4)
+  colorFor(holdingId) { return modeColor(this.state, this.mode, holdingId, this.eyes); }
+  atWarWith(houseId) { return modeAtWar(this.state, houseId); }
 
   recolor() {
     if (!this.province || !this.state) return;
@@ -290,6 +271,7 @@ export class MapScene {
     const ids = new Map(); const id = (k) => { if (!ids.has(k)) ids.set(k, ids.size); return ids.get(k); };
     const myRealm = realmOf(s, s.meta.player);
     const playerTop = s.houses[s.meta.player];
+    this.eyes = this.mode === 'knowledge' ? eyesOf(s, s.meta.player) : null;
     for (let k = 0; k < n; k++) {
       const hid = this.seeds[k].id; const c = this.colorFor(hid); pal.set(c, k * 3);
       const owner = s.holdings[hid]?.owner; const r = realmOf(s, owner);
@@ -301,7 +283,8 @@ export class MapScene {
     }
     const ov = this.overlayCanvas.getContext('2d'); const img = ov.createImageData(W, H); const d = img.data;
     const hl = this.hlCanvas.getContext('2d'); const himg = hl.createImageData(W, H); const hd = himg.data;
-    const fillA = this.mode === 'terrain' ? 0 : this.mode === 'political' ? 125 : 180;
+    // (Knowledge's fog is nearly opaque: the unknown is not to be seen through)
+    const fillA = this.mode === 'terrain' ? 0 : this.mode === 'political' ? 125 : this.mode === 'knowledge' ? 215 : 180;
     const selK = this.selected ? this.seedIndex.get(this.selected) : -1;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const i = y * W + x, k = province[i]; if (k < 0) continue;
@@ -319,6 +302,7 @@ export class MapScene {
       else if (border === 3) { d[o] = pal[k * 3] * 0.3; d[o + 1] = pal[k * 3 + 1] * 0.3; d[o + 2] = pal[k * 3 + 2] * 0.3; d[o + 3] = 245; }
       else if (border === 2) { d[o] = pal[k * 3] * 0.55; d[o + 1] = pal[k * 3 + 1] * 0.55; d[o + 2] = pal[k * 3 + 2] * 0.55; d[o + 3] = 200; }
       else if (border === 1) { d[o] = pal[k * 3] * 0.8; d[o + 1] = pal[k * 3 + 1] * 0.8; d[o + 2] = pal[k * 3 + 2] * 0.8; d[o + 3] = Math.min(255, fillA + 30); }
+      else if (this.mode === 'diplomacy' && mine[k] && ((x + y) % 6) < 2) { d[o] = 90; d[o + 1] = 64; d[o + 2] = 12; d[o + 3] = Math.min(255, fillA + 40); } // your realm hatched gold
       else { d[o] = pal[k * 3]; d[o + 1] = pal[k * 3 + 1]; d[o + 2] = pal[k * 3 + 2]; d[o + 3] = fillA; }
       hd[o] = mineEdge * 255; hd[o + 1] = enemyEdge * 255; hd[o + 2] = k === selK ? (border ? 255 : 90) : 0; hd[o + 3] = 255;
     }
