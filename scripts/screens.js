@@ -373,6 +373,13 @@ const SCENARIOS = {
   ...Object.fromEntries([['nature-l3', 'winterfell', 3, ''], ['nature-l2', 'twins', 2, ''], ['nature-autumn', 'realm', 0, '&season=autumn&days=400'], ['nature-winter', 'realm', 0, '&season=winter&days=200'], ['nature-winter-l2', 'winterfell', 2, '&season=winter&days=200']].map(([name, spot, lod, extra]) => [name, async () => ({
     page: async (page) => { await page.goto(`http://127.0.0.1:${PORT}/dev/map-lod.html?spot=${spot}&lod=${lod}${extra}`); await page.waitForFunction(() => document.title === 'ready', null, { timeout: 240000, polling: 500 }); },
   })])),
+  // labels (WP E4): no two overlap at any level; the page counts the overlaps it measures, and the run fails on any
+  ...Object.fromEntries([['labels-l0', 'realm', 0], ['labels-l1', 'twins', 1], ['labels-l2', 'kings_landing', 2]].map(([name, spot, lod]) => [name, async () => ({
+    page: async (page) => {
+      await page.goto(`http://127.0.0.1:${PORT}/dev/map-lod.html?spot=${spot}&lod=${lod}`); await page.waitForFunction(() => document.title === 'ready', null, { timeout: 240000, polling: 500 });
+      const o = await page.evaluate(() => window.__overlaps); if (o.bad.length) throw new Error(`${name}: ${o.bad.length} labels overlap: ${JSON.stringify(o.bad.slice(0, 5))}`);
+    },
+  })])),
   // the map's modes at L0 (WP E2): Diplomacy, Knowledge and War beside Realms, each with its key; Stark at war with the West
   ...Object.fromEntries(['political', 'diplomacy', 'knowledge', 'war'].map((m) => [`mode-${m}`, async () => {
     const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });

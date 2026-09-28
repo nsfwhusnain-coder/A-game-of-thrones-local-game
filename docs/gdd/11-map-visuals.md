@@ -190,6 +190,9 @@ the player's view (knowledge-filtered). `MapScene.syncParties(prev, next, keyfra
 
 ## 8. Labels
 
+> **Implemented (WP E4)** in `public/js/map3d/labels.js` and `MapScene.updateLabels`. One departure (D-056): the
+> realms' names rank above the great seats, since they are only shown far out, where they are the map.
+
 - **Hierarchy:** realm names (L0–L1; Cinzel, spaced caps, 18–26 px), sea names (italic Garamond, 14–20 px, spaced),
   holdings (Garamond; seats of great houses bold; size by rank 12–16 px), features (italic 11–13 px).
 - **Placement:** one pass per frame over visible labels sorted by priority (player's seat > great seats > cities >

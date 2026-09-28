@@ -33,7 +33,13 @@ if (pos) { map.target.set(pos[0], 0, pos[1]); } else map.home();
 map.tween = null; map.dist = Number(q.get('dist')) || LOD[lod]; if (!pos) { map.target.set(720, 0, 1370); }
 map.updateCamera();
 let frames = 0;
-const tick = () => { if (++frames > 8) { document.getElementById('hud').textContent = `${spot} · L${lod} (lod ${lodOf(map.dist).toFixed(2)}, distance ${Math.round(map.dist)})`; document.title = 'ready'; } else requestAnimationFrame(tick); };
+// the labels on screen must never overlap (11 §8; WP E4): measured from what the browser drew, pins and rotated sea names aside
+const overlaps = () => {
+  const r = [...document.querySelectorAll('.lbl')].filter((e) => e.style.display !== 'none' && !/event|pulse/.test(e.className) && !/rotate/.test(e.style.transform)).map((e) => [e, e.getBoundingClientRect()]).filter(([, b]) => b.width && b.right > 0 && b.bottom > 0 && b.left < innerWidth && b.top < innerHeight);
+  const bad = []; for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) { const a = r[i][1], b = r[j][1]; const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); if (ox > 1 && oy > 1) bad.push([r[i][0].textContent, r[j][0].textContent]); }
+  return { shown: r.length, bad };
+};
+const tick = () => { if (++frames > 8) { const o = overlaps(); window.__overlaps = o; document.getElementById('hud').textContent = `${spot} · L${lod} (lod ${lodOf(map.dist).toFixed(2)}, distance ${Math.round(map.dist)}) · ${o.shown} labels, ${o.bad.length} overlapping`; document.title = 'ready'; } else requestAnimationFrame(tick); };
 requestAnimationFrame(tick);
 </script>
 </body></html>

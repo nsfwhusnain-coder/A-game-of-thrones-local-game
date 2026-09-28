@@ -100,7 +100,7 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 #map-wrap { position: absolute; inset: 0; }
 .map-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .map-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.lbl { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform; font-family: var(--display); color: #f6ecd2; text-shadow: 0 0 3px #000, 0 0 6px #000, 0 1px 1px #000; }
+.lbl { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform; font-family: var(--display); color: #f6ecd2; text-shadow: 0 0 2px rgba(10,8,6,0.95), 0 0 5px rgba(10,8,6,0.75), 0 0 10px rgba(10,8,6,0.45); } /* a soft dark halo: light words on the land (11 §8) */
 .lbl.holding { margin-top: 1.1rem; font-size: 0.72rem; letter-spacing: 0.03em; pointer-events: auto; cursor: pointer; padding: 0 0.2rem; }
 .lbl.holding.t5, .lbl.holding.t6 { font-size: 0.9rem; font-weight: 600; }
 .lbl.holding.mine { color: #d8ffc0; }
@@ -110,7 +110,7 @@ label { font-size: 0.82rem; color: var(--muted); display: block; margin: 0.5rem 
 .lbl.holding[data-status="occupied"]::before { content: '⚑ '; color: #ffcf6a; }
 .lbl.realm { font-weight: 700; letter-spacing: 0.35em; color: rgba(255,246,220,0.9); font-size: 1rem; text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 2px 2px #000; }
 .lbl.realm.own { color: #e8ffd0; }
-.lbl.sea { font-style: italic; letter-spacing: 0.4em; color: rgba(190,220,235,0.65); text-shadow: 0 0 4px rgba(0,20,40,0.8); font-size: 0.8rem; }
+.lbl.sea { font-family: var(--serif); font-style: italic; letter-spacing: 0.4em; color: rgba(22,44,62,0.92); text-shadow: 0 0 2px rgba(214,232,240,0.8), 0 0 6px rgba(214,232,240,0.55); font-size: 0.8rem; } /* dark ink with a light halo on the sea */
 .lbl.place { margin-top: 0.9rem; font-size: 0.64rem; font-style: italic; color: rgba(245,236,214,0.85); letter-spacing: 0.02em; }
 .lbl.place.ruin { color: rgba(214,206,190,0.75); }
 .lbl.landmark { font-size: 0.7rem; color: #fff3d0; background: rgba(20,14,9,0.72); border: 1px solid rgba(201,164,74,0.5); border-radius: 3px; padding: 0 0.3rem; pointer-events: auto; cursor: help; white-space: nowrap; }

@@ -139,7 +139,7 @@ Severity: **P0** breaks the game or its core promise · **P1** visibly wrong, fr
 | B-28 | P2 | Junk decisions from the model ("The Death of the Lion"). | `decision` op open to the model with no template. | B7 — ✅ D3: the op refuses a matter with no catalogued template |
 | B-29 | P2 | Map: Westeros off-centre at maximum zoom-out (half the screen empty ocean); army plates cover names ("KIN~2,400~50 SHIPS NG"); diplomacy mode looks identical to realms at far zoom; zoom-in reaches giant low-poly trees. | `MapScene.updateCamera`/bounds, label layout, overlay strength, zoom clamp. | E1–E4 — ✅ E1: framing, bounds, zoom clamp (modes: E2 ✅; labels: E4) |
 | B-30 | P2 | 4 of the HTTP tests fail on Windows ("server did not start"). | Same path bug and spawn assumptions in `tests/http.test.js`. | A2 |
-| B-31 | P2 | Tooltips stick after the pointer leaves (Whitewalls card stayed on screen). | `MapScene` hover state not cleared on pointerleave / camera move. | E4 |
+| B-31 | P2 | Tooltips stick after the pointer leaves (Whitewalls card stayed on screen). | `MapScene` hover state not cleared on pointerleave / camera move. | E4 ✅ fixed |
 
 ## 5. Module disposition
 
