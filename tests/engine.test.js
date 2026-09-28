@@ -7,7 +7,7 @@ import { initEconomy } from '../public/js/shared/economy.js';
 import { happenings, happeningCount } from '../public/js/shared/happenings.js';
 import { HAPPENINGS } from '../public/data/happenings.js';
 import { openPins } from '../public/js/shared/pins.js';
-import { buildJumpPrompt, turnLog } from '../server/prompts.js';
+import { turnLog } from '../server/prompts.js';
 
 const fresh = (house = 'stark') => { const s = createInitialState('agot_298', house); if (!s.world) initEconomy(s); return s; };
 
@@ -86,18 +86,6 @@ test('news older than two turns loses its pin', () => {
   assert.equal(openPins(s).size, 0);
 });
 
-// ── The prompt: small and cache-friendly ──
-test('the static part of the prompt does not change when people move', () => {
-  const cfg = { contextTokens: 65536, maxTokens: 6000, keepRecentTurns: 4, promptDetail: 'full', thinking: 'auto' };
-  const s = fresh();
-  const a = buildJumpPrompt(s, [], '1m', '', cfg)[1].content;
-  s.characters.jory_cassel.loc = 'baratheon';
-  s.relations[Object.keys(s.relations)[0]].v += 7;
-  const b = buildJumpPrompt(s, [], '1m', '', cfg)[1].content;
-  const staticEnd = a.indexOf('THE STATE OF THE REALM NOW');
-  assert.ok(staticEnd > 1000);
-  assert.equal(a.slice(0, staticEnd), b.slice(0, staticEnd));
-});
 test('the recent-turn log is one line per event, background life only when it matters', () => {
   const s = fresh();
   const line = turnLog(s, { turn: 3, dateFrom: 'a', date: 'b', orders: [{ text: 'March south.' }, { text: 'DECISION — X: I choose "Y".' }], events: [{ day: 4, where: 'stark', title: 'T', text: 'x', importance: 3 }, { day: 5, where: 'tyrell', title: 'Fair', text: 'y', importance: 1, bg: true }] });

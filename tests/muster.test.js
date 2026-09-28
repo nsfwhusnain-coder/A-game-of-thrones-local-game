@@ -36,16 +36,3 @@ test('the banners join the host wherever it has gone: one host, no camp left at 
   for (const a of Object.values(s.parties).filter((x) => x.serving === 'stark')) assert.equal(String(a.march?.to), 'party:' + host.id, `${a.name} follows the host`);
 });
 
-test('the chronicle may not have a lord arrive whom the engine has still on the road, nor retell the engine\'s news', () => {
-  const s = game.loadState(game.newGame('agot_298', 'stark').id);
-  const engine = [{ title: 'House Umber joins The Host of Winterfell', text: '3,800 men under the Umber banner join The Host of Winterfell at Winterfell.', houses: ['umber'] }];
-  const story = [
-    { title: 'The Manderlys arrive', text: 'Ser Wylis Manderly rode into Winterfell with five hundred men.', houses: ['manderly'] },
-    { title: 'The Greatjon arrives, loud as ever', text: 'Jon Umber rode into Winterfell with his men.', houses: ['umber'] },
-    { title: 'House Umber answers the call', text: 'The Greatjon answers with his host.', houses: ['umber'] },
-    { title: 'Melisandre burns the old gods', text: 'On Dragonstone the red woman lit a fire.', houses: ['baratheon_ds'] },
-  ];
-  const { events, dropped } = game.trueToTheRecord(s, story, engine);
-  assert.deepEqual(events.map((e) => e.title), ['The Greatjon arrives, loud as ever', 'Melisandre burns the old gods']);
-  assert.equal(dropped.length, 2);
-});

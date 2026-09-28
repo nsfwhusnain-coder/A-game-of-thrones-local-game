@@ -9,6 +9,11 @@ import path from 'node:path';
 import http from 'node:http';
 
 process.env.WC_SAVES = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-narrator-'));
+// recorded replies for this file: the fixture world's, and one written below from the week the engine makes now (any
+// change to the engine changes the week, so a recording kept in the repository would go stale)
+process.env.WC_REPLAY_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-narrator-replay-'));
+fs.mkdirSync(path.join(process.env.WC_REPLAY_DIR, 'narrate'));
+fs.copyFileSync(new URL('./fixtures/model/narrate/fixture-world.json', import.meta.url), path.join(process.env.WC_REPLAY_DIR, 'narrate', 'fixture-world.json'));
 const { createInitialState } = await import('../public/js/shared/world.js');
 const { emit, asEvent } = await import('../public/js/engine/facts/log.js');
 const { dayNumber } = await import('../public/js/engine/time.js');
@@ -18,6 +23,8 @@ const { anachronismsIn } = await import('../public/data/anachronisms.js');
 const { CALLS } = await import('../server/ai/calls/index.js');
 const { runCall } = await import('../server/ai/client.js');
 const { narrateTurn } = await import('../server/narrator.js');
+const { plainEvent } = await import('../server/ai/calls/narrate.js');
+const { clearReplayCache } = await import('../server/ai/providers/replay.js');
 const game = await import('../server/game.js');
 
 const world = () => createInitialState('agot_298', 'stark', { seed: 298 });
@@ -132,6 +139,28 @@ test('replay: a recorded telling with an invented number keeps its true stories 
 
 // ── story-matches-map (15 §2): Stark, six turns as in the audit — every telling names people where the facts put them,
 // and no one arrives anywhere without an arrival in its facts
+const MARK = 'The ravens were counted twice.';
+const INVENTED = 'rode into Winterfell at dusk';
+// the first week, recorded as a model might tell it: every story true (the facts told, and a line of colour), save one
+// whose teller has a lord ride into Winterfell a month early (B-03)
+async function recordFirstWeek(orders) {
+  process.env.WC_PROVIDER = 'mock';
+  const { id } = game.newGame('agot_298', 'stark', { seed: 298 });
+  const t = (await game.advance(id, { span: '7d', orders: orders[0] })).turn; await game.settled(id);
+  const state = game.loadState(id); const byId = new Map(game.readFacts(id, { from: 1, to: 1 }).map((f) => [f.id, f]));
+  const stories = t.narration.groups.map((g, k) => ({ id: `S${k + 1}`, facts: g.map((x) => byId.get(x)), pov: { name: '' } }));
+  const liar = stories.findIndex((st) => st.facts.some((f) => f.kind === 'call_answered') && st.facts.every((f) => f.place !== 'stark'));
+  const events = stories.map((st, k) => {
+    const e = plainEvent(state, st);
+    if (k !== liar) return { ...e, scene: `${e.scene} ${MARK}`.slice(0, 900) };
+    const who = state.characters[st.facts.find((f) => f.kind === 'call_answered').actors[0]]?.name;
+    return { ...e, scene: `${who} ${INVENTED}, roaring for ale.` };
+  });
+  fs.writeFileSync(path.join(process.env.WC_REPLAY_DIR, 'narrate', 'first-week.json'), JSON.stringify({ kind: 'narrate', fingerprint: t.narration.key, model: 'written by the test', reply: JSON.stringify({ events, meanwhile: '' }) }));
+  clearReplayCache();
+  delete process.env.WC_PROVIDER;
+  return liar >= 0;
+}
 async function sixTurns(provider) {
   process.env.WC_PROVIDER = provider;
   const { id } = game.newGame('agot_298', 'stark', { seed: 298 });
@@ -146,6 +175,7 @@ async function sixTurns(provider) {
 }
 for (const provider of ['mock', 'replay']) {
   test(`story-matches-map on ${provider}: every telling is true to the map and the facts`, async () => {
+    const liar = provider === 'replay' ? await recordFirstWeek([[{ text: 'Call the banners to Winterfell.' }, { text: 'Send Jon Snow to Castle Black.' }]]) : false;
     const turns = await sixTurns(provider);
     let narrated = 0;
     for (const { t, state, facts } of turns) {
@@ -164,9 +194,10 @@ for (const provider of ['mock', 'replay']) {
     assert.ok(narrated >= 12, `the turns were told (${narrated} stories)`);
     if (provider === 'replay') {
       const all = turns.flatMap((x) => x.t.events);
-      assert.ok(all.some((e) => e.narrated && /said Maester Luwin/.test(e.details || '')), 'the recorded telling of the first week is in the chronicle');
-      assert.ok(!all.some((e) => /rode into Winterfell/.test(`${e.text} ${e.details || ''}`)), 'its invented arrival is not');
-      assert.ok(turns[0].t.narration.plain >= 1 && turns[0].t.narration.problems.arrival >= 1);
+      assert.ok(all.some((e) => e.narrated && (e.details || '').includes(MARK)), 'the recorded telling of the first week is in the chronicle');
+      assert.ok(!all.some((e) => `${e.text} ${e.details || ''}`.includes(INVENTED)), 'its invented arrival is not');
+      assert.ok(liar, 'the week had a banner answering far from Winterfell');
+      assert.ok(turns[0].t.narration.plain >= 1 && turns[0].t.narration.problems.arrival >= 1, JSON.stringify(turns[0].t.narration));
     }
   });
 }

@@ -67,6 +67,34 @@ route('POST', '/api/games/:id/orders', async (req, p) => ({ orders: game.setOrde
 route('POST', '/api/games/:id/orders/preview', async (req, p) => game.previewOrderPlans(p.id));
 route('POST', '/api/games/:id/orders/:oid/answer', async (req, p) => game.answerOrderQuestion(p.id, p.oid, (await readBody(req)).option));
 route('POST', '/api/games/:id/advance', async (req, p) => game.advance(p.id, await readBody(req)));
+// The jump, streamed (03 §6.2, §10): the days are started as a job and each week is sent the moment it is told, so the
+// lord watches the first while the next is simulated, and may stop the days on any of them (05 §5).
+const jobs = new Map(); let jobSeq = 0;
+function startJump(id, body) {
+  for (const j of jobs.values()) if (j.game === id && !j.over) throw game.httpError(409, 'the days are already passing');
+  const job = { id: `j${++jobSeq}-${Date.now().toString(36)}`, game: id, sent: [], listeners: new Set(), over: false, stopDay: null };
+  const emit = (event, data) => { const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`; job.sent.push(msg); for (const res of job.listeners) res.write(msg); };
+  jobs.set(job.id, job);
+  game.advance(id, { span: body.span, orders: body.orders, onSegment: (s) => emit('segment', s), stopWanted: () => job.stopDay })
+    .then((r) => emit('done', viewOf(r)), (e) => emit('error', { error: e.message, status: e.status || 500 }))
+    .finally(() => { job.over = true; for (const res of job.listeners) res.end(); job.listeners.clear(); setTimeout(() => jobs.delete(job.id), 10 * 60e3).unref?.(); });
+  return { job: job.id };
+}
+function streamJump(res, job) {
+  res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
+  // a late listener (or a reconnect) hears the whole jump from its first week
+  for (const msg of job.sent) res.write(msg);
+  if (job.over) return res.end();
+  job.listeners.add(res); res.on('close', () => job.listeners.delete(res));
+}
+route('POST', '/api/games/:id/jump', async (req, p) => startJump(p.id, await readBody(req)));
+route('POST', '/api/games/:id/jump/:job/stop', async (req, p) => {
+  const job = jobs.get(p.job); if (!job || job.game !== p.id) throw game.httpError(404, 'no such jump');
+  const day = Math.max(1, Math.round(Number((await readBody(req)).day) || 1)); job.stopDay = job.stopDay ? Math.min(job.stopDay, day) : day;
+  return { ok: true, day: job.stopDay, over: job.over };
+});
+// stop here, after the days have passed: the turn is played again from its snapshot as far as that day
+route('POST', '/api/games/:id/stop', async (req, p) => game.stopHere(p.id, (await readBody(req)).day));
 // undo (docs/gdd/03-architecture.md §11): how far back the glass can turn, and turning it
 route('GET', '/api/games/:id/undo', (req, p) => { const st = game.loadState(p.id); return { depth: game.undoDepth(p.id, st), ironman: !!st.meta.settings?.ironman, turn: st.meta.turn }; });
 route('POST', '/api/games/:id/undo', async (req, p) => game.undo(p.id, await readBody(req)));
@@ -126,6 +154,8 @@ const server = http.createServer(async (req, res) => {
       try { files = fs.readdirSync(dirp).filter((f) => /\.(png|jpe?g|webp|avif)$/i.test(f)); } catch { /* none */ }
       return send(res, 200, { portraits: Object.fromEntries(files.map((f) => [f.replace(/\.[^.]+$/, ''), '/portraits/' + encodeURIComponent(f)])) });
     }
+    const sse = req.method === 'GET' && url.pathname.match(/^\/api\/games\/([^/]+)\/jump\/([^/]+)\/stream$/);
+    if (sse) { const job = jobs.get(sse[2]); if (!job || job.game !== sse[1]) return send(res, 404, { error: 'no such jump' }); return streamJump(res, job); }
     if (url.pathname.startsWith('/api/')) {
       for (const r of routes) {
         if (r.method !== req.method) continue;

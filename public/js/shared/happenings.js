@@ -86,6 +86,8 @@ function rivalOf(s, house) {
   const own = s.houses[house]; const near = Object.values(s.houses).filter((x) => x.id !== house && x.region === own?.region && x.seat);
   return near.length ? near[Math.floor(random() * near.length)].id : null;
 }
+// whether a house has anyone to be rival to (no dice drawn: the check only asks if there is one)
+const hasRival = (s, house) => Object.keys(s.houses).some((k) => k !== house && s.houses[k].seat && getRelation(s, house, k) < -15) || Object.values(s.houses).some((x) => x.id !== house && x.region === s.houses[house]?.region && x.seat);
 function friendOf(s, house) {
   let best = null, v = 15;
   for (const k of Object.keys(s.houses)) { if (k === house || !s.houses[k].seat) continue; const x = getRelation(s, house, k); if (x > v) { v = x; best = k; } }
@@ -113,13 +115,17 @@ export function happenings(state, days, r = random) {
   const turn = s.meta.turn;
   const want = happeningCount(days, r);
   const usedPlaces = new Set();
+  // one reckoning of a house's rivals and friends for the whole pass (they are asked of every template)
+  const rv = new Map(), fr = new Map();
+  const rivalAny = (h) => (rv.has(h) ? rv.get(h) : (rv.set(h, hasRival(s, h)), rv.get(h)));
+  const friendAny = (h) => (fr.has(h) ? fr.get(h) : (fr.set(h, !!friendOf(s, h)), fr.get(h)));
   // gather everything the world fits now, with its weight
   const cands = [];
   for (const tpl of HAPPENINGS) {
     if (turn - (cd[tpl.id] ?? -99) < (tpl.cd ?? 6)) continue;
     // a happening that names a rival or a friend needs the house to have one
     const needR = /\{rival\}/.test(tpl.t + tpl.x), needF = /\{friend\}/.test(tpl.t + tpl.x);
-    const places = placesFor(s, tpl).filter((h) => fits(s, tpl, h, lordOf(s, h)) && (!needR || rivalOf(s, h.owner)) && (!needF || friendOf(s, h.owner)));
+    const places = placesFor(s, tpl).filter((h) => fits(s, tpl, h, lordOf(s, h)) && (!needR || rivalAny(h.owner)) && (!needF || friendAny(h.owner)));
     if (!places.length) continue;
     // the player's own lands and region come up a little more often: that is where they are listening
     const pr = s.holdings[s.houses[s.meta.player]?.seat]?.region;

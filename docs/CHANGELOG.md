@@ -3,6 +3,22 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — B11: the days pass a week at a time, and you can stop them (WP B11)
+
+- **The days are lived one by one, and told a week at a time.** The engine now runs each day in turn — the roads, the
+  banners, the battles, the letters, promises kept or broken — and after each week the realm's lords take counsel
+  again and the chronicle tells that week. In a long jump the first week's news appears in the panel, under its dates,
+  with the map flashing where it happened, while the next week is still being lived.
+- **Stop the days.** While they pass, "Stop the days here" ends the turn at the end of the week you are watching. After
+  a turn, the undo window (↶) offers "Stop the last turn sooner": pick a day and the turn is played again as far as
+  that day — the days you saw come out exactly the same, and the rest is unwritten. (Not in an ironman chronicle.)
+- **The old council of five is gone.** The turn is no longer written by a chain of big prompts; the lords' minds,
+  the engine and the narrator do it. The Settings choice "Who writes the turn" is removed.
+- Faster: a week of the engine takes about a second on the mock model.
+- Owner to verify: `npm start`, play a Stark game with the live model and call the banners and end a turn that runs
+  more than a week (the header says "until …"); watch the first week's news appear while the second is simulated; press
+  "Stop the days here" once; then open ↶ and use "Stop the last turn sooner" on an earlier day.
+
 ## 2026-09-27 — B10: a lord's word binds (WP B10)
 
 - **What a lord promises in an audience, he is held to.** Ask Roose Bolton to bring his men to Moat Cailin within the

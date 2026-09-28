@@ -29,11 +29,15 @@ const tree = (state, x, { eager = false } = {}) => { const t = treeChoice(state,
  * One week's minds. opts: { budget (minds with a model: 3 | 6 | 10), provider, cfg, log, known(actor) → facts }.
  * Returns { cards (for the player's chronicle), record (every mind: who, how, what — the turn record's `minds`) }.
  */
-export async function runMinds(state, { budget = 6, provider = 'mock', cfg, log, known = () => [] } = {}) {
+export async function runMinds(state, { budget = 6, provider = 'mock', cfg, log, known = () => [], replay = null } = {}) {
   const { minds, pressed, all } = salientActors(state, { budget });
   const decided = [];
   const byModel = provider !== 'mock';
+  // a week played again (the lord stopped a jump he was watching, 05 §5) decides as it decided the first time: the
+  // model is not asked twice, so the days up to the stop come out the same
+  const again = new Map((replay || []).filter((r) => ['model', 'replay'].includes(r.via)).map((r) => [r.actor, r]));
   const decide = async (x) => {
+    if (again.has(x.id)) { const r = again.get(x.id); return { x, via: r.via, verb: r.verb, params: r.params, ...(r.words ? { words: r.words } : {}) }; }
     if (!byModel) return { ...tree(state, x), via: 'mock' };
     const r = await runCall('mind', state, { actor: x.id, known: known(x) }, { provider, cfg, log });
     const it = r.value && r.via !== 'fallback' ? intentOf(r.value, r.ctx) : null;

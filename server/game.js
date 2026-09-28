@@ -4,35 +4,29 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
-import { chat, extractJson, extractField, loadConfig, estimateTokens } from './llm.js';
-import { buildJumpPrompt, buildSuggestPrompt, buildConsolidatePrompt, engineFacts } from './prompts.js';
+import { chat, extractJson, loadConfig, estimateTokens } from './llm.js';
+import { buildSuggestPrompt, buildConsolidatePrompt, engineFacts } from './prompts.js';
 import { createInitialState, migrateState, applyChanges, placeName, addDays, dateStr, spanOf, resolvePlaceId, dayNumber } from '../public/js/shared/world.js';
 import { partyOf, together } from '../public/js/engine/parties.js';
 import { settleWorld } from '../public/js/engine/state/settle.js';
 import { validate } from '../public/js/engine/state/validate.js';
-import { marchTick } from '../public/js/shared/marches.js';
-import { settle, initEconomy, seasonTick } from '../public/js/shared/economy.js';
-import { agentsFor, AGENT_LABELS, filterOps, briefFromMaester, briefFromPlan, briefFromWhispers, briefFromApplied } from './agents.js';
+import { settle, initEconomy } from '../public/js/shared/economy.js';
+import { engineDay } from './turn/day.js';
+import { dateOfDay } from '../public/js/engine/time.js';
+import { forces } from '../public/js/engine/parties.js';
+import { atWar } from '../public/js/shared/warfare.js';
 import { random } from '../public/js/engine/rng.js';
 import { nextId } from '../public/js/engine/ids.js';
 import { withDice } from './dice.js';
 import { stripForeignScript } from './ai/schema.js';
-import { psycheTick } from '../public/js/shared/psyche.js';
 import { postTick } from '../public/js/shared/errands.js';
-import { retinueTick } from '../public/js/shared/retinues.js';
 import { nextTurnLength } from '../public/js/shared/turns.js';
 import { realmPetition, applyPetitionFx } from '../public/js/shared/petitions.js';
-import { vassalTick, gatherMusters, fieldService } from '../public/js/shared/vassals.js';
-import { worldTick, THREADS } from '../public/js/shared/plots.js';
-import { resolveWarfare } from '../public/js/shared/battles.js';
-import { roadEncounters } from '../public/js/shared/roads.js';
-import { updateKnowledge, eyesOf, knows, holdNews, newsDue } from '../public/js/engine/knowledge.js';
-import { treacheryTick } from '../public/js/shared/treachery.js';
-import { regencyTick } from '../public/js/shared/regency.js';
+import { updateKnowledge, eyesOf, knows, holdNews, newsDue, seesParty } from '../public/js/engine/knowledge.js';
 import { outcomeFor, standing } from '../public/js/shared/standing.js';
-import { emit, fact, asEvent, flush, redate, factById } from '../public/js/engine/facts/log.js';
+import { emit, fact, flush, factById } from '../public/js/engine/facts/log.js';
 import { VERBS, perform, told, verbOfKind } from '../public/js/engine/actions/registry.js';
-import { carryOutOrders, readOrders, answerOrder, named, orderEvents, advanceMusters, ravenDays } from './orders.js';
+import { carryOutOrders, readOrders, answerOrder, orderEvents } from './orders.js';
 import { interpretOrder } from './orders/interpret.js';
 import { runMinds, knownTo } from './minds.js';
 import { narrateTurn, narratorOn } from './narrator.js';
@@ -218,28 +212,13 @@ const progress = new Map();
 export function getProgress(id) {
   const p = progress.get(id); if (!p) return null;
   const { text, ...rest } = p;
-  return { ...rest, ms: Date.now() - p.t0, ...(text ? { events: streamedEvents(text) } : {}) };
-}
-// The turn's events as the model writes them: every event object already closed in the stream, so the player
-// watches the news come in instead of a spinner (the full, checked turn follows when the reply is done)
-function streamedEvents(text) {
-  const i = text.search(/"events"\s*:\s*\[/); if (i < 0) return [];
-  const out = []; let depth = 0, start = -1, inStr = false, esc = false;
-  for (let k = text.indexOf('[', i) + 1; k < text.length; k++) {
-    const c = text[k];
-    if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
-    if (c === '"') inStr = true;
-    else if (c === '{') { if (depth === 0) start = k; depth++; }
-    else if (c === '}') { depth--; if (depth === 0 && start >= 0) { try { const e = JSON.parse(text.slice(start, k + 1)); if (e.title) out.push({ title: String(e.title), text: String(e.text || ''), where: resolvePlaceId(e.where) || null, day: e.day, type: e.type, importance: e.importance }); } catch { /* half-repaired */ } start = -1; } }
-    else if (c === ']' && depth === 0) break;
-  }
-  return out.slice(0, 20);
+  return { ...rest, ms: Date.now() - p.t0 };
 }
 const tracker = (id, kind, seed = {}) => { const t0 = Date.now(); progress.set(id, { kind, phase: 'waiting', ms: 0, t0, ...seed }); return (p) => progress.set(id, { kind, t0, ...progress.get(id), ...p, ms: Date.now() - t0 }); };
 const done = (id) => progress.delete(id);
 
 async function askJson(id, kind, messages, cfg, extra = {}) {
-  // the swarm names whoever is speaking, so the player is told 'the Hand moves the realm', not 'step 2 of 5'
+  // the one speaking is named, so the player is told 'the lords take counsel', not 'step 2 of 5'
   const onProgress = tracker(id, kind, extra.agentLabel ? { agentLabel: extra.agentLabel, agentStep: extra.agentStep, agentTotal: extra.agentTotal } : {});
   try { return await askJsonInner(id, kind, messages, { ...extra, onProgress }); } finally { done(id); }
 }
@@ -259,82 +238,6 @@ async function askJsonInner(id, kind, messages, extra) {
     }
   }
 }
-
-// ───────────────────────────── The swarm ─────────────────────────────
-// The turn used to be one enormous question to one model. It is now a short council: each agent
-// reads the same realm (the same prompt prefix, so the model server's cache is reused) and is
-// given one charge at the end of it. What each settles is handed to the next in plain English —
-// never as change operations, so the Bard, who writes last, never sees the machinery.
-//
-// If anything at all goes wrong the world still turns: an agent that cannot be read is skipped,
-// and the Bard is the only one whose absence is felt (its summary is then salvaged as before).
-async function runSwarm(id, state, cfg, ctx) {
-  const { span, chronicle, turnReason, engineEvents, dateFrom, applyCtx, applied, rejected } = ctx;
-  const spanDays = spanOf(span).days;
-  // with the realm's minds deciding for the other houses, the Hand — the old way they were moved, by change operations
-  // straight from a model — is not called (the non-negotiable: models propose, the engine resolves)
-  // and with the narrator telling the turn from its facts (server/narrator.js), the Bard is not called either
-  const telling = narratorOn(cfg);
-  const agents = agentsFor(cfg.swarm ?? 'full').filter((a) => (a !== 'hand' || !mindsBudget(cfg)) && (a !== 'bard' || !telling));
-  const build = (agent, brief) => buildJumpPrompt(state, state.orders, span, chronicle, cfg, turnReason, { engineEvents, dateFrom, agent, brief });
-  const untold = { obj: { summary: '', events: [], changes: [] }, raw: null, text: '' };
-
-  if (!agents.length && telling) return untold;
-  // No swarm: the old single question, unchanged.
-  if (!agents.length) {
-    return askJson(id, 'jump', build(null, ''), cfg, { spanDays, streamText: true });
-  }
-
-  const briefs = [];
-  const say = (s) => { if (s) briefs.push(s); };
-  // The Bard is told only what truly happened: the Maester's facts, the engine's receipts for what the Hand and the
-  // Whisperer managed to do, and the whispers — never the Hand's intentions, some of which the engine refused.
-  // (It used to be told the plan, and narrated lords arriving who never set out.)
-  const bardBriefs = [];
-  const tell = (s) => { if (s) bardBriefs.push(s); };
-  let last = null; let bard = null; let bardErr = null;
-  // what the Hand and the Whisperer actually managed to do, told to the Bard as plain fact
-  const doneHere = [];
-
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i];
-    const isBard = agent === 'bard';
-    const brief = (isBard ? bardBriefs : briefs).join('\n\n');
-    const r = await askJson(id, 'jump', build(agent, brief), cfg, {
-      spanDays,
-      streamText: isBard, // only the chronicle is worth streaming to the player
-      maxTokens: isBard ? cfg.maxTokens : Math.min(cfg.maxTokens, agent === 'hand' ? 1800 : 900),
-      temperature: isBard ? cfg.temperature : Math.min(cfg.temperature, 0.6), // the clerks are sober; the Bard is not
-      agent, agentLabel: AGENT_LABELS[agent], agentStep: i + 1, agentTotal: agents.length,
-    }).catch((e) => ({ obj: null, error: e.message }));
-    last = r.raw || last;
-    const obj = r.obj;
-    if (!obj) { if (isBard) { bardErr = r.error || 'unreadable'; bard = r; } console.warn(`swarm: the ${agent} could not be read (${r.error || 'no object'})`); continue; }
-
-    if (isBard) { bard = { ...r, obj }; break; }
-
-    // what this agent is allowed to change, applied at once so the next agent sees a true world
-    const ops = filterOps(agent, obj.changes);
-    if (ops.length) {
-      const told = applyChanges(state, ops, { ...applyCtx, source: AGENT_SOURCE[agent] || applyCtx.source, mayInvent: agent === 'weaver', cause: { type: 'intent', ref: agent } });
-      applied.push(...told.applied); rejected.push(...told.rejected);
-      doneHere.push(...told.applied);
-      tell(briefFromApplied(told.applied, `WHAT ${agent === 'whisperer' ? 'MOVED IN SECRET' : 'THE GREAT HOUSES TRULY DID'} THESE DAYS (the engine's record: tell these — and no march, arrival, battle or meeting that is not here or in WHAT THE ENGINE HAS ALREADY SET DOWN)`));
-    }
-    if (agent === 'maester') { say(briefFromMaester(obj)); tell(briefFromMaester(obj)); }
-    if (agent === 'hand') say(briefFromPlan(obj));
-    if (agent === 'whisperer') { say(briefFromWhispers(obj)); tell(briefFromWhispers(obj)); }
-  }
-
-  // The Bard is told what happened, not what was decided: the engine's own receipts.
-  if (!bard && telling) return { ...untold, raw: last };
-  if (!bard) return { obj: null, raw: last, error: 'the chronicler wrote nothing', text: '' };
-  const out = bard.obj || null;
-  return { obj: out ? { summary: out.summary, events: out.events, threads: out.threads, changes: [] } : null, raw: bard.raw || last, error: bardErr || bard.error, text: bard.text };
-}
-// the turn in a few lines, for the world log and the chronicle's memory: the weightiest stories told, and the Meanwhile
-const inBrief = (n) => [...n.cards.filter((c) => c.narrated).sort((a, b) => b.importance - a.importance).slice(0, 4).map((c) => c.text), n.meanwhile].filter(Boolean).join(' ');
-const AGENT_SOURCE = { hand: 'The doings of the realm', weaver: 'A custom of the realm', whisperer: 'Whispers and letters' };
 
 const consolidating = new Map(); // save id -> promise (memory is compressed in the background)
 /** Wait for a save's background work (the chronicle's consolidation, a receipt being read) to finish writing it. */
@@ -377,243 +280,152 @@ export async function answerOrderQuestion(id, orderId, option) {
   return { orders: state.orders };
 }
 
-export async function advance(id, { span = 'auto', orders } = {}) {
+/**
+ * Let the days pass (03 §6.2). opts: { span ('auto' = until something happens), orders, onSegment(segment) — each
+ * week as soon as it is told (the SSE stream), stopWanted() → the day the lord asked to stop on, if he has }.
+ */
+export async function advance(id, { span = 'auto', orders, onSegment = null, stopWanted = null, stopAt = null, replayMinds = null } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
-  if (warming.has(id)) await warming.get(id); // the model is still reading the start of this very prompt
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
   // everything the engine rolls this turn comes from this save's dice (server/dice.js), awaits and all
-  return withDice(state, () => advanceWith(id, state, cfg, { span, orders }));
+  return withDice(state, () => advanceWith(id, state, cfg, { span, orders, onSegment, stopWanted, stopAt, replayMinds }));
 }
-async function advanceWith(id, state, cfg, { span, orders }) {
+
+/**
+ * Stop here (05 §5): the lord watched the turn play and stops it on a day. The turn is played again from its snapshot
+ * with the same orders and the same minds' choices, as far as that day and no further — the days he saw come out the
+ * same (the dice are the save's, and the day loop runs a day at a time) — and the rest is unmade.
+ */
+export async function stopHere(id, day) {
+  const state = loadState(id);
+  if (state.meta.settings?.ironman) throw httpError(403, 'An ironman chronicle cannot be unwritten: stop the days while they pass.');
+  const t = readTurn(id, state.meta.turn);
+  const d = Math.round(Number(day) || 0);
+  const days = spanOf(t.span).days;
+  if (d < 1 || d >= days) throw httpError(400, `the turn ran ${days} day${days > 1 ? 's' : ''}: stop on one of days 1–${days - 1}`);
+  await undo(id, { turns: 1 });
+  return advance(id, { span: t.span, stopAt: d, replayMinds: t.minds || [] });
+}
+async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replayMinds = null, onSegment = null, stopWanted = null }) {
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o.text) })).filter((o) => o.text.trim()); }
   // the world as it stands before the turn is kept for undo, orders and all (they come back to be changed and given
   // again); the old single undo point of earlier versions is no longer needed
   archiveLegacy(id, state);
   snapshot(id, state);
   for (const f of ['prev-state.json', 'prev-chronicle.md']) fs.rmSync(path.join(dir(id), f), { force: true });
-  // the turn's clock dates its facts (engine/facts/log.js): day 1 is the morrow, and the turn runs to its last day once
-  // its length is known
-  const day0 = dayNumber(state.meta.date);
-  state.meta.clock = { turn: state.meta.turn + 1, from: day0 + 1, to: day0 + 1 };
+  // the turn's clock dates its facts (engine/facts/log.js): day 1 is the morrow
+  const day0 = dayNumber(state.meta.date); const turn = state.meta.turn + 1; const p = state.meta.player;
+  state.meta.clock = { turn, from: day0 + 1, to: day0 + 1 };
   for (const a of Object.values(state.parties)) { delete a.motion; delete a.arriveDay; }
-  const chronicle = readChronicle(id);
-  // The player's written orders are carried out by the engine first (travel, marches, recruiting, hiring),
-  // so they truly happen; the story model is told what was done and narrates what follows.
-  const carried = await carryOutOrders(state, interpreter(id, state, cfg)).catch((e) => { console.warn('orders:', e.message); return []; });
-  // the promises lords have made are acted on from the morrow (engine/politics/commitments.js): a sincere one through
-  // the same verbs as an order — Roose Bolton's men turn for Moat Cailin; a false one not at all
-  commitmentsTick(state, { phase: 'start' });
-  // a turn runs until the next thing that matters (a host arrives, a foe draws near, an answer lands…), at most a moon
-  let turnReason = null;
-  if (!span || span === 'auto' || span === 'turn') { const n = nextTurnLength(state); span = `${n.days}d`; turnReason = n.reason; }
-  const spanInfo = spanOf(span);
-  // ── THE REALM'S MINDS: the lords who matter this week decide one thing each, on its first day, through the same
-  // verbs as the player's orders (04 §5; server/minds.js). A turn longer than a week gives them a mind per week.
-  const minds = mindsBudget(cfg) ? await runMinds(state, {
-    budget: Math.min(18, mindsBudget(cfg) * Math.ceil(spanInfo.days / 7)), provider: cfg.provider, cfg,
-    log: (kind, messages, response) => logLLM(id, kind, messages, response),
-    known: ((recent) => (x) => knownTo(state, recent, x.house))(readFacts(id, { from: state.meta.turn - 1 })),
-  }).catch((e) => { console.warn('minds:', e.message); return { cards: [], record: [] }; }) : { cards: [], record: [] };
-  state.meta.clock.to = day0 + spanInfo.days;
-
   const dateFrom = dateStr(state.meta.date);
-  const yearBefore = state.meta.date.year;
-  state.meta.date = addDays(state.meta.date, spanInfo.days);
-  // The years turn: everyone ages, and the very old may not see the next one
-  const naturalDeaths = [];
-  for (let y = yearBefore; y < state.meta.date.year; y++) {
-    for (const c of Object.values(state.characters)) {
-      if (!c.alive || c.age == null) continue;
-      c.age += 1;
-      const ailing = c.status === 'wounded' || /ailing|dying|sick|abed/i.test(`${c.traits} ${c.bio}`);
-      const risk = c.age >= 60 ? ((c.age - 58) ** 2) / 2600 + (ailing ? 0.25 : 0) : ailing && c.age > 45 ? 0.08 : 0;
-      if (risk && random() < Math.min(0.85, risk)) naturalDeaths.push({ op: 'character', id: c.id, alive: false, cause: ailing ? 'illness' : 'old age' });
+  const log = (kind, messages, response) => logLLM(id, kind, messages, response);
+  // The lord's written orders are carried out first, on the morrow, through the verbs (their receipts were read when
+  // they were written: server/orders.js)
+  const carried = await carryOutOrders(state, interpreter(id, state, cfg)).catch((e) => { console.warn('orders:', e.message); return []; });
+  // the promises lords have made are acted on from the morrow (engine/politics/commitments.js)
+  commitmentsTick(state, { phase: 'start' });
+  // How far: "until something happens" (the next thing that matters, at most a moon; 05 §3–4) or a fixed span that a
+  // major interrupt may still cut short; `stopAt` is the day the lord stopped a jump he was watching (05 §5)
+  let until = null; const auto = !span || span === 'auto' || span === 'turn';
+  if (auto) { const n = nextTurnLength(state); span = `${n.days}d`; until = n.reason; }
+  let horizon = spanOf(span).days; if (stopAt) horizon = Math.max(1, Math.min(horizon, Number(stopAt) || horizon));
+  state.meta.turn = turn;
+  const recent = readFacts(id, { from: turn - 2 });
+  const known = (h) => knownTo(state, recent, h, { limit: 6 });
+  const deliver = async (st) => [...deliverReplies(st), ...await deliverLetters(st, { provider: cfg.provider, cfg, log, known }).catch((e) => { console.warn('letters:', e.message); return []; })];
+  const touched = new Set(); const applied = [], rejected = [], cards = [], mindsRecord = [], segments = [], narrated = [], meanwhile = [];
+  const eyes = { foes: sightedFoes(state) };
+  let stopped = null, ran = 0;
+  const ms = { orders: 0, minds: 0, engine: 0, narrate: 0 }; const t0 = Date.now(); const clock = (k, t) => { ms[k] += Date.now() - t; };
+  const onProgress = tracker(id, 'jump', { agentLabel: 'The realm moves', segments: [] });
+  try {
+    // ── SEGMENTS of a week (03 §6.2): the minds decide on its first day, the days run one by one, the week is told
+    for (let seg = 0; ran < horizon && !stopped; seg++) {
+      const segFrom = day0 + ran + 1; const segDays = Math.min(7, horizon - ran);
+      onProgress({ agentLabel: 'The lords of the realm take counsel', phase: 'thinking' });
+      // ── THE REALM'S MINDS: the lords who matter this week decide one thing each (04 §5; server/minds.js)
+      state.meta.clock = { turn, from: segFrom, to: segFrom };
+      const tm = Date.now();
+      const minds = mindsBudget(cfg) ? await runMinds(state, { budget: mindsBudget(cfg), provider: cfg.provider, cfg, log, known: (x) => known(x.house), replay: replayMinds?.filter((m) => m.segment === seg) || null })
+        .catch((e) => { console.warn('minds:', e.message); return { cards: [], record: [] }; }) : { cards: [], record: [] };
+      clock('minds', tm);
+      mindsRecord.push(...minds.record.map((r) => ({ ...r, segment: seg })));
+      const segCards = minds.cards.map((c) => ({ ...c, day: ran + 1 }));
+      // ── THE DAYS (server/turn/day.js): the engine's rules, one day at a time
+      state.meta.clock = { turn, from: day0 + 1, to: segFrom };
+      onProgress({ agentLabel: 'The days pass', phase: 'working' });
+      let d = 0; const te = Date.now();
+      for (; d < segDays; d++) {
+        const r = await engineDay(state, { touched, deliver });
+        segCards.push(...r.cards); applied.push(...r.applied);
+        const why = interruptOf(state, r.cards, eyes);
+        if (why && (auto || why.major)) { stopped = why; d++; break; }
+        // the lord, watching, stops the days here (05 §5)
+        const want = stopWanted?.(); if (want && ran + d + 1 >= want) { stopped = { major: false, text: 'the lord stopped the days', lord: true }; d++; break; }
+      }
+      clock('engine', te);
+      ran += d;
+      const segTo = day0 + ran;
+      state.meta.clock = { turn, from: day0 + 1, to: segTo };
+      // news travels (engine/knowledge.js): what the house hears of late is told on the day its word arrives, or waits
+      let told = [...holdNews(state, foldAnswers(segCards)), ...newsDue(state)].sort((a, b) => a.day - b.day);
+      // what the house has seen of other hosts; the post; the week's books (06), and the steward's notes
+      updateKnowledge(state); postTick(state);
+      const econNotes = settle(state, d);
+      const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
+      for (const n of mine.slice(0, 6)) told.push(fact(state, 'ledger', { title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, houses: [n.house], day: ran, ...(n.important ? {} : { bg: true, mine: true }) }, { cause: { type: 'rule', ref: 'economy' } }));
+      // ── THE TELLING (04 §6; server/narrator.js): the week's cards gathered into stories and told, held to their facts
+      const tn = Date.now(); let segMeanwhile = '';
+      if (narratorOn(cfg)) {
+        onProgress({ agentLabel: 'The chronicle is written', phase: 'writing' });
+        const own = (state.facts || []).filter((f) => f.cause?.type === 'order' && f.importance >= 2 && f.day >= segFrom && f.day <= segTo);
+        const n = await narrateTurn(state, told, { provider: cfg.provider, cfg, log, own, onProgress: (x) => onProgress({ ...x, agentLabel: 'The chronicle is written' }) })
+          .catch((e) => { console.warn('narrator:', e.message); return null; });
+        if (n) { told = n.cards; narrated.push(n.record); if (n.meanwhile) meanwhile.push(segMeanwhile = n.meanwhile); }
+      }
+      clock('narrate', tn);
+      for (const c of told) if (!c.day) c.day = ran;
+      cards.push(...told);
+      const segment = { index: seg, days: [ran - d + 1, ran], from: dateStr(dateOfDay(segFrom)), to: dateStr(state.meta.date), events: told.length };
+      segments.push(segment);
+      // the week, sent to the lord as soon as it is told (SSE: 03 §10) — the next is simulated while he watches it
+      const shown = told.map((c) => ({ ...c, date: dateStr(dateOfDay(day0 + c.day)) }));
+      onProgress({ segments: [...(progress.get(id)?.segments || []), { ...segment, headlines: shown.filter((c) => !c.bg).map((c) => ({ title: c.title, where: c.where, day: c.day })) }] });
+      onSegment?.({ ...segment, events: shown, meanwhile: segMeanwhile, date: dateStr(state.meta.date), ...(stopped ? { stopped: stopped.text } : {}) });
     }
-  }
-  state.meta.turn += 1;
-  const orderText = state.orders.map((o) => o.text).join(' ');
-  const playerChoseAllegiance = /fealty|swear|kneel|bend the knee|independen|king in the north|secede|declare (my|our)|crown (me|myself)|renounce/i.test(orderText);
-  const playerDeclaredWar = /\b(declare war|make war|attack|march on|invade|assault|lay siege|besiege|ride against|strike at)\b/i.test(orderText);
-  // ── THE ENGINE'S PART OF THE TURN: what the rules decide, day by day — marches and arrivals, musters, battles,
-  // the great matters of the story, lords on the road, letters landing. The story is then told around these facts.
-  const applied = [], rejected = [];
-  // the years' dead are told in the years' own words: their facts are recorded here, before the heirs' (not by the op)
-  const deathEvents = naturalDeaths.map((d) => state.characters[d.id]).map((c) => fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause: naturalDeaths.find((d) => d.id === c.id).cause, age: c.age }, cause: { type: 'rule', ref: 'the years' } }));
-  { const r0 = applyChanges(state, naturalDeaths, { source: 'The years', spanDays: spanInfo.days, told: ['character'] }); applied.push(...r0.applied); }
-  // Vassals whose obligations the story did not settle act on their own temper: dues, and the banners
-  const touched = new Set();
-  const vt = vassalTick(state, spanInfo.days, touched);
-  applied.push(...vt.applied);
-  vt.events.push(...advanceMusters(state, spanInfo.days));
-  // Every party with somewhere to be walks its planned road, day by day: hosts, fleets, households, riders
-  // (shared/marches.js over engine/movement.js). A host raised during the turn sets out on the day it was raised.
-  const turnStart = dayNumber(state.meta.date) - spanInfo.days;
-  const mt = marchTick(state, { span: spanInfo.days, turnStart });
-  vt.events.push(...mt.events); applied.push(...mt.applied);
-  // The road is not safe: outlaws, foragers, floods and snow — and now and then a friend
-  const rd = roadEncounters(state, spanInfo.days);
-  vt.events.push(...rd.events); applied.push(...rd.applied);
-  // Oaths are weighed: tempted lords treat with the enemy in secret, and the desperate turn their cloaks
-  const tr = treacheryTick(state, spanInfo.days);
-  vt.events.push(...tr.events); applied.push(...tr.applied);
-  // Hosts in contact fight; hosts before enemy walls besiege them. The engine fights first and the story is
-  // then told the results, so a battle is never fought twice or narrated away.
-  const wf = resolveWarfare(state, spanInfo.days);
-  vt.events.push(...wf.events); applied.push(...wf.applied);
-  vt.events.push(...fieldService(state, spanInfo.days), ...gatherMusters(state));
-  // The world goes on: the great threads of the story, rising threats, the other houses' lives
-  const wt = worldTick(state, spanInfo.days);
-  vt.events.push(...wt.events); applied.push(...wt.applied);
-  // Who rules where the head of a house cannot: regencies begin, hold and end, and cost the house its vassals' patience
-  const rg = regencyTick(state, spanInfo.days);
-  vt.events.push(...rg.events); applied.push(...rg.applied);
-  // What a war does to the men who fight it and the lords who order it: stress and mistrust, told
-  // only as behaviour — a lord who cannot sleep, a hand that shakes, treason read into a courtesy
-  const ps = psycheTick(state, spanInfo.days);
-  vt.events.push(...ps.events); applied.push(...ps.applied);
-  // lords on the road with their households: feasts, weddings, their liege's hall, the market towns
-  vt.events.push(...retinueTick(state, spanInfo.days).events);
-  vt.events.push(...deliverReplies(state)); // answers of saves from before letters were things (written when sent)
-  // letters that land are read and answered on the day they land; the answers that land are delivered (server/letters.js)
-  const recent = readFacts(id, { from: state.meta.turn - 1 });
-  vt.events.push(...await deliverLetters(state, { provider: cfg.provider, cfg, log: (kind, messages, response) => logLLM(id, kind, messages, response), known: (h) => knownTo(state, recent, h, { limit: 6 }) }).catch((e) => { console.warn('letters:', e.message); return []; }));
-  // promises kept or broken this turn, judged after the marches (a host that reached Moat Cailin has kept its word)
-  vt.events.push(...commitmentsTick(state).filter((f) => f.houses.includes(state.meta.player)).map((f) => asEvent(state, f, { mine: true })));
-  const engineEvents = dayEngineEvents(state, [...deathEvents, ...minds.cards, ...foldAnswers(vt.events)], spanInfo.days);
-  // news travels (engine/knowledge.js): what the house hears of late is told on the day its word arrives, or waits for a
-  // later turn; the word of earlier days that arrives now is told now
-  { const heard = [...holdNews(state, engineEvents), ...newsDue(state)].sort((a, b) => a.day - b.day); engineEvents.length = 0; engineEvents.push(...heard); }
-  for (const a of Object.values(state.parties)) { delete a.bornDay; delete a.landed; }
-  // ── THE STORY'S PART: the model writes the days around the engine's facts, and the rest of the realm's doings
-  const applyCtx = { source: 'Reports & rumours', protectPlayer: true, playerChoseAllegiance, playerDeclaredWar, spanDays: spanInfo.days };
-  let { obj, raw, error, text } = await runSwarm(id, state, cfg, {
-    span, chronicle, turnReason, engineEvents, dateFrom, applyCtx, applied, rejected,
-  });
-  let salvaged = false;
-  if (!obj) {
-    // Unreadable even after repair and a retry: the realm still moves on (the ledger, vassals, seasons and marches
-    // run as always), keeping whatever narrative can be salvaged from the reply.
-    salvaged = true;
-    const sum = extractField(text, 'summary');
-    obj = { summary: sum || 'The ravens bring confused and contradictory reports this season; the maesters could make little sense of them.', events: [], changes: [] };
-    console.warn(`turn ${state.meta.turn + 1}: simulator reply unreadable (${error}); the engine advanced the world alone`);
-  }
-
-  const told = applyChanges(state, obj.changes || [], { ...applyCtx, cause: { type: 'intent', ref: 'story' } });
-  applied.push(...told.applied); rejected.push(...told.rejected);
-  // The seasons turn on their own if the story does not turn them (the white raven is news on the turn's last day)
-  if (!applied.some((a) => a.op === 'season')) {
-    const turned = seasonTick(state, spanInfo.days);
-    if (turned) { engineEvents.push(fact(state, 'season_turned', { title: `A white raven: ${turned.season} has come`, text: turned.text, where: resolvePlaceId('oldtown'), importance: 5, houses: [], day: spanInfo.days }, { data: { season: turned.season }, cause: { type: 'rule', ref: 'seasons' } })); applied.push({ op: 'season', text: `The season turns: ${turned.season.toUpperCase()}` }); }
-  } else { state.world.seasonDays = 0; }
-  // What the player's house has seen of the other hosts this period (fog of war)
-  updateKnowledge(state);
-  postTick(state);
-  // Settle the books for the period (after the story has changed the causes)
-  const econNotes = settle(state, spanInfo.days);
-  // ── THE TELLING: the engine's cards, gathered into stories by their facts, told by the narrator and held to them
-  // (04 §6; server/narrator.js). What cannot be told truly is left in the engine's own plain words.
-  let narration = null;
-  if (narratorOn(cfg)) {
-    // the player is told who is at work, as the swarm told them ('the chronicle is written'), never 'call 3 of 5'
-    const onProgress = tracker(id, 'jump', { agentLabel: AGENT_LABELS.bard });
-    narration = await narrateTurn(state, engineEvents, { provider: cfg.provider, cfg, onProgress, log: (kind, messages, response) => logLLM(id, kind, messages, response), own: (state.facts || []).filter((f) => f.cause?.type === 'order' && f.importance >= 2) })
-      .catch((e) => { console.warn('narrator:', e.message); return null; }).finally(() => done(id));
-    if (narration) { engineEvents.length = 0; engineEvents.push(...narration.cards); }
-  }
-  const events = (Array.isArray(obj.events) ? obj.events : []).map((e, k) => ({
-    day: Math.max(1, Math.min(spanInfo.days, Math.round(Number(e.day) || Math.round(((k + 1) / ((obj.events?.length || 1) + 1)) * spanInfo.days)))),
-    // a stray foreign glyph from the sampler ("Lord Um伯", B-27) is dropped before the chronicle keeps the words
-    title: stripForeignScript(String(e.title || 'Untitled')), text: stripForeignScript(String(e.text || e.description || '')), details: e.details ? stripForeignScript(String(e.details)) : '', where: resolvePlaceId(e.where || e.location) || null,
-    importance: Math.max(1, Math.min(5, Number(e.importance) || 2)), type: String(e.type || 'court'), houses: Array.isArray(e.houses) ? e.houses : [],
-    ...(Number(e.order) >= 1 ? { order: Number(e.order) } : {}),
-    story: true, // the story's telling, not the engine's record: no fact stands behind it (03 §1)
-  }));
-  // the story sometimes writes the same event twice: tell it once
-  for (let k = events.length - 1; k > 0; k--) if (events.slice(0, k).some((x) => x.title === events[k].title && x.text === events[k].text)) events.splice(k, 1);
-  // the chronicle may not tell what the engine did not do (a lord arriving who is still on the road), nor tell again
-  // what the engine has already told (every banner that answered)
-  { const kept = trueToTheRecord(state, events, engineEvents); rejected.push(...kept.dropped); events.length = 0; events.push(...kept.events); }
-  // every order the lord gave has its event, told first on its day
-  events.push(...orderEvents(state, state.orders, [...events, ...engineEvents.filter((e) => e.narrated)]));
-  events.push(...engineEvents);
-  // every event has its day in the period, so the turn can be told in order
-  for (const e of events) if (!e.day) e.day = 1 + Math.floor(random() * spanInfo.days);
+  } finally { done(id); }
+  const days = ran;
+  // every order the lord gave has its card, told first on its day (a story told of it is its card: orders.js)
+  const events = [...orderEvents(state, state.orders, cards.filter((e) => e.narrated)), ...cards];
   events.sort((a, b) => a.day - b.day || (b.orderId ? 1 : 0) - (a.orderId ? 1 : 0));
   for (const a of applied.filter((x) => x.op === 'succession')) {
     const hh = state.houses[a.house]; const f = factById(state, a.fact);
-    const card = { title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === state.meta.player ? 5 : 4, type: 'court', houses: [a.house] };
-    events.unshift(f ? { ...card, fact: f.id, day: asEvent(state, f).day } : card);
+    const card = { title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === p ? 5 : 4, type: 'court', houses: [a.house] };
+    events.unshift(f ? { ...card, fact: f.id, day: Math.max(1, f.day - day0) } : { ...card, day: 1 });
   }
-  const p = state.meta.player;
-  const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
-  // the steward's small notes are the life of your lands, not headlines; only the grave ones are news
-  for (const n of mine.slice(0, 6)) events.push(fact(state, 'ledger', { title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, houses: [n.house], ...(n.important ? {} : { bg: true, mine: true }) }, { cause: { type: 'rule', ref: 'economy' } }));
-  // every event has its day (successions at the start, the steward's accounts at the end) and an id for its pin
-  for (const e of events) if (!e.day) e.day = /^A new head/.test(e.title) ? 1 : spanInfo.days;
-  // the story threads the player follows, kept by the story from turn to turn (not the engine's great matters)
-  if (Array.isArray(obj.threads)) {
-    const now = new Map((state.storyThreads || []).map((t) => [t.title.toLowerCase(), t]));
-    for (const t of obj.threads) {
-      const title = String(t?.title || '').trim().slice(0, 60); if (!title) continue;
-      if (GREAT_NAMES.some((g) => g === title.toLowerCase() || g.split(' ').filter((w) => w.length > 3 && title.toLowerCase().includes(w)).length >= 2)) continue; // the great matters are tracked apart
-      if (/resolved|closed|ended/i.test(String(t.status || ''))) { now.delete(title.toLowerCase()); continue; }
-      now.set(title.toLowerCase(), { title, last: String(t.last || '').slice(0, 200), date: dateStr(state.meta.date) });
-    }
-    state.storyThreads = [...now.values()].slice(-8);
-  }
-  // one date for every view (HUD, feed, reel, pins): day d of the period is the d-th day after it began — and the fact
-  // behind each card falls on the same day as the card
-  events.forEach((e, k) => { e.id = `${state.meta.turn}-${k}`; e.date = dateStr(addDays(state.meta.date, e.day - spanInfo.days)); redate(state, e); });
-  const record = { carried, ...(minds.record.length ? { minds: minds.record } : {}), turn: state.meta.turn, dateFrom, date: dateStr(state.meta.date), span, ...(turnReason ? { until: turnReason } : {}), orders: state.orders, summary: stripForeignScript(String(obj.summary || (narration ? inBrief(narration) : ''))), ...(narration ? { narration: narration.record, ...(narration.meanwhile ? { meanwhile: narration.meanwhile } : {}) } : {}), events, applied, rejected, ms: raw?.ms, usage: raw?.usage, ledger: state.houses[p].ledger.at(-1), ...(salvaged ? { salvaged: true } : {}) };
-  state.history.push(record);
+  // one date for every view (HUD, feed, reel, pins): day d of the turn is the d-th day after it began
+  events.forEach((e, k) => { e.day = Math.max(1, Math.min(days, e.day || 1)); e.id = `${turn}-${k}`; e.date = dateStr(dateOfDay(day0 + e.day)); });
+  const narration = narrated.length ? narrated.reduce((a, r) => ({ stories: a.stories + r.stories, told: a.told + r.told, again: a.again + r.again, plain: a.plain + r.plain, problems: Object.fromEntries([...new Set([...Object.keys(a.problems), ...Object.keys(r.problems)])].map((k) => [k, (a.problems[k] || 0) + (r.problems[k] || 0)])), groups: [...a.groups, ...(r.groups || [])], small: [...a.small, ...(r.small || [])].slice(0, 16), via: r.via, ...(r.key ? { key: r.key } : {}) }), { stories: 0, told: 0, again: 0, plain: 0, problems: {}, groups: [], small: [] }) : null;
+  const summary = [...cards.filter((c) => c.narrated).sort((a, b) => b.importance - a.importance).slice(0, 4).map((c) => c.text), ...meanwhile.slice(0, 1)].join(' ');
+  const record = {
+    carried, ...(mindsRecord.length ? { minds: mindsRecord } : {}), turn, dateFrom, date: dateStr(state.meta.date), span: `${days}d`,
+    ...(stopped ? { until: stopped.text, stopped: stopped.major ? 'major' : 'minor' } : until ? { until } : {}), ...(stopAt ? { stoppedAt: days } : {}),
+    segments, orders: state.orders, summary: stripForeignScript(summary), ...(narration ? { narration } : {}), ...(meanwhile.length ? { meanwhile: meanwhile.join(' ') } : {}),
+    events, applied, rejected, ledger: state.houses[p].ledger.at(-1), ms: { ...ms, total: Date.now() - t0 },
+  };
+  // the clock's timings are the machine's, not the world's: kept in the turn's file, never in the save (a replay is the
+  // same world byte for byte)
+  const { ms: _timings, ...kept } = record; state.history.push(kept);
   // the game reads back only the recent turns (and those the chronicle has not yet taken in); every turn is in turns/
   state.history = state.history.filter((t) => t.turn > state.meta.turn - KEEP_HISTORY || t.turn > (state.consolidatedThrough ?? 0));
   state.orders = [];
-  // If the simulator raised no matter for the player over a moon or more, the realm brings one itself
-  const newDecision = applied.some((a) => a.op === 'decision');
-  const pendingCount = (state.decisions || []).filter((d) => d.status === 'pending').length;
-  if (!newDecision && pendingCount === 0 && random() < 0.75 * Math.min(1, spanInfo.days / 30)) {
-    // the same kind of matter does not come before you twice in quick succession
-    state.plots = state.plots || {}; const seen = state.plots.petitioned = state.plots.petitioned || {};
-    const kindOf = (t) => t.replace(/House [A-Z][\w']*( of [A-Z][\w' ]*)?/g, '').replace(/[^a-z ]/gi, '').trim().slice(0, 40);
-    let pet = null;
-    for (let i = 0; i < 6 && !pet; i++) { const c = realmPetition(state); if (c && state.meta.turn - (seen[kindOf(c.title)] ?? -99) >= 6) pet = c; }
-    if (pet) seen[kindOf(pet.title)] = state.meta.turn;
-    if (pet) { const r = applyChanges(state, [{ op: 'decision', ...pet }]); record.applied.push(...r.applied); }
-  }
-  // Unanswered decisions lapse after a couple of turns — the world moved on without you
-  // a matter waits its days (the King will not wait a moon for his answer), then the world decides without you
-  const today = dayNumber(state.meta.date);
-  for (const d of state.decisions || []) if (d.status === 'pending' && (d.day != null ? today - d.day >= (d.days || 14) : state.meta.turn - d.turn >= 3)) {
-    d.status = 'lapsed';
-    if (d.kind === 'liege_call') applyPetitionFx(state, [{ call: 'refuse' }]); // silence is refusal
-    const fx = (d.options || []).flatMap((o) => o.fx || []);
-    const rising = fx.find((e) => e.rising), rebel = fx.find((e) => e.rebel);
-    if (rising) applyPetitionFx(state, [{ rising: [rising.rising[0], 'ignore'] }]);
-    if (rebel) applyPetitionFx(state, [{ rebel: [rebel.rebel[0], 'release'] }]); // silence: they take themselves out of your realm
-    if (d.lapse) applyPetitionFx(state, d.lapse); // the world decides for you
-  }
-
-  // Where the house stands after all of it, and whether the story has reached its end — ruin, the failing of
-  // the line, a crown of your own, or the Iron Throne. The engine decides this, never the story model.
-  state.standing = standing(state, p);
-  if (!state.outcome) {
-    const oc = outcomeFor(state);
-    if (oc) {
-      state.outcome = { ...oc, turn: state.meta.turn, date: record.date };
-      events.push(fact(state, oc.victory ? 'crowned' : 'house_ended', { title: oc.title, text: oc.text, where: state.houses[p].seat || null, importance: 5, type: 'court', houses: [p], day: spanInfo.days }, { actors: [state.houses[p].lord], data: { outcome: oc.kind, victory: oc.victory }, cause: { type: 'rule', ref: 'standing' } }));
-      state.chronicle.push({ date: record.date, text: `${oc.title} — ${oc.text}` });
-    }
-  }
-
+  closeTurn(state, record, days);
   // Flush chronicle ops + major events into the markdown chronicle
   const notes = [...state.chronicle.map((c) => c.text), ...events.filter((e) => e.importance >= 5).map((e) => `${e.title} — ${e.text}`)];
   if (notes.length) appendChronicle(id, `\n### ${record.date} (turn ${record.turn})\n` + notes.map((n) => `- ${n}`).join('\n') + '\n');
   state.chronicle = [];
-
   // the world holds together (03 §14), checked every turn: a broken invariant is an engine bug, reported, never hidden
   settleWorld(state);
   const broken = validate(state);
@@ -625,23 +437,78 @@ async function advanceWith(id, state, cfg, { span, orders }) {
   // Compress old turns into the chronicle without making the player wait
   const job = maybeConsolidate(id, state, cfg).catch((e) => { console.error('consolidation failed:', e.message); return null; }).finally(() => consolidating.delete(id));
   consolidating.set(id, job);
-  // while the player watches the day unfold, the model reads the unchanging part of the next turn's prompt
-  job.then(() => warmNext(id));
   return { state: loadState(id), turn: record, consolidated: 'background' };
 }
 
-// The model server can resume only from where an earlier request ended. So after each turn it is sent the next
-// turn's prompt up to the point where it starts to change (rules, roster, chronicle, the log of past days): the
-// next turn then reads only what is new — about a third of the prompt — and is two or three times faster.
-const warming = new Map(); // save id -> promise
-const GREAT_NAMES = THREADS.map((t) => t.name.toLowerCase());
-export const STABLE_END = 'THE STATE OF THE REALM NOW';
-function warmNext(id) {
-  const cfg = loadConfig(); if (cfg.provider === 'mock' || cfg.provider === 'replay' || warming.has(id)) return;
-  let msgs; try { const st = loadState(id); msgs = buildJumpPrompt(st, [], '1d', readChronicle(id), cfg); } catch { return; }
-  const cut = msgs[1].content.indexOf(STABLE_END); if (cut < 0) return;
-  const job = chat([msgs[0], { role: 'user', content: msgs[1].content.slice(0, cut) }], { kind: 'warm', maxTokens: 1, thinking: 'off' }).catch(() => null).finally(() => warming.delete(id));
-  warming.set(id, job);
+// The end of a turn: matters raised and lapsed, where the house stands, and whether the story has reached its end
+function closeTurn(state, record, days) {
+  const p = state.meta.player;
+  // If nothing was brought before the lord over a moon or more, the realm brings a matter itself
+  const newDecision = record.applied.some((a) => a.op === 'decision');
+  const pendingCount = (state.decisions || []).filter((d) => d.status === 'pending').length;
+  if (!newDecision && pendingCount === 0 && random() < 0.75 * Math.min(1, days / 30)) {
+    // the same kind of matter does not come before you twice in quick succession
+    state.plots = state.plots || {}; const seen = state.plots.petitioned = state.plots.petitioned || {};
+    const kindOf = (t) => t.replace(/House [A-Z][\w']*( of [A-Z][\w' ]*)?/g, '').replace(/[^a-z ]/gi, '').trim().slice(0, 40);
+    let pet = null;
+    for (let i = 0; i < 6 && !pet; i++) { const c = realmPetition(state); if (c && state.meta.turn - (seen[kindOf(c.title)] ?? -99) >= 6) pet = c; }
+    if (pet) seen[kindOf(pet.title)] = state.meta.turn;
+    if (pet) { const r = applyChanges(state, [{ op: 'decision', ...pet }]); record.applied.push(...r.applied); }
+  }
+  // a matter waits its days (the King will not wait a moon for his answer), then the world decides without you
+  const today = dayNumber(state.meta.date);
+  for (const d of state.decisions || []) if (d.status === 'pending' && (d.day != null ? today - d.day >= (d.days || 14) : state.meta.turn - d.turn >= 3)) {
+    d.status = 'lapsed';
+    if (d.kind === 'liege_call') applyPetitionFx(state, [{ call: 'refuse' }]); // silence is refusal
+    const fx = (d.options || []).flatMap((o) => o.fx || []);
+    const rising = fx.find((e) => e.rising), rebel = fx.find((e) => e.rebel);
+    if (rising) applyPetitionFx(state, [{ rising: [rising.rising[0], 'ignore'] }]);
+    if (rebel) applyPetitionFx(state, [{ rebel: [rebel.rebel[0], 'release'] }]); // silence: they take themselves out of your realm
+    if (d.lapse) applyPetitionFx(state, d.lapse); // the world decides for you
+  }
+  // Where the house stands after all of it, and whether the story has reached its end — ruin, the failing of the line,
+  // a crown of your own, or the Iron Throne. The engine decides this, never a model.
+  state.standing = standing(state, p);
+  if (!state.outcome) {
+    const oc = outcomeFor(state);
+    if (oc) {
+      state.outcome = { ...oc, turn: state.meta.turn, date: record.date };
+      record.events.push({ ...fact(state, oc.victory ? 'crowned' : 'house_ended', { title: oc.title, text: oc.text, where: state.houses[p].seat || null, importance: 5, type: 'court', houses: [p], day: days }, { actors: [state.houses[p].lord], data: { outcome: oc.kind, victory: oc.victory }, cause: { type: 'rule', ref: 'standing' } }), day: days, id: `${state.meta.turn}-${record.events.length}`, date: record.date });
+      state.chronicle.push({ date: record.date, text: `${oc.title} — ${oc.text}` });
+    }
+  }
+}
+
+// What stops a jump (05 §4) on the day it happens, in the world's words — never what is coming. Major: a battle, a
+// siege or a death, capture or birth that touches the lord's house, a foe's host come into sight, a matter brought
+// before the lord; minor (these end only an "until something happens" jump): a letter to the lord, one of the lord's
+// parties arriving, works finished.
+const MAJOR_KINDS = new Set(['battle', 'rout', 'siege_begun', 'storm_assault', 'holding_fell', 'siege_lifted', 'death', 'captured', 'captured_in_battle', 'slain_in_battle', 'birth', 'executed', 'fled', 'vanished', 'war_declared']);
+const MINOR_KINDS = new Set(['letter_arrived', 'arrived', 'works_done', 'landed']);
+function interruptOf(state, cards, eyes) {
+  const p = state.meta.player; const lordId = state.houses[p].lord;
+  const today = dayNumber(state.meta.date);
+  const ours = (f) => f.houses.includes(p) || f.actors.some((a) => state.characters[a]?.house === p);
+  const facts = (state.facts || []).filter((f) => f.day === today);
+  const major = facts.find((f) => MAJOR_KINDS.has(f.kind) && ours(f) && (f.kind !== 'death' || f.importance >= 3));
+  if (major) return { major: true, text: major.title || major.text };
+  const matter = (state.decisions || []).find((d) => d.status === 'pending' && d.day === today);
+  if (matter) return { major: true, text: matter.title };
+  const now = sightedFoes(state); const seen = [...now].find((x) => !eyes.foes.has(x)); eyes.foes = now;
+  if (seen) { const a = state.parties[seen]; return { major: true, text: `${state.houses[a.owner]?.name || 'Enemy'} ${a.men >= 2000 ? 'host' : 'outriders'} sighted near ${placeName(state, nearestHold(state, a.pos))}` }; }
+  const minor = facts.find((f) => MINOR_KINDS.has(f.kind) && (f.kind === 'letter_arrived' ? f.actors.includes(lordId) : f.kind === 'works_done' ? f.houses.includes(p) : state.parties[f.data?.party]?.owner === p || f.actors.includes(lordId)));
+  if (minor) return { major: false, text: minor.title || minor.text };
+  return null;
+}
+// the hosts of the lord's enemies that his house can see now
+function sightedFoes(state) {
+  const p = state.meta.player; const E = eyesOf(state, p);
+  return new Set(forces(state).filter((a) => a.men > 0 && a.owner !== p && atWar(state, p, a.owner) && seesParty(state, p, a, E)).map((a) => a.id));
+}
+function nearestHold(state, pos) {
+  let best = null, d = Infinity;
+  for (const h of Object.values(state.holdings)) { const x = Math.hypot(h.pos[0] - pos[0], h.pos[1] - pos[1]); if (x < d) { d = x; best = h.id; } }
+  return best;
 }
 
 async function maybeConsolidate(id, state, cfg, force = false) {
@@ -773,17 +640,6 @@ async function talkWith(id, state, cfg, charId, message) {
   return { reply, applied, rejected, state, stance: { verdict: stance.verdict, mood: moodWord(stance.mood), patience: stance.mood.patience, full: stance.mood.full, closed: !!stance.mood.closed } };
 }
 
-// The engine's events keep the day they happened; those it cannot date fall where their place's news fell (a host's
-// arrival), else spread through the days
-function dayEngineEvents(state, evs, days) {
-  const arrived = new Map(Object.values(state.parties).filter((a) => a.arriveDay && a.at).map((a) => [a.at, a.arriveDay]));
-  for (const e of evs) {
-    if (e.day) { e.day = Math.max(1, Math.min(days, Math.round(e.day))); continue; }
-    e.day = (e.where && arrived.get(e.where)) || 1 + Math.floor(random() * days);
-    redate(state, e); // its fact (and the heir's, if it tells a death) falls on the same day
-  }
-  return evs.sort((a, b) => a.day - b.day);
-}
 // Sworn lords answering the call on the same day are one piece of news, not a flood of cards
 function foldAnswers(evs) {
   const out = []; const byDay = new Map();
@@ -797,31 +653,6 @@ function foldAnswers(evs) {
     out.push({ ...g[0], day, title: `${g.length} lords answer the call — ${men.toLocaleString('en-GB')} men on the march`, text: `${parts.join('; ')}.`, houses: [...new Set(g.flatMap((e) => e.houses || []))], importance: 3, facts: g.map((e) => e.fact).filter(Boolean) });
   }
   return out;
-}
-// The story model's events are checked against the engine's record before they reach the chronicle:
-//  - a story event that tells again what an engine event already told (a banner answering, a host joining, a crossing)
-//    is dropped: the engine's own card says it with the true numbers;
-//  - a story event that has a lord or host of the player's realm ARRIVE, JOIN or MUSTER when the engine recorded no such
-//    arrival this turn is dropped: the map would contradict it. (docs/gdd/04-ai-system.md §6.4 is the full validator.)
-export function trueToTheRecord(state, events, engineEvents) {
-  const p = state.meta.player; const dropped = [];
-  const realm = Object.values(state.houses).filter((h) => h.id !== p && h.liege === p);
-  const namesOf = (h) => [h.name, state.characters[h.lord]?.name].filter(Boolean).map((n) => n.toLowerCase()).filter((n) => n.length > 3);
-  const engineText = engineEvents.map((e) => `${e.title} ${e.text}`.toLowerCase());
-  const ARRIVE = /\b(arriv\w*|reach(es|ed)?|rides? into|rode into|join(s|ed)?|assembl\w*|mustered|gathered at|gathers at)\b/i;
-  const REPEAT = /\b(answers? the call|raises? \d|delays?|joins?|crosse[sd]|passes the neck)\b/i;
-  const told = (h, re) => engineText.some((x) => namesOf(h).some((n) => x.includes(n)) && re.test(x));
-  const kept = events.filter((e) => {
-    const tl = `${e.title} ${e.text} ${e.details || ''}`.toLowerCase();
-    const named = realm.filter((h) => namesOf(h).some((n) => tl.includes(n)));
-    if (REPEAT.test(e.title) && named.some((h) => told(h, REPEAT))) { dropped.push({ change: { op: 'event', title: e.title }, reason: 'the engine already told it' }); return false; }
-    if (ARRIVE.test(e.title) || ARRIVE.test(e.text)) {
-      const unrecorded = named.filter((h) => !told(h, /(join|reach|arriv|cross)/));
-      if (unrecorded.length) { dropped.push({ change: { op: 'event', title: e.title }, reason: `no such arrival in the record (${unrecorded.map((h) => h.name).join(', ')})` }); return false; }
-    }
-    return true;
-  });
-  return { events: kept, dropped };
 }
 // Answers to letters written from an audience land when their raven does: the letter reaches the inbox, the
 // conversation, and the timeline, and what the writer promised takes effect then — not the day it was asked.
