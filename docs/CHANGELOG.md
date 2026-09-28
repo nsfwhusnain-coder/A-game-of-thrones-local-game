@@ -3,6 +3,20 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — B12: the realm is never quiet for long (WP B12)
+
+- **Things begin.** A hedge knight asks for service, a septon preaches against a lord, two houses quarrel over a mill,
+  outlaws take to a road, a galley goes onto the rocks, reavers burn a fishing village, a fever closes a town — some
+  eighty such beginnings, each happening only where the world fits it (reavers on a coast, wildlings in the North
+  when the free folk stir, sellswords in wartime). In your own lands many of them come before you as a matter to
+  decide, with answers that cost or gain you coin, men, goodwill or order.
+- **No empty weeks.** A whole week in which nothing of note happens anywhere in the realm gets one such beginning.
+- **Settings → A director keeps the realm eventful**: light (the default: at most one new thread a fortnight, chosen by
+  the model), lively, or off (only the empty-week guarantee). The model only chooses which beginning and where, from a
+  list the game offers; the game makes it happen.
+- Owner to verify: play four or five weeks as Stark with the live model; a new thread should appear in the chronicle
+  every fortnight or so, some as matters awaiting your word; `npm run bench` still passes.
+
 ## 2026-09-28 — B11: the days pass a week at a time, and you can stop them (WP B11)
 
 - **The days are lived one by one, and told a week at a time.** The engine now runs each day in turn — the roads, the

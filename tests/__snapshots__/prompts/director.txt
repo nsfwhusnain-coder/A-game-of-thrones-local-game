@@ -1,0 +1,133 @@
+### SYSTEM
+THE WORLD
+The Known World of A Song of Ice and Fire, as George R. R. Martin's books tell it (the television show only where the books are silent). Westeros is a continent some three thousand miles long, the Seven Kingdoms under the Iron Throne in King's Landing: the North (the Starks of Winterfell; a third of the land, cold and thinly peopled), the Iron Islands (the Greyjoys; reavers), the Riverlands (the Tullys of Riverrun), the Vale (the Arryns of the Eyrie, walled by mountains), the Westerlands (the Lannisters of Casterly Rock; gold), the Reach (the Tyrells of Highgarden; the richest land and the largest host), the Stormlands (the Baratheons of Storm's End), Dorne (the Martells of Sunspear; desert, mountains, unbowed) and the Crownlands about King's Landing. Beyond the Wall, seven hundred feet of ice held by the Night's Watch, live the free folk. Across the narrow sea lie the Free Cities and the Dothraki sea.
+
+TIME
+Years are counted from Aegon's Conquest (AC). A year has twelve moons of thirty days; a date is written "the 12th day of the 9th moon, 298 AC". Seasons last years, and the Citadel's white ravens declare them. Only what has happened by today has happened: nobody knows what is to come, and nobody speaks of it.
+
+ROADS, SHIPS AND NEWS
+A host on foot marches fifteen to eighteen miles a day, a mounted host thirty, a lone rider forty, the King's wheelhouse ten; ships make sixty to ninety miles a day. A raven flies some two hundred miles a day between castles that keep them. Nothing moves faster. A lord knows only what has reached him: news is late, partial, sometimes false.
+
+THE ORDER OF THINGS
+The King, then the great lords who are Wardens and Lords Paramount, then their sworn bannermen, then knights and smallfolk. A vassal owes his liege dues and his levies when the banners are called; loyalty is personal, and it can break. Gold dragons are the coin of the realm. People act from their natures and their interests; courtesy is a weapon; a promise is remembered.
+
+TONE
+Grounded, political, human and often cruel, told plainly: people, places and things by their names; the senses before the summary; understatement over speeches. Never a game word (turn, player, morale, stat), never modern speech, never prophecy.
+
+YOUR PART
+You are one part of a chronicle that other parts keep: the numbers, the roads and what befalls are settled elsewhere. Do only what the instructions below ask, from what the dossier tells you, and add nothing it does not.
+
+THE WAY OF THIS REALM
+Everyone acts in their own interest, realistically. Plans that are unprepared or unrealistic often fail or backfire. The realm tends towards the course of the chronicles: people act as they did, unless the world has changed so much that it no longer makes sense.
+
+YOUR TASK
+You are the realm's chronicler of small beginnings. The weeks have been quiet; choose what stirs next, from the hooks offered — the one that best fits the realm as the dossier shows it, and would give its lords something to answer.
+- hooks: one (at most the number asked), each a hook id from HOOKS YOU MAY CHOOSE and one of that hook's own places.
+- why: one short line on why it fits now.
+Prefer hooks that touch what is already happening (a war, a season, a quarrel); vary them — not the same kind as last time.
+
+### USER
+DATE: 1 8th moon, 298 AC. Summer.
+THE LORD: House Stark; the realm is at war.
+OF NOTE LATELY: little.
+HOOKS YOU MAY CHOOSE (id: what it is — its places):
+- tourney_called: … calls a tourney at … — locke (Oldcastle), manderly (White Harbor), mormont (Bear Island), baratheon_se (Storm's End), beesbury (Honeyholt), belmore (Strongsong)
+- melee_quarrel: A quarrel after the melee at … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
+- weirwood_cut: A heart tree cut down near … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), mallister (Seagard), mooton (Maidenpool), piper (Pinkmaiden)
+- pilgrims_throng: Pilgrims throng the roads to … — trant (Gallowsgrey), tully (Riverrun), tyrell (Highgarden), vance (Wayfarer's Rest), velaryon (High Tide), waxley (Wickenden)
+- red_priest: A red priest preaches at … — baratheon (King's Landing), baratheon_se (Storm's End), caswell (Bitterbridge), footly (Tumbleton), goodbrook (Saltpans), hightower (The Hightower)
+- mill_dispute: A quarrel over a mill near … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
+- boundary_stone: A boundary stone moved near … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
+- cattle_raid: Cattle stolen from … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), santagar (Spottswood), selmy (Harvest Hall), smallwood (Acorn Hall)
+- hostage_insult: An insult at the high table of … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
+- reconciliation_feast: … and … feast together — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
+- vassal_grievance: A sworn lord airs his grievances — moat_cailin (Moat Cailin), stark (Winterfell)
+- maester_dies: The maester of … is failing — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
+- comet_rumour: Strange lights over … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
+- old_map: An old map is found at … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
+
+Choose one hook.
+
+### SCHEMA
+{
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "hooks"
+ ],
+ "properties": {
+  "hooks": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "hook",
+     "place",
+     "why"
+    ],
+    "properties": {
+     "hook": {
+      "type": "string",
+      "enum": [
+       "tourney_called",
+       "melee_quarrel",
+       "weirwood_cut",
+       "pilgrims_throng",
+       "red_priest",
+       "mill_dispute",
+       "boundary_stone",
+       "cattle_raid",
+       "hostage_insult",
+       "reconciliation_feast",
+       "vassal_grievance",
+       "maester_dies",
+       "comet_rumour",
+       "old_map"
+      ]
+     },
+     "place": {
+      "type": "string",
+      "enum": [
+       "locke",
+       "manderly",
+       "mormont",
+       "baratheon_se",
+       "beesbury",
+       "belmore",
+       "moat_cailin",
+       "norrey",
+       "blacktyde",
+       "blackwood",
+       "bloody_gate",
+       "mallister",
+       "mooton",
+       "piper",
+       "trant",
+       "tully",
+       "tyrell",
+       "vance",
+       "velaryon",
+       "waxley",
+       "baratheon",
+       "caswell",
+       "footly",
+       "goodbrook",
+       "hightower",
+       "santagar",
+       "selmy",
+       "smallwood",
+       "stark"
+      ]
+     },
+     "why": {
+      "type": "string",
+      "maxLength": 120
+     }
+    }
+   },
+   "minItems": 1,
+   "maxItems": 1
+  }
+ }
+}

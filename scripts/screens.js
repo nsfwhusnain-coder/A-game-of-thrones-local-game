@@ -82,6 +82,24 @@ const SCENARIOS = {
     await api(`/games/${id}/advance`, { span: '14d', orders: [] });
     return { id, focus: state.holdings.stark.pos, dist: 700, page: async (page) => { await page.click('[data-action="undo"]'); await page.waitForSelector('#stop-here'); await page.selectOption('#stop-day', '9'); } };
   },
+  // the Director's hooks (WP B12): weeks pass until a beginning in the lord's own lands comes before him as a matter
+  async hooks() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
+    for (let i = 0; i < 8; i++) {
+      await api(`/games/${id}/advance`, { span: '14d', orders: [] });
+      const s = await api(`/games/${id}`);
+      if ((s.decisions || []).some((d) => d.status === 'pending' && d.hook)) break;
+    }
+    return { id, focus: state.holdings.stark.pos, dist: 900 };
+  },
+  // Settings: the Director's setting beside the narrator's (WP B12)
+  async directorsettings() {
+    return { page: async (page) => {
+      await page.click('#title-screen [data-action="settings"]');
+      await page.waitForSelector('#cfg-director');
+      await page.evaluate(() => document.querySelector('#cfg-director').scrollIntoView({ block: 'center' }));
+    } };
+  },
   // a card's action is a verb, and the receipt is what the lord is told (WP B4): the Stark host marches for Moat Cailin
   async receipt() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });

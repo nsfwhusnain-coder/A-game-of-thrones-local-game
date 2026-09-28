@@ -6,5 +6,6 @@ import mind from './mind.js';
 import narrate from './narrate.js';
 import audience from './audience.js';
 import council from './council.js';
+import director from './director.js';
 
-export const CALLS = { probe, interpret, mind, narrate, audience, council };
+export const CALLS = { probe, interpret, mind, narrate, audience, council, director };

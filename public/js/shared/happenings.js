@@ -21,10 +21,10 @@ function atWar(s, house) {
   return (s.wars || []).some((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].some((x) => x === house || x === r || realmOf(s, x) === r));
 }
 const lordOf = (s, h) => { const c = s.characters[s.houses[h.owner]?.lord]; return c?.alive ? c : null; };
-const inPlayerRealm = (s, h) => { const p = s.meta.player; const o = s.houses[h.owner]; return !!o && (o.id === p || realmOf(s, o.id) === realmOf(s, p) && (o.liege === p || o.id === p)); };
+export const inPlayerRealm = (s, h) => { const p = s.meta.player; const o = s.houses[h.owner]; return !!o && (o.id === p || realmOf(s, o.id) === realmOf(s, p) && (o.liege === p || o.id === p)); };
 
 // Does the world fit this happening at this place?
-function fits(s, tpl, h, lord) {
+export function fits(s, tpl, h, lord) {
   const season = s.world?.season || 'summer';
   for (const w of tpl.when || []) {
     if (w === 'war' && !atWar(s, h.owner)) return false;
@@ -55,7 +55,7 @@ function fits(s, tpl, h, lord) {
 }
 
 // Where a happening may take place
-function placesFor(s, tpl) {
+export function placesFor(s, tpl) {
   const all = Object.values(s.holdings).filter((h) => h.status !== 'ruined' && s.houses[h.owner]);
   const w = tpl.where;
   if (w === 'any') return all.filter((h) => !['essos', 'beyond', 'wall'].includes(h.region));
@@ -95,15 +95,30 @@ function friendOf(s, house) {
 }
 const num = (spec, r) => { const [a, b] = spec.split('-').map(Number); const n = Math.round(a + r() * ((b || a) - a)); return n >= 1000 ? n.toLocaleString('en-US') : String(n); };
 
-function fill(text, ctx, r) {
+export function fill(text, ctx, r) {
   return text.replace(/\{(\w+)(?::([\d-]+))?\}/g, (m, k, spec) => {
     if (k === 'n') return num(spec || '10-100', r);
     const v = ctx[k]; return v == null ? m : typeof v === 'function' ? v() : v;
   });
 }
 // a slot that opens a sentence ("a mason named Gerold lost everything") takes a capital
-const sentenceCase = (t) => t.replace(/(^|[.!?]\s+)([a-z])/g, (m, a, b) => a + b.toUpperCase());
-const variant = (t, r) => { const vs = String(t).split(' || '); return vs[Math.floor(r() * vs.length)]; };
+export const sentenceCase = (t) => t.replace(/(^|[.!?]\s+)([a-z])/g, (m, a, b) => a + b.toUpperCase());
+export const variant = (t, r) => { const vs = String(t).split(' || '); return vs[Math.floor(r() * vs.length)]; };
+
+/** What a template's slots are filled with at a place: its house, its lord, their rival and friend, the region's goods… */
+export function slotsFor(s, h, r = random) {
+  const owner = s.houses[h.owner]; const lord = lordOf(s, h);
+  const rival = rivalOf(s, owner.id); const friend = friendOf(s, owner.id);
+  const ctx = {
+    place: h.name, house: owner.name, lord: lord?.name || `the lord of ${h.name}`, lordshort: lord ? lord.name.split(' ')[0] : 'the lord',
+    region: REGION_LABEL[h.region] || h.region, knight: () => knightOf(s, h, r), smallfolk: () => smallName(r, h.region), smallfolk2: () => smallName(r, h.region),
+    goods: () => pickR(GOODS[h.region] || GOODS.default, r), sea: SEAS[h.region] || 'the narrow sea',
+    rival: rival ? s.houses[rival].name : 'a neighbour', friend: friend ? s.houses[friend].name : 'an old friend',
+    season: s.world?.season || 'summer',
+    liege: s.characters[s.houses[s.meta.player]?.lord]?.name || `House ${s.houses[s.meta.player]?.name}`, liegehouse: `House ${s.houses[s.meta.player]?.name}`,
+  };
+  return { ctx, owner, lord, rival, friend };
+}
 
 /**
  * Play out the small life of the realm for a period.
@@ -138,16 +153,7 @@ export function happenings(state, days, r = random) {
     const { tpl, places } = cands.splice(k, 1)[0];
     const fresh = places.filter((h) => !usedPlaces.has(h.id));
     const h = pickR(fresh.length ? fresh : places, r); usedPlaces.add(h.id);
-    const owner = s.houses[h.owner]; const lord = lordOf(s, h);
-    const rival = rivalOf(s, owner.id); const friend = friendOf(s, owner.id);
-    const ctx = {
-      place: h.name, house: owner.name, lord: lord?.name || `the lord of ${h.name}`, lordshort: lord ? lord.name.split(' ')[0] : 'the lord',
-      region: REGION_LABEL[h.region] || h.region, knight: () => knightOf(s, h, r), smallfolk: () => smallName(r, h.region), smallfolk2: () => smallName(r, h.region),
-      goods: () => pickR(GOODS[h.region] || GOODS.default, r), sea: SEAS[h.region] || 'the narrow sea',
-      rival: rival ? s.houses[rival].name : 'a neighbour', friend: friend ? s.houses[friend].name : 'an old friend',
-      season: s.world?.season || 'summer',
-      liege: s.characters[s.houses[s.meta.player]?.lord]?.name || `House ${s.houses[s.meta.player]?.name}`, liegehouse: `House ${s.houses[s.meta.player]?.name}`,
-    };
+    const { ctx, owner, rival, friend } = slotsFor(s, h, r);
     const title = sentenceCase(fill(variant(tpl.t, r), ctx, r)); const text = sentenceCase(fill(variant(tpl.x, r), ctx, r));
     const mine = inPlayerRealm(s, h);
     const e = fact(s, 'happening', { title, text, where: h.id, importance: tpl.imp || 1, type: tpl.type || 'rumor', houses: [owner.id], bg: true, tpl: tpl.id, day: 1 + Math.floor(r() * days) }, { data: { tpl: tpl.id } });

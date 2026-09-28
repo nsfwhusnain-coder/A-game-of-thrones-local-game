@@ -215,7 +215,8 @@ the unknown. Server-side filtering ([03](03-architecture.md) §10): the client n
 ## 9. Liveliness guarantees (Q4)
 
 > *Points 1, 2 and 4 hold from WP B7* (`server/minds.js`; D-026): three lords act each week, one far from the player; the
-> movements are the minds' own and the retinues'; no card says nothing happened. Point 3 (hooks) is the Director's (B12).
+> movements are the minds' own and the retinues'; no card says nothing happened. *Point 3 holds from WP B12*
+> (`server/director.js` `thinWeek`; `tests/director.test.js`): a whole week with fewer than three facts of note gets a hook.
 
 Per 7-day segment, the engine ensures:
 

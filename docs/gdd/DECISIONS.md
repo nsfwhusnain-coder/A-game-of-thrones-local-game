@@ -612,5 +612,23 @@ every day. **After the fact**, the undo window offers "Stop the last turn sooner
 (`POST /api/games/:id/stop {day}`, `game.stopHere`): the turn is undone to its snapshot and played again with the same
 orders and the same minds' recorded choices (a live model's choices are reused, not asked again) as far as that day.
 The dice are the save's and the day loop runs a day at a time, so the days up to the stop come out fact for fact as
-they did (`tests/jump.test.js`); the ledger of the last, shortened week is settled for its shorter span. Ironman
+they did (`tests/jump.test.js`); what closes a turn — the ledger of the last, shortened week, and a matter the realm may raise as the turn ends — falls on the stop day. Ironman
 chronicles cannot be stopped after the fact.
+
+## D-040 · 2026-09-28 · The Director chooses a hook and a place from lists; the engine does the rest (WP B12)
+
+**What.** 04 §7's schema asked for a hook id and "params (enums)". The params are reduced to one: the **place**, chosen
+from the places the world fits for that hook (at most six: half in the lord's region, half elsewhere, turned by the
+day so the list varies). Everything else a hook names — the house, its lord, its rival and friend, a knight, a
+smallfolk name, the region's goods — is filled by the engine from that place (`shared/happenings.js` `slotsFor`), so the
+model cannot name what does not exist. The Director is asked on **a week's first day** whenever its cadence has come
+round (Settings: light = at most one hook a fortnight, the default; lively = up to two a week; off), not only in the
+first segment of a jump. Whatever the setting, a **whole** week that ends with fewer than three facts of importance ≥ 2
+anywhere in the realm gets one hook of the dice's choosing on its last day (09 §9 point 3); a week cut short by an
+interrupt or a stop is not judged, so a stop never changes the days the lord watched. A hook is a fact of the new kind
+`hook` (local; the news travels as any other), small effects on the place (prosperity, unrest), on the house's
+relations with its rival or friend and on the realm's threats, and, when the place is in the lord's own realm and the
+hook has one, a **matter** for his word whose answers use the matters' own effects. The mock's choice, like a model's,
+draws nothing from the save's dice (its own generator is seeded by the save and the day), and the turn records the
+hooks it had, so *Stop here* replays them rather than asking again. No hook kills anyone or names a canon-locked
+person; the catalogue's texts are original and say nothing of what comes after 298 AC.

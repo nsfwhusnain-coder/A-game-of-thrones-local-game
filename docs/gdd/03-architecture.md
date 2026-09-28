@@ -433,7 +433,7 @@ in brackets; the engine raises importance by +1 when the player's house or kin i
 - **Court & realm** — `feast` [2], `tourney` [3], `tourney_result` [3], `judgement` [2], `petition` [2],
   `tax_changed` [2], `works_begun` [1], `works_done` [2], `unrest_rising` [3], `rising` [4], `famine` [4],
   `plague` [4], `season_turned` [5], `custom_created` [2].
-- **Ambient** — `happening` [1] (flavour from `data/happenings.js`), `behaviour` [1] (psyche lines), `weather` [1].
+- **Ambient** — `happening` [1] (flavour from `data/happenings.js`), `behaviour` [1] (psyche lines), `weather` [1]. `hook` [2] (a story hook the Director raised: `data/hooks.js`; B12).
 
 > *Implemented in WP B3* (`engine/facts/kinds.js`; [DECISIONS.md#D-013](DECISIONS.md)): every kind above, with its card
 > type and default scope; templates (pronouns from `shared/people.js`) for the kinds the engine phrases from data alone.

@@ -1,0 +1,9 @@
+{
+ "kind": "director",
+ "note": "A hook the world fits, at one of its own places.",
+ "reply": "{\"hooks\": [{\"hook\": \"cattle_raid\", \"place\": \"norrey\", \"why\": \"The banners are called; old grudges ride with them.\"}]}",
+ "expect": "accept",
+ "canonical": {
+  "hooks.0.place": "norrey"
+ }
+}

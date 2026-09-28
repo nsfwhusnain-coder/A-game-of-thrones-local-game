@@ -127,6 +127,7 @@ export const KINDS = {
   canon_beat: K(4, 'court'),        // a great matter of the story (shared/plots.js) — its own words, its thread
   // ── Ambient ──
   happening: K(1, 'court', 'local'),
+  hook: K(2, 'court', 'local'), // a story hook the Director raised (engine/director.js)
   behaviour: K(1, 'court', 'local'),
   weather: K(1, 'disaster', 'local'),
   // ── History ──
