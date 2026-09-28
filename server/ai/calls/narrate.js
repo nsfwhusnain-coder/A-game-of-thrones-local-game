@@ -11,13 +11,17 @@ import { dayNumber } from '../../../public/js/engine/time.js';
 import { emit } from '../../../public/js/engine/facts/log.js';
 import { clusterFacts } from '../../../public/js/engine/facts/cluster.js';
 import { checkEvent, storyWorld, problemText, sentencesOf } from '../validate/narration.js';
+import { VOICE, HEADLINE, MATURITY, exampleFor } from '../../../public/data/style.js';
 
-export const INSTRUCTIONS = `YOUR TASK
+/** The narrator's instructions (10 §8, data/style.js), with a few-shot example of a house other than the player's. */
+export function instructionsFor(house, maturity = 'book') {
+  const ex = exampleFor(house);
+  return `YOUR TASK
 You are the chronicler. The stories below have already happened; tell each of them once, as George R. R. Martin would, and add nothing that is not in them.
 - One event per story, in the order given; "story" is its label (S1, S2…).
-- headline: a herald's cry about a person, at most 70 letters ("Lord Umber marches the banners south"; never "The March").
+- headline: ${HEADLINE}.
 - line: one plain sentence of what happened, for the folded card.
-- scene: two to five sentences behind ONE person's eyes (the POV given, or a witness of the place): the senses before the summary, a line or two of speech in character, understatement, ending on what it will cost or who noticed. Past tense, third person.
+- scene: two to five sentences. ${VOICE.join(' ')}
 - pov: whose eyes, by name ("Jon Umber", "a serving girl at the Twins").
 - meanwhile: ONE sentence for all the small happenings listed under MEANWHILE, or "" if none are listed.
 KEEP TO THE STORIES
@@ -27,12 +31,15 @@ KEEP TO THE STORIES
 - Only what has happened by today has happened: no later titles, no foreshadowing, no prophecy.
 - The player's house is written like any other, by name, in the third person; never decide what its lord feels.
 - Never a game word: morale, unrest, prosperity, turn, day 3, player, stat. No modern idiom, no "tapestry", no "winds of change", no moral.
+- ${MATURITY[maturity] || MATURITY.book}
 
 AN EXAMPLE (another house, another day)
-headline: Lord Tarly hangs the Dornish raiders at the Mander ford
-line: Randyll Tarly caught three hundred raiders at the ford at dawn and hanged their captain from the mill.
-scene: The mist had not lifted when the first of them came up out of the water, and Tarly's bowmen were waiting in the reeds where they had lain two nights. Afterwards the miller's boy counted the horses. "Forty-one," he told his father, who told him to stop counting and fetch the rope. Lord Tarly did not stay to watch; he never did.
-pov: the miller's boy`;
+headline: ${ex.headline}
+line: ${ex.line}
+scene: ${ex.scene}
+pov: ${ex.pov}`;
+}
+export const INSTRUCTIONS = instructionsFor('stark');
 
 const clip = (s, n) => { const t = String(s || '').replace(/\s+/g, ' ').trim(); if (t.length <= n) return t; const cut = t.slice(0, n - 1); return (cut.slice(0, Math.max(cut.lastIndexOf(' '), n * 0.6)) || cut).replace(/[,;:—–-]+$/, '') + '…'; };
 const ord = (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'}`;
@@ -90,7 +97,7 @@ export default {
     });
   },
   prompt: (ctx) => [
-    { role: 'system', content: system(null, INSTRUCTIONS) },
+    { role: 'system', content: system(null, instructionsFor(ctx.state.meta.player, ctx.state.meta.settings?.maturity)) },
     { role: 'user', content: `${ctx.dossier}\nTell the stories.` },
   ],
   // every event held to its story; the meanwhile to its happenings. Problems name their story ("S2: names — …") so the

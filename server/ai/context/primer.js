@@ -1,3 +1,4 @@
+import { MATURITY } from '../../../public/data/style.js';
 // The static primer (docs/gdd/04-ai-system.md §2.1): the first bytes of every call's system message, identical across
 // calls and turns so llama.cpp keeps it in its prompt cache and reads only what is new. It says what the world is,
 // how time, travel and news work, and the tone — never an id, an operation or a word about JSON. Each call's own
@@ -39,7 +40,7 @@ const GRAVITY_TEXT = {
 export function settingsText(state) {
   const s = state?.meta?.settings || {}; const house = state?.houses?.[state?.meta?.player]?.name || 'the player';
   const d = DIFFICULTY_TEXT[s.difficulty] || DIFFICULTY_TEXT.normal; const g = GRAVITY_TEXT[s.canonGravity] || GRAVITY_TEXT.canon;
-  return `THE WAY OF THIS REALM\n${d(house)} ${g}`;
+  return `THE WAY OF THIS REALM\n${d(house)} ${g}\nMATURE CONTENT: ${MATURITY[s.maturity] || MATURITY.book}`;
 }
 /** The system message: primer, the game's settings, then the call's own instructions. */
 export const system = (state, instructions) => [PRIMER, state ? settingsText(state) : null, instructions].filter(Boolean).join('\n\n');
