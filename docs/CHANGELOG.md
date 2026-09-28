@@ -3,6 +3,20 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — D3: the matters catalogue — sixty-two kinds of business before the lord
+
+- **Far more comes before you.** Besides the old handful of petitions, the realm, other lords and your own household
+  now bring their business: a poacher in your wood, a deserter from the Wall, a bastard with a letter, a toll on a
+  bridge, a knight's inheritance; alliances, marriages and trade proposed; demands for your submission, a captive's
+  release, a debt or a hostage; summons to court, feasts, weddings, tourneys; a ransom for your own people; an enemy's
+  vassal who would change sides; your steward's famine warning, your maester's winter warning, a poisoner in the
+  kitchens, an heir who wants to fight, a daughter who refuses her match.
+- **Each is raised only when the world has a place for it** (no ransom without a captive, no submission without a war),
+  and never the same kind twice in six turns.
+- **No invented matters.** Every matter now comes from the catalogue; the model cannot put a made-up decision before you
+  (the old "Death of the Lion" kind).
+- Owner to verify: play a few moons as Tully and see the variety of matters; each answer's hint says what it costs.
+
 ## 2026-09-28 — D2: the full canon — sixty beats of the books, 298–300 AC
 
 - **The story of the books now runs from the King's progress to the white ravens of winter**: the wolf and the lion on

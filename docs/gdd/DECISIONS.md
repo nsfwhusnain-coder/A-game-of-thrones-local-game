@@ -894,3 +894,20 @@ ransoms, `embargo`) and the price index of §6.3.
 - **Q9 measure:** a beat counts as fired only when it fired as written (an alternate is "bent", not fired); a beat is due
   once its window has closed or it has happened. `scripts/canon.js` runs it; one house runs in CI, three nightly.
 
+## D-053 · 2026-09-28 · The matters catalogue: templates with `raise`, and an op that refuses the rest (WP D3)
+
+- **One file, `public/data/matters.js`.** A template is `{ group, gist, raise(ctx) }`; `raise` returns the matter (title,
+  text, who asks, where, two to four answers with hints and `fx`, the silence's `lapse`) or null when the world has no
+  place for it. `ctx` (`matterContext` in `shared/petitions.js`) gives it the house's vassals, lands, friends, neutrals,
+  rivals, foes, children, household, captives and treasury. The matters raised where they happen (vassals, the war, the
+  beats, the Director's opportunities) are catalogued by id and gist only; their words stay beside the rules that raise them.
+- **The `decision` op requires `matter`**: a catalogue id or `hook:<id>`. There is no path left for words the engine
+  did not write to become a matter; a matter records its template, and the "not twice in six turns" rule now keys on it
+  (before, it keyed on a mangled title).
+- **Drawn, not scripted**: when a moon passes with nothing before the lord, one template the world has a place for is
+  drawn at random among the realm's, the lords' and the household's; a lord at war is asked for peace or submission, a
+  lord with captives is asked to free them, a lord in autumn is warned of winter.
+- **Fewer than the GDD's list, by design**: the GDD's canon matters that belong to beats not yet written as matters
+  (Renly's offer, the Iron Price, the kingsmoot, Jon's future, Lady, the debt, Jeyne, Karstark, Tyrion's trial) arrive
+  with them; `terms_offered` stays a verb (`offer_terms`), not a matter.
+

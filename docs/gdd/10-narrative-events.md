@@ -245,6 +245,14 @@ Catalogue (`data/matters.js`, from `petitions.js` + beats). Template ids with on
 Each template specifies: conditions, who asks, where (the pin), options with `fx` and hints, `days`, lapse, and the
 facts it produces. Pins on the map (existing `pins.js`) show pending Matters as sealed letters.
 
+*Implemented (WP D3):* `public/data/matters.js` — 62 templates (20 realm, 16 lords', 8 household, and the 18 raised where
+they happen: the Director's opportunities, the vassals' call, rising and defiance, the peace offered, and the beats'
+ten), with the Director's 26 hook matters (`hook:<id>`, `data/hooks.js`) 88 in all. The `decision` op refuses a matter
+that names no template (B-28 closed). Templates of this list not yet written (`terms_offered` as a matter — a siege's
+terms are a verb; `renly_offer`, `stannis_or_joffrey`, `the_iron_price`, `kingsmoot`, `jon_future`, `lady`, `the_debt`,
+`frey_terms` beyond `twins`, `jeyne`, `karstark`, `tyrions_trial`) come with the beats that raise them.
+`tests/matters.test.js` renders and resolves every one.
+
 ## 7. Hooks (the Director's catalogue)
 
 `data/hooks.js`, ~80 entries, each `{ id, when(s), params: {types}, creates: [intents|facts|matters|parties], cooldown,

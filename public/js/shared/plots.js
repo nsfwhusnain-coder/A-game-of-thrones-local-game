@@ -154,7 +154,7 @@ function opportunity(s, raidAt) {
   if (child) {
     const heir = s.characters[child.lord];
     opts.push({
-      id: 'wardship_' + child.id, title: `The wardship of ${heir.name}`, from: null,
+      id: 'wardship_' + child.id, matter: 'wardship', title: `The wardship of ${heir.name}`, from: null,
       text: `${heir.name} is ${pronouns(heir).lord} of ${child.name} at ${heir.age}. Someone must guard the child and ${pronouns(heir).his} lands until ${pronouns(heir).he} comes of age — and whoever holds the wardship holds the house.`,
       options: [
         { label: 'Take the child into your household', hint: 'A loyal house for a generation', fx: [{ rel: [child.id, 15] }, { loyalty: [heir.id, 20] }, { ops: [{ op: 'character', id: heir.id, loc: me.seat, note: `A ward in the household of ${pronouns(heir).his} liege.` }] }] },
@@ -204,7 +204,7 @@ export function worldTick(state, days) {
   const pending = (s.decisions || []).filter((d) => d.status === 'pending').length;
   if (!decisions.length && pending < 2 && random() < 0.6 * Math.min(1, days / 30)) { const o = opportunity(s, th.raid); if (o) decisions.push(o); }
   for (const d of decisions.slice(0, 2)) {
-    const r = applyChanges(s, [{ op: 'decision', ...d }]); applied.push(...r.applied);
+    const r = applyChanges(s, [{ op: 'decision', matter: d.matter || d.id, ...d }]); applied.push(...r.applied);
     const made = s.decisions.at(-1); if (made && d.lapse) made.lapse = d.lapse; if (made && d.from && s.characters[d.from]) made.from = d.from;
   }
   return { events, applied };

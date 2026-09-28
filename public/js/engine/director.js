@@ -107,7 +107,7 @@ export function applyHook(state, id, place, { day = 1, r = random, why = '' } = 
     const ids = { owner: owner.id, place: h.id, lord: lord?.id || null, rival: rival || null };
     const m = tpl.matter;
     const options = m.options.map((o) => ({ label: say(o.label), hint: say(o.hint || ''), fx: bind(o.fx, ids) }));
-    const r2 = applyChanges(s, [{ op: 'decision', title: say(m.title), text: say(m.text), from: bearer(s, owner, lord), where: h.id, options, days: 14 }], { source: 'The realm' });
+    const r2 = applyChanges(s, [{ op: 'decision', matter: `hook:${id}`, title: say(m.title), text: say(m.text), from: bearer(s, owner, lord), where: h.id, options, days: 14 }], { source: 'The realm' });
     applied.push(...r2.applied);
     matter = s.decisions?.at(-1) || null;
     if (matter && m.lapse) matter.lapse = bind(m.lapse, ids);
