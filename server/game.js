@@ -411,7 +411,8 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
         if (n) { told = n.cards; narrated.push(n.record); if (n.meanwhile) meanwhile.push(segMeanwhile = n.meanwhile); }
       }
       clock('narrate', tn);
-      for (const c of told) if (!c.day) c.day = ran;
+      // a week tells only its own days: a story of late news is told on the day the word came, not the day it happened
+      for (const c of told) c.day = Math.max(ran - d + 1, Math.min(ran, c.day || ran));
       cards.push(...told);
       const segment = { index: seg, days: [ran - d + 1, ran], from: dateStr(dateOfDay(segFrom)), to: dateStr(state.meta.date), events: told.length };
       segments.push(segment);

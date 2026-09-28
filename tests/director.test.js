@@ -69,7 +69,7 @@ test('a hook in the lord\'s lands is a fact and a matter; elsewhere a fact only;
 });
 
 test('no whole week is empty: each has three facts of note in the realm, or a hook (09 §9 point 3)', async () => {
-  const { id } = game.newGame('agot_298', 'martell');
+  const { id } = game.newGame('agot_298', 'martell', { seed: 298 });
   const cfg = game.loadState(id);
   for (let i = 0; i < 6; i++) await game.advance(id, { span: '7d' });
   const facts = fs.readFileSync(path.join(game.SAVES, id, 'facts.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
@@ -82,7 +82,7 @@ test('no whole week is empty: each has three facts of note in the realm, or a ho
 });
 
 test('the Director on the mock: a hook on a week\'s first day at most once a fortnight, recorded and kept from the player', async () => {
-  const { id } = game.newGame('agot_298', 'stark');
+  const { id } = game.newGame('agot_298', 'stark', { seed: 298 });
   const r = await game.advance(id, { span: '21d' });
   const starts = (r.turn.hooks || []).filter((h) => h.when === 'start');
   assert.ok(starts.length && starts.every((h) => h.via === 'mock' && HOOK_BY_ID[h.hook]), JSON.stringify(r.turn.hooks));
