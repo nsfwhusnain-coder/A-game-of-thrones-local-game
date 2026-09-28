@@ -114,7 +114,7 @@ test('changes record their facts, once: an op the caller has told itself is not 
 });
 
 test('a turn: every engine card is backed by a fact; the facts go to facts.jsonl, the record to turns/', async () => {
-  const { id, state } = game.newGame('agot_298', 'stark');
+  const { id, state } = game.newGame('agot_298', 'stark', { seed: 298 });
   const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
   game.act(id, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 3000 });
   game.setOrders(id, [{ text: 'Send Jon Snow to Castle Black.' }]);
@@ -144,7 +144,7 @@ test('a turn: every engine card is backed by a fact; the facts go to facts.jsonl
 });
 
 test('undo three turns: the world, the chronicle and the logs are as they were; the same turns come out the same', async () => {
-  const { id, state } = game.newGame('agot_298', 'stark');
+  const { id, state } = game.newGame('agot_298', 'stark', { seed: 298 });
   const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
   game.act(id, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 2000 });
   const spans = ['5d', '8d', '6d', '9d', '4d'];
@@ -171,7 +171,7 @@ test('undo three turns: the world, the chronicle and the logs are as they were; 
 });
 
 test('snapshots: only the last ten are kept', async () => {
-  const { id } = game.newGame('agot_298', 'tully');
+  const { id } = game.newGame('agot_298', 'tully', { seed: 298 });
   for (let i = 0; i < 12; i++) await game.advance(id, { span: '1d' });
   const snaps = fs.readdirSync(file(id, 'snapshots'));
   assert.equal(snaps.length, 10); assert.equal(snaps[0], '000003.json.gz');
@@ -180,7 +180,7 @@ test('snapshots: only the last ten are kept', async () => {
 });
 
 test('ironman: no snapshots, no undo', async () => {
-  const { id, state } = game.newGame('agot_298', 'arryn', { ironman: true });
+  const { id, state } = game.newGame('agot_298', 'arryn', { ironman: true, seed: 298 });
   assert.equal(state.meta.settings.ironman, true);
   await game.advance(id, { span: '3d' });
   assert.ok(!fs.existsSync(file(id, 'snapshots')) || !fs.readdirSync(file(id, 'snapshots')).length);
@@ -189,7 +189,7 @@ test('ironman: no snapshots, no undo', async () => {
 });
 
 test('a save from before snapshots: its one undo point still works, and its history goes to turns/', async () => {
-  const { id } = game.newGame('agot_298', 'martell');
+  const { id } = game.newGame('agot_298', 'martell', { seed: 298 });
   await game.advance(id, { span: '2d' });
   const before = fs.readFileSync(file(id, 'state.json'), 'utf8');
   // make it look old: an undo point of the old kind, no snapshots, no turn files

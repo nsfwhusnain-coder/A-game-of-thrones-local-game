@@ -204,7 +204,7 @@ test('no-feasts-at-war: a lord called to the banners rides to no feast while the
 
 // ── The King's progress (15 §2 kings-progress, B-06) ────────────────────────────────────────────────────────────────
 test('kings-progress: the court rides in the progress along the kingsroad, and is at Winterfell only when it arrives', async () => {
-  const { id } = game.newGame('agot_298', 'tyrell');
+  const { id } = game.newGame('agot_298', 'tyrell', { seed: 298 });
   let arrivedTurn = null;
   for (let t = 1; t <= 12 && arrivedTurn == null; t++) {
     const r = await game.advance(id, { span: '7d' });

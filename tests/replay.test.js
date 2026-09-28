@@ -36,7 +36,7 @@ test('a seed makes the same world', () => {
 });
 
 test('a turn replayed from the same save is byte-identical (mock provider)', async () => {
-  const { id, state } = game.newGame('agot_298', 'stark');
+  const { id, state } = game.newGame('agot_298', 'stark', { seed: 298 });
   const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
   game.act(id, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 3000 });
   game.setOrders(id, [{ text: 'Send Ser Rodrik Cassel with fifty men to White Harbor.' }, { text: 'Raise 500 levies at Winterfell.' }]);

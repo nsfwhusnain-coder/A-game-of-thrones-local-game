@@ -14,7 +14,7 @@ const game = await import('../server/game.js');
 test.after(() => fs.rmSync(process.env.WC_SAVES, { recursive: true, force: true }));
 
 test('the banners join the host wherever it has gone: one host, no camp left at the muster', async () => {
-  const { id, state } = game.newGame('agot_298', 'stark');
+  const { id, state } = game.newGame('agot_298', 'stark', { seed: 298 });
   const vassals = Object.values(state.houses).filter((h) => h.liege === 'stark').map((h) => h.id);
   game.act(id, { kind: 'call_banners', vassals, at: 'stark', ownLevies: 4000 });
   let s = game.loadState(id);

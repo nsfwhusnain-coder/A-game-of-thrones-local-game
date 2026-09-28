@@ -37,7 +37,7 @@ test('a fortnight is lived in weeks: each is told as it ends, and the turn recor
 });
 
 test('the lord stops the days while they pass: the turn ends on his day', async () => {
-  const { id } = gathering('lannister');
+  const { id } = gathering('lannister', 3);
   const r = await game.advance(id, { span: '14d', stopWanted: () => 3 });
   assert.equal(r.turn.span, '3d');
   assert.equal(r.turn.until, 'the lord stopped the days');
@@ -66,7 +66,7 @@ test('stop here: the turn played again to day 9 has the same days 1–9, fact fo
 });
 
 test('an ironman chronicle cannot be stopped after the fact', async () => {
-  const { id } = game.newGame('agot_298', 'tully', { ironman: true });
+  const { id } = game.newGame('agot_298', 'tully', { ironman: true, seed: 298 });
   await game.advance(id, { span: '5d' });
   await assert.rejects(game.stopHere(id, 2), /ironman/);
 });

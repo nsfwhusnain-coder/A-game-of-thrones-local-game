@@ -66,7 +66,7 @@ test('who carries them: own ships, a few boats making trips, the realm\'s ships 
 });
 
 test('islands-need-ships: Crowl and Mormont answer the call — they wait, sail and land; they never walk the sea or pay the Wall', async () => {
-  const { id } = game.newGame('agot_298', 'stark');
+  const { id } = game.newGame('agot_298', 'stark', { seed: 298 });
   const file = path.join(game.SAVES, id, 'state.json');
   const s0 = JSON.parse(fs.readFileSync(file, 'utf8'));
   const home = {};
