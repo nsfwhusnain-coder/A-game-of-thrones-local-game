@@ -9,6 +9,7 @@ import { atWar } from './shared/warfare.js';
 import { statusText, ref } from './engine/parties.js';
 import { CHARACTERS } from '../data/characters.js';
 import { briefFor } from '../data/briefs.js';
+import { LEGENDS } from './map3d/modes.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
 import { app, $, $$, esc, fmt, api, doVerb, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, answerOrder, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
@@ -411,7 +412,13 @@ document.addEventListener('click', (e) => {
   const act = t.closest('[data-action]'); if (act) handleAction(act.dataset.action, act);
 });
 $('#drawer-tabs').addEventListener('click', (e) => { const tab = e.target.closest('[data-tab]')?.dataset.tab; if (tab) setDrawer(tab); });
-$('#mapmodes').onclick = (e) => { const b0 = e.target.closest('[data-mode]'); const m = b0?.dataset.mode; if (!m) return; const box = $('#mapmodes'); if (!box.classList.contains('open')) { box.classList.add('open'); return; } box.classList.remove('open'); $$('#mapmodes button').forEach((b) => b.classList.toggle('active', b.dataset.mode === m)); app.map.setMode(m); };
+$('#mapmodes').onclick = (e) => { const b0 = e.target.closest('[data-mode]'); const m = b0?.dataset.mode; if (!m) return; const box = $('#mapmodes'); if (!box.classList.contains('open')) { box.classList.add('open'); return; } box.classList.remove('open'); $$('#mapmodes button').forEach((b) => b.classList.toggle('active', b.dataset.mode === m)); app.map.setMode(m); showLegend(m); };
+// the map's key for the mode (map3d/modes.js LEGENDS): swatches, or a line of prose; none for Realms
+function showLegend(m) {
+  const L = LEGENDS[m]; const el = $('#map-legend'); if (!el) return;
+  el.classList.toggle('hidden', !L || m === 'political');
+  if (L) el.innerHTML = `<div class="ml-t">${esc(L.title)}</div>${L.keys ? L.keys.map(([k, c]) => `<div class="ml-k"><span class="ml-sw" style="background:rgb(${c.join(',')})"></span>${esc(k)}</div>`).join('') : `<div class="ml-p">${esc(L.text)}</div>`}`;
+}
 $('#modal').onclick = (e) => { if (e.target.id === 'modal') closeModal(); };
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (!$('#modal').classList.contains('hidden')) return closeModal(); if (app.picking) { app.picking = null; $('#pick-hint').classList.add('hidden'); return; } if (app.sheet) return closeSheet(); if (app.win) return closeWindow(); }
