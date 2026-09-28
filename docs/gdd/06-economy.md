@@ -127,7 +127,7 @@ and every lender's opinion of Lannister falls. Other Westerlands mines (Castamer
 normal holdings' `mines` and can be seized by raiders (the Greatjon did, in the books).
 
 *(C1a, implemented: `engine/economy/ledger.js` (§4 `distributePopulation`, §5.1 `holdingRevenue`, the Crown's loans)
-and `data/balance.js ECONOMY`; `npm run balance` lands every great house within 3 % of §5.2 except Stark +10 %;
+and `data/balance.js ECONOMY`; `npm run balance` lands every great house within 11 % of §5.2 (Tyrell +11 %, Stark +10 %, the rest within 3 %);
 DECISIONS D-043.)*
 
 ## 6. Expenses and prices
