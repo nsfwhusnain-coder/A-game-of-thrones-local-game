@@ -9,6 +9,7 @@
 import { isFemale } from './people.js';
 import { placeOf } from '../engine/parties.js';
 import { fact } from '../engine/facts/log.js';
+import { CANON_REGENTS, NOT_REGENT } from '../../data/fates.js';
 
 export const MAJORITY = 16; // the age at which a lord is held fit to rule in his own right
 
@@ -24,34 +25,38 @@ export function incapacity(state, houseId) {
   return null;
 }
 
-const adult = (c) => c && c.alive && (c.age ?? 30) >= 18 && !/imprison|captive|dead|exiled/i.test(c.status || '');
+const adult = (c) => c && c.alive && (c.age ?? 30) >= 18 && !/imprison|captive|dead|exiled|missing/i.test(c.status || '') && !NOT_REGENT[c.id] && !c.outlaw;
 const skill = (c) => (c.skills || []).slice(0, 3).reduce((a, b) => a + b, 0);
 
 /**
- * Who should hold the regency, in the order Westeros would expect:
- *   1. the lord's mother (the widow of the late lord), if she lives and is of the house
+ * Who should hold the regency, in the order Westeros would expect (08 §8; B-23):
+ *   0. the regent the books name (Lysa for her son, Cersei for hers), if she lives and is free
+ *   1. the lord's mother — the late lord's widow, whatever house she was born to
  *   2. an adult full sibling of the young lord
  *   3. an adult uncle or aunt (a sibling of either parent)
- *   4. the most capable adult of the house
- *   5. the castellan, steward or maester of the seat — a sworn man, not a claimant
- * Returns a character or null.
+ *   4. the castellan, steward, maester or captain of the seat — a sworn man, not a claimant
+ *   5. the most capable adult of the house
+ * Never another branch's man or an outlaw (Gerold Dayne of High Hermitage for his cousin at Starfall). Returns a
+ * character or null.
  */
 export function chooseRegent(state, houseId) {
   const h = state.houses[houseId]; const lord = h?.lord && state.characters[h.lord];
   if (!lord) return null;
   const all = Object.values(state.characters);
   const ofHouse = (c) => c.house === houseId;
+  const named = state.characters[CANON_REGENTS[lord.id]];
+  if (adult(named)) return named;
   const mother = lord.mother && state.characters[lord.mother];
-  if (adult(mother) && ofHouse(mother)) return mother;
+  if (adult(mother) && (ofHouse(mother) || (lord.father && mother.spouse === lord.father))) return mother;
   const sibs = all.filter((c) => c.id !== lord.id && adult(c) && ofHouse(c) && ((lord.father && c.father === lord.father) || (lord.mother && c.mother === lord.mother)));
   if (sibs.length) return sibs.sort((a, b) => (a.born ?? 9999) - (b.born ?? 9999))[0];
   const parents = [lord.father, lord.mother].filter(Boolean).map((id) => state.characters[id]).filter(Boolean);
   const uncles = all.filter((c) => adult(c) && ofHouse(c) && parents.some((p) => (p.father && c.father === p.father) || (p.mother && c.mother === p.mother)));
   if (uncles.length) return uncles.sort((a, b) => skill(b) - skill(a))[0];
+  const sworn = all.filter((c) => adult(c) && placeOf(state, c) === h.seat && (ofHouse(c) || !state.houses[c.house]?.lord || c.house === houseId) && (c.roles || []).some((r) => ['castellan', 'steward', 'maester', 'commander', 'captain', 'master_at_arms'].includes(r)));
+  if (sworn.length) return sworn.sort((a, b) => skill(b) - skill(a))[0];
   const kin = all.filter((c) => adult(c) && ofHouse(c) && c.id !== lord.id && !(c.roles || []).includes('ward'));
-  if (kin.length) return kin.sort((a, b) => skill(b) - skill(a))[0];
-  const sworn = all.filter((c) => adult(c) && c.alive && placeOf(state, c) === h.seat && (c.roles || []).some((r) => ['castellan', 'steward', 'maester', 'commander'].includes(r)));
-  return sworn.sort((a, b) => skill(b) - skill(a))[0] || null;
+  return kin.sort((a, b) => skill(b) - skill(a))[0] || null;
 }
 
 /** The person who actually speaks and acts for a house: the regent if there is one, else its head. */

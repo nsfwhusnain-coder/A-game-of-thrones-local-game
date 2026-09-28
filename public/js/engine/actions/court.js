@@ -7,6 +7,7 @@ import { applyPetitionFx } from '../../shared/petitions.js';
 import { random, shuffle } from '../rng.js';
 import { partyOf } from '../parties.js';
 import { emit } from '../facts/log.js';
+import { keptByStory } from '../people/life.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = (a) => a[Math.floor(random() * a.length)];
@@ -49,7 +50,7 @@ function tourney(state, house, cause) {
   const champ = knights.length ? pick(knights) : null;
   let blood = '';
   if (champ) ch.push({ op: 'character', id: champ.id, note: `Champion of the tourney at ${state.holdings[me.seat]?.name}.`, opinion: clamp((champ.opinion || 0) + 10, -100, 100) });
-  const fallen = knights.filter((k) => k !== champ);
+  const fallen = knights.filter((k) => k !== champ && !keptByStory(state, k)); // the story's people do not die in the lists by chance
   if (fallen.length && random() < 0.12) { const k = pick(fallen); ch.push({ op: 'character', id: k.id, alive: false, cause: 'a lance through the throat in the lists' }, { op: 'relation', a: house, b: k.house, delta: -4, reason: 'a knight dead in your lists' }); blood = ` ${k.name} died in the lists, a splinter through the throat.`; }
   emit(state, 'tourney', { actors: [me.lord], houses: [house, ...guests.map((g) => g.id)], place: me.seat || null, data: { cost: TOURNEY_COST, guests: guests.length }, cause, text: `House ${me.name} holds a tourney at ${state.holdings[me.seat]?.name || 'its seat'}; ${guests.length} houses send knights.` });
   applyChanges(state, ch, { source: 'Your tourney', cause });

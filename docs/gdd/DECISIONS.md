@@ -911,3 +911,20 @@ ransoms, `embargo`) and the price index of §6.3.
   (Renly's offer, the Iron Price, the kingsmoot, Jon's future, Lady, the debt, Jeyne, Karstark, Tyrion's trial) arrive
   with them; `terms_offered` stays a verb (`offer_terms`), not a matter.
 
+## D-054 · 2026-09-28 · Life: one guard over every death of chance; fates as data, not character fields (WP D4)
+
+- **The windows stay in `data/fates.js`** (`CANON_DEATHS`, `CANON_PROTECTED`, and now `CANON_REGENTS`, `NOT_REGENT`)
+  rather than a `canon.deathWindow` on each character in `data/characters.js` as 08 §5 has it: one table the story's
+  rules read, beside the beats that kill, and no migration of saved characters.
+- **`keptByStory` moved to `engine/people/life.js`** and guards every death the rules roll for — the year's turning, a
+  festering wound, a fever, a winter chill, a lance in the lists, a battle. Deaths by a beat, by the player's order, by
+  a mind's deliberate act (a judgement) or by a decision are not chance and are not guarded. Under Canon, anyone a
+  beat still to come names is spared too (D-052's `canonAhead`).
+- **Wounds heal.** Before, `wounded` was forever (the D2 playtest showed half the realm's great lords limping for two
+  years). A wound is reckoned from the day it is first seen: it heals in 30–90 days, one in twelve festers.
+- **Invariant 11** records each death's day and what caused it (`diedDay`, `diedBy`) and fails when, under Canon, a
+  character with a canon death died of chance before their window opened, or a protected one before 301.
+- **Regency (B-23):** the named regent first; the widowed mother whatever house she was born to (Cersei is a Lannister);
+  the seat's sworn officers before distant kin; never another branch's man or an outlaw. Starfall under Edric has no fit
+  regent in the data: the house drifts, as regencyTick already charges.
+

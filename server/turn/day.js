@@ -14,6 +14,7 @@ import { psycheTick } from '../../public/js/shared/psyche.js';
 import { retinueTick } from '../../public/js/shared/retinues.js';
 import { vassalTick, gatherMusters, fieldService } from '../../public/js/shared/vassals.js';
 import { worldTick, canonAhead } from '../../public/js/shared/plots.js';
+import { lifeTick, mayDie } from '../../public/js/engine/people/life.js';
 import { resolveWarfare } from '../../public/js/shared/battles.js';
 import { roadEncounters } from '../../public/js/shared/roads.js';
 import { treacheryTick } from '../../public/js/shared/treachery.js';
@@ -28,15 +29,18 @@ import { asEvent } from '../../public/js/engine/facts/log.js';
 import { advanceMusters } from '../orders.js';
 import { resolvePlaceId } from '../../public/js/shared/world.js';
 
+// those a beat still to come names, whom chance does not take under Canon gravity (engine/people/life.js)
+const sparedBy = (state) => ((state.meta.settings?.canonGravity || 'canon') === 'canon' ? canonAhead(state) : new Set());
+
 // the year turns: everyone ages, and the very old may not see the next one
 function theYears(state, applied) {
   const dead = [];
   // under Canon gravity the years spare those the story still has a part for (Lord Walder lives to see his wedding)
-  const spared = (state.meta.settings?.canonGravity || 'canon') === 'canon' ? canonAhead(state) : new Set();
+  const spared = sparedBy(state);
   for (const c of Object.values(state.characters)) {
     if (!c.alive || c.age == null) continue;
     c.age += 1;
-    if (spared.has(c.id)) continue;
+    if (!mayDie(state, c, spared)) continue;
     const ailing = c.status === 'wounded' || /ailing|dying|sick|abed/i.test(`${c.traits} ${c.bio}`);
     const risk = c.age >= 60 ? ((c.age - 58) ** 2) / 2600 + (ailing ? 0.25 : 0) : ailing && c.age > 45 ? 0.08 : 0;
     if (risk && random() < Math.min(0.85, risk)) dead.push({ c, cause: ailing ? 'illness' : 'old age' });
@@ -80,6 +84,8 @@ export async function engineDay(state, ctx) {
   // the strain of war works slowly: reckoned once a week, on the realm's own calendar (the seventh days), so a jump
   // stopped midweek has lived the same days as one that ran on
   if (day % 7 === 0) { const r = psycheTick(state, 7); cards.push(...(r.events || [])); applied.push(...(r.applied || [])); }
+  // wounds heal or fester; fevers, winter chills and great age (engine/people/life.js)
+  { const r = lifeTick(state, random, { spared: sparedBy(state) }); cards.push(...r.events); if (r.changes.length) applied.push(...applyChanges(state, r.changes, { source: 'Life', spanDays: 1, told: ['character'], cause: { type: 'rule', ref: 'life' } }).applied); }
   cards.push(...retinueTick(state, 1).events);
   cards.push(...await ctx.deliver(state));
   // promises kept or broken today, judged after the day's marches (a host that reached Moat Cailin has kept its word)

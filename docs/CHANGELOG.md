@@ -3,6 +3,16 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — D4: life — wounds heal, winter kills the old, and the story keeps its own
+
+- **Wounds heal** in one to three moons — or fester. Before, a wounded lord limped for the rest of the game.
+- **Fevers, winter chills and great age** take people week by week, the old and the sick most, and far more in winter.
+- **Under Canon, chance does not take the story's people** before their time: King Robert does not die of a fever
+  before his boar, Robb Stark's wound does not fester before the Twins, and the Stark children live through 300. The
+  player's own orders still kill whom they kill. Under Loose only the great deaths are kept; under Sandbox, none.
+- **Regents**: Lysa rules for her son, Cersei for hers; the Darkstar never holds Starfall for his young cousin.
+- Owner to verify: `node scripts/soak.js --turns 40` reports no broken invariant (number 11 is the story's people).
+
 ## 2026-09-28 — D3: the matters catalogue — sixty-two kinds of business before the lord
 
 - **Far more comes before you.** Besides the old handful of petitions, the realm, other lords and your own household
