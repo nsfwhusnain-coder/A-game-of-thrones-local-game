@@ -18,22 +18,24 @@ import { rideOf } from '../../shared/world.js';
 import { random } from '../rng.js';
 import { fact, shown } from '../facts/log.js';
 import { dayNumber } from '../time.js';
+import { MUSTER } from '../../../data/balance.js';
 
 const round50 = (n) => Math.round(n / 50) * 50;
 const RAVEN_MILES = 300; // a day's flight (engine/actions/diplomacy.js)
 
-/** The days a sworn lord's levies take to gather at his seat, by his country (07 §3.2). */
-export const GATHER = { north: 12, riverlands: 8, vale: 10, westerlands: 6, reach: 8, stormlands: 9, dorne: 10, crownlands: 7, iron_islands: 5 };
+/** The days a sworn lord's levies take to gather at his seat, by his country (07 §3.2; data/balance.js MUSTER). */
+export const GATHER = MUSTER.gatherDays;
 export function gatherDays(state, v, scope = 'quick') {
   const region = state.holdings[v.seat]?.region || v.region;
   const season = state.world?.season || 'summer';
   return Math.round((GATHER[region] ?? 8) * (scope === 'full' ? 1.8 : 1) * (season === 'autumn' ? 1.4 : 1) * (season === 'winter' ? 1.6 : 1));
 }
+const bandOf = (t) => (t >= MUSTER.bands.devoted ? 'devoted' : t >= MUSTER.bands.dutiful ? 'dutiful' : t >= MUSTER.bands.wavering ? 'wavering' : 'resentful');
 
 /** How a lord of this temper answers: the chances of answering, delaying and refusing (07 §3.2), after the modifiers. */
 export function answerOdds(state, v, { scope = 'quick', late = false } = {}) {
   const t = vassalTemper(state, v.id) ?? 50;
-  let [a, d, r] = t >= 70 ? [95, 5, 0] : t >= 45 ? [85, 13, 2] : t >= 28 ? [50, 40, 10] : [20, 30, 50];
+  let [a, d, r] = MUSTER.answer[bandOf(t)];
   const shift = (n) => { const x = Math.min(a, n); a -= x; d += x; };
   if (scope === 'full') shift(10);
   if (state.world?.season === 'autumn') shift(10); // the harvest is not yet in
@@ -45,10 +47,10 @@ export function answerOdds(state, v, { scope = 'quick', late = false } = {}) {
 /** Men a lord sends: of his levies by the call's scope and his zeal, and of his men-at-arms; a late answer, fewer. */
 export function menSent(state, v, { scope = 'quick', late = false } = {}) {
   const t = vassalTemper(state, v.id) ?? 50;
-  const zeal = t >= 70 ? 1.1 : t >= 45 ? 1 : t >= 28 ? 0.8 : 0.6;
+  const zeal = MUSTER.zeal[bandOf(t)];
   const lev = Number(v.figures?.levies?.v) || 0; const maa = Number(v.figures?.menAtArms?.v) || 0;
-  const [pl, pm] = scope === 'full' ? [0.9, 0.8] : [0.4, 0.6];
-  const levies = Math.min(lev, Math.round(lev * pl * zeal)); const arms = Math.round(maa * pm);
+  const k0 = MUSTER[scope === 'full' ? 'full' : 'quick'];
+  const levies = Math.min(lev, Math.round(lev * k0.levies * zeal)); const arms = Math.round(maa * k0.menAtArms);
   const k = late ? 0.85 : 1;
   return { levies: Math.round(levies * k), arms: Math.round(arms * k), men: round50((levies + arms) * k) };
 }
