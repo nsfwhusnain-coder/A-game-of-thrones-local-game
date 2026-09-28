@@ -378,7 +378,7 @@ const SCENARIOS = {
     const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });
     await api(`/games/${id}/act`, { verb: 'declare_war', params: { house: 'lannister', reason: 'for the test' } });
     // the whole realm: the opening flight to the seat may land after ours, so fly home again once the mode is set
-    return { id, page: async (page) => { await page.click('#mapmodes button.active'); await page.click(`#mapmodes [data-mode="${m}"]`); await page.waitForTimeout(3000); await page.evaluate(() => window.__wc.map.home()); await page.waitForTimeout(2500); } };
+    return { id, page: async (page) => { await page.click('#mapmodes button.active'); await page.click(`#mapmodes [data-mode="${m}"]`); await page.waitForTimeout(3000); await page.evaluate(() => { const m = window.__wc.map; m.tween = null; m.zoom = null; m.target.set(720, 0, 1370); m.dist = 3500; m.updateCamera(); }); await page.waitForTimeout(2500); } };
   }])),
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {

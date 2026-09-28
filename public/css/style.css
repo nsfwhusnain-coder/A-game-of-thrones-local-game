@@ -836,7 +836,7 @@ body:has(#window:not(.hidden)) .mapmodes { right: calc(min(30rem, 36vw) + 1.6rem
 .muster .mu-d, .muster .mu-s { color: var(--muted, #a99d86); font-size: 0.8rem; white-space: nowrap; }
 
 /* the map's key for its mode (WP E2) */
-.map-legend { position: absolute; right: 1rem; bottom: 6.5rem; z-index: 20; background: rgba(12, 16, 22, 0.86); border: 1px solid var(--line, #3a3226); border-radius: 4px; padding: 0.45rem 0.65rem; font-size: 0.78rem; color: var(--ink, #e8dcc0); max-width: 16rem; pointer-events: none; }
+.map-legend { position: absolute; right: 1rem; bottom: 6.5rem; z-index: 20; background: rgba(12, 16, 22, 0.86); border: 1px solid var(--line, #3a3226); border-radius: 4px; padding: 0.45rem 0.65rem; font-size: 0.78rem; color: #e8dcc0; max-width: 16rem; pointer-events: none; }
 .map-legend .ml-t { font-family: var(--display); letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.72rem; margin-bottom: 0.25rem; color: var(--gold2, #c9a44a); }
 .map-legend .ml-k { display: flex; align-items: center; gap: 0.4rem; line-height: 1.5; }
 .map-legend .ml-sw { width: 0.9rem; height: 0.65rem; border-radius: 2px; border: 1px solid rgba(0,0,0,0.5); display: inline-block; }
