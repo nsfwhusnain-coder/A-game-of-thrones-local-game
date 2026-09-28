@@ -4,6 +4,7 @@
 import { forces, idOf } from '../../../public/js/engine/parties.js';
 import { daysLeft } from '../../../public/js/engine/movement.js';
 import { placeName, dayNumber } from '../../../public/js/shared/world.js';
+import { supplyOf, supplyText } from '../../../public/js/engine/military/supply.js';
 
 const n = (x) => Math.round(Number(x) || 0).toLocaleString('en-GB');
 const OFFICERS = ['steward', 'maester', 'master_at_arms', 'captain', 'commander', 'council', 'lord', 'lady', 'heir', 'spymaster', 'knight'];
@@ -41,5 +42,6 @@ export function officerKnowledge(state, c) {
   return [
     `THE HOUSE'S STRENGTH (true, as its officers keep it): coin ${n(f.treasury?.v)} dragons; levies not yet called ${n(f.levies?.v)}; men-at-arms ${n(f.menAtArms?.v)}; food ${Math.round(Number(f.food?.v) || 0)} moons.`,
     `THE BANNERS: ${musterState(state, c.house)}`,
+    ...(() => { const fed = forces(state).filter((a) => a.owner === c.house && a.kind === 'host' && supplyOf(state, a).days != null); return fed.length ? [`THE HOSTS' BREAD: ${fed.map((a) => `${a.name}: ${supplyText(state, a)}`).join('; ')}.`] : []; })(),
   ].join('\n');
 }

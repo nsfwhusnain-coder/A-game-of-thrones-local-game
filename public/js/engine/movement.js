@@ -7,7 +7,7 @@
 // Deterministic and browser-safe: the server plans and walks the routes; the client draws them and asks for estimates.
 import { ROADS, MOUNTAIN_RANGES, FORESTS, SWAMPS, WALL, MILES_PER_UNIT } from '../../data/geography.js';
 import { HOUSES, EXTRA_HOLDINGS } from '../../data/houses.js';
-import { SPEED, SEA, TERRAIN } from '../../data/balance.js';
+import { SPEED, SEA, TERRAIN, SUPPLY } from '../../data/balance.js';
 import { raster, cellOf, centre, polyCells, landmassOf, shoreCell, seaMilesTo, seaRoute, bestLanding, pathUnits } from './geo.js';
 import { unitsOf } from '../shared/units.js';
 
@@ -125,7 +125,7 @@ function squeeze(pts, eff) {
 const round = ([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
 
 // ── Pace ────────────────────────────────────────────────────────────────────────────────────────────────────────────
-/** Miles a day on a road for a party of this kind and make-up (07 §5; season and forced marches come with C3). */
+/** Miles a day on a road for a party of this kind and make-up, in this season (07 §5; forced marches come with C4). */
 export function paceOf(state, p) {
   switch (p.kind) {
     case 'rider': return SPEED.rider;
@@ -138,7 +138,17 @@ export function paceOf(state, p) {
   const u = unitsOf(state, p); const men = Math.max(1, p.men || 0);
   const riders = (u.horse + u.knights) / men;
   const base = riders >= 0.85 ? SPEED.horseHost : riders <= 0.05 ? SPEED.footHost : SPEED.mixedHost;
-  return base * (p.men > 15000 ? 0.8 : 1) * (p.secrecy === 'hidden' ? 0.85 : 1); // a great host is slow; so is one that marches by night
+  return base * (p.men > 15000 ? 0.8 : 1) * (p.secrecy === 'hidden' ? 0.85 : 1) * seasonPace(state, p); // a great host is slow; so is one that marches by night
+}
+
+/** A host's pace by the season (07 §5; WP C3): autumn's rains, winter's snows, the North's and beyond the Wall worst of all. */
+export function seasonPace(state, p) {
+  const s = state?.world?.season || 'summer';
+  if (s === 'autumn') return SUPPLY.season.autumn;
+  if (s !== 'winter') return 1;
+  const at = p.pos || state.holdings?.[p.at]?.pos; let region = state.holdings?.[p.at]?.region;
+  if (!region && at) { let bd = Infinity; for (const h of Object.values(state.holdings || {})) { const d = (h.pos[0] - at[0]) ** 2 + (h.pos[1] - at[1]) ** 2; if (d < bd) { bd = d; region = h.region; } } }
+  return region === 'beyond' ? SUPPLY.season.winterBeyond : ['north', 'wall'].includes(region) ? SUPPLY.season.winterNorth : SUPPLY.season.winter;
 }
 
 // ── Journeys ────────────────────────────────────────────────────────────────────────────────────────────────────────

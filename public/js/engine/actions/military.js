@@ -10,6 +10,7 @@ import { emit } from '../facts/log.js';
 import { raiseForLiege } from '../../shared/vassals.js';
 import { summon, waitForBanners, musterOf } from '../military/muster.js';
 import { dayNumber } from '../time.js';
+import { foldTrain } from '../military/supply.js';
 
 const fmtN = (n) => Math.round(n).toLocaleString('en-GB');
 const lordName = (state, house) => state.characters[state.houses[house]?.lord]?.name || `House ${state.houses[house]?.name}`;
@@ -44,6 +45,7 @@ export function foldInto(state, host, other) {
   host.units = addUnits(unitsOf(state, host), unitsOf(state, other));
   const total = host.men + other.men;
   host.morale = Math.round(((host.morale ?? 70) * host.men + (other.morale ?? 70) * other.men) / Math.max(1, total));
+  foldTrain(state, host, other); // the wagons and the bread come with the men
   host.supply = Math.round(((host.supply ?? 80) * host.men + (other.supply ?? 80) * other.men) / Math.max(1, total));
   host.men = total;
   for (const [v, n] of Object.entries(other.contingents || {})) host.contingents = { ...(host.contingents || {}), [v]: ((host.contingents || {})[v] || 0) + n };

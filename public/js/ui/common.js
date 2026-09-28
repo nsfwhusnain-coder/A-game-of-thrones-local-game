@@ -5,6 +5,7 @@ import { portraitLazy } from './portrait.js';
 import { placeName, getRelation, fmt } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
 import { statusText } from '../engine/parties.js';
+import { supplyOf } from '../engine/military/supply.js';
 
 export const app = {
   saveId: null, state: null, map: null, win: null, winArg: null, sheet: null, drawerTab: 'feed', chatWith: null, council: null,
@@ -71,11 +72,13 @@ export function houseRow(h, extra = '') {
   const rel = h.id === p ? '' : relHtml(getRelation(s, p, h.id));
   return `<div class="row clickable" data-house="${h.id}">${sig(h)}<div class="grow"><div class="title">${esc(h.name)}</div><div class="sub">${esc(h.seat ? s.holdings[h.seat]?.name : 'landless')}${lord ? ' · ' + esc(lord.name) : ''}</div></div>${extra}${rel}</div>`;
 }
+// your own hosts carry their bread in the open: days of rations, or the word that there are none (engine/military/supply.js)
+const rationsNote = (s, a) => { if (a.owner !== s.meta.player || a.kind !== 'host') return ''; const sp = supplyOf(s, a); return sp.days == null ? '' : sp.word === 'starving' ? ' · <b class="bad">starving</b>' : ` · ${Math.floor(sp.days)} days' rations${sp.word === 'short' ? ' <b class="bad">(short)</b>' : ''}`; };
 export function armyRow(a) {
   const s = app.state; const h = s.houses[a.owner];
   const cmd = a.commander ? s.characters[a.commander]?.name || a.commander : 'no commander';
   const where = statusText(s, a); // what it is doing, in the engine's words (engine/parties.js)
-  return `<div class="row clickable" data-army="${a.id}">${sig(h)}<div class="grow"><div class="title">${a.kind === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</div><div class="sub">${a.owner === s.meta.player ? '' : '~'}${fmt(a.men)} men${a.ships ? ' · ' + a.ships + ' ships' : ''} · ${esc(cmd)} · ${esc(where)}</div>${meter(a.morale, '#c9a44a')}</div></div>`;
+  return `<div class="row clickable" data-army="${a.id}">${sig(h)}<div class="grow"><div class="title">${a.kind === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</div><div class="sub">${a.owner === s.meta.player ? '' : '~'}${fmt(a.men)} men${a.ships ? ' · ' + a.ships + ' ships' : ''} · ${esc(cmd)} · ${esc(where)}${rationsNote(s, a)}</div>${meter(a.morale, '#c9a44a')}</div></div>`;
 }
 export function md(text) {
   const lines = esc(text).split('\n'); let html = ''; let inList = false;

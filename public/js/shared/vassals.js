@@ -10,6 +10,7 @@ import { needsShips } from './sea.js';
 import { random } from '../engine/rng.js';
 import { fact, shown } from '../engine/facts/log.js';
 import { answer, joined, gathering } from '../engine/military/muster.js';
+import { foldTrain } from '../engine/military/supply.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -199,6 +200,7 @@ export function gatherMusters(state) {
     host.units = addUnits(unitsOf(state, host), unitsOf(state, a));
     const total = host.men + a.men;
     host.morale = Math.round(((host.morale ?? 70) * host.men + (a.morale ?? 70) * a.men) / Math.max(1, total));
+    foldTrain(state, host, a); // the banners bring their own wagons and bread
     host.supply = Math.round(((host.supply ?? 80) * host.men + (a.supply ?? 80) * a.men) / Math.max(1, total));
     host.men = total;
     host.contingents = { ...(host.contingents || {}), [a.owner]: ((host.contingents || {})[a.owner] || 0) + a.men };

@@ -113,6 +113,21 @@ const SCENARIOS = {
       await page.waitForSelector('.muster');
     } };
   },
+  // supply (WP C3): a Lannister host six weeks out from the Rock, in the Riverlands with no granary of its own in
+  // reach — the host card counts its rations in days, the foraging, and the lands it has picked over
+  async supply() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'lannister', seed: 7 });
+    await api(`/games/${id}/act`, { kind: 'call_banners', vassals: [], at: 'lannister', ownLevies: 12000 });
+    let s = await api(`/games/${id}`);
+    const host = Object.values(s.parties).find((a) => a.owner === 'lannister' && a.kind === 'host' && a.at === 'lannister');
+    await api(`/games/${id}/act`, { kind: 'march', army: host.id, to: 'tully' });
+    for (let t = 0; t < 6; t++) await api(`/games/${id}/advance`, { span: '7d', orders: [] });
+    s = await api(`/games/${id}`);
+    return { id, focus: s.parties[host.id]?.pos || state.holdings.tully.pos, dist: 900, page: async (page) => {
+      await page.evaluate(async (hid) => { const m = await import('/js/ui/windows.js'); m.openSheet('army', hid); }, host.id);
+      await page.waitForTimeout(500);
+    } };
+  },
   // the economy (WP C1): a moon's accounts in the Treasury window — rents, trade, tribute, the household, the field
   async economy() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 7 });

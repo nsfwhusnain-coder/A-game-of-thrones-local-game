@@ -20,6 +20,7 @@ import { profileFor, VOICE_CHOICES, voiceSettings, setVoiceSetting, speak, stopS
 import { forces, partyOf, placeOf, membersOf, together, statusText, sworn } from '../engine/parties.js';
 import { daysLeft } from '../engine/movement.js';
 import { musterOf } from '../engine/military/muster.js';
+import { supplyOf, supplyText, provinceOf } from '../engine/military/supply.js';
 import { dayNumber, dateOfDay } from '../engine/time.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
@@ -571,9 +572,10 @@ function armySheet(id) {
       <div class="s"><div class="k">${a.kind === 'fleet' ? 'Crews' : 'Men'}</div><div class="v">${mine ? '' : '~'}${fmt(a.men)}</div></div>
       ${a.ships ? `<div class="s"><div class="k">Ships</div><div class="v">${fmt(a.ships)}</div></div>` : ''}
       <div class="s"><div class="k">Morale</div><div class="v">${a.morale}</div>${meter(a.morale, '#c9a44a')}</div>
-      <div class="s"><div class="k">Supply</div><div class="v">${a.supply}</div>${meter(a.supply, '#7fb85a')}</div>
+      ${(() => { const sp = mine && a.kind === 'host' ? supplyOf(s, a) : null; return sp?.days != null ? `<div class="s" title="${esc(supplyText(s, a))}"><div class="k">Rations</div><div class="v ${sp.word === 'fed' ? '' : 'bad'}">${sp.word === 'starving' ? 'none' : `${Math.floor(sp.days)} days`}</div>${meter(sp.supply, sp.word === 'fed' ? '#7fb85a' : '#c96a4a')}</div>` : `<div class="s"><div class="k">Supply</div><div class="v">${a.supply ?? '?'}</div>${meter(a.supply ?? 0, '#7fb85a')}</div>`; })()}
     </div>
     <div class="kv"><span class="k">Position</span><span>${a.march ? `bound for ${esc(a.route?.toName || placeName(s, a.march.to))}${(() => { const d = daysLeft(a) ?? (s.holdings[a.march.to]?.pos && marchDays(a, a.pos, s.holdings[a.march.to].pos, s).days); return d ? ` · ~${Math.max(1, Math.round(d))} days away${a.route ? ` (${fmt(a.route.miles)} miles by the road it takes)` : ''}` : ''; })()}` : a.at ? esc(placeName(s, a.at)) : 'in the field'}</span>
+    ${mine && a.kind === 'host' && supplyOf(s, a).days != null ? (() => { const sp = supplyOf(s, a); const land = provinceOf(s, a); return `<span class="k">Supply</span><span>${esc(supplyText(s, a))} · ${fmt(sp.wagons)} wagons, eats ${fmt(sp.need)} rations a day${land?.devastation >= 20 ? ` · the lands about ${esc(land.name)} are ${land.devastation >= 70 ? 'stripped bare' : 'picked over'}` : ''}</span>`; })() : ''}
     <span class="k">Composition</span><span>${esc(a.composition || '—')}</span><span class="k">Reported</span><span>${esc(a.asOf || '')}</span></div>
     ${cmd ? `<h4>Commander</h4>${charRow(cmd)}` : ''}
     ${(() => {
