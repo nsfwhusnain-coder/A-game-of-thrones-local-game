@@ -16,6 +16,7 @@ import { whereabouts } from '../../../public/js/shared/roads.js';
 import { milesBetween } from '../../../public/js/engine/facts/cluster.js';
 import { anachronismsIn } from '../../../public/data/anachronisms.js';
 import { hasForeignScript } from '../schema.js';
+import { FORBIDDEN, FORBIDDEN_EXACT } from '../../../public/data/style.js';
 
 const NEAR = 40; // miles: "at Winterfell" includes the wolfswood and the winter town
 const ROAD = 25; // miles either side of a road a party walks this turn
@@ -103,13 +104,8 @@ export function numbersOf(facts) {
   return [...out];
 }
 
-// ── The forbidden words (10 §8.2) ────────────────────────────────────────────────────────────────────────────────────
-export const GAME_WORDS = [
-  /\bmorale\b/i, /\bunrest\b/i, /\bprosperity\b/i, /\blevies figure\b/i, /\b(?:this|next|last|each|every|the) turn\b/i, /\bturn \d+/i, /\bturns? (?:of|in) the game\b/i,
-  /\bday \d+\b/i, /\bthe player'?s?\b/i, /\bplayers?\b/i, /\bengine\b/i, /\bops?\b/, /\bstats?\b/i, /\bmeters?\b/i, /\bgame\b/i,
-  /\bthe realm holds its breath\b/i, /\ba storm (?:is|was) brewing\b/i, /\bwinds? of change\b/i, /\blittle did (?:they|he|she) know\b/i,
-  /\bin a world where\b/i, /\btapestry\b/i, /\btestament to\b/i, /\ba dance of\b/i, /\bechoed through the halls\b/i,
-];
+// ── The forbidden words (10 §8.2; data/style.js) ────────────────────────────────────────────────────────────────────────────────────
+export const GAME_WORDS = [...FORBIDDEN.map((w) => new RegExp(w, 'i')), ...FORBIDDEN_EXACT.map((w) => new RegExp(w))];
 const MATURE = /\b(genitals?|intercourse|orgasm\w*|cunt)\b/i;
 
 // ── The story's world ────────────────────────────────────────────────────────────────────────────────────────────────

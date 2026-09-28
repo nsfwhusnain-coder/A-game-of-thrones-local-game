@@ -3,6 +3,16 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — D7: the style bible — the chronicler's voice, and a choice of how much cruelty it tells
+
+- **Book content or Restrained**: a new choice on the begin screen. Book tells the violence of the books without relish;
+  Restrained summarises it. Nothing sexual is ever described, and never anything involving the young.
+- **The chronicler learns from another house's example**, never your own, and every voice in the game — the chronicle,
+  audiences, letters, the council — is held to the same forbidden words ("tapestry", "winds of change", "morale"…).
+- **More of the later story stays unsaid until it happens**: no one speaks of the sack of Winterfell, Queen Jeyne, the
+  Breaker of Chains or the red comet before your game reaches them.
+- Owner to verify: start a game on Restrained and read a battle in the chronicle (with a model connected).
+
 ## 2026-09-28 — D6: goals — what the realm's lords want, and how their houses go about it
 
 - **A hundred goals for the realm's people**: Tywin wants the crown in his grandson's hand and every insult answered;

@@ -323,6 +323,12 @@ alluded to, never described; **never** any sexual content involving minors in an
 **Restrained** — violence summarised. The prompts carry the chosen paragraph. The validator rejects explicit sexual
 description in any setting.
 
+*Implemented (WP D7):* `public/data/style.js` — `VOICE`, `FORBIDDEN` (the §8.2 words and a few more tired ones),
+`HEADLINE`, four few-shot `EXAMPLES` (Tarly, Frey, Manderly, Greyjoy; the narrator is shown one of another house than the
+player's) and `MATURITY` (Book / Restrained, chosen on the begin screen, carried by the narrator's instructions and every
+prompt's settings). The narration, audience, letter, council and memory validators read the same words.
+`tests/style.test.js`.
+
 ## 9. Anachronism guard
 
 `data/anachronisms.js`: phrases the narrator/audience/letter validators reject **unless** the named fact has happened:
@@ -348,8 +354,9 @@ description in any setting.
 Plus a general guard in every narration prompt: "Only what has happened by today has happened."
 
 > *Implemented in WP B8*: `data/anachronisms.js` (`anachronismsIn(state, text)`), each phrase allowed once this game has
-> reached it — the beat in the story's log, a title held, a death, a battle fought — rather than by the beat ids of this
-> table, which the beat engine (D1) will bring. Added: "King Joffrey" before Joffrey is king, "the War of the Five Kings"
+> reached it — the beat in the story's log, a title held, a death, a battle fought. *WP D7* added the D2 beats' phrases
+> (Queen Jeyne, King Balon, the sack of Winterfell, the Fist, the Old Bear's death, the Breaker of Chains, Lord Tywin's
+> and Balon's deaths, the red comet) and ties Reek to `ironborn.winterfell_burns`. Added: "King Joffrey" before Joffrey is king, "the War of the Five Kings"
 > before there are kings to count. The narrator's validator reads it; the audience and letter validators will (B10).
 
 ## 10. Threads the player follows

@@ -59,7 +59,7 @@ route('POST', '/api/llm/test', async () => {
 });
 route('GET', '/api/scenarios', () => Object.values(SCENARIOS).map(({ id, name, subtitle, description, date }) => ({ id, name, subtitle, description, date })));
 route('GET', '/api/saves', () => game.listSaves());
-route('POST', '/api/games', async (req) => { const b = await readBody(req); return game.newGame(b.scenario || 'agot_298', b.house, { ironman: !!b.ironman, canonGravity: b.canonGravity, ...(Number.isFinite(Number(b.seed)) && b.seed != null ? { seed: Number(b.seed) } : {}) }); });
+route('POST', '/api/games', async (req) => { const b = await readBody(req); return game.newGame(b.scenario || 'agot_298', b.house, { ironman: !!b.ironman, canonGravity: b.canonGravity, maturity: b.maturity, ...(Number.isFinite(Number(b.seed)) && b.seed != null ? { seed: Number(b.seed) } : {}) }); });
 route('GET', '/api/games/:id/progress', (req, p) => game.getProgress(p.id) || { phase: 'idle' });
 route('GET', '/api/games/:id', (req, p) => game.loadState(p.id));
 route('DELETE', '/api/games/:id', (req, p) => { game.deleteSave(p.id); return { ok: true }; });
