@@ -377,7 +377,13 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       return;
     }
     // a siege (07 §8.3): storm the walls, or offer the castle terms — the castle named, else the one the host sits before
-    const besieged = () => places.find((id) => state.holdings[id]?.siege) || Object.values(state.parties).find((a) => a.besieging && commands(state, house, a))?.besieging || places[0];
+    const besieged = () => places.find((id) => state.holdings[id]?.siege && Object.values(state.parties).some((a) => a.besieging === id && commands(state, house, a))) || Object.values(state.parties).find((a) => a.besieging && commands(state, house, a))?.besieging;
+    // the sea (07 §9): a fleet sent raiding, closing a port, taking a host aboard or putting it ashore
+    const myFleet = () => hosts.map((x) => state.parties[x]).find((x) => x?.kind === 'fleet') || Object.values(state.parties).filter((x) => x.kind === 'fleet' && commands(state, house, x)).sort((x, y) => y.ships - x.ships)[0];
+    if (/\b(raid|reave|harry|plunder|pay the iron price)\b/.test(t) && places.length && myFleet()) { A('raid_coast', { fleet: myFleet().id, target: places[0] }); return; }
+    if (/\bblockade\b|\bclose the (port|harbou?r)\b/.test(t) && myFleet() && (places.length || /\blift\b/.test(t))) { A('blockade', /\blift\b/.test(t) ? { fleet: myFleet().id, lift: true } : { fleet: myFleet().id, holding: places[0] }); return; }
+    if (/\b(embark|board|go aboard|take ship|put (?:the )?(?:host|men|army) (?:aboard|on (?:the )?ships))\b/.test(t) && myFleet()) { const a = hostMeant() || bigHost(); if (a) { A('embark_host', { army: a.id, fleet: myFleet().id }); if (places.length && RE.march.test(t) || /\bsail\b/.test(t) && places.length) A('march_host', { army: myFleet().id, to: places[0] }); return; } }
+    if (/\b(land|disembark|put (?:the )?(?:host|men|army) ashore|come ashore)\b/.test(t) && myFleet() && Object.values(state.parties).some((x) => x.aboard)) { const f = Object.values(state.parties).find((x) => x.kind === 'fleet' && commands(state, house, x) && Object.values(state.parties).some((y) => y.aboard === x.id)); if (f) { A('land_host', { fleet: f.id }); return; } }
     if (/\b(storm|scale|carry) (?:the )?(walls|castle|keep|gates?)\b|\bstorm (?!\w+'s host)[a-z]/.test(t) && besieged()) { A('storm', { holding: besieged() }); return; }
     if (/\b(offer|give|send) (?:\w+ )?terms\b|\b(demand|bid) (?:its |their |the castle'?s? )?(surrender|yield)\b|\b(call on|summon) [^.]*\bto (yield|surrender)\b/.test(t) && besieged()) {
       const terms = /\bhostage/.test(t) ? 'yield_hostages' : /\b(swear|fealty|bend the knee|sworn)\b/.test(t) ? 'yield_and_swear' : /\b(unconditional|without terms|no terms|at (?:my|our) mercy)\b/.test(t) ? 'unconditional' : 'march_out_with_arms';

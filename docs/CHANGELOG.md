@@ -3,6 +3,21 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — C6: the sea — fleets that carry, blockade and reave
+
+- **Fleets carry hosts.** "Put the host aboard the fleet and sail for Storm's End": the host goes aboard in port, sails
+  with the fleet (the fleet's card shows its galleys, cogs or longships, who is aboard and the room left), and comes
+  ashore in a day at a port or two on a beach.
+- **The ironborn reave.** "Raid the Stony Shore": the longships fall on a village every other day for a fortnight,
+  burning and taking the harvest, then sail home with the plunder. At war, the Greyjoys do it on their own.
+- **Blockades.** A fleet before an enemy port halves its trade — and a besieged port with no food coming by sea starves
+  (Storm's End at last).
+- **Sea fights and storms.** Fleets at war that meet fight by their ships, crews and admirals; boarders take prizes.
+  Autumn and winter gales take ships at sea.
+- Owner to verify: as Stannis, raise your levies at Dragonstone, press *Go aboard* on the host's card, send the fleet to
+  Storm's End, and when it arrives press *Put them ashore*. As Greyjoy, declare war on the Starks and write "Raid the
+  Stony Shore".
+
 ## 2026-09-28 — C5: sieges — terms, storms, treachery and relief
 
 - **The great castles are what the books say.** Storm's End, Pyke and Dragonstone cannot be starved without ships before

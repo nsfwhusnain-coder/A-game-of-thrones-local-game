@@ -4,7 +4,8 @@
 import { applyChanges, resolvePlaceId, placeName, placePos, slug, dateStr, nearestHolding, sendHome, realmOf } from '../../shared/world.js';
 import { ref, isRef, idOf, partyAt, joinParty, moveMembers, settle, forces, isForce, sworn, membersOf, disband } from '../parties.js';
 import { planRoute } from '../movement.js';
-import { marchDays } from '../../shared/warfare.js';
+import { marchDays, atWar } from '../../shared/warfare.js';
+import { canEmbark, embark, land, aboardOf, sail, raidTargets, startRaid } from '../military/naval.js';
 import { unitsOf, unitsFor, addUnits, unitsText } from '../../shared/units.js';
 import { emit } from '../facts/log.js';
 import { raiseForLiege } from '../../shared/vassals.js';
@@ -207,6 +208,9 @@ export const MILITARY = [
     legal: (state, i) => {
       if (!i.params.army) return { code: 'no_host', text: 'You have no host in the field to march: raise your levies or call the banners first.' };
       const a = hostOf(state, i); if (!a) return { code: 'not_yours', text: 'That host is not yours to command.' };
+      // a host aboard ship goes where its fleet sails; one coming ashore is not yet ready to march (engine/military/naval.js)
+      if (a.aboard) return { code: 'aboard', text: `${a.name} is aboard ${state.parties[a.aboard]?.name || 'ship'}: sail the fleet, or land the host first.` };
+      if (a.ashore && a.ashore > dayNumber(state.meta.date)) return { code: 'landing', text: `${a.name} is still coming ashore; it can march in ${a.ashore - dayNumber(state.meta.date)} day${a.ashore - dayNumber(state.meta.date) === 1 ? '' : 's'}.` };
       const cmd = i.params.commander && state.characters[i.params.commander];
       if (cmd && (!cmd.alive || cmd.house !== i.house || /imprisoned|captive/.test(cmd.status || ''))) return { code: 'commander', text: `${cmd.name} cannot lead ${a.name}.` };
       const to = resolvePlaceId(i.params.to) || destination(state, i.params.to);
@@ -333,6 +337,87 @@ export const MILITARY = [
     receipt: (state, i, d) => [{ ok: d.odds >= 1.2 ? true : 'warn', text: `The host will storm ${state.holdings[d.holding].name} at dawn — ${d.odds >= 1.5 ? 'the walls should fall' : d.odds >= 1 ? 'it may fail, and it will be bloody' : 'the odds are against it; many will die below the walls'}.` }],
     said: (state, i, d) => ({ status: 'underway', text: `The host prepares to storm ${state.holdings[d.holding].name}.` }),
     facts: ['storm_assault'], mind: { allowed: false },
+  },
+  {
+    // a host goes aboard a fleet in port (07 §9.2): it sails wherever the fleet sails, until it is landed
+    id: 'embark_host', family: 'military', label: 'Take a host aboard',
+    params: { army: 'party:own', fleet: 'party:own' },
+    legal: (state, i) => {
+      const a = hostOf(state, i); if (!a || a.kind === 'fleet') return { code: 'not_yours', text: 'That host is not yours to command.' };
+      const f = hostOf(state, i, 'fleet'); if (!f || f.kind !== 'fleet') return { code: 'no_fleet', text: 'You have no such fleet.' };
+      const why = canEmbark(state, a, f); return why ? { code: 'cannot', text: `${a.name} cannot go aboard: ${why}.` } : null;
+    },
+    start: (state, i) => { const a = hostOf(state, i); const f = hostOf(state, i, 'fleet'); const e = embark(state, a, f); emit(state, 'embarked', { actors: [a.commander], houses: [a.owner], pos: f.pos, data: { party: a.id, fleet: f.id, men: a.men }, cause: i.source, text: `${a.name} (${fmtN(a.men)} men) goes aboard ${f.name}.` }); return { host: a.id, fleet: f.id, days: e.days }; },
+    receipt: (state, i, d) => [{ ok: true, text: `${state.parties[d.host].name} goes aboard ${state.parties[d.fleet].name} (a day for every 2,000 men); send the fleet where you would land it.` }],
+    said: (state, i, d) => ({ status: 'done', text: `${state.parties[d.host].name} is aboard ${state.parties[d.fleet].name}.` }),
+    facts: ['embarked'], mind: { allowed: false },
+  },
+  {
+    // a fleet puts its hosts ashore where it lies: a port in a day, a beach in two (07 §9.2)
+    id: 'land_host', family: 'military', label: 'Put the host ashore',
+    params: { fleet: 'party:own' },
+    legal: (state, i) => {
+      const f = hostOf(state, i, 'fleet'); if (!f || f.kind !== 'fleet') return { code: 'no_fleet', text: 'You have no such fleet.' };
+      if (!aboardOf(state, f).length) return { code: 'empty', text: `${f.name} carries no host.` };
+      if (f.march) return { code: 'at_sea', text: `${f.name} is under sail: land the host when it comes to its haven.` };
+      return null;
+    },
+    start: (state, i) => {
+      const f = hostOf(state, i, 'fleet'); const L = land(state, f);
+      if (!L.hosts.length) return { lines: [`${f.name} can find no shore to put the men on`] };
+      for (const h of L.hosts) emit(state, 'landed', { actors: [h.commander], houses: [h.owner], place: L.where, pos: L.pos, data: { party: h.id, fleet: f.id, men: h.men }, cause: i.source, text: `${h.name} (${fmtN(h.men)} men) comes ashore${L.where ? ` at ${placeName(state, L.where)}` : ''}.` });
+      return { lines: L.hosts.map((h) => `${h.name} comes ashore${L.where ? ` at ${placeName(state, L.where)}` : ' on the beach'}; ready to march in ${L.days} day${L.days === 1 ? '' : 's'}`) };
+    },
+    receipt: (state, i, d) => lines(d),
+    said: (state, i, d) => ({ status: 'done', text: (d.lines || []).join('; ') }),
+    facts: ['landed'], mind: { allowed: false },
+  },
+  {
+    // a fleet lies before an enemy port (07 §9.4): its trade halves, and if it is besieged it starves
+    id: 'blockade', family: 'military', label: 'Blockade a port',
+    params: { fleet: 'party:own', holding: 'holding:foe', lift: 'boolean?' },
+    legal: (state, i) => {
+      const f = hostOf(state, i, 'fleet'); if (!f || f.kind !== 'fleet') return { code: 'no_fleet', text: 'You have no such fleet.' };
+      if (i.params.lift) return f.blockade ? null : { code: 'none', text: `${f.name} blockades no port.` };
+      const h = state.holdings[resolvePlaceId(i.params.holding) || i.params.holding]; if (!h) return { code: 'no_place', text: 'There is no such port.' };
+      if (!h.coastal) return { code: 'inland', text: `${h.name} is not on the sea.` };
+      if (!atWar(state, i.house, h.owner)) return { code: 'not_at_war', text: `You are not at war with House ${state.houses[h.owner]?.name}.` };
+      return null;
+    },
+    start: (state, i) => {
+      const f = hostOf(state, i, 'fleet');
+      if (i.params.lift) { const h = state.holdings[f.blockade]; if (h?.blockade?.fleet === f.id) delete h.blockade; delete f.blockade; return { lines: [`${f.name} lifts its blockade of ${h?.name || 'the port'}`] }; }
+      const h = state.holdings[resolvePlaceId(i.params.holding) || i.params.holding];
+      delete f.raid; f.blockade = h.id; const m = marchDays(f, f.pos, h.pos, state);
+      if (Math.hypot(f.pos[0] - h.pos[0], f.pos[1] - h.pos[1]) > 20) sail(state, f, h.id);
+      emit(state, 'blockade', { actors: [f.commander], houses: [f.owner, h.owner], place: h.id, data: { fleet: f.id, holding: h.id }, cause: i.source, text: `${f.name} sails to close the port of ${h.name}.` });
+      applyChanges(state, [{ op: 'relation', a: i.house, b: h.owner, delta: -5, reason: `the blockade of ${h.name}` }], { cause: i.source });
+      return { lines: [`${f.name} sails to blockade ${h.name}${m?.days ? ` (~${m.days} days)` : ''}: while it lies there the port's trade is halved, and if it is besieged no food comes in by sea`] };
+    },
+    receipt: (state, i, d) => lines(d),
+    said: (state, i, d) => ({ status: 'underway', text: (d.lines || []).join('; ') }),
+    facts: ['blockade'], mind: { allowed: true },
+  },
+  {
+    // a fleet goes reaving along an enemy coast (07 §9.4): a village every other day for a fortnight, the loot home
+    id: 'raid_coast', family: 'military', label: 'Raid a coast',
+    params: { fleet: 'party:own', target: 'holding:foe', days: 'number?' },
+    legal: (state, i) => {
+      const f = hostOf(state, i, 'fleet'); if (!f || f.kind !== 'fleet') return { code: 'no_fleet', text: 'You have no such fleet.' };
+      const h = state.holdings[resolvePlaceId(i.params.target) || i.params.target]; if (!h) return { code: 'no_place', text: 'Raid where?' };
+      const probe = { ...f, raid: { target: h.id, pos: h.pos, reach: 120, done: [] } };
+      if (!raidTargets(state, probe).length) return { code: 'no_targets', text: `There is no enemy coast to reave about ${h.name}.` };
+      return null;
+    },
+    start: (state, i) => {
+      const f = hostOf(state, i, 'fleet'); const h = state.holdings[resolvePlaceId(i.params.target) || i.params.target];
+      const first = startRaid(state, f, h.id, { days: Math.max(3, Math.min(60, Number(i.params.days) || 14)) });
+      emit(state, 'set_out', { actors: [f.commander], houses: [f.owner, h.owner], pos: f.pos, data: { party: f.id, to: first, raid: true }, cause: i.source, text: `${f.name} puts to sea to reave the coast about ${h.name}.` });
+      return { lines: [`${f.name} sails to reave the coast about ${h.name}, beginning at ${placeName(state, first)}: a village every other day for ${f.raid.days} days from the first landing, then home with the plunder`] };
+    },
+    receipt: (state, i, d) => lines(d),
+    said: (state, i, d) => ({ status: 'underway', text: (d.lines || []).join('; ') }),
+    facts: ['set_out', 'raid'], mind: { allowed: true },
   },
   {
     id: 'halt_host', family: 'military', label: 'Halt a host',

@@ -20,7 +20,7 @@ const nearestPort = (state, pos) => Object.values(state.holdings).filter((h) => 
 export function marchTick(state, { span, turnStart }) {
   const events = []; const applied = []; const p = state.meta.player; const turn = state.meta.turn;
   for (const a of Object.values(state.parties)) {
-    if (!a.march || !state.parties[a.id]) continue; // a party merged into another earlier in the loop is gone
+    if (!a.march || !state.parties[a.id] || a.aboard) continue; // a party merged into another earlier in the loop is gone; one aboard ship sails with it
     const order = String(a.march.to);
     const quarry = idOf(order) != null ? state.parties[idOf(order)] : null;
     const goal = quarry ? quarry.pos : placePos(order, state.holdings);

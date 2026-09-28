@@ -42,6 +42,8 @@ test('every card action of earlier versions and every kind of written order is a
 
 // Each verb, done where it may be done, and refused where it may not. `setup` prepares the world and returns the
 // params; `refuse` returns params (or changes the world) so that the verb must be refused, with the refusal's code.
+// a Stark fleet in port at White Harbor (the sea verbs, WP C6)
+const fleetOf = (s, at) => { applyChanges(s, [{ op: 'army_create', id: 'fl', owner: 'stark', name: 'The White Harbor fleet', at, men: 2500, type: 'fleet' }]); const f = s.parties.fl; f.kind = 'fleet'; f.ships = 25; f.composition = 'War galleys and cogs'; return 'fl'; };
 // a Stark host sitting before an enemy castle, at war with its lord (the siege verbs, WP C5)
 const siegeOf = (s, hold, foe = 'lannister') => {
   applyChanges(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['stark'], defenders: [foe] }]);
@@ -59,6 +61,10 @@ const CASES = {
   set_standing_orders: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000), engage: 'avoid' }), no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 3000), engage: 'charge blindly' }, 'engage'] },
   offer_terms: { ok: (s) => siegeOf(s, 'lannister'), no: (s) => [{ holding: 'lannister', terms: 'march_out_with_arms' }, 'not_besieged'] },
   storm: { ok: (s) => { siegeOf(s, 'frey', 'tully'); return { holding: 'frey' }; }, no: (s) => [siegeOf(s, 'lannister') && { holding: 'lannister' }, 'no_storm'] },
+  embark_host: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'manderly', 1000), fleet: fleetOf(s, 'manderly') }), no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 1000), fleet: fleetOf(s, 'manderly') }, 'cannot'] },
+  land_host: { ok: (s) => { const f = fleetOf(s, 'manderly'); perform(s, 'embark_host', { params: { army: host(s, 'h1', 'stark', 'manderly', 1000), fleet: f } }); return { fleet: f }; }, no: (s) => [{ fleet: fleetOf(s, 'manderly') }, 'empty'] },
+  blockade: { ok: (s) => { applyChanges(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['stark'], defenders: ['lannister'] }]); return { fleet: fleetOf(s, 'manderly'), holding: 'lannisport' }; }, no: (s) => [{ fleet: fleetOf(s, 'manderly'), holding: 'lannisport' }, 'not_at_war'] },
+  raid_coast: { ok: (s) => { applyChanges(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['stark'], defenders: ['greyjoy'] }]); return { fleet: fleetOf(s, 'manderly'), target: 'harlaw' }; }, no: (s) => [{ fleet: fleetOf(s, 'manderly'), target: 'harlaw' }, 'no_targets'] },
   merge_hosts: { ok: (s) => { host(s, 'h1', 'stark', 'stark', 3000); host(s, 'h2', 'stark', 'stark', 500); return {}; }, no: (s) => { host(s, 'h1', 'stark', 'stark', 3000); host(s, 'h2', 'stark', 'moat_cailin', 500); return [{}, 'apart']; } },
   disband_host: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000) }), no: (s) => [{ army: host(s, 'foe', 'lannister', 'lannister', 3000) }, 'not_yours'] },
   set_secrecy: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000), mode: 'feint', to: 'tully' }), no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 3000), mode: 'invisible' }, 'mode'] },

@@ -8,7 +8,8 @@ import { atWar } from './warfare.js';
 import { siegeTick, rulesOf } from '../engine/military/siege.js';
 import { contingentsHoldBack } from './treachery.js';
 import { random } from '../engine/rng.js';
-import { settle, ref } from '../engine/parties.js';
+import { settle, ref, idOf } from '../engine/parties.js';
+import { navalPower, fightAtSea } from '../engine/military/naval.js';
 import { resolveBattle, reckon, stanceOf, escapes, fallBack, refugeOf } from '../engine/military/battle.js';
 import { groundAt } from '../engine/movement.js';
 import { seesParty } from '../engine/knowledge.js';
@@ -124,6 +125,7 @@ export function resolveWarfare(state, days, { skip = new Set(), r = random } = {
   for (const a of all) for (const b of all) {
     if (a.id >= b.id || !atWar(state, a.owner, b.owner)) continue;
     if ((a.kind === 'fleet') !== (b.kind === 'fleet')) continue;
+    if (a.aboard || b.aboard) continue; // soldiers aboard ship fight only as their fleet does
     if (skip.has(a.owner) && skip.has(b.owner)) continue;
     const d = dist(a.pos, b.pos); if (d <= CONTACT * (a.kind === 'fleet' ? 1.6 : 1)) pairs.push([d, a, b]);
   }
@@ -132,7 +134,14 @@ export function resolveWarfare(state, days, { skip = new Set(), r = random } = {
     if (fought.has(a.id) || fought.has(b.id) || !state.parties[a.id] || !state.parties[b.id]) continue;
     const aMoving = a.march && !b.march, bMoving = b.march && !a.march;
     let att, def, caught = false; const stances = {};
-    if (a.kind === 'fleet') [att, def] = aMoving ? [a, b] : bMoving ? [b, a] : a.men >= b.men ? [a, b] : [b, a];
+    if (a.kind === 'fleet') {
+      // fleets meet at sea (engine/military/naval.js): the stronger gives battle at 1.2, or one sent against the other
+      const pa = navalPower(state, a), pb = navalPower(state, b);
+      const aGoes = (a.march && idOf(a.march.to) === b.id) || pa >= pb * 1.2, bGoes = (b.march && idOf(b.march.to) === a.id) || pb >= pa * 1.2;
+      if (!aGoes && !bGoes) continue;
+      const cards = fightAtSea(state, aGoes ? a : b, aGoes ? b : a, r, 1);
+      events.push(...cards); fought.add(a.id); fought.add(b.id); continue;
+    }
     else {
       // each commander takes his stance (engine/military/battle.js): give battle, hold his ground, or fall back
       const oa = reckon(state, a, b).odds, ob = reckon(state, b, a).odds;

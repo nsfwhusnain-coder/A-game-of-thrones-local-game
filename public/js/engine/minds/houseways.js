@@ -40,6 +40,7 @@ const PRESSING = [
   // called, and not the kind to hurry: the call is answered in the lord's own time and temper (shared/vassals.js)
   ['called', (w, f) => ['called', 'delayed'].includes(w.me.obligations?.levies) && f(HOLD), (w) => `House ${w.liege?.name} has called the banners; you will answer in your own time.`],
   ['muster', (w, f) => w.atWar && strength(w) < 2000 && w.levies >= 1000 && (f('call_banners') || f('raise_levies', (p) => p.target === w.seat)), () => 'At war with no host worth the name: raise one.'],
+  ['blockade', (w, f) => w.atWar && f('blockade'), (w) => 'An enemy port is besieged by land: close it by sea, and it starves.'],
   ['march', (w, f, T) => w.atWar && T.courage >= 0.5 && w.hosts.some((a) => !a.march && a.men >= 3000) && f('march_host', (p) => { const a = w.state.parties[p.host]; const h = nearestEnemyHold(w, a); return a && !a.march && a.men >= 3000 && h && p.target === h.id; }), () => 'At war, a host that sits idle eats its own lands: carry the war to the enemy.'],
   // a prisoner of a house at peace is judged by the keeper's nature: freed by the honest, ransomed by the greedy, kept
   // as a hostage by the cunning (a hostage is leverage)
@@ -68,7 +69,7 @@ const WAYS = {
     ['winter', (w, f) => w.season !== 'summer' && f('fund_works', (p) => p.choice === 'granaries'), () => 'Winter is coming: the North fills its granaries before anything else.'],
   ],
   greyjoy: [
-    ['iron_price', (w, f) => w.atWar && f('march_host', (p) => w.foes.includes(w.state.holdings[p.target]?.owner)), () => 'We do not sow: take what is weak, and pay the iron price for it.', 'pressing'],
+    ['iron_price', (w, f) => w.atWar && (f('raid_coast') || f('march_host', (p) => w.foes.includes(w.state.holdings[p.target]?.owner))), () => 'We do not sow: take what is weak, and pay the iron price for it.', 'pressing'],
     ['longships', (w, f) => !w.atWar && chance(0.2) && f('fund_works', (p) => p.choice === 'warships'), () => 'Count the longships, and build more: the ironborn wait for their moment.'],
   ],
   tully: [
@@ -167,7 +168,7 @@ export function hintFor(state, actorId, choice) {
   const what = choice.verb === HOLD ? `would keep ${c?.sex === 'f' ? 'her' : 'his'} counsel this week` : `would most likely ${VERB_WORDS[choice.verb] || choice.verb.replace(/_/g, ' ')}`;
   return `${choice.rule === 'hold' ? '' : `${choice.why} `}A ${c?.sex === 'f' ? 'lady' : 'lord'} of your nature ${what}.${ways ? ` Your house's way: ${ways}` : ''}`;
 }
-const VERB_WORDS = { answer_call: 'answer the call', call_banners: 'call the banners', raise_levies: 'raise levies', march_host: 'march', attack_host: 'give battle', halt_host: 'halt the host', merge_hosts: 'join the hosts', disband_host: 'send the men home', send_person: 'send someone of the household', set_tax: 'change the taxes', set_dues: 'change the dues', fund_works: 'build', hire_men: 'hire men', send_gift: 'send a gift', hold_feast: 'hold a feast', hold_tourney: 'hold a tourney', judge_prisoner: 'judge a prisoner', declare_war: 'declare war' };
+const VERB_WORDS = { raid_coast: 'send the longships raiding', blockade: 'close an enemy port with the fleet', answer_call: 'answer the call', call_banners: 'call the banners', raise_levies: 'raise levies', march_host: 'march', attack_host: 'give battle', halt_host: 'halt the host', merge_hosts: 'join the hosts', disband_host: 'send the men home', send_person: 'send someone of the household', set_tax: 'change the taxes', set_dues: 'change the dues', fund_works: 'build', hire_men: 'hire men', send_gift: 'send a gift', hold_feast: 'hold a feast', hold_tourney: 'hold a tourney', judge_prisoner: 'judge a prisoner', declare_war: 'declare war' };
 
 /** Every great house (and the houses whose ways the story leans on) has ways of its own (B7 gate). */
 export const HOUSES_WITH_WAYS = Object.keys(WAYS);
