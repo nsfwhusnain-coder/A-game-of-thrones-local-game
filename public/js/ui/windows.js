@@ -22,6 +22,8 @@ import { daysLeft } from '../engine/movement.js';
 import { musterOf } from '../engine/military/muster.js';
 import { supplyOf, supplyText, provinceOf } from '../engine/military/supply.js';
 import { STANDING } from '../engine/military/battle.js';
+import { TERMS, fortOf, siegeView } from '../engine/military/siege.js';
+import { FORTRESS } from '../../data/fortresses.js';
 import { dayNumber, dateOfDay } from '../engine/time.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
@@ -521,6 +523,19 @@ function familyTree(id) {
     ${gen(kids, 'Child')}${gen(grand, 'Grandchild')}</div>`);
 }
 
+// a castle under siege (07 §8): how long it can hold, and for the besieger, terms or a storm
+function siegeHtml(s, hd) {
+  const p = s.meta.player; const bes = forces(s).filter((a) => a.besieging === hd.id && a.men > 0);
+  const R = FORTRESS[hd.id];
+  if (!hd.siege && !R) return '';
+  if (!hd.siege) return `<div class="muted" style="font-size:0.85rem;margin-top:0.3rem">${esc([R.noStorm ? 'It cannot be taken by storm' : '', R.needsSea ? 'fed by sea: starved only with a fleet before it' : '', R.mules ? 'fed by the high road until winter' : '', R.camps ? 'rivers on two sides: besiegers must lie in divided camps' : '', R.causeway ? 'from the south, only a causeway leads to it' : ''].filter(Boolean).join('; '))}.</div>`;
+  const v = siegeView(s, hd, bes); const by = s.houses[hd.siege.by];
+  const ours = bes.some((a) => a.owner === p || a.serving === p);
+  return `<h4>The siege</h4><div class="kv"><span class="k">Besieged by</span><span>House ${esc(by?.name || '?')}, ${hd.siege.days} day${hd.siege.days === 1 ? '' : 's'}</span>
+    <span class="k">Stores</span><span>~${v.months} moons${v.starve ? ` · ${esc(v.starve)}` : ''}</span>
+    <span class="k">A storm</span><span>${esc(v.storm)}</span></div>
+    ${ours ? `<div class="row-actions"><select class="terms" data-terms-for="${hd.id}">${Object.entries(TERMS).map(([k, t]) => `<option value="${k}">${esc(t.replace(/^./, (x) => x.toUpperCase()))}</option>`).join('')}</select><button class="btn" data-offer-terms="${hd.id}">Offer terms</button>${R?.noStorm ? '' : `<button class="btn danger" data-storm="${hd.id}" title="Heavy losses; it fails often">Storm the walls</button>`}</div>` : ''}`;
+}
 function holdingSheet(id) {
   const s = app.state; const hd = s.holdings[id]; if (!hd) return '';
   const owner = s.houses[hd.owner]; const lord = owner?.lord ? s.characters[owner.lord] : null; const p = s.meta.player;
@@ -538,10 +553,11 @@ function holdingSheet(id) {
       <div class="s"><div class="k">Smallfolk</div><div class="v">~${fmt(hd.population)}</div></div>
       <div class="s"><div class="k">Prosperity</div><div class="v">${Math.round(hd.prosperity)}</div>${meter(hd.prosperity, '#7fb85a')}</div>
       <div class="s"><div class="k">Unrest</div><div class="v">${Math.round(hd.unrest)}</div>${meter(hd.unrest, '#d0604a')}</div>
-      <div class="s"><div class="k">Walls</div><div class="v">${'■'.repeat(hd.fort || 0)}${'□'.repeat(Math.max(0, 5 - (hd.fort || 0)))}</div></div>
+      <div class="s"><div class="k">Walls</div><div class="v">${'■'.repeat(fortOf(s, hd))}${'□'.repeat(Math.max(0, 6 - fortOf(s, hd)))}</div></div>
       <div class="s"><div class="k">Status</div><div class="v" style="font-size:0.9rem">${esc(hd.status)}</div></div>
       <div class="s"><div class="k">Garrison</div><div class="v">${hd.garrison != null ? '~' + fmt(hd.garrison) : '?'}</div></div>
     </div>
+    ${siegeHtml(s, hd)}
     <div>${Object.entries(hd.resources || {}).filter(([, v]) => v >= 0.3).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span class="pill" title="${esc(RESOURCES[k]?.desc || '')}">${RESOURCES[k]?.icon || ''} ${esc(RESOURCES[k]?.name || k)} ${v >= 2 ? '●●●' : v >= 1 ? '●●' : '●'}</span>`).join('')}</div>
     ${hd.buildings?.length ? `<div style="margin-top:0.3rem">${hd.buildings.map((b) => `<span class="pill good">${esc(b)}</span>`).join('')}</div>` : ''}
     ${owner.seat === id ? `<h4>${mine ? 'Your' : 'Rumoured'} strength of House ${esc(owner.name)}</h4><div class="kv"><span class="k">Levies</span><span>${fig('levies')}</span><span class="k">Men-at-arms</span><span>${fig('menAtArms')}</span><span class="k">Ships</span><span>${fig('ships')}</span><span class="k">Treasury</span><span>${fig('treasury')} gd</span></div>` : ''}
@@ -591,7 +607,7 @@ function armySheet(id) {
       return (a.owner === p || known.get(a.id)?.known === 'seen' ? `<h4>The host</h4><div class="muted" style="font-size:0.88rem">${esc(unitsText(s, a))}${banners.length ? `<br>Banners: House ${esc(s.houses[a.owner]?.name)}, ${banners.join(', ')}` : ''}</div>` : '')
         + (with_.length ? `<h4>Riding with the host</h4>${with_.map((c) => charRow(c)).join('')}` : '')
         + (foes.length ? `<h4>War room — enemy hosts</h4>${foes.map(({ b, m, o, seen }) => `<div class="row clickable" data-army="${b.id}">${seen ? sig(s.houses[b.owner]) : '<span class="unknown-dot"></span>'}<div class="grow"><div class="title">${seen ? esc(b.name) : 'An unconfirmed host'} <span class="muted">~${fmt(b.men)}</span></div><div class="sub">${m.days} days' march (${m.miles} mi) · if you attack: <b style="color:${o.attacker >= 60 ? '#a8e08a' : o.attacker >= 40 ? '#ffe0a0' : '#ec9a8a'}">${o.attacker}%</b></div></div></div>`).join('')}` : '')
-        + (targets.length ? `<h4>Enemy holdings in reach</h4>${targets.map(({ h, m }) => { const e = siegeEstimate(s, h, [a]); return `<div class="row clickable" data-hold="${h.id}"><div class="grow"><div class="title">${esc(h.name)}</div><div class="sub">${m.days} days · walls ${h.fort}/6 · a siege would take ~${e.months} moons · ${esc(e.storm)}</div></div></div>`; }).join('')}` : '');
+        + (targets.length ? `<h4>Enemy holdings in reach</h4>${targets.map(({ h, m }) => { const e = siegeEstimate(s, h, [a]); return `<div class="row clickable" data-hold="${h.id}"><div class="grow"><div class="title">${esc(h.name)}</div><div class="sub">${m.days} days · walls ${e.fort}/6 · a siege would take ~${e.months} moons · ${esc(e.storm)}</div></div></div>`; }).join('')}` : '');
     })()}
     ${mine && a.owner === p ? musterHtml(a) : ''}
     ${mine && a.kind !== 'fleet' ? `<h4>How it marches</h4><div class="row-actions secrecy"><button class="btn small${(a.secrecy || 'open') === 'open' && !a.feint ? ' on' : ''}" data-secrecy="open" data-army-id="${a.id}" title="On the roads, banners flying: the realm hears of it">Openly</button><button class="btn small${a.secrecy === 'hidden' ? ' on' : ''}" data-secrecy="hidden" data-army-id="${a.id}" title="By night and off the roads, a little slower: the realm loses track of it">In secret</button><button class="btn small${a.feint ? ' on' : ''}" data-feint="${a.id}" title="Spread word that it marches somewhere else">${a.feint ? `Feint: ${esc(s.holdings[a.feint]?.name || '')}` : 'Feint…'}</button></div>` : ''}
@@ -617,6 +633,10 @@ function musterHtml(a) {
   </div>
   ${m.road.length + m.expected.length ? `<div class="row-actions">${w ? `<span class="muted grow">Waiting for the banners: ${Math.round(w.share * 100)}% of the men called, or ${when(w.until)}${w.to ? `; then to ${esc(placeName(s, w.to))}` : ''}</span>` : ''}<button class="btn small" data-march="${a.id}" title="March now: the banners still coming will follow the host wherever it goes">March now — the banners will follow</button>${w ? '' : `<button class="btn small" data-wait-banners="${a.id}" title="Hold here until eight in ten of the men called are with the host (or the last expected is overdue), then march where it was bound">Wait for the banners</button>`}</div>` : ''}`;
 }
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-offer-terms]'); if (t) { const h = t.dataset.offerTerms; const terms = document.querySelector(`select[data-terms-for="${h}"]`)?.value || 'march_out_with_arms'; doVerb('offer_terms', { holding: h, terms }, { after: () => renderSheet() }); }
+  const st = e.target.closest('[data-storm]'); if (st) doVerb('storm', { holding: st.dataset.storm }, { after: () => renderSheet() });
+});
 document.addEventListener('change', (e) => { const sel = e.target.closest('select[data-standing]'); if (sel) doVerb('set_standing_orders', { army: sel.dataset.standing, engage: sel.value }, { after: () => renderSheet() }); });
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-wait-banners]'); if (b) doVerb('wait_banners', { army: b.dataset.waitBanners, share: 0.8 }, { after: () => renderSheet() }); });
 

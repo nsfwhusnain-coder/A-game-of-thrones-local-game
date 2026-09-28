@@ -766,3 +766,26 @@ ransoms, `embargo`) and the price index of §6.3.
 - **Rivers and fords** (×1.4) and **raids** (§7.6) are not yet: the atlas has no fords for the engine to read (C6
   brings the coasts and the raids). Night attacks are a surprise.
 
+## D-047 · 2026-09-28 · Sieges: terms, storms and the castles that cannot be starved (WP C5)
+
+**What.** `engine/military/siege.js` (from `shared/battles.js`'s siege) and `data/fortresses.js`. Departures from 07 §8:
+- **The fortress table raises walls, it never lowers them**, except Harrenhal under 1,500 men. Its `fort` is the walls
+  the engine fights; the holdings keep their own number for everything else.
+- **The storm's odds**: the besiegers' field power (×1.3 once the siege is a week old: the engines) against the
+  garrison as men-at-arms × (1 + fort × 0.6) **squared** — once for the walls, once for the gates and towers. With the
+  GDD's single factor a great host carried any castle; squared, Riverrun's two thousand throw back twelve thousand, and
+  sixty men cannot hold a small castle against fifteen thousand. A storm carried costs 20–35 %, a failed one 30–50 %.
+- **Terms** are weighed at once by a rule, not a castellan's mind: how generous the terms (marching out 0.45 …
+  unconditional 0.05), the host outside against the walls, the stores left (if the castle is starving at all), relief
+  near (×0.3), and the castellan's courage, pride and stubbornness. **Swear and keep** and **hostages** leave a lord his
+  own seat (not a great lord's); the house leaves the war, and swears to the besieger's realm or gives one of its own
+  (an heir first) as a hostage. The realm's besiegers offer terms once a week after the first; the lord offers them from
+  the castle's card, no more than once a week.
+- **Starved**, a castle yields without terms, and its castellan is taken.
+- **Treachery**: a castellan who took gold from the besiegers' realm (`bribe`, which now records `bought` on the person)
+  opens a postern after three days. Other schemes wait for D (intrigue).
+- **Relief**: a host of the castle's side within three days' march is announced once; the realm's besiegers storm first
+  if they can (≥ 1.2), stand if they can meet it (field odds ≥ 0.9), else lift the siege. The lord decides for his own.
+- **Blockade** is only ships of the besiegers' side lying within ~55 miles; the verb and its trade effects are C6's.
+- **Not yet**: the Red Keep and the Hightower as keeps within their cities; the Rock's sea caves (a scheme).
+

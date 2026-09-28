@@ -509,7 +509,7 @@ function closeTurn(state, record, days) {
 // siege or a death, capture or birth that touches the lord's house, a foe's host come into sight, a matter brought
 // before the lord; minor (these end only an "until something happens" jump): a letter to the lord, one of the lord's
 // parties arriving, works finished.
-const MAJOR_KINDS = new Set(['battle', 'rout', 'siege_begun', 'storm_assault', 'holding_fell', 'siege_lifted', 'death', 'captured', 'captured_in_battle', 'slain_in_battle', 'birth', 'executed', 'fled', 'vanished', 'war_declared']);
+const MAJOR_KINDS = new Set(['battle', 'rout', 'relief_near', 'siege_begun', 'storm_assault', 'holding_fell', 'siege_lifted', 'death', 'captured', 'captured_in_battle', 'slain_in_battle', 'birth', 'executed', 'fled', 'vanished', 'war_declared']);
 const MINOR_KINDS = new Set(['letter_arrived', 'arrived', 'works_done', 'landed']);
 function interruptOf(state, cards, eyes) {
   const p = state.meta.player; const lordId = state.houses[p].lord;

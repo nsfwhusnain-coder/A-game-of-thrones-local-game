@@ -3,6 +3,7 @@
 import { applyChanges, resolvePlaceId, slug, dateStr } from '../../shared/world.js';
 import { PROJECT_TEMPLATES, TAX_LEVELS } from '../../shared/economy.js';
 import { temperament } from '../../shared/temperament.js';
+import { dayNumber } from '../time.js';
 import { emit } from '../facts/log.js';
 import { LENDERS, lenderName, creditOf, borrow, repay, callDebt, grainPrice } from '../economy/lenders.js';
 import { random } from '../rng.js';
@@ -262,6 +263,8 @@ function bribe(state, i) {
   if (took) applyChanges(state, [{ op: 'figure', house: i.house, field: 'treasury', delta: -n, source: 'A bribe' }]);
   if (took) {
     applyChanges(state, [{ op: 'character', id: c.id, opinion: clamp((c.opinion || 0) + 20, -100, 100), note: `Took ${n} dragons from House ${me.name}${i.params.aim ? ` to ${i.params.aim}` : ''}.` }], { cause: i.source });
+    // what the gold bought is the engine's to remember: a castellan bought by a besieger opens a postern (siege.js)
+    c.bought = { by: i.house, aim: i.params.aim || '', day: dayNumber(state.meta.date) };
     emit(state, 'bribe', { actors: [me.lord, c.id], houses: [i.house, c.house], vis: { scope: 'houses', houses: [i.house] }, data: { gold: n, aim: i.params.aim || '' }, cause: i.source, text: `${c.name} takes ${fmtN(n)} dragons from House ${me.name}${i.params.aim ? `, to ${i.params.aim}` : ''}.` });
     return { took: true, text: `${c.name} takes the gold${i.params.aim ? ` — to ${i.params.aim}` : ''}; what it buys is theirs to give.` };
   }
