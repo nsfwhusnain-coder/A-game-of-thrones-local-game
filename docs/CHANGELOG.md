@@ -3,6 +3,17 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — E1: the camera — framed on Westeros, never into the trees
+
+- **Zoomed all the way out, you see Westeros and the Narrow Sea**, not half a screen of empty ocean (B-29), and the map
+  keeps the realm on screen as you pan.
+- **Zoomed all the way in, you stop at a castle and its lands** — no longer inside giant trees.
+- **The wheel zooms smoothly toward the cursor**; the view tilts gently as you come down; flights to a place ease in and
+  out and never fight your drag.
+- **Keys**: Home flies to your seat (press again for the whole realm); F follows the selected host; WASD and the arrows
+  pan; + and − zoom.
+- Owner to verify: zoom all the way out and in; press Home twice; select a host and press F.
+
 ## 2026-09-28 — D8: the living society — lords on the road, guests at the seats (Phase D done)
 
 - **Lords ride out every moon, for the reasons the books give**: to their liege's court, a neighbour's feast or wedding,

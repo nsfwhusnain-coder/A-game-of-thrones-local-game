@@ -365,6 +365,10 @@ const SCENARIOS = {
       await page.waitForTimeout(800);
     } };
   },
+  // the map's levels of detail (WP E1): dev/map-lod.html at L0 over the realm and L1–L3 over Winterfell
+  ...Object.fromEntries([['lod0', 'realm', 0], ['lod1', 'winterfell', 1], ['lod2', 'winterfell', 2], ['lod3', 'winterfell', 3], ['lod-kl', 'kings_landing', 2], ['lod-pyke', 'pyke', 1]].map(([name, spot, lod]) => [name, async () => ({
+    page: async (page) => { await page.goto(`http://127.0.0.1:${PORT}/dev/map-lod.html?spot=${spot}&lod=${lod}`); await page.waitForFunction(() => document.title === 'ready', null, { timeout: 240000, polling: 500 }); },
+  })])),
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
