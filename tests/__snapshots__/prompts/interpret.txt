@@ -85,6 +85,11 @@ ACTIONS ALLOWED:
 - hire_men: hire [men] fighting men at [at] [choice: men-at-arms|sellswords]
 - hire_officer: take a new officer into service at [at] [choice: the office]
 - send_gift: send [gold] dragons to [person] or to a house [houses]
+- borrow: borrow [gold] dragons from a lender [choice: iron_bank|faith|tyroshi|bank_of_oldtown] or a great house [houses]; the term in moons in [men] (0 = two years)
+- repay: repay a lender [choice] or a house [houses]: [gold] dragons (0 = all that can be paid)
+- call_debt: call in what a house [houses] owes you: repaid within [men] moons (0 = three) or a default
+- buy_grain: buy [men] moons of grain for your granaries (0 = two)
+- embargo: forbid all trade with a house [houses], or lift it [choice: impose|lift]
 - declare_war: declare war on [houses]; the cause in [note]
 - send_letter: a raven to [person]; the letter says what the order says
 THE PRE-PARSE FOUND: verbs send_person; people jon_snow, luwin; places nights_watch, tully; numbers 10
@@ -139,6 +144,11 @@ Turn the order into actions.
        "hire_men",
        "hire_officer",
        "send_gift",
+       "borrow",
+       "repay",
+       "call_debt",
+       "buy_grain",
+       "embargo",
        "declare_war",
        "send_letter"
       ]
@@ -259,6 +269,7 @@ Turn the order into actions.
       "type": "string",
       "enum": [
        "almshouse",
+       "bank_of_oldtown",
        "barracks",
        "captain",
        "castellan",
@@ -266,11 +277,10 @@ Turn the order into actions.
        "crushing",
        "envoy",
        "execute",
+       "faith",
        "feint",
        "granaries",
-       "harbour",
-       "hidden",
-       "… 41 members"
+       "… 47 members"
       ]
      },
      "note": {

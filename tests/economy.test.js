@@ -53,3 +53,67 @@ test('an older save keeps its coin; its people grow to the new count, and what i
   assert.equal(s.economy.v, 2);
   assert.ok(project(s, 'stark').income > 8000);
 });
+
+// ── C1b: lenders, loans, default, and the verbs of 06 §9 ──
+const { creditOf, lendersTick, grainPrice } = await import('../public/js/engine/economy/lenders.js');
+const { perform } = await import('../public/js/engine/actions/registry.js');
+const { parseOrder } = await import('../server/orders/parse.js');
+const { dayNumber } = await import('../public/js/engine/time.js');
+const at = (s, days) => { const d = dayNumber(s.meta.date) + days; s.meta.date = { ...s.meta.date, ...{ year: Math.floor(d / 360), month: Math.floor((d % 360) / 30) + 1, day: (d % 30) + 1 } }; };
+
+test('the Iron Bank lends by what it thinks of you, and will have its due: a loan unpaid is a default the realm hears of', () => {
+  const s = createInitialState('agot_298', 'stark', { seed: 3 });
+  const c = creditOf(s, 'stark', 'iron_bank');
+  assert.ok(c.limit > 150000 && c.rate >= 0.08 && c.rate < 0.15, JSON.stringify(c));
+  assert.equal(perform(s, 'borrow', { params: { lender: 'iron_bank', gold: c.limit + 100000 } }).refusal.code, 'credit');
+  const coin = s.houses.stark.figures.treasury.v;
+  const r = perform(s, 'borrow', { params: { lender: 'iron_bank', gold: 100000, months: 6 } });
+  assert.ok(r.ok, r.refusal?.text); assert.equal(s.houses.stark.figures.treasury.v, coin + 100000);
+  assert.match(r.receipt[0].text, /100,000 dragons borrowed from the Iron Bank of Braavos at \d+ in the hundred a year; due in 6 moons/);
+  // the interest is in the accounts each moon
+  withRng(s, () => settle(s, 30));
+  assert.ok(s.houses.stark.ledger.at(-1).lines.some((l) => l.label === 'Interest on debts' && l.amount > 500));
+  // six moons on, the loan is called; spend the coin and let two more moons pass: a default
+  at(s, 180); lendersTick(s);
+  s.houses.stark.figures.treasury.v = 0; at(s, 61); lendersTick(s);
+  assert.ok(s.facts.some((f) => f.kind === 'loan_defaulted'), 'the default is a fact');
+  assert.ok(s.economy.ironBankRefuses.includes('stark'), 'the Iron Bank lends no more to the North');
+  assert.equal(perform(s, 'borrow', { params: { lender: 'iron_bank', gold: 1000 } }).refusal.code, 'refused');
+});
+
+test('Tywin calls in the Crown\'s debt: three million within three moons, or the Crown defaults on House Lannister', () => {
+  const s = createInitialState('agot_298', 'lannister', { seed: 3 });
+  const r = perform(s, 'call_debt', { house: 'lannister', params: { debtor: 'baratheon', months: 3 } });
+  assert.ok(r.ok, r.refusal?.text); assert.match(r.receipt[0].text, /House Baratheon of King's Landing must repay 3,000,000 dragons within 3 moons/);
+  assert.ok(s.facts.some((f) => f.kind === 'debt_called' && f.vis.scope === 'public'));
+  const rel = s.relations[['baratheon', 'lannister'].sort().join('|')]?.v ?? 0;
+  at(s, 91); lendersTick(s);
+  assert.ok(s.economy.defaults.some((d) => d.debtor === 'baratheon' && d.lender === 'lannister'));
+  assert.ok((s.relations[['baratheon', 'lannister'].sort().join('|')]?.v ?? 0) < rel, 'the Lannisters are wronged');
+});
+
+test('grain costs what the season and the war make it; a bribe is taken or refused; an embargo is both ways and can be lifted', () => {
+  const s = createInitialState('agot_298', 'stark', { seed: 3 });
+  const summer = grainPrice(s, 'north'); s.world.season = 'winter'; const winter = grainPrice(s, 'north'); s.world.season = 'summer';
+  assert.ok(Math.abs(winter / summer - 3.5) < 0.01, 'winter in the North: grain is dear');
+  const food = s.houses.stark.figures.food.v; const coin = s.houses.stark.figures.treasury.v;
+  const g = perform(s, 'buy_grain', { params: { moons: 2 } }); assert.ok(g.ok, g.refusal?.text);
+  assert.equal(s.houses.stark.figures.food.v, food + 2); assert.ok(s.houses.stark.figures.treasury.v < coin);
+  const b = withRng(s, () => perform(s, 'bribe', { params: { to: 'walder_frey', gold: 20000, aim: 'let our host cross' } }));
+  assert.ok(b.ok && s.facts.some((f) => ['bribe', 'bribe_refused'].includes(f.kind)));
+  assert.ok(perform(s, 'embargo', { params: { house: 'lannister' } }).ok);
+  assert.ok(s.pacts.some((p) => p.type === 'embargo' && p.status === 'active'));
+  assert.equal(perform(s, 'embargo', { params: { house: 'lannister' } }).refusal.code, 'already');
+  assert.ok(perform(s, 'embargo', { params: { house: 'lannister', lift: 'yes' } }).ok);
+  assert.ok(!s.pacts.some((p) => p.type === 'embargo' && p.status === 'active'));
+});
+
+test('written orders about money are read by the rules', () => {
+  const s = createInitialState('agot_298', 'stark', { seed: 3 });
+  const one = (text) => { const a = parseOrder(s, text).actions[0]; return a && { verb: a.verb, params: a.params }; };
+  assert.deepEqual(one('Borrow 50,000 dragons from the Iron Bank for two years.'), { verb: 'borrow', params: { lender: 'iron_bank', gold: 50000, months: 24 } });
+  assert.deepEqual(one('Buy three moons of grain for the granaries.'), { verb: 'buy_grain', params: { moons: 3 } });
+  assert.deepEqual(one('Embargo House Lannister.'), { verb: 'embargo', params: { house: 'lannister' } });
+  assert.equal(one('Bribe Walder Frey with 2,000 dragons to let our host cross.').verb, 'bribe');
+  assert.deepEqual(one('Repay the Iron Bank.'), { verb: 'repay', params: { lender: 'iron_bank' } });
+});

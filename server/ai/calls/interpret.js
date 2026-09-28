@@ -12,6 +12,7 @@ import { VERBS } from '../../../public/js/engine/actions/registry.js';
 import { commands } from '../../../public/js/engine/actions/military.js';
 import { ROLES } from '../../../public/js/engine/actions/court.js';
 import { OFFICES } from '../../../public/js/engine/actions/economy.js';
+import { LENDERS } from '../../../public/js/engine/economy/lenders.js';
 import { isForce } from '../../../public/js/engine/parties.js';
 import { PROJECT_TEMPLATES, TAX_LEVELS } from '../../../public/js/shared/economy.js';
 import { whereabouts } from '../../../public/js/shared/roads.js';
@@ -27,6 +28,7 @@ const CHOICE_OF = {
   fund_works: PROJECT_TEMPLATES.map((t) => t.key), cancel_works: PROJECT_TEMPLATES.map((t) => t.key),
   hire_men: ['men-at-arms', 'sellswords'], hire_officer: OFFICES, appoint_office: Object.keys(ROLES),
   judge_prisoner: ['release', 'ransom', 'take_the_black', 'execute'], set_secrecy: ['open', 'hidden', 'feint'],
+  borrow: Object.keys(LENDERS), repay: Object.keys(LENDERS), embargo: ['impose', 'lift'],
 };
 const CHOICES = [...new Set(Object.values(CHOICE_OF).flat())].sort();
 // what each verb cannot do without ('person|houses': one of them)
@@ -37,6 +39,7 @@ const NEEDS = {
   send_gift: ['gold', 'person|houses'], appoint_office: ['who', 'choice'], grant_holding: ['at', 'houses'],
   judge_prisoner: ['person', 'choice'], declare_war: ['houses'], plant_spy: ['houses'], gather_secrets: ['houses'],
   send_letter: ['person'],
+  borrow: ['gold', 'choice|houses'], repay: ['choice|houses'], call_debt: ['houses'], buy_grain: [], bribe: ['person', 'gold'], embargo: ['houses'], pay_ransom: ['person'],
 };
 // how the dossier explains each verb, with the fields it uses
 const MEANS = {
@@ -58,6 +61,13 @@ const MEANS = {
   hire_men: 'hire [men] fighting men at [at] [choice: men-at-arms|sellswords]',
   hire_officer: 'take a new officer into service at [at] [choice: the office]',
   send_gift: 'send [gold] dragons to [person] or to a house [houses]',
+  borrow: 'borrow [gold] dragons from a lender [choice: iron_bank|faith|tyroshi|bank_of_oldtown] or a great house [houses]; the term in moons in [men] (0 = two years)',
+  repay: 'repay a lender [choice] or a house [houses]: [gold] dragons (0 = all that can be paid)',
+  call_debt: 'call in what a house [houses] owes you: repaid within [men] moons (0 = three) or a default',
+  buy_grain: 'buy [men] moons of grain for your granaries (0 = two)',
+  bribe: 'offer [gold] dragons to [person] of another house, to the end in [note]',
+  embargo: 'forbid all trade with a house [houses], or lift it [choice: impose|lift]',
+  pay_ransom: 'pay the ransom of one of your people [person] held by another house',
   appoint_office: 'give one of your people [who] an office [choice]',
   grant_holding: 'grant your holding [at] to a sworn house [houses]',
   hold_feast: 'hold a feast at your seat',
@@ -257,6 +267,13 @@ export function valueOf(parse, ctx) {
       case 'fund_works': a.choice = q.template; a.at = place(q.holding); break;
       case 'cancel_works': a.choice = q.template || 'none'; break;
       case 'hire_men': a.at = place(q.at); a.men = q.men || 0; a.choice = q.kind || 'men-at-arms'; break;
+      case 'borrow': if (LENDERS[q.lender]) a.choice = q.lender; else a.houses = [memberOf(ctx.houses, q.lender)].filter((m) => m !== 'none'); a.gold = q.gold || 0; a.men = q.months || 0; break;
+      case 'repay': if (LENDERS[q.lender]) a.choice = q.lender; else a.houses = [memberOf(ctx.houses, q.lender)].filter((m) => m !== 'none'); a.gold = q.gold || 0; break;
+      case 'call_debt': a.houses = [memberOf(ctx.houses, q.debtor)].filter((m) => m !== 'none'); a.men = q.months || 0; break;
+      case 'buy_grain': a.men = q.moons || 0; break;
+      case 'bribe': a.person = memberOf(ctx.persons, q.to); a.gold = q.gold || 0; a.note = String(q.aim || '').slice(0, 120); break;
+      case 'embargo': a.houses = [memberOf(ctx.houses, q.house)].filter((m) => m !== 'none'); a.choice = q.lift ? 'lift' : 'impose'; break;
+      case 'pay_ransom': a.person = memberOf(ctx.persons, q.character); break;
       case 'hire_officer': a.choice = q.role || 'none'; a.at = place(q.at); break;
       case 'send_gift': a.gold = q.gold || 0; if (ctx.persons.canon.has(q.to) || [...ctx.persons.canon.values()].includes(q.to)) a.person = memberOf(ctx.persons, q.to); else a.houses = [memberOf(ctx.houses, q.to)].filter((m) => m !== 'none'); break;
       case 'appoint_office': a.who = memberOf(ctx.own, q.character); a.choice = q.role || 'none'; break;
@@ -310,6 +327,13 @@ export function readingOf(value, state, { house = state.meta.player } = {}) {
         case 'declare_war': return { house: hs[0] || null, ...(a.note ? { reason: a.note } : {}) };
         case 'plant_spy': case 'gather_secrets': return { house: hs[0] || null };
         case 'hold_feast': case 'hold_tourney': return {};
+        case 'borrow': return { lender: id(a.choice) || hs[0] || null, gold: a.gold, ...(a.men ? { months: a.men } : {}) };
+        case 'repay': return { lender: id(a.choice) || hs[0] || null, ...(a.gold ? { gold: a.gold } : {}) };
+        case 'call_debt': return { debtor: hs[0] || null, ...(a.men ? { months: a.men } : {}) };
+        case 'buy_grain': return { moons: a.men || 2 };
+        case 'bribe': return { to: id(a.person), gold: a.gold, ...(a.note ? { aim: a.note } : {}) };
+        case 'embargo': return { house: hs[0] || null, ...(a.choice === 'lift' ? { lift: 'yes' } : {}) };
+        case 'pay_ransom': return { character: id(a.person) };
         default: return null;
       }
     })();

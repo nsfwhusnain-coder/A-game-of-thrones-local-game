@@ -696,3 +696,24 @@ coin; its people grow to the new count and each house's measure of its lands wit
 **C1 in two parts.** C1a (this) is the model and its balance. C1b adds the lenders as actors (creditworthiness, the
 Iron Bank's temper, default), the economy verbs of 06 §9 (`borrow`, `repay`, `call_debt`, `buy_grain`, `bribe`,
 ransoms, `embargo`) and the price index of §6.3.
+
+## D-044 · 2026-09-28 · Lenders and the economy verbs, kept to what the engine can judge (WP C1b)
+
+**What.** `engine/economy/lenders.js` and eight verbs (`borrow`, `repay`, `call_debt`, `buy_grain`, `bribe`,
+`embargo`, `pay_ransom`; a ransom *demanded* stays `judge_prisoner … ransom`). Departures from 06 §7 and §9:
+- **Default** is a loan past its day and called (two moons' grace), or a debt called by its lender, not repaid when the
+  day comes. A house that runs short in a moon still borrows the shortfall from the moneylenders as before; that alone
+  is not a default (the Crown lives on such borrowing, as in the books). On a default the realm hears of it, the lender
+  (if a house) is wronged (−30), and the Iron Bank raises that loan's rate and lends nothing more to the defaulter's
+  whole realm. *Funding the defaulter's rivals* waits for the NPC diplomacy of D6.
+- **Creditworthiness**: about eighteen moons of income, half the coin and a third of what is owed to the house, less its
+  debts; the rate rises with the burden of debt, war and past defaults, by each lender's appetite for risk. The Bank of
+  Oldtown lends only in the Reach and the Crownlands.
+- **The price index** covers grain only (season, war in the region, a besieged city); horses, arms and labour come with
+  C3's supply. `buy_grain` buys moons of the house's own people's needs (a man-moon for every three souls) at that price;
+  under embargo no more than two moons.
+- **A bribe** is taken with a chance by the sum against the person's station (§6.4), their love of gold and their
+  honesty; refused, the purse comes home and the house takes offence (−8) and hears of it. What a taken bribe buys is
+  recorded on the person (and in a secret fact) for the minds and the audiences to weigh; it is not a binding promise.
+- **An embargo** is a pact of kind `embargo`, both ways, and can be lifted.
+- `hire_sellswords` by company is C7's (07 §10).

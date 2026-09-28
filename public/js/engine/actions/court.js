@@ -60,6 +60,11 @@ function tourney(state, house, cause) {
 
 /** Who holds a prisoner: the party they are kept in, or the holding they are kept at. */
 const keeperOf = (state, c) => partyOf(state, c)?.owner || state.holdings[c.loc]?.owner;
+/** What a captive is worth to his house (06 §6.4): a great lord or an heir most, a knight little. */
+export function ransomOf(state, c) {
+  const h = state.houses[c.house]; const lordOfHouse = h?.lord === c.id || (c.roles || []).includes('heir');
+  return Math.round((RANSOM[h?.rank] || 2000) * (lordOfHouse ? 1.5 : 1));
+}
 
 /** A prisoner's fate: mercy, a ransom, the Wall, or the axe — each remembered by the prisoner's house. */
 function judge(state, house, { character, verdict }, cause) {
@@ -171,6 +176,30 @@ export const COURT = [
     receipt: (state, i, d) => [{ ok: true, text: d.summary }],
     said: (state, i, d) => ({ status: 'done', text: d.text, note: d.note }),
     facts: ['judgement', 'released', 'ransomed', 'sent_to_wall', 'executed'], mind: { allowed: true },
+  },
+  {
+    // 06 §9: buy back one of your own held by another house, at the price of who they are
+    id: 'pay_ransom', family: 'court', label: 'Pay a ransom',
+    params: { character: 'character' },
+    legal: (state, i) => {
+      const c = state.characters[i.params.character];
+      if (!c?.alive || c.house !== i.house || !/imprisoned|captive|hostage/.test(c.status || '')) return { code: 'not_held', text: 'None of your people by that name is held captive.' };
+      const k = keeperOf(state, c); if (!k || k === i.house) return { code: 'not_held', text: `${c.name} is not held by another house.` };
+      const sum = ransomOf(state, c); if (gold(state.houses[i.house]) < sum) return { code: 'gold', text: `House ${state.houses[k].name} asks ~${sum.toLocaleString('en-GB')} dragons for ${c.name}; your treasury holds ${Math.round(gold(state.houses[i.house])).toLocaleString('en-GB')}.` };
+      return null;
+    },
+    cost: (state, i) => ({ gold: ransomOf(state, state.characters[i.params.character]) }),
+    start: (state, i) => {
+      const c = state.characters[i.params.character]; const k = keeperOf(state, c); const me = state.houses[i.house]; const sum = ransomOf(state, c);
+      applyChanges(state, [
+        { op: 'figure', house: i.house, field: 'treasury', delta: -sum, source: `Ransom of ${c.name}` }, { op: 'figure', house: k, field: 'treasury', delta: sum, source: `Ransom of ${c.name}` },
+        { op: 'character', id: c.id, status: 'free', loc: me.seat || c.loc, note: `Ransomed for ${sum} dragons.` },
+      ], { cause: i.source });
+      emit(state, 'ransomed', { actors: [c.id, me.lord], houses: [i.house, k], place: me.seat || null, data: { gold: sum, by: k }, cause: i.source, text: `House ${me.name} pays ${sum.toLocaleString('en-GB')} dragons to House ${state.houses[k].name} for ${c.name}, who goes home.` });
+      return { sum, keeper: k, name: c.name };
+    },
+    receipt: (state, i, d) => [{ ok: true, text: `${d.sum.toLocaleString('en-GB')} dragons paid to House ${state.houses[d.keeper].name}; ${d.name} rides home.` }],
+    facts: ['ransomed'], mind: { allowed: true },
   },
   {
     // a matter brought before the lord (a petition, a liege's call, a rising): an option, or the lord's own words

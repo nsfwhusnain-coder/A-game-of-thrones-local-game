@@ -1,9 +1,11 @@
 // Economy verbs (docs/gdd/06-economy.md §9): taxes and dues, works, hiring men and officers, and gold given to win a
 // lord's goodwill. Each spends what it should at once and records its fact; the ledger does the rest over the moons.
-import { applyChanges, resolvePlaceId, slug } from '../../shared/world.js';
+import { applyChanges, resolvePlaceId, slug, dateStr } from '../../shared/world.js';
 import { PROJECT_TEMPLATES, TAX_LEVELS } from '../../shared/economy.js';
 import { temperament } from '../../shared/temperament.js';
 import { emit } from '../facts/log.js';
+import { LENDERS, lenderName, creditOf, borrow, repay, callDebt, grainPrice } from '../economy/lenders.js';
+import { random } from '../rng.js';
 
 const gold = (h) => Number(h?.figures?.treasury?.v) || 0;
 const fmtN = (n) => Math.round(n).toLocaleString('en-GB');
@@ -134,4 +136,136 @@ export const ECONOMY = [
     said: (state, i, d) => ({ status: 'done', text: d.text, note: d.note }),
     facts: ['gift'], mind: { allowed: true },
   },
+  {
+    // 06 §7: coin now, interest each moon, the whole on its day — as much as the lender thinks you good for
+    id: 'borrow', family: 'economy', label: 'Borrow from a lender',
+    params: { lender: `enum:${Object.keys(LENDERS).join('|')}|house`, gold: 'number', months: 'number?' },
+    legal: (state, i) => {
+      const n = Math.round(Number(i.params.gold) || 0); const L = i.params.lender;
+      if (!LENDERS[L] && !state.houses[L]) return { code: 'lender', text: 'No such lender: the Iron Bank, the Faith, the Tyroshi, the Bank of Oldtown — or a great house.' };
+      if (L === i.house) return { code: 'lender', text: 'A house cannot borrow from itself.' };
+      if (n < 100) return { code: 'too_little', text: 'No lender troubles with less than a hundred dragons.' };
+      if (state.houses[L]) return gold(state.houses[L]) < n ? { code: 'cannot', text: `House ${state.houses[L].name} has not ${fmtN(n)} dragons to lend.` } : null;
+      const c = creditOf(state, i.house, L);
+      if (c.refuses) return { code: 'refused', text: 'The Iron Bank will lend nothing more to your realm: it has not been repaid.' };
+      if (!c.reach) return { code: 'reach', text: `${lenderName(state, L).replace(/^./, (x) => x.toUpperCase())} lends only to the Reach and the Crownlands.` };
+      if (n > c.limit) return { code: 'credit', text: `${lenderName(state, L).replace(/^./, (x) => x.toUpperCase())} would lend you no more than ~${fmtN(c.limit)} dragons.` };
+      return null;
+    },
+    cost: (state, i) => ({ gold: -Math.round(Number(i.params.gold) || 0) }),
+    start: (state, i) => borrow(state, { house: i.house, lender: i.params.lender, amount: i.params.gold, months: Number(i.params.months) || 24, cause: i.source }),
+    receipt: (state, i, d) => [{ ok: true, text: `${fmtN(d.loan.amount)} dragons borrowed from ${lenderName(state, d.loan.lender)} at ${Math.round(d.rate * 100)} in the hundred a year; due in ${Math.round((d.loan.due - d.loan.since) / 30)} moons.` }],
+    facts: ['loan_taken'], mind: { allowed: false },
+  },
+  {
+    id: 'repay', family: 'economy', label: 'Repay a lender',
+    params: { lender: 'text', gold: 'number?' },
+    legal: (state, i) => {
+      const owed = (state.economy?.loans || []).filter((l) => l.debtor === i.house && l.lender === i.params.lender && l.amount > 0).reduce((n, l) => n + l.amount, 0);
+      if (!owed) return { code: 'no_debt', text: `You owe ${lenderName(state, i.params.lender)} nothing.` };
+      if (gold(state.houses[i.house]) < 1) return { code: 'gold', text: 'The treasury is empty.' };
+      return null;
+    },
+    start: (state, i) => repay(state, { house: i.house, lender: i.params.lender, amount: i.params.gold, cause: i.source }),
+    receipt: (state, i, d) => [{ ok: d.still ? 'warn' : true, text: `${fmtN(d.paid)} dragons repaid to ${lenderName(state, i.params.lender)}${d.still ? `; ${fmtN(d.still)} is still owed` : ' — the debt is cleared'}.` }],
+    facts: ['loan_repaid'], mind: { allowed: true },
+  },
+  {
+    // Tywin's lever on the Crown (06 §7): what is owed, to be repaid within the moons given, or a default
+    id: 'call_debt', family: 'economy', label: 'Call in a debt',
+    params: { debtor: 'house', months: 'number?' },
+    legal: (state, i) => ((state.economy?.loans || []).some((l) => l.lender === i.house && l.debtor === i.params.debtor && l.amount > 0 && !l.called) ? null : { code: 'no_debt', text: `House ${state.houses[i.params.debtor]?.name || '?'} owes you nothing to call in.` }),
+    start: (state, i) => callDebt(state, { lender: i.house, debtor: i.params.debtor, months: Number(i.params.months) || 3, cause: i.source }),
+    receipt: (state, i, d) => [{ ok: true, text: `House ${state.houses[i.params.debtor].name} must repay ${fmtN(d.owed)} dragons within ${Number(i.params.months) || 3} moons, or default.` }],
+    facts: ['debt_called'], mind: { allowed: true },
+  },
+  {
+    // 06 §6.3, §10: grain for the granaries, at the price the season and the wars set in your country
+    id: 'buy_grain', family: 'economy', label: 'Buy grain',
+    params: { moons: 'number' },
+    legal: (state, i) => {
+      const me = state.houses[i.house]; const n = Number(i.params.moons) || 0;
+      if (n < 0.5) return { code: 'too_little', text: 'Buy at least half a moon of grain.' };
+      if (/besieg/.test(state.holdings[me.seat]?.status || '')) return { code: 'siege', text: 'No merchant reaches a besieged seat.' };
+      if ((state.pacts || []).some((p) => p.type === 'embargo' && p.status === 'active' && [p.a, p.b].includes(i.house)) && n > 2) return { code: 'embargo', text: 'Under embargo, the merchants will sell no more than two moons of grain.' };
+      const cost = grainCost(state, i.house, n);
+      if (cost > gold(me)) return { code: 'gold', text: `${n} moons of grain cost ~${fmtN(cost)} dragons; the treasury holds ${fmtN(gold(me))}.` };
+      return null;
+    },
+    cost: (state, i) => ({ gold: grainCost(state, i.house, Number(i.params.moons) || 0) }),
+    start: (state, i) => {
+      const me = state.houses[i.house]; const n = Math.round((Number(i.params.moons) || 0) * 10) / 10; const cost = grainCost(state, i.house, n);
+      applyChanges(state, [{ op: 'figure', house: i.house, field: 'treasury', delta: -cost, source: 'Grain bought' }]);
+      me.figures.food = { ...(me.figures.food || {}), v: Math.round(((Number(me.figures.food?.v) || 0) + n) * 10) / 10 };
+      emit(state, 'grain_bought', { actors: [me.lord], houses: [i.house], data: { moons: n, cost }, cause: i.source, text: `House ${me.name} buys ${n} moons of grain for ${fmtN(cost)} dragons.` });
+      return { moons: n, cost };
+    },
+    receipt: (state, i, d) => [{ ok: true, text: `${d.moons} moons of grain bought for ${fmtN(d.cost)} dragons; the granaries hold more.` }],
+    facts: ['grain_bought'], mind: { allowed: true },
+  },
+  {
+    // 06 §9: gold for a favour, weighed by the one who takes it (their love of gold, their honesty) and by the sum
+    id: 'bribe', family: 'intrigue', label: 'Bribe someone',
+    params: { to: 'character', gold: 'number', aim: 'text?' },
+    legal: (state, i) => {
+      const c = state.characters[i.params.to]; const n = Math.round(Number(i.params.gold) || 0);
+      if (!c?.alive || c.house === i.house) return { code: 'no_one', text: 'There is no one of another house by that name to bribe.' };
+      if (n < 5) return { code: 'too_little', text: 'Not even a gaoler takes less than five dragons.' };
+      if (n > gold(state.houses[i.house])) return { code: 'gold', text: `Your treasury holds only ${fmtN(gold(state.houses[i.house]))} dragons.` };
+      return null;
+    },
+    cost: (state, i) => ({ gold: Math.round(Number(i.params.gold) || 0) }),
+    start: (state, i) => bribe(state, i),
+    receipt: (state, i, d) => [{ ok: d.took ? true : 'warn', text: d.text }],
+    facts: ['bribe', 'bribe_refused'], mind: { allowed: false },
+  },
+  {
+    // 06 §8: no trade with a house's lands or ships, both ways; lifted as easily
+    id: 'embargo', family: 'economy', label: 'Embargo a house',
+    params: { house: 'house:other', lift: 'text?' },
+    legal: (state, i) => {
+      const t = state.houses[i.params.house]; if (!t || t.id === i.house) return { code: 'no_target', text: 'Embargo whom?' };
+      const on = (state.pacts || []).some((p) => p.type === 'embargo' && p.status === 'active' && [p.a, p.b].includes(i.house) && [p.a, p.b].includes(t.id));
+      if (i.params.lift && !on) return { code: 'none', text: `There is no embargo on House ${t.name} to lift.` };
+      if (!i.params.lift && on) return { code: 'already', text: `House ${t.name} is already under your embargo.` };
+      return null;
+    },
+    start: (state, i) => {
+      const t = state.houses[i.params.house]; const me = state.houses[i.house];
+      if (i.params.lift) { for (const p of state.pacts) if (p.type === 'embargo' && p.status === 'active' && [p.a, p.b].includes(i.house) && [p.a, p.b].includes(t.id)) p.status = 'ended'; }
+      else state.pacts.push({ id: `embargo_${i.house}_${t.id}_${state.meta.turn}`, type: 'embargo', a: i.house, b: t.id, terms: `No trade between House ${me.name} and House ${t.name}`, status: 'active', since: dateStr(state.meta.date) });
+      emit(state, 'embargo', { actors: [me.lord], houses: [i.house, t.id], data: { lifted: !!i.params.lift }, cause: i.source, text: i.params.lift ? `House ${me.name} lifts its embargo on House ${t.name}.` : `House ${me.name} forbids all trade with House ${t.name}.` });
+      return { name: t.name, lifted: !!i.params.lift };
+    },
+    receipt: (state, i, d) => [{ ok: true, text: d.lifted ? `The embargo on House ${d.name} is lifted; the merchants may go again.` : `No merchant of yours trades with House ${d.name}, nor theirs with you; both of you lose by it.` }],
+    facts: ['embargo'], mind: { allowed: true },
+  },
 ];
+
+/** What n moons of grain cost a house: its people's needs (a man-moon for every three souls) at its country's price. */
+export function grainCost(state, house, moons) {
+  const me = state.houses[house]; const hs = Object.values(state.holdings).filter((h) => h.owner === house);
+  const people = hs.reduce((n, h) => n + (h.population || 0), 0);
+  return Math.round(moons * people / 3 * grainPrice(state, state.holdings[me.seat]?.region || hs[0]?.region));
+}
+
+/** A bribe: the one bribed weighs the sum against their station and their honesty — and may take offence, and tell. */
+function bribe(state, i) {
+  const me = state.houses[i.house]; const c = state.characters[i.params.to]; const h = state.houses[c.house];
+  const n = Math.round(Number(i.params.gold) || 0); const T = temperament(c);
+  // what would tempt them: a gaoler five dragons, a steward a few thousand, a great lord tens of thousands (06 §6.4)
+  const worth = h?.lord === c.id ? ({ crown: 60000, paramount: 30000, major: 5000, minor: 1500 }[h.rank] || 1000) : (c.roles || []).some((r) => ['steward', 'captain', 'master_at_arms', 'spymaster'].includes(r)) ? 2000 : 300;
+  const greed = T?.sway?.gold ? 1.6 : 1; const honest = T ? 1 - 0.7 * (T.honesty ?? 0.5) : 0.6;
+  const p = clamp(Math.sqrt(n / worth) * 0.6 * greed * honest, 0.02, 0.95);
+  const took = random() < p;
+  // the gold goes only if it is taken (a refused purse comes home)
+  if (took) applyChanges(state, [{ op: 'figure', house: i.house, field: 'treasury', delta: -n, source: 'A bribe' }]);
+  if (took) {
+    applyChanges(state, [{ op: 'character', id: c.id, opinion: clamp((c.opinion || 0) + 20, -100, 100), note: `Took ${n} dragons from House ${me.name}${i.params.aim ? ` to ${i.params.aim}` : ''}.` }], { cause: i.source });
+    emit(state, 'bribe', { actors: [me.lord, c.id], houses: [i.house, c.house], vis: { scope: 'houses', houses: [i.house] }, data: { gold: n, aim: i.params.aim || '' }, cause: i.source, text: `${c.name} takes ${fmtN(n)} dragons from House ${me.name}${i.params.aim ? `, to ${i.params.aim}` : ''}.` });
+    return { took: true, text: `${c.name} takes the gold${i.params.aim ? ` — to ${i.params.aim}` : ''}; what it buys is theirs to give.` };
+  }
+  applyChanges(state, [{ op: 'relation', a: i.house, b: c.house, delta: -8, reason: 'a bribe refused' }], { cause: i.source });
+  emit(state, 'bribe_refused', { actors: [me.lord, c.id], houses: [i.house, c.house], data: { gold: n }, cause: i.source, text: `${c.name} refuses the gold of House ${me.name}, and does not keep quiet about it.` });
+  return { took: false, text: `${c.name} refuses the gold, and takes offence; House ${h?.name} will hear of it.` };
+}

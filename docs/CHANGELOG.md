@@ -3,6 +3,19 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — C1b: lenders, loans and the price of grain (WP C1, second part)
+
+- **Borrow, repay, and be called to account.** Write "Borrow 50,000 dragons from the Iron Bank for two years": the
+  receipt says at what rate and when it is due. The Iron Bank, the Faith, the Tyroshi cartels and the Bank of Oldtown
+  lend as much as they think you good for, dearer if you are deep in debt or at war. A loan past its day is called; a
+  debt not repaid is a default the whole realm hears of — and the Iron Bank lends no more to your realm.
+- **The Lannisters can call in the Crown's debt.** Three million, within three moons, or the Crown defaults.
+- **Buy grain** at the season's price (dear in winter, dearer in the North and in war), **bribe** a lord's steward or a
+  lord himself (he may take it, or take offence), **embargo** a house (and lift it), and **pay the ransom** of one of
+  your people held captive.
+- Owner to verify: as Stark, order "Borrow 50,000 dragons from the Iron Bank" and "Buy two moons of grain", and read the
+  receipts; the Treasury's accounts show the interest the next moon.
+
 ## 2026-09-28 — C1a: gold means something (WP C1, first part)
 
 - **The realm is as populous as the books.** The North holds two million souls, the Reach seven and a half; each
