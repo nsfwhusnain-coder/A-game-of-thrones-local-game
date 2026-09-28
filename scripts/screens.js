@@ -334,9 +334,9 @@ const SCENARIOS = {
       await page.waitForTimeout(1200);
     } };
   },
-  // beginning a chronicle, ironman or not (WP B3)
+  // beginning a chronicle: ironman or not (WP B3), and how hard the canon pulls (WP D1)
   async begin() {
-    return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); } };
+    return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); if (await page.$('#gravity')) await page.selectOption('#gravity', 'loose'); } };
   },
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {

@@ -850,3 +850,21 @@ ransoms, `embargo`) and the price index of §6.3.
   the victor it is a matter with two answers, when he is the beaten one he must sue for himself.
 - **Cold wars** are marked after six moons without a blow and told once; the score does not decay.
 
+## D-051 · 2026-09-28 · The beat engine: data and meta apart, effects as functions (WP D1)
+
+- **Two files.** The threads (dates, preconditions, what happens) moved from `plots.js` to `public/data/beats.js`; the
+  v2 schema's extra fields sit in a `BEAT_META` table keyed by `thread.stage` beside them, so the 11 threads were ported
+  without rewriting each beat. `engine/world/beats.js` turns both into beats and runs them.
+- **Effects stay functions** that return ops, facts and matters, as before; routing them through the verbs (10 §3's
+  `{ verb, actor, params }`) waits for D2, when the full beat set is written anew.
+- **Triggers:** `date` (the window opens), `arrival` (a party halted at a place), `death` (a character dead — the
+  schema's fact-match trigger, narrowed to the one fact the ported threads need) and `after` (days behind another beat,
+  the lower bound of the range).
+- **Canon gravity** is chosen at the begin screen (Canon, Loose, Sandbox) and kept in `meta.settings.canonGravity`. A beat
+  the setting forbids passes silently when its window closes. Under Loose the pillars are: the Imp taken and the
+  Riverlands burning, the boar, Ned's arrest (or Joffrey's quiet crowning), Robb's banners, the Twins, the dragons, the
+  ironborn crown.
+- **Canon locks** cover the people a beat names from a moon before its window to its end. They bind the realm's minds
+  (a lord does not send a named person on an errand); the player is never bound — what the player does may make a beat
+  take its alternate or lapse.
+

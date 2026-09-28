@@ -189,10 +189,12 @@ function logLLM(id, kind, messages, response) {
   fs.writeFileSync(path.join(dir(id), `last-prompt-${kind}.txt`), messages.map((m) => `### ${m.role.toUpperCase()}\n${m.content}`).join('\n\n'));
 }
 
-export function newGame(scenario, house, { ironman = false, seed } = {}) {
+export function newGame(scenario, house, { ironman = false, seed, canonGravity } = {}) {
   const state = createInitialState(scenario, house, seed != null ? { seed: Number(seed) >>> 0 } : {});
   // an ironman chronicle is written once: no undo, no snapshots (docs/gdd/03-architecture.md §11)
   if (ironman) state.meta.settings = { ...(state.meta.settings || {}), ironman: true };
+  // how hard the story pulls toward the books: canon, loose (only the pillars) or sandbox (docs/gdd/10-events-story.md §3)
+  if (['canon', 'loose', 'sandbox'].includes(canonGravity)) state.meta.settings = { ...(state.meta.settings || {}), canonGravity };
   const id = `${house}-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`;
   saveState(id, state);
   const h = state.houses[house];
