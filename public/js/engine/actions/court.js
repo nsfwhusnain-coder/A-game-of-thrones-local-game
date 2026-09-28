@@ -7,6 +7,7 @@ import { applyPetitionFx } from '../../shared/petitions.js';
 import { random, shuffle } from '../rng.js';
 import { partyOf } from '../parties.js';
 import { emit } from '../facts/log.js';
+import { dayNumber } from '../time.js';
 import { keptByStory } from '../people/life.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -36,7 +37,7 @@ function feast(state, house, cause) {
     incident = ` At the high table, ${state.characters[a.lord].name} and ${state.characters[b.lord].name} came to blows over ${pick(['an old boundary', 'a toast to the wrong king', 'a daughter', 'a horse race', 'precedence at table'])}.`;
   }
   applyChanges(state, ch, { source: 'Your feast', cause });
-  emit(state, 'feast', { actors: [me.lord, ...vas.map((v) => v.lord)], houses: [house, ...vas.map((v) => v.id)], place: me.seat || null, data: { cost, brawl: !!incident }, cause, text: `${lordOf(state, house)?.name || `House ${me.name}`} feasts ${vas.length} sworn lord${vas.length === 1 ? '' : 's'} at ${state.holdings[me.seat]?.name || 'the seat'}.${incident}` });
+  emit(state, 'feast', { actors: [me.lord, ...vas.map((v) => v.lord)], houses: [house, ...vas.map((v) => v.id)], place: me.seat || null, data: { cost, brawl: !!incident }, cause, text: `${lordOf(state, house)?.name || `House ${me.name}`} ${vas.length ? `feasts ${vas.length} sworn lord${vas.length === 1 ? '' : 's'} at` : 'holds a feast for the household at'} ${state.holdings[me.seat]?.name || 'the seat'}.${incident}` });
   return { text: `Hold a great feast at ${state.holdings[me.seat]?.name || 'my seat'} for my bannermen.`, note: `[Already done: the feast cost ${cost} dragons; each sworn lord's loyalty +4.${incident} Narrate the feast — who came, who did not, what was said in drink.]`, summary: `The feast is held (${cost.toLocaleString('en-US')} dragons). Your lords are glad of it.${incident}` };
 }
 
@@ -52,6 +53,8 @@ function tourney(state, house, cause) {
   if (champ) ch.push({ op: 'character', id: champ.id, note: `Champion of the tourney at ${state.holdings[me.seat]?.name}.`, opinion: clamp((champ.opinion || 0) + 10, -100, 100) });
   const fallen = knights.filter((k) => k !== champ && !keptByStory(state, k)); // the story's people do not die in the lists by chance
   if (fallen.length && random() < 0.12) { const k = pick(fallen); ch.push({ op: 'character', id: k.id, alive: false, cause: 'a lance through the throat in the lists' }, { op: 'relation', a: house, b: k.house, delta: -4, reason: 'a knight dead in your lists' }); blood = ` ${k.name} died in the lists, a splinter through the throat.`; }
+  // the lords of the region ride to it for a moon (shared/retinues.js)
+  if (me.seat) { state.plots = state.plots || {}; (state.plots.tourneys = state.plots.tourneys || {})[me.seat] = dayNumber(state.meta.date); }
   emit(state, 'tourney', { actors: [me.lord], houses: [house, ...guests.map((g) => g.id)], place: me.seat || null, data: { cost: TOURNEY_COST, guests: guests.length }, cause, text: `House ${me.name} holds a tourney at ${state.holdings[me.seat]?.name || 'its seat'}; ${guests.length} houses send knights.` });
   applyChanges(state, ch, { source: 'Your tourney', cause });
   if (champ) emit(state, 'tourney_result', { actors: [champ.id], houses: [house, champ.house], place: me.seat || null, cause, text: `${champ.name} is champion of the tourney at ${state.holdings[me.seat]?.name || 'the seat'}.` });

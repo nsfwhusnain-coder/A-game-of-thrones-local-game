@@ -7,6 +7,7 @@
 import { joinParty, settle } from '../js/engine/parties.js';
 import { pronouns } from '../js/shared/people.js';
 import { random } from '../js/engine/rng.js';
+import { dayNumber } from '../js/engine/time.js';
 import { YM, C, alive, free, at, flag, player, plays, inWar, ev } from '../js/engine/world/beatkit.js';
 
 // the King's Hand is at court: canon keeps the boar and the tourney waiting for him while he is on the kingsroad
@@ -131,6 +132,7 @@ export const THREADS = [
           const out = {
             events: [ev('The Tourney of the Hand', `King Robert holds a great tourney in King's Landing, forty thousand golden dragons to the champion. Ser Hugh of the Vale dies with a lance through his throat; the Mountain loses his temper and tries to kill ${winner}, and the Hound stands between them. The crown's debt grows by the purse.`, 'baratheon', 3, 'court', ['baratheon', 'tyrell', 'clegane'])],
             changes: [{ op: 'figure', house: 'baratheon', field: 'treasury', delta: -90000, source: 'The tourney accounts' }],
+            post: (st) => { st.plots.tourneys = { ...(st.plots.tourneys || {}), baratheon: dayNumber(st.meta.date) }; },
           };
           if (!plays(s, 'baratheon') && s.houses[player(s)]?.rank !== 'minor') {
             out.decision = {

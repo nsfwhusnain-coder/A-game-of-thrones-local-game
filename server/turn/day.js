@@ -15,6 +15,7 @@ import { retinueTick } from '../../public/js/shared/retinues.js';
 import { vassalTick, gatherMusters, fieldService } from '../../public/js/shared/vassals.js';
 import { worldTick, canonAhead } from '../../public/js/shared/plots.js';
 import { lifeTick, mayDie } from '../../public/js/engine/people/life.js';
+import { CALENDAR, COURTS } from '../../public/data/calendar.js';
 import { resolveWarfare } from '../../public/js/shared/battles.js';
 import { roadEncounters } from '../../public/js/shared/roads.js';
 import { treacheryTick } from '../../public/js/shared/treachery.js';
@@ -87,6 +88,12 @@ export async function engineDay(state, ctx) {
   // wounds heal or fester; fevers, winter chills and great age (engine/people/life.js)
   { const r = lifeTick(state, random, { spared: sparedBy(state) }); cards.push(...r.events); if (r.changes.length) applied.push(...applyChanges(state, r.changes, { source: 'Life', spanDays: 1, told: ['character'], cause: { type: 'rule', ref: 'life' } }).applied); }
   cards.push(...retinueTick(state, 1).events);
+  // the realm's calendar and its courts: flavour for the chronicle's Meanwhile (data/calendar.js)
+  for (const c of [...CALENDAR.filter((x) => x.month === state.meta.date.month && x.day === state.meta.date.day), ...COURTS.filter((x) => x.day === state.meta.date.day)]) {
+    if (c.when && !c.when(state)) continue; const where = resolvePlaceId(c.where);
+    if (!state.holdings[where]) continue;
+    cards.push(fact(state, 'happening', { title: c.title, text: c.text, where, importance: 1, houses: [state.holdings[where].owner], bg: true }, { cause: { type: 'rule', ref: 'calendar' } }));
+  }
   cards.push(...await ctx.deliver(state));
   // promises kept or broken today, judged after the day's marches (a host that reached Moat Cailin has kept its word)
   cards.push(...commitmentsTick(state).filter((f) => f.houses.includes(state.meta.player)).map((f) => asEvent(state, f, { mine: true })));

@@ -523,14 +523,16 @@ test('lords ride out with their households, stay, ride home — and the realm se
     for (const a of Object.values(s.parties).filter((x) => x.kind === 'retinue')) {
       went.add(a.id); assert.ok(isSeen(s, a), 'a party under banners is seen');
       assert.equal(s.characters[a.commander].loc, 'party:' + a.id);
-      assert.deepEqual(a.members, [a.commander], 'the lord rides in it, and the party knows it');
+      // the lord rides in it (and 0–3 of the family with him, WP D8), and the party knows each of them
+      assert.equal(a.members[0], a.commander, 'the lord rides in it, and the party knows it');
+      assert.ok(a.members.length <= 4 && a.members.every((id) => s.characters[id].loc === 'party:' + a.id));
     }
     marchTick(s, { span: 1, turnStart: day }); // the engine's march step, as advance() does it
     for (const id of went) if (!s.parties[id]) home++;
   }
   assert.ok(went.size >= 5, `parties sent: ${went.size}`);
   assert.ok(home > 0, 'some came home and disbanded');
-  assert.ok(Object.values(s.parties).filter((x) => x.kind === 'retinue').length <= 14);
+  assert.ok(Object.values(s.parties).filter((x) => x.kind === 'retinue').length <= 20); // twenty abroad at once (09 §3.1)
 });
 
 // ── Turns that run until something happens ──

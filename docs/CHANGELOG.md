@@ -3,6 +3,17 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — D8: the living society — lords on the road, guests at the seats (Phase D done)
+
+- **Lords ride out every moon, for the reasons the books give**: to their liege's court, a neighbour's feast or wedding,
+  the market, a sept — and now to **tourneys** (a tourney draws its whole region for a moon), on **pilgrimage** to Oldtown
+  or the Great Sept, and **to greet the King** when his progress halts nearby. The warm feast, the ambitious go to court,
+  the pious pray; autumn is the season of harvest feasts; no one travels far in a northern winter.
+- **They bring their families**, stay as **guests** (a holding's card lists its guests), and come home again.
+- **The calendar**: the Maiden's Day, the Father's feast at the Starry Sept, the harvest fires, the old gods' night, the
+  Stranger's eve, and the small council sitting each moon, in the chronicle's Meanwhile.
+- Owner to verify: play a few moons, open a seat with a feast or a tourney, and see the guests.
+
 ## 2026-09-28 — D7: the style bible — the chronicler's voice, and a choice of how much cruelty it tells
 
 - **Book content or Restrained**: a new choice on the begin screen. Book tells the violence of the books without relish;

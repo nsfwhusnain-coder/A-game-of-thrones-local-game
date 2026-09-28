@@ -19,6 +19,7 @@ import { DEMEANOURS } from '../../data/demeanours.js';
 import { profileFor, VOICE_CHOICES, voiceSettings, setVoiceSetting, speak, stopSpeaking } from './voice.js';
 import { forces, partyOf, placeOf, membersOf, together, statusText, sworn } from '../engine/parties.js';
 import { daysLeft } from '../engine/movement.js';
+import { guestsAt } from '../shared/retinues.js';
 import { musterOf } from '../engine/military/muster.js';
 import { supplyOf, supplyText, provinceOf } from '../engine/military/supply.js';
 import { STANDING } from '../engine/military/battle.js';
@@ -602,7 +603,8 @@ function holdingSheet(id) {
     ${hd.buildings?.length ? `<div style="margin-top:0.3rem">${hd.buildings.map((b) => `<span class="pill good">${esc(b)}</span>`).join('')}</div>` : ''}
     ${owner.seat === id ? `<h4>${mine ? 'Your' : 'Rumoured'} strength of House ${esc(owner.name)}</h4><div class="kv"><span class="k">Levies</span><span>${fig('levies')}</span><span class="k">Men-at-arms</span><span>${fig('menAtArms')}</span><span class="k">Ships</span><span>${fig('ships')}</span><span class="k">Treasury</span><span>${fig('treasury')} gd</span></div>` : ''}
     ${hd.notes?.length ? `<h4>Recent</h4>${hd.notes.slice(-4).map((n) => `<div class="muted" style="font-size:0.85rem">${esc(n)}</div>`).join('')}` : ''}
-    <h4>People here</h4>${here.map((c) => charRow(c)).join('') || '<div class="muted">No one of note.</div>'}
+    ${(() => { const guests = guestsAt(s, id); const gid = new Set(guests.map((c) => c.id)); const home = here.filter((c) => !gid.has(c.id));
+      return `<h4>People here</h4>${home.map((c) => charRow(c)).join('') || '<div class="muted">No one of note.</div>'}${guests.length ? `<h4>Guests at ${esc(hd.name)}</h4>${guests.map((c) => charRow(c)).join('')}` : ''}`; })()}
     ${armies.length ? `<h4>Forces here</h4>${armies.map(armyRow).join('')}` : ''}
     <hr><div class="row-actions">
       ${lord && lord.alive && owner.id !== p ? `<button class="btn primary" data-talk="${lord.id}">✉ Treat with ${esc(lord.name.split(' ')[0])}</button>` : ''}

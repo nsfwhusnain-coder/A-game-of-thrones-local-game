@@ -1,8 +1,14 @@
-# Handoff — end of Phase C (war and money)
+# Handoff — end of Phase D (the story and the realm's people)
 
-*Written 2026-09-28 (Phase B's handoff, updated at the end of Phase C). The plan is the Game Design Document in [`docs/gdd/`](gdd/README.md); the order of work is
+*Written 2026-09-28 (Phase B's handoff, updated at the ends of Phases C and D). The plan is the Game Design Document in [`docs/gdd/`](gdd/README.md); the order of work is
 [`16-roadmap.md`](gdd/16-roadmap.md); design departures are in [`DECISIONS.md`](gdd/DECISIONS.md); the earlier sessions'
 handoff is archived at [`archive/HANDOFF-2026-09.md`](archive/HANDOFF-2026-09.md).*
+
+Phase D gave the realm its story and its people: a beat engine with canon gravity (Canon, Loose, Sandbox — chosen on
+the begin screen), the sixty beats of 298–300 AC holding their order through a two-year playtest (Q9), a catalogue of
+matters the model cannot add to, lives that heal and end by rule while the story keeps its own, an opening for every
+house, a hundred goals and ways for every great house, the style bible as data (with a Book / Restrained choice), and
+lords who ride out every moon to feasts, tourneys, pilgrimages and their liege's court.
 
 Phase C made war and money real: the economy anchored in the books with lenders and default, the banners that come
 as lords would bring them, supply in man-days, battles by stance and ground, sieges won by terms, storms, hunger or
@@ -42,12 +48,20 @@ All merged into `claude/brave-ramanujan-i8dt0q` with CI green on windows-latest 
 | C6 | #23 | The sea: ships by kind; fleets carry hosts (*Go aboard*, *Put them ashore*); blockades; the ironborn reave the coasts; sea fights and storms. |
 | C7 | #24 | Free companies by contract (they desert unpaid, the turncoats go over); outlaw bands; the Watch's recruits; the Dothraki refuse the poison water. |
 | C8 | #25 | The state of war: goals, the score, cold wars, *Sue for peace* (white peace, concede, demand), the beaten side's offer. **Phase C done.** |
+| D1 | #26 | The beat engine: windows, triggers, alternates and lapses; canon locks; *Canon / Loose / Sandbox* on the begin screen. |
+| D2 | #27 | Sixty canon beats; the chain made to hold (Q9: 58–60 of 60 in two years for three houses far from the war). |
+| D3 | #28 | Sixty-two kinds of matter from the catalogue; no invented matters (B-28). |
+| D4 | #29 | Wounds heal or fester, fevers and winter; the story's people are not taken by chance under Canon (invariant 11); canon regents (B-23). |
+| D5 | #30 | An opening for every house (27 by hand), with its levers; the council hears the news of the first moons. |
+| D6 | #31 | A hundred goals; ways for every great and major house; lords work at what they want. |
+| D7 | #32 | The style bible as data; *Book content / Restrained*; examples of other houses; anachronisms keyed to the beats. |
+| D8 | #33 | Lords ride out every moon (feasts, weddings, tourneys, pilgrimages, the King's passing) with kin, stay as guests, come home; the calendar and the small council. **Phase D done.** |
 
 ## 2. What CI verifies, and what you should verify
 
-CI (`.github/workflows/ci.yml`) runs `npm run check` and `npm test` (≈ 270 tests: engine, verbs, facts, knowledge,
+CI (`.github/workflows/ci.yml`) runs `npm run check` and `npm test` (≈ 380 tests, among them the two-year canon playtest Q9 for Hightower: engine, verbs, facts, knowledge,
 minds, narrator, audiences, the jump, the Director, memory, the HTTP API end to end, and the contract of every model
-call on the mock and on recorded replies). A nightly soak plays 200 turns × 6 houses and checks the invariants every turn.
+call on the mock and on recorded replies). A nightly soak plays 200 turns × 6 houses and checks the invariants every turn (and at least five lords' journeys a moon); a nightly canon playtest (`node scripts/canon.js`) plays three houses for 24 moons.
 
 **Your checklist** (each one command; what to look for):
 
@@ -68,7 +82,11 @@ call on the mock and on recorded replies). A nightly soak plays 200 turns × 6 h
    siege begins open the castle and *Offer terms*; open Military and hire the Golden Company; open Diplomacy and see the
    war's score move; *Sue for peace*.
 7. `npm run balance` → "the economy is in balance".
-8. If the bench gates fail: see §4.
+8. The story (Phase D): `node scripts/canon.js` (≈ 3 minutes a house) → "Q9 passes". Start as Hightower on *Canon story*
+   and jump a year: the ravens bring the books' news in order, autumn is declared in 299. Start as Stark on *Loose
+   canon*: the King does not come to Winterfell, but his death and the war still do. On the begin screen pick Manderly
+   and Glover and read their openings; open a holding with guests (a feast or a tourney) and see them listed.
+9. If the bench gates fail: see §4.
 
 ## 3. Model guidance
 
@@ -115,11 +133,15 @@ the dataset the recipe will build from. Never train on book text.
   their own (D6); outlaw bands are a mark on a holding, not a party on the map (E).
 - One soak run broke an invariant for Tyrell at turn 82 on a seed that was not recorded; six re-runs with fixed seeds
   held. The nightly soak prints its seeds; if it recurs, replay it with `node scripts/soak.js --seed N --houses tyrell`.
-- Portraits and family trees are unchanged in Phase B; Phase F improves them.
+- The canon beats' effects are functions that return ops (D-051); routing them through the verbs waits. The GDD's canon
+  matters that belong to beats not yet written as matters (Renly's offer, the Iron Price, the kingsmoot, Jon's future,
+  Lady, the debt, Jeyne, Karstark, Tyrion's trial) come with them (D-053).
+- The King's progress has no scheduled stops; lords near it ride to greet it when it halts (D8).
+- Portraits and family trees are unchanged in Phases B–D; Phase F improves them.
 - Open question: do you want the Director *lively* by default once you have seen it with the live model?
 
 ## 6. What comes next
 
-D (politics: the characters' lives, succession, marriages, the court, intrigue, the minds' letters), E (the map: the
+E (the map: the
 living map of hosts, fleets, devastation and outlaws; weather), F (the interface, portraits and family trees improved),
 G (content: Essos, the canon beats of 299–300), H (audio, the fine-tuning recipe, the playtest reports).

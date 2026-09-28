@@ -68,9 +68,14 @@ for (const house of HOUSES) {
     seen.add(f.id); last = f.turn;
   }
   const logSize = fs.statSync(path.join(process.env.WC_SAVES, id, 'facts.jsonl')).size;
+  // the living society (09 §3): lords riding out on their own business, at least five a moon realm-wide
+  const days = Math.max(1, (facts.at(-1)?.day ?? 0) - (facts[0]?.day ?? 0));
+  const journeys = facts.filter((f) => f.kind === 'set_out' && f.data?.why && !f.data?.returning).length;
+  const perMoon = journeys / (days / 30);
+  if (days >= 60 && perMoon < 5) { broken++; log(`- ${house}: only ${perMoon.toFixed(1)} journeys a moon (09 §3 wants at least 5)`, true); }
   const avg = times.reduce((x, y) => x + y, 0) / times.length; const max = Math.max(...times);
-  summary.push({ house, turns: times.length, date: `${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}`, avg, max, size, parties: Object.keys(s.parties).length, first, facts: facts.length, logSize });
-  log(`- ${house}: ${times.length} turns to ${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}, ${Math.round(avg)} ms a turn (max ${max}), save ${(size / 1024).toFixed(0)} KB, ${facts.length} facts (${(logSize / 1024).toFixed(0)} KB), ${Object.keys(s.parties).length} parties${first ? `, FIRST BROKEN ON TURN ${first.t}` : ', every invariant held'}`);
+  summary.push({ house, journeys: perMoon, turns: times.length, date: `${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}`, avg, max, size, parties: Object.keys(s.parties).length, first, facts: facts.length, logSize });
+  log(`- ${house}: ${times.length} turns to ${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}, ${Math.round(avg)} ms a turn (max ${max}), save ${(size / 1024).toFixed(0)} KB, ${facts.length} facts (${(logSize / 1024).toFixed(0)} KB), ${Object.keys(s.parties).length} parties, ${perMoon.toFixed(1)} journeys a moon${first ? `, FIRST BROKEN ON TURN ${first.t}` : ', every invariant held'}`);
 }
 log(`\n| house | turns | reached | ms/turn | max ms | save | facts | parties | invariants |\n|---|---|---|---|---|---|---|---|---|`);
 for (const x of summary) log(`| ${x.house} | ${x.turns} | ${x.date} | ${Math.round(x.avg)} | ${x.max} | ${(x.size / 1024).toFixed(0)} KB | ${x.facts} (${(x.logSize / 1024).toFixed(0)} KB) | ${x.parties} | ${x.first ? `broken on turn ${x.first.t}` : 'held'} |`);

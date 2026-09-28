@@ -86,7 +86,7 @@ validator is the real fix.**
 | D5 | House openings (10 §5) + briefs for every playable house | — | M | every house has a brief; the §5 houses hand-written — ✅ 27 by hand, the rest by region and rank, with levers and the council's hints; `tests/briefs.test.js` |
 | D6 | Goals/agendas (~90) + house-ways trees for all great and major houses | B7 | L | every salient actor has ≥ 1 goal — ✅ 100 goals of 78 people in `data/goals.js` + rank and nature goals; ways for every great, major, order, tribe and exile house (23 new); goals in the mind's dossier, the ways and salience; `tests/goals.test.js` |
 | D7 | Style bible, few-shots and `data/anachronisms.js` | B8 | S | narration validator uses the data — ✅ `data/style.js` (voice, forbidden words, headline, four examples of other houses, maturity Book/Restrained on the begin screen); every validator reads its words; anachronisms keyed to the D2 beats; `tests/style.test.js` |
-| D8 | Living society: retinue scheduler v2, courts and calendars, the progress as a first-class party, guests at seats | B2, D1 | M | 09 §3 behaviours visible in the soak (≥ 5 journeys a moon realm-wide) |
+| D8 | Living society: retinue scheduler v2, courts and calendars, the progress as a first-class party, guests at seats | B2, D1 | M | 09 §3 behaviours visible in the soak (≥ 5 journeys a moon realm-wide) — ✅ scheduler v2 (purposes by nature and season, tourneys, pilgrimages, greeting the King, kin, canon locks, guests, homecomings), the calendar and the small council; the soak counts journeys (≈ 26 a moon); `tests/society.test.js`. **Phase D done.** |
 
 ## Phase E — The map ([11](11-map-visuals.md))
 

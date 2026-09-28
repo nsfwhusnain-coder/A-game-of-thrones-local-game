@@ -22,6 +22,7 @@ const K = (importance, type, vis = 'public', text = null) => ({ importance, type
 export const KINDS = {
   // ── Movement ──
   set_out: K(2, 'war', 'local', (f, s) => `${mover(s, f)} ${toward(s, f)}${f.data.days ? ` (~${f.data.days} days)` : ''}.`),
+  returned: K(1, 'court', 'local', (f, s) => `${mover(s, f)} is home again at ${placeOf(s, f.place)}.`),
   arrived: K(2, 'war', 'local', (f, s) => `${mover(s, f)} reaches ${placeOf(s, f.place)}${f.data.men ? ` (${men(f.data.men)} men)` : ''}.`),
   turned_back: K(2, 'war', 'local'),
   met_on_road: K(2, 'court', 'local'),
