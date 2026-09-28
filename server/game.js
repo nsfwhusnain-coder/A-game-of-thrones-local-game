@@ -5,9 +5,10 @@ import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { chat, extractJson, loadConfig, estimateTokens } from './llm.js';
-import { buildSuggestPrompt, buildConsolidatePrompt, engineFacts } from './prompts.js';
+import { buildSuggestPrompt } from './prompts.js';
+import { whatHappened } from './ai/calls/consolidate.js';
 import { createInitialState, migrateState, applyChanges, placeName, addDays, dateStr, spanOf, resolvePlaceId, dayNumber } from '../public/js/shared/world.js';
-import { partyOf, together } from '../public/js/engine/parties.js';
+import { partyOf, together, placeOf } from '../public/js/engine/parties.js';
 import { settleWorld } from '../public/js/engine/state/settle.js';
 import { validate } from '../public/js/engine/state/validate.js';
 import { settle, initEconomy } from '../public/js/shared/economy.js';
@@ -30,6 +31,7 @@ import { carryOutOrders, readOrders, answerOrder, orderEvents } from './orders.j
 import { interpretOrder } from './orders/interpret.js';
 import { runMinds, knownTo } from './minds.js';
 import { directWeek, thinWeek } from './director.js';
+import { relevantMemory, chronicleNotes } from './ai/context/memory.js';
 import { narrateTurn, narratorOn } from './narrator.js';
 import { deliverLetters, reveal } from './letters.js';
 import { replyText, promisesIn } from './ai/calls/audience.js';
@@ -240,6 +242,18 @@ async function askJsonInner(id, kind, messages, extra) {
   }
 }
 
+/**
+ * A save's relevant memory (04 §9): (person, { words, places }) → the text of what that person's house remembers of
+ * them, their house, where they are and what is being said. The log's last hundred days and the chronicle's notes.
+ */
+export function memoryOf(id, state) {
+  const today = dayNumber(state.meta.date);
+  const own = new Set((state.facts || []).map((f) => f.id));
+  const facts = [...readFacts(id, { limit: 6000 }).filter((f) => today - f.day <= 100 && !own.has(f.id)), ...(state.facts || [])];
+  const notes = chronicleNotes(readChronicle(id));
+  return (c, { words = '', places = [] } = {}) => (c ? relevantMemory(state, { facts, notes, house: c.house, actors: [c.id], houses: [c.house], places: [placeOf(state, c), ...places].filter(Boolean), words }).text : '');
+}
+
 const consolidating = new Map(); // save id -> promise (memory is compressed in the background)
 /** Wait for a save's background work (the chronicle's consolidation, a receipt being read) to finish writing it. */
 export async function settled(id) {
@@ -335,7 +349,10 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   state.meta.turn = turn;
   const recent = readFacts(id, { from: turn - 2 });
   const known = (h) => knownTo(state, recent, h, { limit: 6 });
-  const deliver = async (st) => [...deliverReplies(st), ...await deliverLetters(st, { provider: cfg.provider, cfg, log, known }).catch((e) => { console.warn('letters:', e.message); return []; })];
+  // the realm's minds and letters remember by the relevant memory (04 §9; ai/context/memory.js): only when a model is
+  // asked (the mock's choices do not read it), over the last few moons of the log and the chronicle's notes
+  const remember = cfg.provider === 'mock' ? () => '' : memoryOf(id, state);
+  const deliver = async (st) => [...deliverReplies(st), ...await deliverLetters(st, { provider: cfg.provider, cfg, log, known, memory: (c, words) => remember(c, { words }) }).catch((e) => { console.warn('letters:', e.message); return []; })];
   const touched = new Set(); const applied = [], rejected = [], cards = [], mindsRecord = [], hooksRecord = [], segments = [], narrated = [], meanwhile = [];
   const eyes = { foes: sightedFoes(state) };
   let stopped = null, ran = 0;
@@ -349,7 +366,7 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
       // ── THE REALM'S MINDS: the lords who matter this week decide one thing each (04 §5; server/minds.js)
       state.meta.clock = { turn, from: segFrom, to: segFrom };
       const tm = Date.now();
-      const minds = mindsBudget(cfg) ? await runMinds(state, { budget: mindsBudget(cfg), provider: cfg.provider, cfg, log, known: (x) => known(x.house), replay: replayMinds?.filter((m) => m.segment === seg) || null })
+      const minds = mindsBudget(cfg) ? await runMinds(state, { budget: mindsBudget(cfg), provider: cfg.provider, cfg, log, known: (x) => known(x.house), memory: (x) => remember(state.characters[x.id]), replay: replayMinds?.filter((m) => m.segment === seg) || null })
         .catch((e) => { console.warn('minds:', e.message); return { cards: [], record: [] }; }) : { cards: [], record: [] };
       clock('minds', tm);
       mindsRecord.push(...minds.record.map((r) => ({ ...r, segment: seg })));
@@ -530,14 +547,15 @@ async function maybeConsolidate(id, state, cfg, force = false) {
   if (!force && pendingDays < 44 && !tooBig) return null;
   const batch = pending.slice(0, Math.max(1, pending.length - keep));
   if (!batch.length) return null;
-  const messages = buildConsolidatePrompt(state, batch, readChronicle(id));
-  let obj = null; try { ({ obj } = await askJson(id, 'consolidate', messages, cfg)); } catch { obj = null; }
+  // the stretch's facts as the lord's house knows them (the chronicle is the player's: no other house's secrets)
+  const facts = readFacts(id, { from: batch[0].turn, to: batch.at(-1).turn, view: 'player', limit: 6000 });
+  const r = await runCall('consolidate', state, { facts }, { provider: cfg.provider, cfg, log: (kind, messages, response) => logLLM(id, kind, messages, response) }).catch(() => null);
+  const v = r?.value || { open: [], rumours: [], summary: '' };
   // the engine's dated facts first — they cannot contradict the world; then what is open, then what is only said
-  const bullets = (v) => String(Array.isArray(v) ? v.map((x) => `- ${x}`).join('\n') : v || '').trim();
-  const threads = bullets(obj?.threads) || bullets(obj?.chronicle);
-  const rumours = bullets(obj?.rumours);
+  const bullets = (xs) => (xs || []).map((x) => `- ${String(x).replace(/^[-*]\s*/, '')}`).join('\n');
+  const threads = bullets(v.open); const rumours = bullets(v.rumours);
   const from = batch[0].dateFrom || batch[0].date, to = batch.at(-1).date;
-  const entry = [`### What happened\n${engineFacts(batch) || batch.map((t) => `- **${t.date}** — ${t.summary}`).join('\n')}`, threads && `### Still open, as of ${to}\n${threads}`, rumours && `### Said, not confirmed\n${rumours}`].filter(Boolean).join('\n\n');
+  const entry = [`### What happened\n${whatHappened(facts) || batch.map((t) => `- **${t.date}** — ${t.summary}`).join('\n')}`, v.summary && `### In brief\n${v.summary}`, threads && `### Still open, as of ${to}\n${threads}`, rumours && `### Said, not confirmed\n${rumours}`].filter(Boolean).join('\n\n');
   appendChronicle(id, `\n## ${from} — ${to}\n${entry}\n`);
   const fresh = loadState(id);
   fresh.consolidatedThrough = batch.at(-1).turn;
@@ -624,9 +642,10 @@ async function talkWith(id, state, cfg, charId, message) {
     }
   }
   const known = knownTo(state, readFacts(id, { from: state.meta.turn - 1 }), c.house, { limit: 6 });
+  const memory = cfg.provider === 'mock' ? '' : memoryOf(id, state)(c, { words: message });
   const onProgress = tracker(id, 'chat');
   let r; try {
-    r = await runCall('audience', state, { character: c.id, words: message, stance, face: true, known, receipt: applied.map((a) => a.text) }, { provider: cfg.provider, cfg, onProgress, log: (kind, messages, response) => logLLM(id, kind, messages, response) });
+    r = await runCall('audience', state, { character: c.id, words: message, stance, face: true, known, memory, receipt: applied.map((a) => a.text) }, { provider: cfg.provider, cfg, onProgress, log: (kind, messages, response) => logLLM(id, kind, messages, response) });
   } finally { done(id); }
   const v = r.value;
   const reply = replyText(v);

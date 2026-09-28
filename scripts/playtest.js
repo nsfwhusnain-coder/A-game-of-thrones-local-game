@@ -10,9 +10,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, all) => (x.startsWith('--') ? [...a, [x.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true]] : a), []));
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-play-'));
 fs.cpSync(path.join(ROOT, 'server'), path.join(work, 'server'), { recursive: true });
-fs.symlinkSync(path.join(ROOT, 'public'), path.join(work, 'public'));
+fs.symlinkSync(path.join(ROOT, 'public'), path.join(work, 'public'), 'junction'); // a junction: Windows needs no admin rights for it
 fs.mkdirSync(path.join(work, 'saves'));
-fs.copyFileSync(path.join(ROOT, 'config.json'), path.join(work, 'config.json'));
+if (fs.existsSync(path.join(ROOT, 'config.json'))) fs.copyFileSync(path.join(ROOT, 'config.json'), path.join(work, 'config.json'));
 process.chdir(work);
 const game = await import(path.join(work, 'server/game.js'));
 const { whereabouts } = await import(path.join(work, 'public/js/shared/roads.js'));

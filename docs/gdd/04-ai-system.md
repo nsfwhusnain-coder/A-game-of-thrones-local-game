@@ -453,6 +453,12 @@ voice). Schema: `{ "salutation", "body", "signature", "seal_description" }`.
   "summary": string ≤ 900 }`.
 - `chronicle.md` remains player-editable; edits are read as **notes** ("The lord remembers…"), never as facts.
 
+*(B13, implemented: `server/ai/context/memory.js` `relevantMemory` (lately / older / the chronicle's notes, BM25 from
+`server/lore.js` `bm25Index`/`bm25Search`, the house's knowledge only, 1,200 tokens) given to minds, audiences and
+letters when a model is asked; `server/ai/calls/consolidate.js` (schema as above; "What happened" is
+`whatHappened(facts)`, the engine's; every open thread must name what the dossier names — the check, and salvage drops
+the rest; the engine's own `openNow` is the mock and the fallback). DECISIONS D-041.)*
+
 ## 10. The Weaver (custom mechanics) — phase H, optional
 
 The sandboxed DSL in `shared/rules.js` is kept. When re-enabled, the Weaver is a separate, rare call (≤ 1 per game month)

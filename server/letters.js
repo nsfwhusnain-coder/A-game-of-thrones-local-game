@@ -20,9 +20,9 @@ const firstSentence = (t) => String(t).replace(/\*[^*]*\*/g, ' ').replace(/\s+/g
 
 /**
  * The letters of a turn: the lord's that land are read and answered; the answers that land are delivered. Returns the
- * cards of the answers for the chronicle. opts: { provider, cfg, log, known(house) → facts }.
+ * cards of the answers for the chronicle. opts: { provider, cfg, log, known(house) → facts, memory(person, words) → the relevant memory's text }.
  */
-export async function deliverLetters(state, { provider = 'mock', cfg, log, known = () => [] } = {}) {
+export async function deliverLetters(state, { provider = 'mock', cfg, log, known = () => [], memory = () => '' } = {}) {
   const clock = state.meta.clock; if (!clock) return [];
   const p = state.meta.player; const lordId = state.houses[p].lord; const lord = state.characters[lordId];
   const today = dayNumber(state.meta.date); const cards = [];
@@ -34,7 +34,7 @@ export async function deliverLetters(state, { provider = 'mock', cfg, log, known
     const c = state.characters[l.to];
     if (!c?.alive || c.house === p || l.answered) continue;
     const stance = weighAudience(state, c, l.text);
-    const r = await runCall('audience', state, { character: c.id, words: l.text, stance, face: false, known: known(c.house) }, { provider, cfg, log });
+    const r = await runCall('audience', state, { character: c.id, words: l.text, stance, face: false, known: known(c.house), memory: memory(c, l.text) }, { provider, cfg, log });
     const v = r.value; if (!v?.beats) continue;
     const back = Math.max(1, l.days || 1);
     // what the verdict settles of a proposal (a pact, fealty) and what it leaves in their memory, from the day it lands

@@ -64,7 +64,7 @@ export const DEFAULT_CONFIG = {
   model: '',                          // leave empty to use the server's loaded model
   temperature: 0.85,
   maxTokens: 6000,                    // max tokens for a single response
-  contextTokens: 32768,               // your model's context window (e.g. 262144 for 256k)
+  contextTokens: 65536,               // your model's context window: the 64k llama-swap profiles are the ones to use
   jsonMode: false,                    // send response_format: json_object (some servers require a schema; leave off if errors)
   timeoutSec: 1800,
   consolidateEvery: 5,                // consolidate turn history into the chronicle every N turns (Pax Historia style)

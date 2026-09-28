@@ -46,7 +46,7 @@ function targetEnum(state, ids) {
 export default {
   kind: 'mind',
   fixtureArgs: () => ({ actor: 'tywin_lannister' }),
-  context(state, { actor, known = [], except = [] } = {}) {
+  context(state, { actor, known = [], memory = '', except = [] } = {}) {
     const c = state.characters[actor]; if (!c) throw new Error(`no such person: ${actor}`);
     const opts = optionsFor(state, actor, { except }); const w = opts.view;
     const tree = treeChoice(state, actor, opts);
@@ -77,7 +77,8 @@ export default {
         wants.length ? `WHAT YOU WANT: ${wants.join(' — ')}` : null,
         `YOUR STRENGTH: coin ~${n(w?.gold)} dragons; levies ~${n(w?.levies)} uncalled; men-at-arms ${n(w?.menAtArms)}${w?.hosts.length ? `; hosts: ${w.hosts.map((a) => `${a.id} "${a.name}" ${n(a.men)}${a.at ? ` at ${state.holdings[a.at]?.name || a.at}` : ' in the field'}${a.march ? ` (marching)` : ''}`).join('; ')}` : '; no host in the field'}.`,
         `YOUR HOUSE: ${w?.liege ? `sworn to House ${w.liege.name}` : 'sworn to no one'}${w?.vassals.length ? ` · ${w.vassals.length} houses sworn to you (the banners ${w.bannersCalled ? 'are called' : 'are not called'})` : ''}${w?.atWar ? ` · AT WAR with ${w.foes.map((x) => `House ${state.houses[x]?.name}`).join(', ')}` : ' · at peace'}.`,
-        `WHAT YOU KNOW (as it reached you; it may be late or wrong):\n${known.length ? known.slice(0, 8).map((f) => `- ${f.text}`).join('\n') : '- Nothing of note has reached you this past fortnight.'}`,
+        // the relevant memory (context/memory.js) when the turn gives one; else the fortnight's news as it reached them
+        memory ? `WHAT YOU KNOW (as it reached you; it may be late or wrong):\n${memory}` : `WHAT YOU KNOW (as it reached you; it may be late or wrong):\n${known.length ? known.slice(0, 8).map((f) => `- ${f.text}`).join('\n') : '- Nothing of note has reached you this past fortnight.'}`,
         promisesOf(state, c.id).length ? `YOUR PROMISES (a lord's word is remembered): ${promisesOf(state, c.id).map((x) => promiseText(state, x)).join('; ')}.` : null,
         rel.length ? `RELATIONS: ${rel.map(([x, v]) => `${x.name} ${v > 0 ? '+' : '−'}${Math.abs(v)}`).join(' · ')}` : null,
         `WHAT YOU CAN DO NOW (choose one):\n${optionLines.join('\n')}`,

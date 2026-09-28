@@ -72,7 +72,7 @@ export default {
   // Roose Bolton, at Winterfell for the banners, asked to bring his men to Moat Cailin within the fortnight (15 §2
   // `audience-binds`); the verdict is the engine's (here: he agrees)
   fixtureArgs: (state) => ({ character: 'roose_bolton', words: 'Lord Bolton, bring your men to Moat Cailin within the fortnight.', stance: { verdict: 'agree', moodWord: 'composed', directive: 'THE OUTCOME IS SETTLED — YOU AGREE.', I: { request: true } }, face: true }),
-  context(state, { character, words, stance, face = true, known = [], receipt = [] } = {}) {
+  context(state, { character, words, stance, face = true, known = [], memory = '', receipt = [] } = {}) {
     const c = state.characters[character]; if (!c) throw new Error(`no such person: ${character}`);
     const p = state.meta.player; const lord = state.characters[state.houses[p].lord]; const own = c.house === p;
     const verdict = stance?.verdict || null;
@@ -94,7 +94,7 @@ export default {
         V ? `HOW YOU SPEAK: ${V.voice}\nWHAT YOU WANT: ${V.wants}\nWHAT YOU FEAR: ${V.fears}` : null,
         `THE LORD: ${lord?.name || 'the lord'} of House ${state.houses[p].name}.${own ? ' You are sworn to their service.' : ''}`,
         officerKnowledge(state, c) || null,
-        known.length ? `WHAT HAS REACHED YOU LATELY:\n${known.slice(0, 6).map((f) => `- ${f.text}`).join('\n')}` : null,
+        memory ? `WHAT YOU REMEMBER (as it reached you):\n${memory}` : known.length ? `WHAT HAS REACHED YOU LATELY:\n${known.slice(0, 6).map((f) => `- ${f.text}`).join('\n')}` : null,
         promises.length ? `YOUR PROMISES: ${promises.map((x) => promiseText(state, x)).join('; ')}.` : null,
         receipt.length ? `WHAT YOU ARE ABOUT TO DO (the lord's command, as it will be done): ${receipt.join('; ')}.` : null,
         log.length ? `THE LAST WORDS BETWEEN YOU:\n${log.map((m) => `${m.role === 'player' ? 'The lord' : 'You'}: ${String(m.text).replace(/\s+/g, ' ').slice(0, 240)}`).join('\n')}` : null,
