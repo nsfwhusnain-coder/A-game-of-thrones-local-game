@@ -6,6 +6,8 @@ import { evaluateRules } from './rules.js';
 import { RESOURCES, REGION_PROFILE, HOLDING_RESOURCES, POPULATION, POPULATION_DEFAULTS, TRIBUTE_SHARE, TAX_LEVELS, RESOURCE_VALUE } from '../../data/economy.js';
 import { random } from '../engine/rng.js';
 import { forces, sworn as swornOf } from '../engine/parties.js';
+import { ECONOMY } from '../../data/balance.js';
+import { distributePopulation, holdingRevenue, householdCost, wagesOf, crownLoans, interestOf, labourFactor } from '../engine/economy/ledger.js';
 
 const MINES = new Set(['gold', 'silver', 'iron']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -43,11 +45,33 @@ export function initEconomy(state) {
     house.ledger = house.ledger || [];
   }
   // Scenario flavour: the crown's debts, the Watch's poverty
-  if (state.houses.baratheon) state.houses.baratheon.policy.courtCost = 14000; // Robert's tourneys and feasts
   if (state.houses.nights_watch) state.houses.nights_watch.obligations.tribute = 'none';
   // A few known discontents
   if (state.houses.dustin) state.houses.dustin.obligations.tribute = 'late';
   if (state.houses.greyjoy) state.houses.greyjoy.obligations.tribute = 'late';
+  economyV2(state);
+  return state;
+}
+
+/**
+ * The economy of the books (06; WP C1), once per save: the realm's people as §4 counts them, the Crown's debts as §7
+ * lists them, and — for a new game — the coin of §5.2. An older save keeps its coin; its people grow to the new count
+ * and each house's measure of what its lands can bear grows with them.
+ */
+export function economyV2(state) {
+  if (state.economy?.v >= 2) return state;
+  const fresh = !(state.meta?.turn > 0);
+  const before = Object.fromEntries(Object.keys(state.houses).map((id) => [id, Object.values(state.holdings).filter((x) => x.owner === id).reduce((a, x) => a + (x.population || 0), 0)]));
+  distributePopulation(state);
+  for (const house of Object.values(state.houses)) {
+    const now = Object.values(state.holdings).filter((x) => x.owner === house.id).reduce((a, x) => a + (x.population || 0), 0);
+    if (house.popBase) house.popBase = Math.max(1, Math.round(house.popBase * (now / Math.max(1, before[house.id] || now))));
+    if (fresh && ECONOMY.start[house.id]) house.figures.treasury = { ...(house.figures.treasury || {}), v: ECONOMY.start[house.id].coin };
+  }
+  const crown = Object.values(state.houses).find((h) => h.rank === 'crown');
+  const loans = crown && (fresh || Number(crown.figures?.debt?.v) >= 5e6) ? crownLoans(crown.id) : [];
+  state.economy = { v: 2, loans };
+  if (crown && loans.length) crown.figures.debt = { ...(crown.figures.debt || {}), v: loans.reduce((n, l) => n + l.amount, 0) };
   return state;
 }
 
@@ -82,63 +106,63 @@ export function tradeModifier(state, houseId) {
 }
 
 export function holdingYield(state, h) {
-  const pop10k = h.population / 10000;
-  const tmod = state.__tradeMods?.[h.owner] ?? tradeModifier(state, h.owner);
-  const lines = {};
-  let total = pop10k * 45; // rents, fees, customary dues
-  lines.rents = total;
-  for (const [r, v] of Object.entries(h.resources || {})) {
-    if (!v || !RESOURCE_VALUE[r]) continue;
-    let y = MINES.has(r) ? v * RESOURCE_VALUE[r] * 8 : v * pop10k * RESOURCE_VALUE[r];
-    if (r === 'trade' || r === 'wine' || r === 'spice' || r === 'furs') y *= tmod;
-    lines[r] = y; total += y;
-  }
-  return { total: total * holdingFactor(state, h), lines };
+  const owner = state.houses[h.owner];
+  const trade = state.__tradeMods?.[h.owner] ?? tradeModifier(state, h.owner);
+  const labour = state.__labour?.[h.owner] ?? labourFactor(state, h.owner);
+  return holdingRevenue(state, h, { tax: owner?.policy?.tax || 'normal', trade, labour });
 }
 
 export function armyUpkeep(a) {
+  const F = ECONOMY.field;
   if (a.kind === 'fleet') {
-    const reavers = /ironborn|reaver|longship/i.test(a.composition || '') ? 0.45 : 1; // ironborn crews live off the sea and the iron price
-    return ((a.ships || 0) * 12 + a.men * 0.1) * reavers * (a.at && !a.march ? 0.8 : 1); // crews fish, trade and raid between wars
+    const reavers = /ironborn|reaver|longship/i.test(a.composition || '');
+    const perShip = reavers ? F.longship : F.ship; // ironborn crews live off the sea and the iron price
+    return (a.ships || 0) * perShip * (a.at && !a.march ? F.shipLaidUp : 1);
   }
-  // Levies are the lord's own smallfolk, called from their fields and fed from his stores: they cost bread (the
-  // food stores, and fields left untended) and a little coin for carts, spears and shoes — not wages. Sworn
-  // houses feed and arm their own contingents. Men-at-arms are paid; sellswords are paid dearly.
+  // Levies are the lord's own smallfolk, called from their fields: they cost food and a little coin (06 §6.2), and the
+  // fields they left (the labour factor). Sworn houses feed their own contingents; men-at-arms are paid; sellswords
+  // are paid dearly. A garrison sits on its own stores.
   const sell = /sellsword|company|mercenar/i.test(a.composition || '') || /company/i.test(a.name || '');
   const sworn = swornOf(a).reduce((x, [, y]) => x + y, 0);
   const own = Math.max(0, a.men - Math.min(a.men, sworn));
   const paid = /men-at-arms|household|knights|guard|gold cloak/i.test(a.composition || '') && !/levies/i.test(a.composition || '');
-  return own * (sell ? 1.1 : paid ? 0.22 : 0.04) * (a.kind === 'garrison' ? 0.5 : 1);
+  const each = sell ? (/horse|riders|cavalry/i.test(a.composition || '') ? F.sellswordHorse : F.sellswordFoot) : paid ? F.manAtArmsFood : F.levy;
+  return own * each * (a.kind === 'garrison' ? 0.5 : 1);
 }
 
 function houseHoldings(state, id) { return Object.values(state.holdings).filter((x) => x.owner === id); }
 
+/** The share of a sworn lord's revenue his liege takes, by the liege's rank (06 §5.1). */
+const tributeShare = (liege) => ECONOMY.tribute[liege?.rank] ?? 0.2;
+/** Debt a house owes beyond its named loans (a shortfall borrowed to pay its way), and what it costs a moon. */
+const looseDebt = (state, id, f) => Math.max(0, (Number(f.debt?.v) || 0) - (state.economy?.loans || []).filter((l) => l.debtor === id).reduce((n, l) => n + l.amount, 0));
+
 /** Expected monthly figures for a house (used for projections in the UI and the prompt). */
 export function project(state, houseId) {
   const house = state.houses[houseId]; if (!house) return null;
-  const tax = TAX_LEVELS[house.policy?.tax || 'normal'];
-  const own = houseHoldings(state, houseId).reduce((s, h) => s + holdingYield(state, h).total, 0) * 0.25 * tax.income;
+  const revenueOf = (id) => houseHoldings(state, id).reduce((s, h) => s + holdingYield(state, h).total, 0);
+  const own = revenueOf(houseId);
   let tribute = 0; const vassals = [];
   for (const v of Object.values(state.houses)) {
     if (v.liege !== houseId) continue;
-    const vg = houseHoldings(state, v.id).reduce((s, h) => s + holdingYield(state, h).total, 0) * 0.25;
-    const share = TRIBUTE_SHARE[house.rank] ?? 0.2;
+    const vg = revenueOf(v.id); const share = tributeShare(house);
     const st = v.obligations?.tribute || 'paying';
-    const exp = st === 'paying' ? vg * share * tax.income : st === 'reduced' ? vg * share * tax.income * 0.5 : st === 'late' ? vg * share * 0.4 : 0;
+    const exp = st === 'paying' ? vg * share : st === 'reduced' ? vg * share * 0.5 : st === 'late' ? vg * share * 0.4 : 0;
     tribute += exp; vassals.push({ id: v.id, expected: Math.round(exp), status: st });
   }
   const armies = forces(state).filter((a) => a.owner === houseId);
   const upkeep = armies.reduce((s, a) => s + armyUpkeep(a), 0);
   const alms = almsFor(state).find((x) => x.id === houseId)?.amount || 0;
-  const household = (house.figures.menAtArms?.v || 0) * (houseId === 'nights_watch' ? 0.12 : 0.38) + (house.figures.guard?.v || 0) * 0.6 + alms;
-  const court = house.policy?.courtCost ?? ({ crown: 6000, paramount: 1500, major: 160, minor: 40, city_state: 5000 }[house.rank] || 30);
-  const interest = (house.figures.debt?.v || 0) * 0.004;
+  const household = wagesOf(houseId, house) + alms;
+  const court = householdCost(state, houseId);
+  const it = interestOf(state, houseId);
+  const interest = it.coin + looseDebt(state, houseId, house.figures) * ECONOMY.shortfallRate / 12;
   const projects = (state.projects || []).filter((p) => p.house === houseId && p.status === 'active').reduce((s, p) => s + p.perMonth, 0);
   const liege = house.liege ? state.houses[house.liege] : null;
-  const owed = liege && (house.obligations?.tribute === 'paying') ? own / tax.income * (TRIBUTE_SHARE[liege.rank] ?? 0.2) : 0;
-  const income = own + tribute + (houseId === 'nights_watch' ? almsFor(state).reduce((a, x) => a + x.amount, 0) : 0);
+  const owed = liege && (house.obligations?.tribute === 'paying') ? own * tributeShare(liege) : 0;
+  const income = own + tribute + it.received + (houseId === 'nights_watch' ? almsFor(state).reduce((a, x) => a + x.amount, 0) : 0);
   const expenses = upkeep + household + court + interest + projects + owed;
-  return { own: Math.round(own), tribute: Math.round(tribute), vassals, upkeep: Math.round(upkeep), household: Math.round(household), court: Math.round(court), interest: Math.round(interest), projects: Math.round(projects), owed: Math.round(owed), income: Math.round(income), expenses: Math.round(expenses), net: Math.round(income - expenses), low: Math.round(income * 0.75 - expenses), high: Math.round(income * 1.15 - expenses) };
+  return { own: Math.round(own), tribute: Math.round(tribute), vassals, upkeep: Math.round(upkeep), household: Math.round(household), court: Math.round(court), interest: Math.round(interest), accrues: Math.round(it.accrues), projects: Math.round(projects), owed: Math.round(owed), income: Math.round(income), expenses: Math.round(expenses), net: Math.round(income - expenses), low: Math.round(income * 0.8 - expenses), high: Math.round(income * 1.15 - expenses) };
 }
 
 /**
@@ -151,6 +175,7 @@ export function settle(state, days) {
   const date = state.meta?.date ? `${state.meta.date.day} ${ord(state.meta.date.month)} moon, ${state.meta.date.year} AC` : '';
   // 1. Gross incomes with luck per holding
   state.__tradeMods = Object.fromEntries(Object.keys(state.houses).map((id) => [id, tradeModifier(state, id)]));
+  state.__labour = Object.fromEntries(Object.keys(state.houses).map((id) => [id, labourFactor(state, id)]));
   const gross = {}; const detail = {};
   for (const house of Object.values(state.houses)) { gross[house.id] = 0; detail[house.id] = []; }
   for (const h of Object.values(state.holdings)) {
@@ -162,7 +187,7 @@ export function settle(state, days) {
     let why = '';
     if (roll < 0.03 * months) { luck *= 0.45; why = pick(['blight in the fields', 'a fire in the granary', 'outlaws on the roads', 'a sickness among the smallfolk', 'a storm wrecked the fishing boats']); }
     else if (roll > 1 - 0.03 * months) { luck *= 1.5; why = pick(['a bumper harvest', 'a rich market season', 'a new vein in the mines', 'fat herring shoals', 'a great fair drew merchants']); }
-    const v = y.total * 0.25 * luck * months;
+    const v = y.total * luck * months;
     gross[h.owner] += v;
     detail[h.owner].push({ label: h.name, amount: Math.round(v), note: why });
     if (why && state.houses[h.owner]) notes.push({ house: h.owner, holding: h.id, text: `${h.name}: ${why}.` });
@@ -170,10 +195,9 @@ export function settle(state, days) {
   // 2. Per house: taxes, tribute up the chain, expenses
   const ledgers = {};
   for (const house of Object.values(state.houses)) {
-    const tax = TAX_LEVELS[house.policy?.tax || 'normal'];
     const lines = [];
-    const own = gross[house.id] * tax.income;
-    if (own) lines.push({ kind: 'income', label: 'Rents, taxes & yields of your lands', amount: Math.round(own), detail: detail[house.id].map((d) => ({ ...d, amount: Math.round(d.amount * tax.income) })) });
+    const own = gross[house.id]; // the taxes are in the rents (06 §5.1)
+    if (own) lines.push({ kind: 'income', label: 'Rents, trade & mines of your lands', amount: Math.round(own), detail: detail[house.id] });
     ledgers[house.id] = { lines, own };
   }
   for (const v of Object.values(state.houses)) {
@@ -181,13 +205,12 @@ export function settle(state, days) {
     // Remitted dues (forgiven or halved by the liege) run for a year, then revert
     if (v.obligations?.tributeUntil && state.meta?.date && state.meta.date.year * 12 + state.meta.date.month >= v.obligations.tributeUntil) { v.obligations.tribute = 'paying'; delete v.obligations.tributeUntil; notes.push({ house: liege.id, text: `House ${v.name}'s remitted dues have run their course; full tribute is owed again.` }); }
     const st = v.obligations?.tribute || 'paying';
-    const share = TRIBUTE_SHARE[liege.rank] ?? 0.2;
+    const share = tributeShare(liege);
     const ltax = TAX_LEVELS[liege.policy?.tax || 'normal'];
     let rel = 0; try { rel = state.relations[(v.id < liege.id ? `${v.id}|${liege.id}` : `${liege.id}|${v.id}`)]?.v ?? 0; } catch { /* */ }
     let comply = st === 'paying' ? rnd(0.85, 1.05) : st === 'reduced' ? rnd(0.45, 0.55) : st === 'late' ? (random() < 0.35 ? rnd(0.8, 1.6) : 0) : 0;
     if (st === 'paying' && rel < -30) comply *= rnd(0.5, 0.9);
-    const base = (ledgers[v.id]?.own || 0) / TAX_LEVELS[v.policy?.tax || 'normal'].income;
-    const due = base * share * ltax.income;
+    const due = (ledgers[v.id]?.own || 0) * share;
     const paid = Math.max(0, due * comply);
     const note = st === 'withholding' ? 'withheld' : st === 'forgiven' ? 'forgiven this year' : st === 'reduced' ? 'halved by your grace' : st === 'late' ? (paid > 0 ? 'arrears paid' : 'late — nothing arrived') : paid < due * 0.8 ? 'paid short' : '';
     if (due > 1 || st !== 'paying') {
@@ -208,12 +231,20 @@ export function settle(state, days) {
     const armies = forces(state).filter((a) => a.owner === house.id);
     const upkeep = armies.reduce((s, a) => s + armyUpkeep(a), 0) * months;
     if (upkeep) L.lines.push({ kind: 'expense', label: 'Hosts & fleets in the field', amount: Math.round(upkeep), detail: armies.map((a) => ({ label: a.name, amount: Math.round(armyUpkeep(a) * months) })) });
-    const household = ((f.menAtArms?.v || 0) * (house.id === 'nights_watch' ? 0.12 : 0.38) + (f.guard?.v || 0) * 0.6) * months; // sworn brothers take no wages
+    const household = wagesOf(house.id, house) * months; // sworn brothers take a pittance
     if (household) L.lines.push({ kind: 'expense', label: 'Men-at-arms & household guard', amount: Math.round(household) });
-    const court = (house.policy?.courtCost ?? ({ crown: 6000, paramount: 1500, major: 160, minor: 40, city_state: 5000 }[house.rank] || 30)) * months * rnd(0.85, 1.2);
+    const court = householdCost(state, house.id) * months * rnd(0.9, 1.1);
     L.lines.push({ kind: 'expense', label: 'Court, feasts & household', amount: Math.round(court) });
-    const interest = (f.debt?.v || 0) * 0.004 * months;
+    // the named loans (06 §7): a lender's interest paid in coin, or — a great house's loan — added to the debt; and any
+    // shortfall borrowed to pay the house's way, at the moneylenders' rate
+    const it = interestOf(state, house.id);
+    const interest = (it.coin + looseDebt(state, house.id, f) * ECONOMY.shortfallRate / 12) * months;
     if (interest) L.lines.push({ kind: 'expense', label: 'Interest on debts', amount: Math.round(interest) });
+    if (it.received) L.lines.push({ kind: 'income', label: 'Interest owed to you, paid', amount: Math.round(it.received * months) });
+    if (it.accrues) {
+      for (const l of (state.economy?.loans || []).filter((x) => x.debtor === house.id && x.pays === 'accrues')) l.amount = Math.round(l.amount * (1 + l.rate / 12 * months));
+      f.debt = { ...(f.debt || {}), v: Math.round((Number(f.debt?.v) || 0) + it.accrues * months) };
+    }
     // The Night's Watch lives on the alms of the realm; friendly great houses send coin and grain north
     if (house.id === 'nights_watch' || (state.houses.nights_watch && ['crown', 'paramount'].includes(house.rank))) {
       if (house.id === 'nights_watch') {
@@ -264,7 +295,7 @@ export function settle(state, days) {
     const soldiers = armies.filter((a) => a.kind !== 'fleet').reduce((s, a) => s + a.men, 0) / 10000;
     const cons = Math.max(0.05, pop * 0.9 + soldiers * 1.3);
     const prod = hs.reduce((s, h) => { const r = h.resources || {}; return s + (h.population / 10000) * ((r.grain || 0) * 0.8 + (r.fish || 0) * 0.5 + (r.horses || 0) * 0.1 + 0.45) * holdingFactor(state, h) * seasonFood(state, h.region) * rnd(0.8, 1.15); }, 0);
-    const levyDrain = Math.min(0.35, soldiers / Math.max(0.01, pop) * 3); // men in the field don't till fields
+    const levyDrain = 1 - (state.__labour?.[house.id] ?? 1); // men in the field don't till fields (06 §5.1)
     const aid = house.id === 'nights_watch' ? (almsFor(state).length ? Math.min(1.1, 0.85 + 0.15 * almsFor(state).length) : 0) * cons : 0; // grain carts up the kingsroad
     const stores = aid * months + (Number(f.food?.v) || 0) * cons + (prod * (1 - levyDrain) - cons) * months;
     // a woven custom may feed the house or eat it (a smuggler's grain, a cult's sacrifices)
@@ -318,7 +349,7 @@ export function settle(state, days) {
     const entry = { turn: (state.meta?.turn || 0), date, days, lines: L.lines, income, expense, net: income - expense, treasury: f.treasury.v, prevTreasury: prev, food: f.food.v, reporter: steward?.name || null };
     house.ledger = [...(house.ledger || []), entry].slice(house.id === state.meta?.player ? -24 : -2);
   }
-  delete state.__tradeMods;
+  delete state.__tradeMods; delete state.__labour;
   return notes;
 }
 

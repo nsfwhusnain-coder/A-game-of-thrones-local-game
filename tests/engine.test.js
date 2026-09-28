@@ -419,7 +419,7 @@ test('gold an order cannot pay is refused before anything is done', async () => 
   assert.equal(goldIn('offer 2,000 dragons'), 2000);
   const s = fresh(); s.orders = [{ id: 'o', text: 'Spend sixty million gold dragons to buy the Iron Throne from King Robert.' }];
   await carryOutOrders(s, asRead([{ verb: 'send_gift', params: { to: 'robert_baratheon', gold: 60e6 } }]));
-  assert.match(s.orders[0].result[0], /could not be done: the treasury holds 60,000 dragons, not 60,000,000/i);
+  assert.match(s.orders[0].result[0], /could not be done: the treasury holds 120,000 dragons, not 60,000,000/i);
 });
 test('an untagged story event that tells an order becomes its event (no duplicate)', async () => {
   const { orderEvents } = await import('../server/orders.js');
@@ -469,7 +469,7 @@ test('every kind of order is read by the rules and carried out by the engine', a
 test('a refused order is told once, and nothing of it happens elsewhere', async () => {
   const { orderEvents } = await import('../server/orders.js');
   const s = fresh(); const told = [{ order: 1, title: 'The treasurer laughs', text: '…' }, { order: 1, title: 'Gold travels south', text: 'A chest of gold is sent to King\'s Landing.' }];
-  orderEvents(s, [{ id: 'a', text: 'Spend sixty million dragons.', result: ['could not be done: the treasury holds 60,000 dragons, not 60,000,000'] }], told);
+  orderEvents(s, [{ id: 'a', text: 'Spend sixty million dragons.', result: ['could not be done: the treasury holds 120,000 dragons, not 60,000,000'] }], told);
   assert.equal(told.length, 1); assert.equal(told[0].title, 'The treasurer laughs');
 });
 test('an order that names a leader puts them at the head of the host', async () => {

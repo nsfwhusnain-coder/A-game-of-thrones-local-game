@@ -29,7 +29,7 @@ DATE: 1 8th moon, 298 AC. Summer.
 YOU ARE: Tywin Lannister [tywin_lannister], Lord of Casterly Rock, Warden of the West, 57. Head of House Lannister. At Casterly Rock.
 YOUR NATURE: courage 8, wits 10, guile 9, pride 10, temper 3, warmth 1, honesty 3, ambition 9. Swayed by: family, power.
 WHAT YOU WANT: the House of Lannister's legacy: the crown in his grandson's hand, the realm in his debt
-YOUR STRENGTH: coin ~2,800,000 dragons; levies ~25,000 uncalled; men-at-arms 4,000; no host in the field.
+YOUR STRENGTH: coin ~500,000 dragons; levies ~25,000 uncalled; men-at-arms 4,000; no host in the field.
 YOUR HOUSE: sworn to House Baratheon of King's Landing · 15 houses sworn to you (the banners are not called) · at peace.
 WHAT YOU KNOW (as it reached you; it may be late or wrong):
 - Nothing of note has reached you this past fortnight.
