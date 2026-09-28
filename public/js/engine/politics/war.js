@@ -159,7 +159,7 @@ function suesForPeace(state, r) {
     if (canonHeld(state, w) && W !== p) continue;
     if (W === p) {
       const LH = state.houses[L]; const { ops, tribute } = peaceOps(state, w, { conceder: loser });
-      applyChanges(state, [{ op: 'decision', id: `peace_${w.id}`, title: `House ${LH?.name} sues for peace`, from: LH?.lord, days: 14,
+      applyChanges(state, [{ op: 'decision', matter: 'peace_offered', id: `peace_${w.id}`, title: `House ${LH?.name} sues for peace`, from: LH?.lord, days: 14,
         text: `Beaten in ${w.name}, House ${LH?.name} sends to ask for peace: it will concede, pay ${fmt(tribute)} dragons and free the captives it holds.`,
         options: [
           { label: 'Accept their surrender', hint: `The war ends; ${fmt(tribute)} dragons; your people freed`, fx: [{ ops }] },

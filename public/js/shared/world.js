@@ -2,6 +2,7 @@
 import { HOUSES, EXTRA_HOLDINGS, PLACE_ALIASES } from '../../data/houses.js';
 import { CHARACTERS } from '../../data/characters.js';
 import { SCENARIOS } from '../../data/scenarios.js';
+import { MATTER_IDS } from '../../data/matters.js';
 import { JUNCTIONS, PLACE_NAMES, LAND, LAKES, MILES_PER_UNIT } from '../../data/geography.js';
 import { MAP_VERSION, warpOld } from '../../data/warp.js';
 import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.js';
@@ -1030,10 +1031,13 @@ function applyOne(state, ch, ctx) {
       return { op, text: `A raven arrives from ${state.ravens[0].fromName}` };
     }
     case 'decision': case 'choice': {
+      // every matter is one of the catalogue's templates (data/matters.js) or a Director hook's — never invented (B-28)
+      const matter = String(ch.matter || '');
+      if (!MATTER_IDS.has(matter) && !(matter.startsWith('hook:') && matter.length > 5)) throw new Error(`no such matter${matter ? ` (${matter})` : ''}: a matter must come from the catalogue`);
       const opts = (Array.isArray(ch.options) ? ch.options : []).map((o) => (typeof o === 'string' ? { label: o } : { label: String(o.label || o.text || ''), hint: String(o.hint || o.effect || ''), ...(Array.isArray(o.fx) ? { fx: o.fx } : {}) })).filter((o) => o.label);
       if (opts.length < 2) throw new Error('a decision needs at least two options');
       state.decisions = state.decisions || [];
-      const d = { id: slug(ch.id || ch.title || 'decision') + '_' + nextId(state, 'd'), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, day: dayNumber(state.meta.date), days: Math.max(1, Math.round(num(ch.days) ?? 14)), status: 'pending', ...(resolvePlaceId(ch.where) && state.holdings[resolvePlaceId(ch.where)] ? { where: resolvePlaceId(ch.where) } : {}) };
+      const d = { id: slug(ch.id || ch.title || 'decision') + '_' + nextId(state, 'd'), title: String(ch.title || 'A decision'), text: String(ch.text || ''), from: findChar(state, ch.from) || null, options: opts, date, turn: state.meta.turn, day: dayNumber(state.meta.date), days: Math.max(1, Math.round(num(ch.days) ?? 14)), status: 'pending', matter, ...(resolvePlaceId(ch.where) && state.holdings[resolvePlaceId(ch.where)] ? { where: resolvePlaceId(ch.where) } : {}) };
       state.decisions.push(d);
       note('petition', { actors: [d.from, state.houses[state.meta.player]?.lord], houses: [state.meta.player, state.characters[d.from]?.house], place: d.where || null, data: { matter: d.id }, title: d.title, text: `A matter is brought before ${state.characters[state.houses[state.meta.player]?.lord]?.name || 'the lord'}: ${d.title}.` });
       return { op, text: `A decision awaits you: ${d.title}` };

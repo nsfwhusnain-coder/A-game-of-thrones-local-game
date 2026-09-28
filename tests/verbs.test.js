@@ -85,7 +85,7 @@ const CASES = {
   hold_feast: { ok: () => ({}), no: (s) => { s.houses.stark.figures.treasury.v = 100; return [{}, 'gold']; } },
   hold_tourney: { ok: () => ({}), no: (s) => { s.houses.stark.figures.treasury.v = 100; return [{}, 'gold']; } },
   judge_prisoner: { ok: (s) => { Object.assign(s.characters.jaime_lannister, { status: 'imprisoned', loc: 'stark' }); return { character: 'jaime_lannister', verdict: 'release' }; }, no: () => [{ character: 'jaime_lannister', verdict: 'release' }, 'no_prisoner'] },
-  answer_matter: { ok: (s) => { applyChanges(s, [{ op: 'decision', id: 'm1', title: 'A quarrel', text: 'Two lords quarrel.', options: ['Side with the first', 'Side with the second'] }]); return { decision: s.decisions.at(-1).id, option: 0 }; }, no: () => [{ decision: 'no_such_matter', option: 0 }, 'no_matter'] },
+  answer_matter: { ok: (s) => { applyChanges(s, [{ op: 'decision', matter: 'border_quarrel', id: 'm1', title: 'A quarrel', text: 'Two lords quarrel.', options: ['Side with the first', 'Side with the second'] }]); return { decision: s.decisions.at(-1).id, option: 0 }; }, no: () => [{ decision: 'no_such_matter', option: 0 }, 'no_matter'] },
   declare_war: { ok: () => ({ house: 'lannister', reason: 'the attack on Bran' }), no: () => [{ house: 'stark' }, 'no_target'] },
   plant_spy: { ok: () => ({ house: 'lannister' }), no: () => [{ house: 'stark' }, 'no_target'] },
   gather_secrets: { ok: () => ({ house: 'lannister' }), no: (s) => { s.houses.stark.figures.treasury.v = 100; return [{ house: 'lannister' }, 'gold']; } },

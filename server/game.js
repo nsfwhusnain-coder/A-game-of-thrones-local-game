@@ -477,10 +477,8 @@ function closeTurn(state, record, days) {
   if (!newDecision && pendingCount === 0 && random() < 0.75 * Math.min(1, days / 30)) {
     // the same kind of matter does not come before you twice in quick succession
     state.plots = state.plots || {}; const seen = state.plots.petitioned = state.plots.petitioned || {};
-    const kindOf = (t) => t.replace(/House [A-Z][\w']*( of [A-Z][\w' ]*)?/g, '').replace(/[^a-z ]/gi, '').trim().slice(0, 40);
-    let pet = null;
-    for (let i = 0; i < 6 && !pet; i++) { const c = realmPetition(state); if (c && state.meta.turn - (seen[kindOf(c.title)] ?? -99) >= 6) pet = c; }
-    if (pet) seen[kindOf(pet.title)] = state.meta.turn;
+    const pet = realmPetition(state); // a template not raised in the last six turns (data/matters.js)
+    if (pet) seen[pet.matter] = state.meta.turn;
     if (pet) { const r = applyChanges(state, [{ op: 'decision', ...pet }]); record.applied.push(...r.applied); }
   }
   // a matter waits its days (the King will not wait a moon for his answer), then the world decides without you

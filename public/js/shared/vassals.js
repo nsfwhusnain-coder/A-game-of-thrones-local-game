@@ -81,7 +81,7 @@ function unrestTick(state, days) {
     h.status = 'rising';
     if (h.owner !== p) { if (random() < 0.5) { h.status = 'normal'; h.unrest -= 20; } continue; } // the story handles other lords' troubles
     const cost = Math.round(h.population * 0.01 / 50) * 50 + 500;
-    applyChanges(state, [{ op: 'decision', title: `The smallfolk rise at ${h.name}`, from: null, text: `Hunger, taxes and lawlessness have driven the smallfolk of ${h.name} to arms. They have burned a tithe barn and hanged a tax collector, and they will not disperse.`, options: [
+    applyChanges(state, [{ op: 'decision', matter: 'rising', title: `The smallfolk rise at ${h.name}`, from: null, text: `Hunger, taxes and lawlessness have driven the smallfolk of ${h.name} to arms. They have burned a tithe barn and hanged a tax collector, and they will not disperse.`, options: [
       { label: 'Crush the rising', hint: 'Your men-at-arms ride out. It will be bloody, and it will be remembered.', fx: [{ rising: [h.id, 'crush'] }] },
       { label: 'Hear their grievances', hint: `~${cost.toLocaleString()} dragons in grain and remitted rents`, fx: [{ rising: [h.id, 'grant', cost] }] },
       { label: 'Hang the ringleaders, pardon the rest', hint: 'A middle course', fx: [{ rising: [h.id, 'hang'] }] },
@@ -125,7 +125,7 @@ function rebellionTick(state, days) {
     if (t >= 14 || v.obligations?.tribute !== 'withholding' || random() >= 0.2 * months) continue;
     v.rebel = true;
     const lord = state.characters[v.lord];
-    applyChanges(state, [{ op: 'decision', title: `House ${v.name} defies you`, from: v.lord, text: `${lord.name} has closed the gates of ${state.holdings[v.seat]?.name || `${pronouns(lord).his} seat`}, turned away your envoy and declared that House ${v.name} owes you nothing. Other lords are watching to see what you do.`, options: [
+    applyChanges(state, [{ op: 'decision', matter: 'defiant_vassal', title: `House ${v.name} defies you`, from: v.lord, text: `${lord.name} has closed the gates of ${state.holdings[v.seat]?.name || `${pronouns(lord).his} seat`}, turned away your envoy and declared that House ${v.name} owes you nothing. Other lords are watching to see what you do.`, options: [
       { label: 'Declare them traitors and march', hint: 'War. Every lord will see the price of defiance.', fx: [{ rebel: [v.id, 'war'] }] },
       { label: 'Offer terms', hint: 'Forgive their dues and hear their grievances. Some will call it weakness.', fx: [{ rebel: [v.id, 'terms'] }] },
       { label: 'Release them from their oaths', hint: 'Let them go. Your realm shrinks.', fx: [{ rebel: [v.id, 'release'] }] }] }]);
@@ -268,7 +268,7 @@ function playerAsVassal(state, me, months) {
   if (ob.levies === 'called' && !(state.decisions || []).some((d) => d.kind === 'liege_call' && d.status === 'pending')) {
     const lev = Number(me.figures.levies?.v) || 0;
     const muster = state.holdings[ob.muster || liege.seat]?.name || 'his seat';
-    const r = applyChanges(state, [{ op: 'decision', title: `House ${liege.name} calls your banners`, from: liege.lord, text: `A raven with ${lord ? lord.name + "'s" : 'your liege\'s'} seal: you are commanded to muster your levies and ride for ${muster} with all haste.`, options: [
+    const r = applyChanges(state, [{ op: 'decision', matter: 'liege_call', title: `House ${liege.name} calls your banners`, from: liege.lord, text: `A raven with ${lord ? lord.name + "'s" : 'your liege\'s'} seal: you are commanded to muster your levies and ride for ${muster} with all haste.`, options: [
       { label: 'Answer the call', hint: `~${Math.round(lev * 0.75).toLocaleString()} men march for ${muster}; your liege is pleased`, fx: [{ call: 'answer' }] },
       { label: 'Send a token force', hint: 'A few hundred men and many excuses', fx: [{ call: 'token' }] },
       { label: 'Delay — the harvest must come in', hint: 'Your liege will not wait forever', fx: [{ call: 'delay' }] },

@@ -92,6 +92,17 @@ const SCENARIOS = {
     }
     return { id, focus: state.holdings.stark.pos, dist: 900 };
   },
+  // a matter from the catalogue before the lord (WP D3): moons pass as Tully until one of the realm's, the lords' or the
+  // household's templates comes before him
+  async matter() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'tully' });
+    for (let i = 0; i < 12; i++) {
+      await api(`/games/${id}/advance`, { span: '30d', orders: [] });
+      const s = await api(`/games/${id}`);
+      if ((s.decisions || []).some((d) => d.status === 'pending' && d.matter && !d.matter.startsWith('hook:'))) break;
+    }
+    return { id, focus: state.holdings.tully.pos, dist: 700 };
+  },
   // Settings: the Director's setting beside the narrator's (WP B12)
   async directorsettings() {
     return { page: async (page) => {
