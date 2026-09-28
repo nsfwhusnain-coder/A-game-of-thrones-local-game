@@ -13,6 +13,7 @@
 <script type="module">
 // The map at its four levels of detail over five fixed spots (docs/gdd/11-map-visuals.md §12; WP E1):
 //   ?spot=realm|kings_landing|winterfell|twins|pyke|sunspear  &lod=0|1|2|3  &boxes=1 (outline every label's box)
+//   &season=summer|autumn|winter|spring &days=N (how old the season is: the snow line, WP E3)  &dist=N (a camera distance)
 // The page sets document.title to "ready" once the map has drawn the view, for the screenshot tests.
 import { createInitialState } from '../js/shared/world.js';
 import { MapScene, LOD, lodOf } from '../js/map3d/MapScene.js';
@@ -21,6 +22,7 @@ const SPOTS = { realm: 'realm', kings_landing: 'baratheon', winterfell: 'stark',
 const spot = q.get('spot') || 'realm'; const lod = Math.max(0, Math.min(3, Number(q.get('lod') ?? 0)));
 if (q.get('boxes')) document.body.classList.add('boxes');
 const state = createInitialState('agot_298', 'stark', { seed: 1 });
+if (q.get('season')) state.world = { ...state.world, season: q.get('season'), seasonDays: Number(q.get('days') || 0) };
 const map = new MapScene(document.getElementById('map-wrap'), {});
 window.__map = map;
 await map.generate(state.holdings, (p, msg) => { document.getElementById('hud').textContent = `${msg}… ${Math.round(p * 100)} %`; });
@@ -28,7 +30,7 @@ map.setState(state);
 const hid = SPOTS[spot];
 const pos = spot === 'realm' ? null : state.holdings[hid]?.pos;
 if (pos) { map.target.set(pos[0], 0, pos[1]); } else map.home();
-map.tween = null; map.dist = LOD[lod]; if (!pos) { map.target.set(720, 0, 1370); }
+map.tween = null; map.dist = Number(q.get('dist')) || LOD[lod]; if (!pos) { map.target.set(720, 0, 1370); }
 map.updateCamera();
 let frames = 0;
 const tick = () => { if (++frames > 8) { document.getElementById('hud').textContent = `${spot} · L${lod} (lod ${lodOf(map.dist).toFixed(2)}, distance ${Math.round(map.dist)})`; document.title = 'ready'; } else requestAnimationFrame(tick); };

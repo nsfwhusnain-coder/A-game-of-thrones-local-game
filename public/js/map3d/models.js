@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { drawBanner } from '../sigils.js';
+import { treeAtlas } from './nature.js';
 
 // ---------- shared materials ----------
 const matCache = new Map();
@@ -561,40 +562,83 @@ export function buildArmy(army, house) {
   return g;
 }
 
-// ---------- trees (chunked instancing for frustum culling) ----------
-export function buildForests({ W, H, scale, forest, land, northY = 900, snowY = 380 }, heightAt, tile = 200) {
-  const conifer = mergeGeometries([new THREE.ConeGeometry(0.9, 2.4, 6).translate(0, 1.8, 0).toNonIndexed(), new THREE.CylinderGeometry(0.12, 0.15, 0.7, 5).translate(0, 0.35, 0).toNonIndexed()]);
-  const leafy = mergeGeometries([new THREE.IcosahedronGeometry(0.95, 0).translate(0, 1.7, 0).toNonIndexed(), new THREE.CylinderGeometry(0.12, 0.16, 1, 5).translate(0, 0.5, 0).toNonIndexed()]);
-  const matC = new THREE.MeshLambertMaterial({ color: '#ffffff', flatShading: true });
-  const group = new THREE.Group(); group.name = 'forests';
+// ---------- trees: painted canopy impostors (docs/gdd/11-map-visuals.md §5.2; WP E3) ----------
+// Each tree is a painted quad from a small atlas (map3d/nature.js), standing up and turned to the camera, leaning back a
+// little toward it as a painted map's trees do; the crowns sway in the wind. North of the season's snow line the
+// broadleaves stand bare and the pines carry snow. Chunked by tile so whole chunks are culled off screen.
+const FOREST_VERT = `uniform float uTime; uniform float uSnowLine; uniform float uGrow;
+attribute vec3 aPos; attribute vec2 aSize; attribute float aTile; attribute float aSeed;
+varying vec2 vUv; varying float vTile; varying float vSnow; varying float vShade;
+#include <fog_pars_vertex>
+void main(){
+  float north = aPos.z - uSnowLine + (fract(aSeed * 7.13) - 0.5) * 70.0;
+  vSnow = 1.0 - smoothstep(-20.0, 20.0, north);
+  vTile = (aTile > 0.5 && aTile < 1.5 && vSnow > 0.5) ? 2.0 : aTile;
+  vUv = uv; vShade = 0.8 + 0.2 * fract(aSeed * 13.7);
+  vec3 right = normalize(vec3(viewMatrix[0][0], 0.0, viewMatrix[2][0]) + vec3(1e-4, 0.0, 0.0));
+  vec3 up = normalize(mix(vec3(0.0, 1.0, 0.0), vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]), 0.45));
+  float sway = sin(uTime * 1.3 + aSeed * 6.283 + aPos.x * 0.05) * 0.05 * position.y * position.y;
+  vec3 wp = aPos + (right * (position.x + sway) * aSize.x + up * position.y * aSize.y) * uGrow;
+  vec4 mvPosition = viewMatrix * vec4(wp, 1.0);
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}`;
+const FOREST_FRAG = `uniform sampler2D uAtlas; uniform float uLight;
+varying vec2 vUv; varying float vTile; varying float vSnow; varying float vShade;
+#include <fog_pars_fragment>
+void main(){
+  vec4 c = texture2D(uAtlas, vec2((vTile + vUv.x) * 0.25, 1.0 - vUv.y));
+  if (c.a < 0.5) discard;
+  vec3 col = c.rgb * vShade;
+  // the pines north of the snow line: snow on the upper boughs
+  if (vTile < 0.5) col = mix(col, vec3(0.9, 0.93, 0.96), vSnow * 0.6 * smoothstep(0.15, 0.8, vUv.y + c.g * 0.6 - 0.2));
+  gl_FragColor = vec4(col * uLight, 1.0);
+  #include <fog_fragment>
+}`;
+export const TREE_KIND = { conifer: 0, broadleaf: 1, bare: 2, weirwood: 3 };
+export function buildForests({ W, H, scale, forest, land, northY = 1120 }, heightAt, tile = 200) {
+  const atlas = treeAtlas();
+  const tex = new THREE.DataTexture(atlas.pixels, atlas.width, atlas.height, THREE.RGBAFormat, THREE.UnsignedByteType);
+  tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = true; tex.needsUpdate = true;
+  const uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 }, uSnowLine: { value: 520 }, uGrow: { value: 1 }, uLight: { value: 1.05 } }]);
+  uniforms.uAtlas = { value: tex };
+  const material = new THREE.ShaderMaterial({ uniforms, vertexShader: FOREST_VERT, fragmentShader: FOREST_FRAG, fog: true, side: THREE.DoubleSide });
+  const quad = new THREE.BufferGeometry();
+  quad.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, 0.5, 1, 0, -0.5, 1, 0], 3));
+  quad.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2)); quad.setIndex([0, 1, 2, 0, 2, 3]);
+  const group = new THREE.Group(); group.name = 'forests'; group.userData.uniforms = uniforms;
   const rng = seeded(1234);
-  const tilesX = Math.ceil(W / scale / tile), tilesY = Math.ceil(H / scale / tile);
   const buckets = new Map();
   const step = 2.4;
-  const col = new THREE.Color(); const m4 = new THREE.Matrix4(); const q = new THREE.Quaternion(); const up = new THREE.Vector3(0, 1, 0);
   for (let y = 0; y < H / scale; y += step) for (let x = 0; x < W / scale; x += step) {
     const jx = x + (rng() - 0.5) * step, jy = y + (rng() - 0.5) * step;
     const px = Math.floor(jx * scale), py = Math.floor(jy * scale); if (px < 0 || py < 0 || px >= W || py >= H) continue;
     const i = py * W + px; if (!land[i]) continue;
     const f = forest[i] / 255; if (f < 0.25 || rng() > f * 0.85) continue;
-    const north = jy < northY; const type = north || rng() < 0.25 ? 0 : 1;
-    const key = `${Math.floor(jx / tile)},${Math.floor(jy / tile)},${type}`;
+    // pines in the North and scattered through the south; now and then a weirwood, most often in the North
+    const north = jy < northY, roll = rng();
+    const kind = roll < (north ? 0.004 : 0.0008) ? TREE_KIND.weirwood : north || roll < 0.25 ? TREE_KIND.conifer : TREE_KIND.broadleaf;
+    const s = 0.7 + rng() * 0.6;
+    const [w, h] = kind === TREE_KIND.conifer ? [2.2, 3.8] : kind === TREE_KIND.weirwood ? [3.4, 3.8] : [3, 3.4];
+    const key = `${Math.floor(jx / tile)},${Math.floor(jy / tile)}`;
     if (!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key).push([jx, jy, 0.7 + rng() * 0.6, rng() * 6.28, north, jy < snowY - rng() * 80]);
+    buckets.get(key).push([jx, heightAt(jx, jy) - 0.15, jy, w * s, h * s * (0.9 + rng() * 0.2), kind, rng()]);
   }
-  for (const [key, list] of buckets) {
-    const type = Number(key.split(',')[2]);
-    const im = new THREE.InstancedMesh(type === 0 ? conifer : leafy, matC, list.length);
-    list.forEach(([x, z, s, r, north, snowy], k) => {
-      q.setFromAxisAngle(up, r);
-      m4.compose(new THREE.Vector3(x, heightAt(x, z), z), q, new THREE.Vector3(s, s * (0.9 + (k % 7) * 0.05), s));
-      im.setMatrixAt(k, m4);
-      if (snowy) col.setRGB(0.78, 0.84, 0.86); else if (type === 0) col.setRGB(0.16 + (k % 5) * 0.012, 0.27 + (k % 3) * 0.02, 0.2); else col.setRGB(0.22 + (k % 5) * 0.015, 0.36 + (k % 4) * 0.02, 0.16);
-      im.setColorAt(k, col);
+  for (const list of buckets.values()) {
+    const g = new THREE.InstancedBufferGeometry(); g.index = quad.index; g.setAttribute('position', quad.attributes.position); g.setAttribute('uv', quad.attributes.uv);
+    const pos = new Float32Array(list.length * 3), size = new Float32Array(list.length * 2), kind = new Float32Array(list.length), seed = new Float32Array(list.length);
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, maxY = 0;
+    list.forEach(([x, y, z, w, h, k, r], n) => {
+      pos.set([x, y, z], n * 3); size.set([w, h], n * 2); kind[n] = k; seed[n] = r;
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); maxY = Math.max(maxY, y + h);
     });
-    im.castShadow = true; im.receiveShadow = false;
-    im.computeBoundingSphere();
-    group.add(im);
+    g.setAttribute('aPos', new THREE.InstancedBufferAttribute(pos, 3)); g.setAttribute('aSize', new THREE.InstancedBufferAttribute(size, 2));
+    g.setAttribute('aTile', new THREE.InstancedBufferAttribute(kind, 1)); g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 1));
+    g.instanceCount = list.length;
+    const c = new THREE.Vector3((minX + maxX) / 2, maxY / 2, (minZ + maxZ) / 2);
+    g.boundingSphere = new THREE.Sphere(c, Math.hypot(maxX - minX, maxZ - minZ, maxY) / 2 + 6);
+    const mesh = new THREE.Mesh(g, material); mesh.frustumCulled = true;
+    group.add(mesh);
   }
   return group;
 }

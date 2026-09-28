@@ -4,13 +4,14 @@
 // kept inside the kingdom borders of the atlas).
 import { WORLD, LAND, LAKES, MOUNTAIN_RANGES, FORESTS, SWAMPS, STEPPES, RIVERS, ROADS, REGIONS } from '../../data/geography.js';
 import { makeNoise } from './noise.js';
+import { regionTint } from '../map3d/nature.js';
 
 self.onmessage = (e) => {
   const { scale = 1, seeds = [], seed = 298, heightScale = 55, features = [] } = e.data;
   const t0 = performance.now();
   const out = generate({ scale, seeds, seed, heightScale, features }, (p, msg) => self.postMessage({ type: 'progress', p, msg }));
   out.ms = Math.round(performance.now() - t0);
-  self.postMessage({ type: 'done', ...out }, [out.rgba.buffer, out.normal.buffer, out.province.buffer, out.land.buffer, out.height.buffer, out.forest.buffer, out.depth.buffer]);
+  self.postMessage({ type: 'done', ...out }, [out.rgba.buffer, out.normal.buffer, out.province.buffer, out.land.buffer, out.height.buffer, out.forest.buffer, out.depth.buffer, out.river.buffer]);
 };
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -217,6 +218,7 @@ export function generate({ scale, seeds, seed, heightScale, features }, progress
   const rgba = new Uint8ClampedArray(N * 4);
   const forest = new Uint8Array(N);
   const depth = new Uint8Array(N);
+  const river = new Uint8Array(N); // where the rivers run, for winter's ice (map3d/nature.js riversFrozen)
   let col = [0, 0, 0];
   const mix = (c, t) => { if (t <= 0) return; if (t > 1) t = 1; col[0] += (c[0] - col[0]) * t; col[1] += (c[1] - col[1]) * t; col[2] += (c[2] - col[2]) * t; };
   const set = (c) => { col[0] = c[0]; col[1] = c[1]; col[2] = c[2]; };
@@ -268,6 +270,8 @@ export function generate({ scale, seeds, seed, heightScale, features }, progress
       // rock on steep slopes and high ground; red rock in Dorne
       const rockT = clamp(smooth(0.22, 0.55, h) + smooth(0.8, 1.9, sl) * 0.75, 0, 1);
       if (rockT > 0) { const rc = [lerp(C.rock[0], C.redRock[0], ar), lerp(C.rock[1], C.redRock[1], ar), lerp(C.rock[2], C.redRock[2], ar)]; mix(rc, rockT); mix(C.rockLight, rockT * smooth(0.4, 0.9, h) * 0.6); mix(C.cliff, smooth(1.4, 2.6, sl) * 0.5); }
+      // the painted palette's regional tints (11 §5.1): ochre western hills, blue-grey Vale peaks, slate isles…
+      const tint = regionTint(wx, wy, clamp(smooth(0.05, 0.3, h) + rockT * 0.5, 0, 1)); if (tint) mix(tint[0], tint[1]);
       // snow: a snow line that falls toward the north, plus the white lands beyond the Wall
       const snowLine = lerp(1.05, 0.58, clamp(cold, 0, 1)) - frozen * 0.3 + noise(wx * 0.08, wy * 0.08) * 0.07;
       const snowT = smooth(snowLine, snowLine + 0.1, h) * (1 - smooth(1.2, 2.2, sl) * 0.5);
@@ -276,6 +280,7 @@ export function generate({ scale, seeds, seed, heightScale, features }, progress
       // beaches in the warm south
       if (distLand[i] * inv < 2.5 && h < 0.08) mix(C.beach, 0.55 * (0.25 + warm * 0.75) * (1 - frozen));
       // rivers and roads
+      if (riverF[i] > 0.2) river[i] = Math.round(clamp(riverF[i] * 1.4, 0, 1) * 255);
       if (riverF[i] > 0.2) mix(C.river, clamp(riverF[i] * 1.4, 0, 1) * (1 - frozen * 0.5));
       if (roadF[i] > 0.15 && riverF[i] < 0.3) mix(C.road, roadF[i] * 0.55 * (1 - frozen * 0.7));
       // valleys darker, ridges lighter (baked cavity) + fine grain
@@ -327,5 +332,5 @@ export function generate({ scale, seeds, seed, heightScale, features }, progress
   }
 
   progress(1, 'Done');
-  return { W, H, scale, rgba, normal, province, land, height, forest, depth };
+  return { W, H, scale, rgba, normal, province, land, height, forest, depth, river };
 }

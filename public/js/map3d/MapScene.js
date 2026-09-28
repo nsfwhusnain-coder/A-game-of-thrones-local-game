@@ -14,7 +14,7 @@ import { LivingMap } from './life.js';
 
 const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
-const GEN_VERSION = 'atlas-v3';
+const GEN_VERSION = 'atlas-v4'; // v4: the painted palette's regional tints, and the river mask for winter's ice
 // Graphics quality (Settings): terrain mesh density, pixel ratio and shadows
 const QUALITY = { high: { seg: 960, dpr: 2, shadows: true }, balanced: { seg: 720, dpr: 1.5, shadows: true }, fast: { seg: 480, dpr: 1, shadows: false } };
 export const lifeOn = () => { try { const v = localStorage.getItem('map-life'); return v === null ? (localStorage.getItem('gfx-quality') !== 'fast') : v === '1'; } catch { return true; } };
@@ -31,6 +31,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 import { LOD, lodOf, layerAlpha, HOME_BOX, KNOWN_BOX, L0_CENTRE } from './lod.js';
 import { colorFor as modeColor, atWarWith as modeAtWar, diplomacyOf, DIPLO } from './modes.js';
 import { eyesOf } from '../engine/knowledge.js';
+import { SNOW, snowLineOf, riversFrozen } from './nature.js';
 export { LOD, lodOf, layerAlpha };
 
 export class MapScene {
@@ -91,7 +92,7 @@ export class MapScene {
     this.buildWater(data);
     onProgress?.(0.88, 'Planting the forests');
     await tick();
-    this.forests = buildForests({ W: data.W, H: data.H, scale: data.scale, forest: data.forest, land: data.land, northY: 1180, snowY: 640 }, (x, z) => this.heightAt(x, z));
+    this.forests = buildForests({ W: data.W, H: data.H, scale: data.scale, forest: data.forest, land: data.land, northY: SNOW.neck }, (x, z) => this.heightAt(x, z));
     this.scene.add(this.forests);
     this.wallMesh = buildWall(WALL, (x, z) => this.heightAt(x, z)); this.scene.add(this.wallMesh);
     this.buildRivers();
@@ -128,12 +129,16 @@ export class MapScene {
     this.hlCanvas = document.createElement('canvas'); this.hlCanvas.width = data.W; this.hlCanvas.height = data.H;
     this.overlayTex = new THREE.CanvasTexture(this.overlayCanvas); this.overlayTex.colorSpace = THREE.SRGBColorSpace;
     this.hlTex = new THREE.CanvasTexture(this.hlCanvas);
-    const uniforms = this.terrainUniforms = { uOverlay: { value: this.overlayTex }, uHL: { value: this.hlTex }, uStrength: { value: 0.6 }, uTime: { value: 0 } };
+    // the forest and river masks (one byte a pixel): the canopy's mass at a distance, and where winter lays its ice
+    const mask = (arr) => { const t = new THREE.DataTexture(arr, data.W, data.H, THREE.RedFormat, THREE.UnsignedByteType); t.flipY = true; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.needsUpdate = true; return t; };
+    const uniforms = this.terrainUniforms = { uOverlay: { value: this.overlayTex }, uHL: { value: this.hlTex }, uStrength: { value: 0.6 }, uTime: { value: 0 },
+      uForest: { value: mask(data.forest) }, uRiver: { value: mask(data.river || new Uint8Array(data.W * data.H)) }, uSnowLine: { value: SNOW.beyond }, uFrozen: { value: 0 } };
     const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.94, metalness: 0, normalMap: nmap, normalMapType: THREE.ObjectSpaceNormalMap });
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, uniforms);
       sh.vertexShader = 'varying vec3 vWPos;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       sh.fragmentShader = `uniform sampler2D uOverlay; uniform sampler2D uHL; uniform float uStrength; uniform float uTime; varying vec3 vWPos;
+        uniform sampler2D uForest; uniform sampler2D uRiver; uniform float uSnowLine; uniform float uFrozen;
         float dh(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
         float dn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(dh(i),dh(i+vec2(1,0)),f.x), mix(dh(i+vec2(0,1)),dh(i+vec2(1,1)),f.x), f.y); }
 ` + sh.fragmentShader
@@ -144,6 +149,20 @@ export class MapScene {
           diffuseColor.rgb *= 1.0 + (det - 0.5) * 0.22 * near;
           float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
           diffuseColor.rgb = clamp(mix(vec3(lum), diffuseColor.rgb, 1.2) * vec3(1.03, 1.0, 0.96), 0.0, 1.0);
+          // the season's snow line (11 §5.3): north of it the land is white, the band's edge ragged; the peaks keep theirs
+          float camD = length(cameraPosition - vWPos);
+          float edge = (dn(vWPos.xz * 0.02) - 0.5) * 90.0 + (dn(vWPos.xz * 0.11) - 0.5) * 24.0;
+          float snowy = (1.0 - smoothstep(uSnowLine - 30.0, uSnowLine + 30.0, vWPos.z + edge)) * smoothstep(${WATER_LEVEL.toFixed(2)}, ${(WATER_LEVEL + 0.5).toFixed(2)}, vWPos.y); // the land only: the sea keeps its own ice
+          float canopy = texture2D(uForest, vMapUv).r;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95) * (0.92 + 0.08 * det), snowy * (0.82 - canopy * 0.3));
+          // winter's ice on the northern rivers
+          float river = texture2D(uRiver, vMapUv).r;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.78, 0.86, 0.9), uFrozen * snowy * smoothstep(0.2, 0.6, river));
+          // far off, the forests are a mass of darker canopy with soft edges (11 §5.2), and the land has a paper grain
+          float farK = smoothstep(500.0, 1100.0, camD);
+          float mass = smoothstep(0.15, 0.7, texture2D(uForest, vMapUv + vec2(0.0006, 0.0004)).r * 0.5 + canopy * 0.5);
+          diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.13, 0.22, 0.13), vec3(0.72, 0.78, 0.8), snowy), mass * farK * 0.45);
+          diffuseColor.rgb *= 1.0 + (dn(vWPos.xz * 0.9) - 0.5) * 0.07 * farK;
           vec4 ov = texture2D(uOverlay, vMapUv);
           diffuseColor.rgb = mix(diffuseColor.rgb, ov.rgb, ov.a * uStrength);
           vec4 hl = texture2D(uHL, vMapUv);
@@ -242,6 +261,7 @@ export class MapScene {
     const first = !this.state;
     const prev = this.state;
     this.state = state;
+    this.setSeason(state.world);
     this.recolor();
     this.syncSettlements();
     if (this.provDirty) { this.provDirty = false; this.recolor(); }
@@ -259,6 +279,12 @@ export class MapScene {
     }
   }
   setMode(m) { this.mode = m; this.recolor(); }
+  /** The season on the land: the snow line for the ground and the trees, and the northern rivers' ice. */
+  setSeason(world) {
+    const line = snowLineOf(world), frozen = riversFrozen(world) ? 1 : 0;
+    if (this.terrainUniforms) { this.terrainUniforms.uSnowLine.value = line; this.terrainUniforms.uFrozen.value = frozen; }
+    if (this.forests) this.forests.userData.uniforms.uSnowLine.value = line;
+  }
 
   // each mode's colour for a holding (map3d/modes.js; 11 §4)
   colorFor(holdingId) { return modeColor(this.state, this.mode, holdingId, this.eyes); }
@@ -732,7 +758,8 @@ export class MapScene {
     for (const pl of this.places || []) pl.group.visible = this.dist < 520;
     const af = clamp(this.dist / 160, 1, 9);
     for (const rec of this.armyObjs.values()) rec.group.scale.setScalar(af);
-    if (this.forests) this.forests.visible = this.dist < 900;
+    // the trees grow out of the canopy's mass as the camera comes down (and sink back into it going up)
+    if (this.forests) { this.forests.visible = this.dist < 900; this.forests.userData.uniforms.uGrow.value = 1 - clamp((this.dist - 640) / 260, 0, 1) * 0.8; }
     if (this.roadGroup) this.roadGroup.visible = this.dist < 1300;
     if (this.terrainUniforms) this.terrainUniforms.uStrength.value = this.mode === 'terrain' ? 0 : THREE.MathUtils.lerp(0.28, 0.92, clamp((this.dist - 150) / 1200, 0, 1));
   }
@@ -885,6 +912,7 @@ export class MapScene {
     if (this.follow) { const a = this.state?.parties?.[this.follow]; if (!a?.pos) this.follow = null; else { const k = 1 - Math.pow(0.05, dt); this.target.x += (a.pos[0] - this.target.x) * k; this.target.z += (a.pos[1] - this.target.z) * k; } }
     this.updateCamera();
     if (this.terrainUniforms) this.terrainUniforms.uTime.value = time;
+    if (this.forests) this.forests.userData.uniforms.uTime.value = time;
     if (this.waterUniforms) this.waterUniforms.uTime.value = time;
     // armies: animate marches and place on terrain
     const now = performance.now();

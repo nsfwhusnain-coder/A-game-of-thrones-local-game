@@ -98,6 +98,10 @@ pixel-diff of the acceptance, measured on the fills the map draws. Trade lanes (
 
 ## 5. Terrain and nature
 
+> **Implemented (WP E3).** `public/js/map3d/nature.js` holds the snow line, the frozen-river flag, the regional tints
+> and the procedural tree atlas; the forests are impostors in `models.js`; the terrain shader draws the snow line, the
+> canopy mass at L0–L1 and the paper grain. See D-055 for where it departs from this section.
+
 ### 5.1 Palette and biomes (`terrain.worker.js`)
 
 Keep the atlas-driven generation. Retune colours toward a painted palette: the North heather-brown and pine green,
