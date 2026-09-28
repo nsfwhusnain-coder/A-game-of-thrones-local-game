@@ -928,3 +928,20 @@ ransoms, `embargo`) and the price index of §6.3.
   the seat's sworn officers before distant kin; never another branch's man or an outlaw. Starfall under Edric has no fit
   regent in the data: the house drifts, as regencyTick already charges.
 
+## D-055 · 2026-09-28 · Nature on the map: billboards, a latitude snow line, tints over the atlas' biomes (WP E3)
+
+- **Billboards, not crossed quads.** Each tree is one camera-facing quad that turns about its own upright and leans
+  back a little toward the camera (45% of the way to a true billboard), so trees read from the steep L2–L3 views without
+  the X-shaped silhouettes crossed quads show from above. They cast no shadows (the budget of §10); the canopy's mass
+  in the terrain shader gives the forests their weight.
+- **The atlas is drawn in code** (`treeAtlas()` in `map3d/nature.js`, 256×64 RGBA) rather than committed as a PNG: no
+  asset to keep, deterministic, and testable in Node.
+- **The snow line is a latitude in map units** from `world.season` and `world.seasonDays` (summer 520, the Wall 600, the
+  Neck 1120, the Twins 1340), not `world.snowLine` in the state: it is how the map draws the season, not a fact of the
+  world, and so needs no migration. For it to creep through an autumn under Canon gravity, `seasonTick` now counts a
+  season's days even while the Citadel's ravens are held for their beats.
+- **The regional palette is a tint over the atlas' biomes** (six soft pools of colour, on the hills or the plains)
+  rather than a new biome table: the worker's climate stays as it was, and the tints are data (`REGION_TINTS`).
+- **Weirwoods are drawn by chance** (about one tree in eighty in the North, one in five hundred south of the Neck), not
+  placed at each godswood: the godswoods are inside the castles, which the settlement models draw.
+

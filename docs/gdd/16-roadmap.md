@@ -94,7 +94,7 @@ validator is the real fix.**
 |---|---|---|---|---|
 | E1 | Camera: framing, bounds, zoom clamp, cursor zoom, LOD framework | — | M | B-29 camera items; `dev/map-lod.html` at L0–L3 — ✅ `map3d/lod.js` (levels, continuous LOD, fades), clamp, tilt, L0 framing and pan bounds, smoothed cursor zoom, timed fly-to, Home/F; `dev/map-lod.html`; `tests/map-lod.test.js` |
 | E2 | Political overlay restyle + map modes (Diplomacy visibly distinct; Knowledge, War, Food) + legend | E1 | M | each mode distinct at L0 (pixel-diff test vs Realms > threshold) — ✅ `map3d/modes.js` (Diplomacy's relation scale and hatched realm, Knowledge, War), the legend; `tests/map-modes.test.js` measures each mode's distance from Realms over every holding's fill |
-| E3 | Terrain palette, forest impostors (no low-poly trees), the snow line | E1 | L | L3 shows impostor trees; winter shifts the snow line |
+| E3 | Terrain palette, forest impostors (no low-poly trees), the snow line | E1 | L | L3 shows impostor trees; winter shifts the snow line — ✅ `map3d/nature.js` (snow line, frozen rivers, regional tints, the procedural tree atlas), impostor forests in `models.js`, the snow line and canopy mass in the terrain shader; `tests/map-nature.test.js`, `docs/screens/e3/` |
 | E4 | Labels: priority placement, no overlaps, halos; tooltip clearing | E1 | M | label-overlap assertion passes; B-31 gone |
 | E5 | Party tokens, clustering, figures (hosts, retinues, the progress, envoys, fleets), routes, trails | B2, E1 | L | `dev/tokens.html`; the progress visible from L0 |
 | E6 | Holding states and effects (siege, smoke, battle markers, weather) | E5 | M | fixture holdings in each state render |

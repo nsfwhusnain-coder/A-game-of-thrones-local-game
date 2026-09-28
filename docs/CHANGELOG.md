@@ -3,6 +3,19 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — E3: painted trees, a palette by region, and the snow line of the season
+
+- **The forests are painted trees now**, not low-poly cones: pines, broadleaves and here and there a white weirwood with
+  red leaves, standing up to the camera and swaying in the wind. From far off a forest is a soft mass of darker canopy,
+  and the trees grow out of it as you come down.
+- **The land takes its regions' colours**: ochre western hills, blue-grey Vale peaks, slate Iron Islands, the Reach
+  golden-green, the Stormlands' dark woods, with a faint paper grain at a distance.
+- **The snow follows the season**: in summer only beyond the Wall; through an autumn it creeps south from the Wall toward
+  the Neck; in winter the whole North is white down to the Twins, the broadleaves stand bare, the pines carry snow and,
+  in deep winter, the northern rivers freeze. Spring draws it back.
+- Owner to verify: zoom in on the Wolfswood; then `/dev/map-lod.html?spot=realm&season=winter&days=200` and
+  `…&season=autumn&days=400`.
+
 ## 2026-09-28 — E2: map modes — Diplomacy that looks like diplomacy, Knowledge and War
 
 - **Diplomacy** now reads at a glance: your enemies in deep red, the hostile in orange, the neutral grey, friends blue,

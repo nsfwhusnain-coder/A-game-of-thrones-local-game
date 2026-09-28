@@ -428,9 +428,10 @@ const SEASON_CLOCK = {
 export function seasonTick(state, days) {
   const w = state.world = state.world || {};
   const cur = w.season || 'summer'; const c = SEASON_CLOCK[cur]; if (!c) return null;
+  // the season ages whoever turns it: the map's snow line creeps south through an autumn (map3d/nature.js)
+  w.seasonDays = (w.seasonDays || 0) + days;
   // under Canon gravity the Citadel's white ravens of 299 and 300 are beats of the story (data/beats.js `omens`)
   if ((state.meta?.settings?.canonGravity || 'canon') === 'canon' && (state.meta?.date?.year ?? 0) <= 300 && ['summer', 'autumn'].includes(cur)) return null;
-  w.seasonDays = (w.seasonDays || 0) + days;
   if (w.seasonDays < c.min) return null;
   const pTurn = 1 - Math.exp(-days / Math.max(30, c.mean - c.min));
   if (random() >= pTurn) return null;
