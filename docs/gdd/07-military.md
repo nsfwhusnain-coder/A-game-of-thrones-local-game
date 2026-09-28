@@ -423,6 +423,16 @@ the Windblown, the Brotherhood without Banners, and dragons wait for G.
 `started`. Peace comes by `sue_for_peace`/`offer_terms` (diplomacy verbs, [08](08-characters-politics.md) §12) weighed
 by score and natures. A war with no fighting for 6 moons becomes a *cold war* (no score drift) until someone acts.
 
+*Implemented in WP C8* (`engine/politics/war.js`; [DECISIONS.md#D-050](DECISIONS.md)): a goal read from the
+declaration's words (or given); the score (attackers' view) moved by each day's deeds between the sides — a battle won
++10 (+5 if the host is destroyed), a sea fight +6, a castle taken +8 (a seat +15), a storm thrown back +3, a siege raised
++4 to the defenders, a coast reaved +2, a captive +4 and a slain man +4 (+6/+8 for a lord or heir); six moons without a
+blow and it goes cold (a war's score still moves when fighting resumes); `sue_for_peace` with a white peace, a
+concession or a demand, weighed by the score as the answering side sees it, the war's weariness and its leader's
+pride, stubbornness and warmth; at a score of 50 either way and a moon old, the beaten side sues each week (at most once a
+moon) — the realm's lords answer it at once; the lord answers it as a matter. A concession pays up to three moons of the
+conceder's income and frees its captives; a white peace frees both sides'; each keeps what it holds.
+
 ## 12. Military verbs
 
 > *In the registry since WP B4* (`engine/actions/military.js`): `call_banners`, `raise_levies`, `march_host` (and

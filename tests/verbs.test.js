@@ -67,6 +67,7 @@ const CASES = {
   raid_coast: { ok: (s) => { applyChanges(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['stark'], defenders: ['greyjoy'] }]); return { fleet: fleetOf(s, 'manderly'), target: 'harlaw' }; }, no: (s) => [{ fleet: fleetOf(s, 'manderly'), target: 'harlaw' }, 'no_targets'] },
   hire_company: { ok: () => ({ company: 'brave_companions' }), no: () => [{ company: 'no_such_company' }, 'no_company'] },
   dismiss_company: { ok: (s) => { perform(s, 'hire_company', { params: { company: 'brave_companions' } }); return { company: 'brave_companions' }; }, no: () => [{ company: 'golden_company' }, 'not_hired'] },
+  sue_for_peace: { ok: (s) => { applyChanges(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['stark'], defenders: ['lannister'] }]); return { house: 'lannister', terms: 'concede' }; }, no: () => [{ house: 'lannister', terms: 'white_peace' }, 'not_at_war'] },
   merge_hosts: { ok: (s) => { host(s, 'h1', 'stark', 'stark', 3000); host(s, 'h2', 'stark', 'stark', 500); return {}; }, no: (s) => { host(s, 'h1', 'stark', 'stark', 3000); host(s, 'h2', 'stark', 'moat_cailin', 500); return [{}, 'apart']; } },
   disband_host: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000) }), no: (s) => [{ army: host(s, 'foe', 'lannister', 'lannister', 3000) }, 'not_yours'] },
   set_secrecy: { ok: (s) => ({ army: host(s, 'h1', 'stark', 'stark', 3000), mode: 'feint', to: 'tully' }), no: (s) => [{ army: host(s, 'h1', 'stark', 'stark', 3000), mode: 'invisible' }, 'mode'] },

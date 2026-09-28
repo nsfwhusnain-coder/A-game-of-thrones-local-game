@@ -3,6 +3,18 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — C8: the state of war — goals, the score and the peace (Phase C done)
+
+- **Every war has a goal and a score.** The Diplomacy window shows each war's goal ("fought to free a prisoner") and
+  how it goes for you — battles won, castles taken, lords captured and slain move it.
+- **Sue for peace.** "Offer House Lannister a white peace", "…peace: we will concede and pay", or "…peace: they must
+  concede and pay" (the Sue for peace button writes it for you). The other side's lord weighs the terms by how the war
+  goes for him and his own pride. A concession pays up to three moons of the loser's income and sets its captives free.
+- **The beaten sue for peace.** When a war is lopsided, the losing side offers to concede — to you as a matter to accept
+  or refuse, or to the victor among the realm's lords. A war with no blow struck for six moons goes cold.
+- Owner to verify: as Stark, declare war on the Lannisters "to free Lord Eddard"; open Diplomacy and see the war's goal;
+  win a battle or two and see the score move; press Sue for peace.
+
 ## 2026-09-28 — C7: sellswords, outlaws, the Watch and the Dothraki
 
 - **Free companies.** The Military window lists them: the Golden Company (ten thousand swords, 25,000 a moon) and the

@@ -283,10 +283,10 @@ Turn the order into actions.
        "captain",
        "castellan",
        "commander",
+       "concede",
        "crushing",
-       "envoy",
-       "execute",
-       "… 57 members"
+       "demand",
+       "… 60 members"
       ]
      },
      "note": {

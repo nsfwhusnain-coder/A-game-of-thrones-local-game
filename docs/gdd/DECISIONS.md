@@ -832,3 +832,21 @@ ransoms, `embargo`) and the price index of §6.3.
 - **The free folk** grow 1 % a moon to 90,000 (the scenario begins them at 60,000, more than 07 §10's 2,000: the host
   beyond the Wall in 298 is the scenario's). They stay held beyond the Wall until the story moves them (D-022).
 
+## D-050 · 2026-09-28 · War score from the facts; peace by terms, weighed (WP C8)
+
+**What.** `engine/politics/war.js`. Departures from 07 §11 and 08 §12:
+- **The score is reckoned from the day's facts** (battles, sea fights, castles taken or stormed, sieges raised, raids,
+  lords taken or slain) between the war's two sides; each fact counts once. Devastation does not count on its own (the
+  raids and sieges that cause it do).
+- **Peace is three terms, not a treaty table**: a white peace (each keeps what it holds; both free their captives); a
+  concession (the side that concedes pays up to three moons of its income and frees its captives); a demand (the other
+  side must concede). Holdings are not traded in the terms: each keeps what it holds. Border treaties, marriages and
+  hostages as terms wait for D (politics).
+- **The answer is a rule** (the score as the answering side sees it, the war's weariness, the leader's pride,
+  stubbornness and warmth), not a mind call; the realm's lords answer at once.
+- **Who makes peace**: the leader of each side (the first house named on it, or the realm's head for its sworn houses);
+  a sworn lord cannot make a separate peace (he can withdraw from the war with D's politics).
+- **The beaten side sues** once the score is 50 either way and the war a moon old, at most once a moon; when the lord is
+  the victor it is a matter with two answers, when he is the beaten one he must sue for himself.
+- **Cold wars** are marked after six moons without a blow and told once; the score does not decay.
+

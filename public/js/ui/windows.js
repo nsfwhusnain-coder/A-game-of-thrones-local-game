@@ -26,6 +26,7 @@ import { hullsOf, capacityOf, carriedOf, aboardOf } from '../engine/military/nav
 import { TERMS, fortOf, siegeView } from '../engine/military/siege.js';
 import { FORTRESS } from '../../data/fortresses.js';
 import { COMPANIES } from '../../data/companies.js';
+import { GOALS, sideOf, scoreFor, leaderOf } from '../engine/politics/war.js';
 import { dayNumber, dateOfDay } from '../engine/time.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
@@ -180,6 +181,17 @@ document.addEventListener('click', (e) => {
   const d = e.target.closest('[data-dismiss-company]'); if (d) doVerb('dismiss_company', { company: d.dataset.dismissCompany }, { after: () => renderWindow() });
 });
 
+// a war (07 §11): its sides, its goal, how it goes (the score as your side sees it), and for its leader, peace
+function warRow(s, p, w) {
+  const side = sideOf(s, w, p); const sc = side ? scoreFor(w, side) : w.score || 0;
+  const how = !side ? '' : sc >= 50 ? 'you are winning it' : sc >= 15 ? 'it goes your way' : sc <= -50 ? 'you are losing it' : sc <= -15 ? 'it goes against you' : 'it hangs in the balance';
+  const other = side ? leaderOf(w, side === 'A' ? 'D' : 'A') : null; const leads = side && leaderOf(w, side) === p;
+  return `<div class="row"><div class="grow"><div class="title">${esc(w.name)} ${side ? '<span class="pill war">your war</span>' : ''}${w.cold ? ' <span class="pill">cold</span>' : ''}</div>
+    <div class="sub">${w.attackers.map((x) => esc(s.houses[x]?.name)).join(', ')} ⚔ ${w.defenders.map((x) => esc(s.houses[x]?.name)).join(', ')} · since ${esc(w.started)}${w.goal ? ` · fought ${esc(GOALS[w.goal] || w.goal)}` : ''}${how ? ` · <b>${how}</b>` : ''}</div>
+    ${side ? meter(50 + sc / 2, sc >= 0 ? '#7fb85a' : '#c96a4a') : ''}</div>
+    ${leads ? `<button class="btn small" data-order-tpl="Offer House ${esc(s.houses[other]?.name)} ${sc >= 40 ? 'peace: they must concede and pay' : sc <= -40 ? 'peace: we will concede and pay' : 'a white peace'}.">Sue for peace</button>` : ''}</div>`;
+}
+
 // ───────────── Economy ─────────────
 // The last moon's accounts summed from the turns' ledgers (turns are often a single day)
 function moonAccounts(h) {
@@ -280,7 +292,7 @@ function diplomacy() {
   tops.sort((a, b) => getRelation(s, p, b.id) - getRelation(s, p, a.id));
   const neighbours = Object.values(s.houses).filter((x) => x.id !== p && x.liege === player().liege && x.liege).slice(0, 12);
   return `
-    <div class="section"><h4>Wars</h4>${wars.map((w) => `<div class="row"><div class="grow"><div class="title">${esc(w.name)} ${w.attackers.includes(p) || w.defenders.includes(p) ? '<span class="pill war">your war</span>' : ''}</div><div class="sub">${w.attackers.map((x) => esc(s.houses[x]?.name)).join(', ')} ⚔ ${w.defenders.map((x) => esc(s.houses[x]?.name)).join(', ')} · since ${esc(w.started)}</div></div></div>`).join('') || '<div class="muted">Peace — for now.</div>'}</div>
+    <div class="section"><h4>Wars</h4>${wars.map((w) => warRow(s, p, w)).join('') || '<div class="muted">Peace — for now.</div>'}</div>
     <div class="section"><h4>Pacts & agreements</h4>${pacts.map((x) => `<div class="row"><div class="grow"><div class="title">${esc(x.type)} · ${esc(s.houses[x.a]?.name)} & ${esc(s.houses[x.b]?.name)} <span class="pill">${esc(x.status)}</span></div><div class="sub" title="${esc(x.terms)}">${esc(x.terms)}</div></div></div>`).join('') || '<div class="muted">None.</div>'}</div>
     <div class="section"><h4>The great powers</h4>${tops.map((x) => houseRow(x)).join('')}</div>
     ${neighbours.length ? `<div class="section"><h4>Fellow vassals of ${esc(s.houses[player().liege]?.name)}</h4>${neighbours.map((x) => houseRow(x)).join('')}</div>` : ''}`;

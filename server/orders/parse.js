@@ -378,6 +378,11 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     }
     // a siege (07 §8.3): storm the walls, or offer the castle terms — the castle named, else the one the host sits before
     const besieged = () => places.find((id) => state.holdings[id]?.siege && Object.values(state.parties).some((a) => a.besieging === id && commands(state, house, a))) || Object.values(state.parties).find((a) => a.besieging && commands(state, house, a))?.besieging;
+    // peace (07 §11): "sue House Tully for peace", "offer the Starks a white peace", "demand House Frey's surrender"
+    if (/\b(peace|surrender|concede|terms)\b/.test(t) && housesNamed.length && !/\b(besieg|castle|walls|garrison)\b/.test(t)) {
+      const terms = /\b(demand|their surrender|must (?:yield|concede|surrender)|bend the knee|if they concede|they (?:shall|will) (?:concede|pay))\b/.test(t) ? 'demand' : /\b(we|i) (?:will )?(yield|concede|surrender)|\bour surrender|\bpay (?:them|tribute)\b/.test(t) ? 'concede' : 'white_peace';
+      A('sue_for_peace', { house: housesNamed[0], terms }); return;
+    }
     // the free companies (07 §10): "hire the Golden Company", "pay off the Brave Companions"
     const company = /\bgolden company\b/.test(t) ? 'golden_company' : /\b(brave companions|bloody mummers|mummers)\b/.test(t) ? 'brave_companions' : null;
     if (company && /\b(hire|contract|buy|take into (?:our|my) pay|sign)\b/.test(t)) { A('hire_company', { company, ...(nums[0] && nums[0] >= 1000 ? { offer: nums[0] } : {}) }); return; }

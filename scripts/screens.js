@@ -204,6 +204,18 @@ const SCENARIOS = {
       await page.waitForTimeout(300);
     } };
   },
+  // the state of war (WP C8): Stark at war with the Lannisters to free Lord Eddard — the Diplomacy window's wars, each
+  // with its goal and how it goes, and the lord's Sue for peace
+  async war() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 7 });
+    await api(`/games/${id}/act`, { verb: 'declare_war', params: { house: 'lannister', reason: 'to free Lord Eddard' } });
+    return { id, focus: state.holdings.stark.pos, dist: 1400, page: async (page) => {
+      await page.evaluate(async () => { const m = await import('/js/ui/windows.js'); m.openWindow('diplomacy'); });
+      await page.waitForTimeout(400);
+      await page.evaluate(() => { const h = [...document.querySelectorAll('h4')].find((x) => /^Wars$/.test(x.textContent.trim())); h?.scrollIntoView({ block: 'start' }); });
+      await page.waitForTimeout(300);
+    } };
+  },
   // the economy (WP C1): a moon's accounts in the Treasury window — rents, trade, tribute, the household, the field
   async economy() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 7 });

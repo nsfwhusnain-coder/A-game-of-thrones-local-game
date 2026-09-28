@@ -1,8 +1,13 @@
-# Handoff — end of Phase B (the Truth Pipeline)
+# Handoff — end of Phase C (war and money)
 
-*Written 2026-09-28. The plan is the Game Design Document in [`docs/gdd/`](gdd/README.md); the order of work is
+*Written 2026-09-28 (Phase B's handoff, updated at the end of Phase C). The plan is the Game Design Document in [`docs/gdd/`](gdd/README.md); the order of work is
 [`16-roadmap.md`](gdd/16-roadmap.md); design departures are in [`DECISIONS.md`](gdd/DECISIONS.md); the earlier sessions'
 handoff is archived at [`archive/HANDOFF-2026-09.md`](archive/HANDOFF-2026-09.md).*
+
+Phase C made war and money real: the economy anchored in the books with lenders and default, the banners that come
+as lords would bring them, supply in man-days, battles by stance and ground, sieges won by terms, storms, hunger or
+treachery, the sea (fleets that carry, blockade and reave), sellswords by contract, outlaws, and the state of war with
+its score and its peace. All of it is engine rules on seeded dice: no model decides a man of it.
 
 Phase B rebuilt how a turn happens. The model no longer writes the world: **the engine resolves, the model proposes
 and narrates, and facts are the only history.** Every model call is small, schema-constrained, checked, and has a mock
@@ -29,6 +34,14 @@ All merged into `claude/brave-ramanujan-i8dt0q` with CI green on windows-latest 
 | B12 | #15 | A Director: some eighty grounded beginnings (a hedge knight, a septon, outlaws, a wreck, a fever…), many as matters for your word; no week passes with nothing of note. |
 | B13 | #16 | Lords remember what their house knows (relevant memory); the chronicle is consolidated from the facts, and its open threads must name real things. |
 | C2 | #17 | The banners come as lords would bring them: raven, deliberation, gathering at home, the march; the host card shows who is present, on the road (with the day) and expected; *Wait for the banners*. **Milestone 1.** |
+| C1a | #18 | Gold means something: the realm as populous as the books, incomes by rents, trade and mines, the Crown's debts, war costing what war costs (`npm run balance`). |
+| C1b | #19 | Lenders (the Iron Bank, the Faith, the Tyroshi, the Bank of Oldtown), loans, calls and default; buy grain, bribe, embargo, pay a ransom. |
+| C3 | #20 | Supply: rations in days, fed at home, foraging abroad, the land laid waste — the second passage starves; camp fever; the seasons slow the march. |
+| C4 | #21 | Battles by stance, standing orders, arms and ground, surprise; routs and bloody draws; lords slain, taken or wounded (the story keeps its own); the record says what decided it. |
+| C5 | #22 | Sieges: the great castles' rules (Storm's End fed by sea, the Eyrie by the high road, Riverrun's camps…), terms, storms, treachery, relief. |
+| C6 | #23 | The sea: ships by kind; fleets carry hosts (*Go aboard*, *Put them ashore*); blockades; the ironborn reave the coasts; sea fights and storms. |
+| C7 | #24 | Free companies by contract (they desert unpaid, the turncoats go over); outlaw bands; the Watch's recruits; the Dothraki refuse the poison water. |
+| C8 | #25 | The state of war: goals, the score, cold wars, *Sue for peace* (white peace, concede, demand), the beaten side's offer. **Phase C done.** |
 
 ## 2. What CI verifies, and what you should verify
 
@@ -50,7 +63,12 @@ call on the mock and on recorded replies). A nightly soak plays 200 turns × 6 h
    appear while the next is lived; press *Stop the days here* once; hold an audience with Roose Bolton and ask for his
    men at Moat Cailin within the fortnight; write to Riverrun; after the King arrives, open ↶ and try *Stop the last
    turn sooner*; read the Chronicle (h) after two moons. The map, the numbers and the chronicle should agree.
-6. If the bench gates fail: see §4.
+6. A 20-minute war as Lannister (Phase C): declare war on the Tullys; raise 15,000 at the Rock; on the host's card set
+   *Always engage* and read its rations; march on Wayfarer's Rest; read the battle's record (what decided it); when the
+   siege begins open the castle and *Offer terms*; open Military and hire the Golden Company; open Diplomacy and see the
+   war's score move; *Sue for peace*.
+7. `npm run balance` → "the economy is in balance".
+8. If the bench gates fail: see §4.
 
 ## 3. Model guidance
 
@@ -90,9 +108,11 @@ the dataset the recipe will build from. Never train on book text.
 
 ## 5. Known limits and open questions
 
-- The economy still settles per week, not per day; movement is the old module run a day at a time (Phase C).
-- Winterfell → the Twins by road is about 1,000 miles (the road graph; Phase C).
-- The realm's lords do not sail fleets (C6) and do not start letters of their own (D6).
+- The economy still settles per week, not per day; the price index covers grain only.
+- Battle stances and siege terms are rules, not model calls (D-046, D-047); the model narrates them.
+- Winterfell → the Twins by road is about 1,000 miles (the atlas's road graph; E).
+- The realm's lords raid and blockade with their fleets but do not yet carry hosts by sea; they do not start letters of
+  their own (D6); outlaw bands are a mark on a holding, not a party on the map (E).
 - One soak run broke an invariant for Tyrell at turn 82 on a seed that was not recorded; six re-runs with fixed seeds
   held. The nightly soak prints its seeds; if it recurs, replay it with `node scripts/soak.js --seed N --houses tyrell`.
 - Portraits and family trees are unchanged in Phase B; Phase F improves them.
@@ -100,6 +120,6 @@ the dataset the recipe will build from. Never train on book text.
 
 ## 6. What comes next
 
-C1, C3–C8 (movement, battles, sieges, economy,
-fleets, the realm's health), D (politics), E (the map), F (the interface, portraits and trees), G (content), H (audio,
-the fine-tuning recipe, the playtest reports).
+D (politics: the characters' lives, succession, marriages, the court, intrigue, the minds' letters), E (the map: the
+living map of hosts, fleets, devastation and outlaws; weather), F (the interface, portraits and family trees improved),
+G (content: Essos, the canon beats of 299–300), H (audio, the fine-tuning recipe, the playtest reports).

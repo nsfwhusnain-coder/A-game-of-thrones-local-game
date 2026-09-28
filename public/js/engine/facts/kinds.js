@@ -121,6 +121,8 @@ export const KINDS = {
   bribe_refused: K(3, 'intrigue', 'houses'),
   ransom_demanded: K(3, 'court', 'houses'),
   embargo: K(3, 'economy'),       // gold sent to win a lord's goodwill
+  peace_sued: K(3, 'diplomacy'),       // terms of peace offered (engine/politics/war.js), taken or refused
+  cold_war: K(2, 'diplomacy'),         // a war with no blow struck in six moons
   commitment_made: K(2, 'diplomacy', 'houses'),
   commitment_kept: K(2, 'diplomacy', 'houses'),
   commitment_broken: K(4, 'diplomacy'),
