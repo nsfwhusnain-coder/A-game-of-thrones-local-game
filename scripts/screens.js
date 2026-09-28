@@ -353,6 +353,18 @@ const SCENARIOS = {
   async opening() {
     return { page: async (page) => { await page.click('#house-filters [data-f="north"]'); await page.click('.house-tile[data-h="manderly"]'); await page.waitForSelector('#begin'); } };
   },
+  // guests at a seat (WP D8): a fortnight passes until a lord's party is staying at someone's hall, and its card opens
+  async guests() {
+    const { guestsAt } = await import('../public/js/shared/retinues.js');
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'tyrell' });
+    let hold = null, s = state;
+    for (let i = 0; i < 8 && !hold; i++) { ({ state: s } = await api(`/games/${id}/advance`, { span: '7d' })); hold = Object.keys(s.holdings).find((h) => guestsAt(s, h).length); }
+    if (!hold) throw new Error('no guests anywhere in eight weeks');
+    return { id, focus: s.holdings[hold].pos, dist: 500, page: async (page) => {
+      await page.evaluate(async (h) => { const m = await import('/js/ui/windows.js'); m.openSheet('holding', h); }, hold);
+      await page.waitForTimeout(800);
+    } };
+  },
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
