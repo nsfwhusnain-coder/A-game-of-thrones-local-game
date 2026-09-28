@@ -1,0 +1,7 @@
+{
+ "kind": "consolidate",
+ "note": "A thread the model started of its own: nothing in the dossier names a dragon or Braavos.",
+ "reply": "{\"open\": [\"As of 4 8th moon, 298 AC: a dragon has been seen over Braavos.\"], \"rumours\": [], \"summary\": \"The North stirred.\"}",
+ "expect": "refuse",
+ "problem": "names no one and nowhere"
+}

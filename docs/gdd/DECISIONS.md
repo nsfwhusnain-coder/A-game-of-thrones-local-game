@@ -632,3 +632,19 @@ hook has one, a **matter** for his word whose answers use the matters' own effec
 draws nothing from the save's dice (its own generator is seeded by the save and the day), and the turn records the
 hooks it had, so *Stop here* replays them rather than asking again. No hook kills anyone or names a canon-locked
 person; the catalogue's texts are original and say nothing of what comes after 298 AC.
+
+## D-041 · 2026-09-28 · Memory is built from the log for each call; the chronicle is consolidated from facts (WP B13)
+
+**What.** A call that speaks for a lord (a mind, an audience, a letter's answer) is given **the relevant memory** when a
+model is asked: what has reached that lord's house in the last fortnight (what touches them, their house and where they
+are first, then the realm's weightiest news), older facts of the last hundred days that bear on who and what is in
+question, and the chronicle's summary lines that do, found by BM25 — within about 1,200 tokens, and only facts the
+house knows. The chronicle's lines are given as *notes, not certain*, because the lord may edit it. With the mock
+nothing changes (its choices do not read memory), so the replayable engine and every recorded fixture stay as they were.
+The **Consolidator** is now a constrained call over the stretch's facts **as the lord's house knows them** (the chronicle
+is the player's and must hold no other house's secrets): "What happened" is written by the engine from the facts of
+importance ≥ 3, dated; the model writes a short summary, what is still open and what is only said. Every open thread
+must name a person, house or place the dossier names (the facts, and what the engine knows is open: the house's wars,
+the marches of its hosts and its sworn lords', promises, matters and letters in flight), or it is refused and dropped:
+the model cannot start a thread of its own. With the mock (and as the fallback) the open threads are the engine's own.
+The old turn-record digest (`engineFacts`) and the free-JSON consolidation prompt are gone.

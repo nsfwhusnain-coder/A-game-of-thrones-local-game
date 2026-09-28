@@ -292,15 +292,19 @@ test('council: only gestures is not an answer', () => {
 });
 
 // ── The chronicle's facts come from the engine, dated ──
-import { engineFacts } from '../server/prompts.js';
-test('chronicle facts are the engine\'s record, dated by turn', () => {
-  const f = engineFacts([
-    { turn: 3, dateFrom: '3 8th moon, 298 AC', date: '4 8th moon, 298 AC', span: '1d', carried: [{ result: ['Jory Cassel sets out for King\'s Landing (~48 days\' ride)', 'could not be done: no gold'] }], applied: [{ op: 'relation', text: 'Stark–Umber 60 → 65' }, { op: 'character', text: 'Robert Baratheon arrives at Winterfell' }], events: [{ importance: 2, title: 'Whispers' }, { importance: 3, title: 'House Umber answers the call' }] },
+import { whatHappened } from '../server/ai/calls/consolidate.js';
+import { dayNumber } from '../public/js/engine/time.js';
+test('chronicle facts are the engine\'s record, dated, only those of note', () => {
+  const day = dayNumber({ year: 298, month: 8, day: 4 });
+  const f = whatHappened([
+    { day, kind: 'set_out', importance: 3, title: 'Jory Cassel rides for King\'s Landing', text: 'Jory Cassel sets out for King\'s Landing with 20 men.' },
+    { day, kind: 'ledger', importance: 3, text: 'The steward counts the coin.' },
+    { day, kind: 'rumour', importance: 1, text: 'Whispers' },
+    { day, kind: 'call_answered', importance: 3, text: 'House Umber answers the call' },
   ]);
-  assert.match(f, /\*\*4 8th moon, 298 AC\*\* — Jory Cassel sets out/);
-  assert.match(f, /Robert Baratheon arrives at Winterfell/);
+  assert.match(f, /\*\*4 8th moon, 298 AC\*\* — Jory Cassel rides for King's Landing: Jory Cassel sets out/);
   assert.match(f, /House Umber answers the call/);
-  assert.doesNotMatch(f, /could not|Stark–Umber|Whispers/);
+  assert.doesNotMatch(f, /steward|Whispers/);
 });
 test('an order to garrison and drill hires no one', async () => {
   const s = fresh(); const gold = s.houses.stark.figures.treasury.v;

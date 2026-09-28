@@ -3,6 +3,20 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — B13: the realm remembers what it knows (WP B13)
+
+- **Lords remember.** When the model speaks for a lord — in his week's decision, in an audience, in answering a
+  letter — he is reminded of what has reached his house lately and of older things that bear on the matter (an old
+  oath, a quarrel over fishing rights), and of what the chronicle says of them — only what his house could know.
+- **The chronicle is written from what happened.** Each moon or so the chronicle gains a section: what happened
+  (the game's own record, dated), a short summary, what is still open (your hosts on the march, your sworn lords'
+  hosts coming to you, promises not yet due, matters awaiting your word) and what is only rumoured. Threads the model
+  might invent are refused: every open thread must name someone or somewhere real in those days.
+- `npm run playtest` now exists and works on Windows (it no longer needs administrator rights), and the default context
+  window is 64k.
+- Owner to verify: play two moons; open the Chronicle (h) and read the new section; `npm run playtest -- --house stark
+  --turns 12`.
+
 ## 2026-09-28 — B12: the realm is never quiet for long (WP B12)
 
 - **Things begin.** A hedge knight asks for service, a septon preaches against a lord, two houses quarrel over a mill,

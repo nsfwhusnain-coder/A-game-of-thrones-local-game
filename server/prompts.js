@@ -2,7 +2,7 @@
 // decides what every other house does, and emits structured changes that the engine applies.
 import { regencyLine } from '../public/js/shared/regency.js';
 import { standing, standingWord } from '../public/js/shared/standing.js';
-import { dateStr, getRelation, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, spanOf, nearestHolding, rideOf } from '../public/js/shared/world.js';
+import { dateStr, getRelation, realmTotals, vassalsOf, placeName, fmt, FIGURE_FIELDS, nearestHolding, rideOf } from '../public/js/shared/world.js';
 import { partyOf } from '../public/js/engine/parties.js';
 import { daysLeft } from '../public/js/engine/movement.js';
 import { estimateTokens } from './llm.js';
@@ -12,7 +12,6 @@ import { project } from '../public/js/shared/economy.js';
 import { briefFor } from '../public/data/briefs.js';
 import { vassalTemper } from '../public/js/shared/vassals.js';
 import { temperament } from '../public/js/shared/temperament.js';
-import { whereabouts as whereNow } from '../public/js/shared/roads.js';
 
 const RULES = `SIMULATION RULES
 1. You are the living world of A Song of Ice and Fire (books + show lore). Stay true to characters' personalities, motives, secrets and the political realities of Westeros and Essos. Other houses act on THEIR OWN interests, not the player's.
@@ -144,48 +143,3 @@ export function buildSuggestPrompt(state, chronicleMd, cfg) {
   const user = [playerSheet(state), memoryBlock(state, chronicleMd, 3000, 2), `DATE: ${dateStr(state.meta.date)}`, 'What should we do next?'].join('\n\n');
   return [{ role: 'system', content: system }, { role: 'user', content: user }];
 }
-
-// The facts of a stretch of turns, as the engine recorded them — dated, and never contradicted by the story:
-// journeys begun and ended, deaths, wars, pacts, fealty, lands changing hands, hosts raised and destroyed.
-const FACT_OPS = new Set(['travel', 'ride', 'send_character', 'army_create', 'raise_army', 'army_destroy', 'army_disband', 'war', 'war_join', 'pact', 'treaty', 'alliance', 'marriage', 'liege', 'set_liege', 'fealty', 'battle', 'project', 'wed', 'marriage_characters', 'betroth', 'recruit', 'hire']);
-const FACT_TEXT = /\b(arrives at|reaches|sets out|rides for|turns .+ for|has died|dies\b|answers the call|marches for|declares|swears|passes from|is destroyed|ceased to exist|captured|imprisoned|released|executed|wed to|betrothed|begins:)/i;
-export function engineFacts(turns, max = 24) {
-  const out = [];
-  for (const t of turns) {
-    const when = t.dateFrom && t.dateFrom !== t.date && spanOf(t.span).days > 1 ? `${t.dateFrom} – ${t.date}` : t.date;
-    const lines = [...new Set([
-      ...(t.carried || []).flatMap((c) => c.result || []).filter((x) => !/^could not/i.test(x)),
-      ...(t.applied || []).filter((a) => a && (FACT_OPS.has(a.op) || FACT_TEXT.test(a.text || ''))).map((a) => a.text),
-      ...(t.events || []).filter((e) => (e.importance || 0) >= 3).map((e) => `${e.title}${e.text ? ` — ${e.text}` : ''}`),
-    ].map((x) => String(x).replace(/\s+/g, ' ').trim()).filter(Boolean))];
-    for (const l of lines) out.push(`- **${when}** — ${l}`);
-  }
-  return out.slice(-max).join('\n');
-}
-
-export function buildConsolidatePrompt(state, turns, chronicleMd) {
-  const from = turns[0].dateFrom || turns[0].date, to = turns.at(-1).date;
-  const system = `You are the Archmaester keeping the chronicle of a long game. The dated FACTS of these days are already written by the engine and will stand above your words; do not restate them. You write the two things the engine cannot:
-- "threads": 3-8 bullets on what is IN MOTION or UNRESOLVED as of ${to} — each bullet begins "As of ${to}:" and names who, what and where (a plot, a quarrel, a debt, a journey not yet finished, a secret kept). Say "as of" — never write as though it is still true today.
-- "rumours": 0-5 bullets of what was SAID or SUSPECTED but not confirmed, each marked with who says it ("Rumour in King's Landing: ...").
-Past tense for what happened. Never contradict THE REALM NOW: the dead are dead, people are where it says. Names and places. Reply ONLY with JSON: {"threads":"markdown bullets","rumours":"markdown bullets"}`;
-  const user = [
-    chronicleMd ? 'EXISTING CHRONICLE (do not repeat it):\n' + chronicleMd.slice(-5000) : '',
-    `FACTS ALREADY WRITTEN (${from} – ${to}):\n${engineFacts(turns) || '(none)'}`,
-    'THE REALM NOW (the truth; the chronicle must agree with it):\n' + realmNow(state),
-    'TURNS TO CONSOLIDATE:\n' + turns.map((t) => `== ${t.dateFrom} → ${t.date} ==\nOrders: ${t.orders.map((o) => o.text).join(' | ') || '(none)'}\n${t.summary}\n${t.events.map((e) => `- [${e.importance}] ${e.title}: ${e.text}`).join('\n')}`).join('\n\n'),
-  ].filter(Boolean).join('\n\n');
-  return [{ role: 'system', content: system }, { role: 'user', content: user }];
-}
-// the present in a few lines: the player's people, the great lords, the dead of late, the wars
-function realmNow(state) {
-  const p = state.meta.player; const lines = [];
-  const who = Object.values(state.characters).filter((c) => c.house === p || Object.values(state.houses).some((h) => h.lord === c.id && ['crown', 'paramount'].includes(h.rank)) || (c.roles || []).includes('council'));
-  for (const c of who.filter((c) => c.alive).slice(0, 40)) lines.push(`${c.name}: ${whereNow(state, c).text}${c.status && c.status !== 'free' ? ` (${c.status})` : ''}`);
-  const dead = who.filter((c) => !c.alive && c.died && Number(c.died) >= (state.meta.date?.year || 0) - 1).map((c) => c.name);
-  if (dead.length) lines.push(`Dead: ${dead.join(', ')}`);
-  const wars = (state.wars || []).filter((w) => w.status !== 'ended').map((w) => `${w.name || 'War'}: ${w.attackers.join(', ')} against ${w.defenders.join(', ')}`);
-  lines.push(wars.length ? `Wars: ${wars.join('; ')}` : 'No open war.');
-  return lines.join('\n');
-}
-

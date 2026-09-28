@@ -67,12 +67,12 @@ function documents() {
   return docs;
 }
 
-function build() {
-  const docs = documents();
+/** A BM25 index over any passages ({ id, title, text, … }): the lore's, or a save's facts and chronicle (context/memory.js). */
+export function bm25Index(docs) {
   const df = new Map();
   for (const d of docs) {
     d.tf = new Map();
-    const toks = tokenize(`${d.title} ${d.text}`);
+    const toks = tokenize(`${d.title || ''} ${d.text}`);
     d.len = toks.length || 1;
     for (const t of toks) d.tf.set(t, (d.tf.get(t) || 0) + 1);
     for (const t of new Set(toks)) df.set(t, (df.get(t) || 0) + 1);
@@ -80,20 +80,14 @@ function build() {
   const avg = docs.reduce((a, d) => a + d.len, 0) / Math.max(1, docs.length);
   return { docs, df, avg, N: docs.length };
 }
-
-export function loreIndex() { if (!INDEX) INDEX = build(); return INDEX; }
-/** Rebuild after the player drops new files into lore/ (the server does it on boot). */
-export function reloadLore() { INDEX = null; return loreIndex().N; }
-
-/** BM25. k1 and b at their usual values; no tuning, because there is nothing here to overfit to. */
-export function searchLore(query, k = 6, { kinds = null } = {}) {
-  const ix = loreIndex();
+/** Each passage's BM25 score for the query (k1 and b at their usual values), best first, only those that match. */
+export function bm25Search(ix, query, { k = 6, keep = () => true } = {}) {
   const q = tokenize(query);
   if (!q.length) return [];
   const k1 = 1.4, b = 0.72;
   const scored = [];
   for (const d of ix.docs) {
-    if (kinds && !kinds.includes(d.kind)) continue;
+    if (!keep(d)) continue;
     let s = 0;
     for (const t of q) {
       const f = d.tf.get(t); if (!f) continue;
@@ -103,7 +97,18 @@ export function searchLore(query, k = 6, { kinds = null } = {}) {
     if (s > 0) scored.push({ d, s });
   }
   scored.sort((a, b2) => b2.s - a.s);
-  return scored.slice(0, k).map(({ d, s }) => ({ id: d.id, title: d.title, kind: d.kind, text: d.text, score: Math.round(s * 100) / 100 }));
+  return scored.slice(0, k);
+}
+const build = () => bm25Index(documents());
+
+export function loreIndex() { if (!INDEX) INDEX = build(); return INDEX; }
+/** Rebuild after the player drops new files into lore/ (the server does it on boot). */
+export function reloadLore() { INDEX = null; return loreIndex().N; }
+
+/** The lore's passages for a query, best first. */
+export function searchLore(query, k = 6, { kinds = null } = {}) {
+  return bm25Search(loreIndex(), query, { k, keep: (d) => !kinds || kinds.includes(d.kind) })
+    .map(({ d, s }) => ({ id: d.id, title: d.title, kind: d.kind, text: d.text, score: Math.round(s * 100) / 100 }));
 }
 
 /**

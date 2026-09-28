@@ -26,10 +26,10 @@ export function knownTo(state, facts, house, { limit = 8 } = {}) {
 const tree = (state, x, { eager = false } = {}) => { const t = treeChoice(state, x.id, optionsFor(state, x.id), { eager }); return { x, via: 'tree', verb: t.verb, params: t.params, rule: t.rule }; };
 
 /**
- * One week's minds. opts: { budget (minds with a model: 3 | 6 | 10), provider, cfg, log, known(actor) → facts }.
+ * One week's minds. opts: { budget (minds with a model: 3 | 6 | 10), provider, cfg, log, known(actor) → facts, memory(actor) → the relevant memory's text }.
  * Returns { cards (for the player's chronicle), record (every mind: who, how, what — the turn record's `minds`) }.
  */
-export async function runMinds(state, { budget = 6, provider = 'mock', cfg, log, known = () => [], replay = null } = {}) {
+export async function runMinds(state, { budget = 6, provider = 'mock', cfg, log, known = () => [], memory = () => '', replay = null } = {}) {
   const { minds, pressed, all } = salientActors(state, { budget });
   const decided = [];
   const byModel = provider !== 'mock';
@@ -39,7 +39,7 @@ export async function runMinds(state, { budget = 6, provider = 'mock', cfg, log,
   const decide = async (x) => {
     if (again.has(x.id)) { const r = again.get(x.id); return { x, via: r.via, verb: r.verb, params: r.params, ...(r.words ? { words: r.words } : {}) }; }
     if (!byModel) return { ...tree(state, x), via: 'mock' };
-    const r = await runCall('mind', state, { actor: x.id, known: known(x) }, { provider, cfg, log });
+    const r = await runCall('mind', state, { actor: x.id, known: known(x), memory: memory(x) }, { provider, cfg, log });
     const it = r.value && r.via !== 'fallback' ? intentOf(r.value, r.ctx) : null;
     if (!it) return { ...tree(state, x), via: 'fallback', problems: r.problems };
     const v = r.value;

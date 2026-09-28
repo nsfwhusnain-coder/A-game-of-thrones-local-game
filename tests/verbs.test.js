@@ -116,7 +116,7 @@ test('the intent names who acts: the lord of the house, unless another is named'
 });
 
 test('over the wire: { verb, params } is done and its receipt told; a refusal is a 409 with its reason', async () => {
-  const { id } = game.newGame('agot_298', 'stark');
+  const { id } = game.newGame('agot_298', 'stark', { seed: 298 });
   const r = game.act(id, { verb: 'set_tax', params: { level: 'high' } });
   assert.match(r.summary, /Heavy taxes are proclaimed/); assert.equal(r.receipt[0].ok, true);
   assert.equal(r.state.houses.stark.policy.tax, 'high');
