@@ -109,6 +109,7 @@ function wellFormed(state) {
     if (!(p.men >= 0)) out.push(`party ${id} has ${p.men} men`);
     if (p.march && idOf(p.march.to) != null && !state.parties[idOf(p.march.to)]) out.push(`party ${id} follows ${p.march.to}, which is gone`);
     if (p.route && !(p.route.done <= p.route.days + 1e-6)) out.push(`party ${id} has walked past the end of its road`);
+    if (p.aboard && state.parties[p.aboard]?.kind !== 'fleet') out.push(`party ${id} is aboard ${p.aboard}, which is no fleet`);
     // a host's bread (engine/military/supply.js): never less than nothing, never more than its men and wagons carry
     // (men lost in a battle today leave their bread in the wagons until tomorrow's reckoning: counted at the men it fed)
     const cap = capacityOf({ ...p, men: Math.max(p.men, p.fedMen || 0) });

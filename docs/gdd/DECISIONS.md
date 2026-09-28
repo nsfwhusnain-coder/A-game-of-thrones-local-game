@@ -789,3 +789,27 @@ ransoms, `embargo`) and the price index of §6.3.
 - **Blockade** is only ships of the besiegers' side lying within ~55 miles; the verb and its trade effects are C6's.
 - **Not yet**: the Red Keep and the Hightower as keeps within their cities; the Rock's sea caves (a scheme).
 
+## D-048 · 2026-09-28 · The sea: fleets carry, blockade and reave; the old crossings stay (WP C6)
+
+**What.** `engine/military/naval.js` and the verbs `embark_host`, `land_host`, `blockade`, `raid_coast`. Departures from
+07 §9:
+- **Two ways over water.** A host ordered to march to another landmass still finds its own passage (A8's
+  `shared/sea.js`: its ships, a few boats making trips, or the realm's ships sent to fetch it). A fleet that *carries* a
+  host is the new, deliberate way: aboard in port, the fleet sails where it is sent, and the host is put ashore where it
+  lies. Both stay: the first keeps islands' lords answering the banners without the player's help.
+- **Ships by kind** are reckoned for each fleet from its house and make-up (the ironborn all longships, the Essos cities
+  carracks and galleys, fleets of "galleys" four in five galleys, the rest half galleys and half cogs) and scale with the
+  ships it keeps. Embarking takes no time in the engine (the day per 2,000 men is told, not waited for); landing does.
+- **Raids** last a fortnight from the **first landing** (a voyage from Pyke to the Stony Shore is two weeks and more),
+  over the enemy's coast within ~220 miles of the holding named ("the Stony Shore" names Deepwood Motte); a village
+  every other day. A garrison more than six-tenths the raiders' strength beats them off. Captives are a flavour line
+  ("thralls and salt wives"), never people in the state (10 §8.5).
+- **Blockade** is the fleet lying within ~55 miles of the port; sailing away lifts it. A besieged port is starved by a
+  blockade or by any ships of the besiegers' side lying before it (D-047).
+- **Sea fights** are fought when fleets at war meet and one is sent against the other or outweighs it by 1.2; a third
+  of the loser's lost ships are the victor's prizes; a beaten fleet runs for its home port; a fleet sunk takes its hosts
+  down with it. Wildfire (the Blackwater) and hired passage (Salladhor Saan, the Braavosi) wait for C7.
+- **Minds**: the head of a house sends its fleets (the house ways' `iron_price` for the ironborn: reave; everyone's
+  `blockade` when an enemy port is besieged). The fleet verbs are offered to the order interpreter only for a house that
+  has a fleet, and the siege verbs only for one before a castle's walls (the prompt's budget).
+

@@ -32,6 +32,17 @@ export const SEA = {
   shipCarries: 100,                           // men a ship carries: between a longship's 40 and a cog's 200
   sail: { cog: 60, galley: 70, longship: 90, carrack: 55, swan: 110 }, // miles a day
   embarkDays: 1,                              // a day to go aboard and a day to come ashore, taken together
+  // the kinds of ship (07 §9.1; WP C6): crew, soldiers carried, speed, and weight in a sea fight
+  hulls: {
+    longship: { crew: 40, carries: 40, speed: 90, weight: 1 },   // the crew fights; beaches anywhere
+    galley: { crew: 150, carries: 100, speed: 70, weight: 2 },   // the royal fleet, the Redwyne and Velaryon galleys
+    cog: { crew: 30, carries: 200, speed: 60, weight: 0.8 },     // merchantmen and transports
+    carrack: { crew: 60, carries: 300, speed: 55, weight: 2.5 }, // Braavos, Lys, Volantis
+  },
+  storm: { autumn: 0.03, winter: 0.05 },      // a week's chance a fleet at sea is caught in a storm
+  stormLoss: [0.05, 0.2],                     // the share of its ships it loses (half near a coast)
+  landDays: { port: 1, beach: 2, longship: 0.5 }, // coming ashore
+  raid: { days: 14, every: 2, loot: [1, 3], devastation: [15, 40] }, // a raid's length, a village every two days, moons of rents taken
 };
 
 // ── Musters (07 §3.2): how a sworn lord answers his liege, by temper (WP C2 reads these) ───────────────────────────

@@ -1,6 +1,6 @@
 // One day of the realm (docs/gdd/03-architecture.md §6.2, the day loop). Every rule of the engine that makes time pass
 // runs here for a single day, in this order: the year's turn (age and old death), the banners' answers and the musters,
-// the roads (marches, arrivals, the road's dangers), the hosts' bread, oaths weighed, the battles and sieges, the great threads and the
+// the roads (marches, arrivals, the road's dangers), the fleets, the hosts' bread, oaths weighed, the battles and sieges, the great threads and the
 // realm's small life, regencies, the strain of war, lords on the road, letters landing, promises judged, the season.
 // Running each day alone is what lets a jump be streamed a week at a time and stopped on any day: the world at the end
 // of day 9 is the same whether the jump was meant to run to day 9 or to day 30 (03 §1.6).
@@ -20,6 +20,7 @@ import { treacheryTick } from '../../public/js/shared/treachery.js';
 import { regencyTick } from '../../public/js/shared/regency.js';
 import { musterTick } from '../../public/js/engine/military/muster.js';
 import { supplyTick } from '../../public/js/engine/military/supply.js';
+import { seaTick } from '../../public/js/engine/military/naval.js';
 import { commitmentsTick } from '../../public/js/engine/politics/commitments.js';
 import { asEvent } from '../../public/js/engine/facts/log.js';
 import { advanceMusters } from '../orders.js';
@@ -62,6 +63,8 @@ export async function engineDay(state, ctx) {
   cards.push(...advanceMusters(state, 1));
   // every party with somewhere to be walks its road one day (a host raised today sets out today)
   const mt = marchTick(state, { span: 1, turnStart: day - 1 }); cards.push(...mt.events); applied.push(...mt.applied);
+  // the fleets: hosts aboard sail with them, storms, blockades and raids (engine/military/naval.js)
+  { const r = seaTick(state, 1, random); cards.push(...r.events); applied.push(...r.applied); }
   // every host eats (engine/military/supply.js): from friendly stores, its wagons, or the country it stands in
   { const r = supplyTick(state, 1); cards.push(...r.events); applied.push(...r.applied); }
   for (const tick of [roadEncounters, treacheryTick, resolveWarfare]) { const r = tick(state, 1); cards.push(...r.events); applied.push(...r.applied); }

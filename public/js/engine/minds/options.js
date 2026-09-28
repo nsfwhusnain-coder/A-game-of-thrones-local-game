@@ -45,9 +45,11 @@ export function worldView(state, actorId) {
   const holdings = Object.values(state.holdings).filter((h) => h.owner === hid).map((h) => h.id);
   const vassals = Object.values(state.houses).filter((h) => h.liege === hid && state.characters[h.lord]?.alive);
   // who this actor is to the house: its head (or regent) commands all it has; a commander, only the host he leads
-  // (fleets fight at sea, a war of phase C: minds do not sail them yet)
+  // (fleets are the head's: raiding and blockades, below)
   const role = actorOf(state, hid)?.id === actorId ? 'head' : 'commander';
   const hosts = Object.values(state.parties).filter((a) => commands(state, hid, a) && a.kind !== 'garrison' && a.kind !== 'fleet' && a.men > 0 && (role === 'head' || a.commander === actorId));
+  // the house's fleets, which the head of the house sends raiding or to close an enemy port (engine/military/naval.js)
+  const fleets = role === 'head' ? Object.values(state.parties).filter((a) => commands(state, hid, a) && a.kind === 'fleet' && a.ships >= 5 && !a.raid && !a.blockade && !a.march && !Object.values(state.parties).some((x) => x.aboard === a.id)) : [];
   const wars = (state.wars || []).filter((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].includes(hid));
   const foesOf = new Set(wars.flatMap((w) => (w.attackers.includes(hid) ? w.defenders : w.attackers)));
   // the foe's hosts as this house knows them: those it sees, and those its reports place (09 §7.2) — not the truth
@@ -62,7 +64,7 @@ export function worldView(state, actorId) {
   const others = Object.values(state.houses).filter((h) => h.id !== hid && state.characters[h.lord]?.alive && h.seat && state.holdings[h.seat]);
   const neighbours = others.filter((h) => miles(state.holdings[h.seat].pos, home) < 420);
   return {
-    state, actor, house: hid, role, me, seat, home, holdings, vassals, hosts, wars, foes: [...foesOf], foeHosts, threatened, besieged, prisoners, kinHeld, captors,
+    state, actor, house: hid, role, me, seat, home, holdings, vassals, hosts, fleets, wars, foes: [...foesOf], foeHosts, threatened, besieged, prisoners, kinHeld, captors,
     liege: me.liege && state.houses[me.liege] ? state.houses[me.liege] : null, realm: realmOf(state, hid),
     gold: gold(me), levies: Math.round(Number(me.figures?.levies?.v) || 0), menAtArms: Math.round(Number(me.figures?.menAtArms?.v) || 0),
     tax: me.policy?.tax || 'normal', dues: me.obligations?.tribute || null,
@@ -107,6 +109,9 @@ const CANDIDATES = {
   raise_levies: (w) => (w.levies >= 200 ? w.holdings.slice(0, 3).map((h) => ({ params: { at: h, men: Math.round(w.levies * 0.5) }, target: h, men: true })) : []),
   march_host: (w) => (held(w) ? [] : w.hosts).filter((a) => !a.canonLock).flatMap((a) => placesFor(w, a).map((p) => ({ params: { army: a.id, to: p, ...(w.foes.includes(w.state.holdings[p]?.owner) ? { intent: 'lay siege' } : {}) }, host: a.id, target: p }))),
   attack_host: (w) => (held(w) ? [] : w.hosts).filter((a) => !a.canonLock).flatMap((a) => w.near(a.pos, 150).filter((f) => a.march?.to !== 'party:' + f.id).map((f) => ({ params: { army: a.id, to: 'party:' + f.id, intent: 'bring them to battle' }, host: a.id, target: 'party:' + f.id }))),
+  // a fleet sent reaving along the nearest enemy coasts, or to close an enemy port
+  raid_coast: (w) => (w.atWar ? w.fleets.flatMap((f) => Object.values(w.state.holdings).filter((h) => h.coastal && (w.foes.includes(h.owner) || w.foes.includes(realmOf(w.state, h.owner)))).sort((a, b) => miles(a.pos, f.pos) - miles(b.pos, f.pos)).slice(0, 3).map((h) => ({ params: { fleet: f.id, target: h.id }, host: f.id, target: h.id }))) : []),
+  blockade: (w) => (w.atWar ? w.fleets.flatMap((f) => Object.values(w.state.holdings).filter((h) => h.coastal && w.foes.includes(h.owner) && h.status === 'besieged').slice(0, 2).map((h) => ({ params: { fleet: f.id, holding: h.id }, host: f.id, target: h.id }))) : []),
   halt_host: (w) => w.hosts.filter((a) => a.march && !a.canonLock).map((a) => ({ params: { army: a.id }, host: a.id })),
   merge_hosts: (w) => { const at = new Map(); for (const a of w.hosts) if (a.at) at.set(a.at, (at.get(a.at) || 0) + 1); return [...at.values()].some((n) => n > 1) ? [{ params: {} }] : []; },
   disband_host: (w) => (w.atWar || held(w) ? [] : w.hosts.filter((a) => a.kind === 'host' && !a.canonLock && !a.march).map((a) => ({ params: { army: a.id }, host: a.id }))),

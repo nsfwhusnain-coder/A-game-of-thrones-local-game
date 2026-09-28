@@ -123,7 +123,7 @@ export function settle(state, p) {
   const h = p.besieging && state.holdings?.[p.besieging];
   const besieging = !!(h?.siege && !p.march);
   if (!besieging) delete p.besieging;
-  p.state = p.sea?.phase === 'sailing' || (p.route && atSeaOn(p.route, p.route.done)) ? 'embarked'
+  p.state = p.aboard || p.sea?.phase === 'sailing' || (p.route && atSeaOn(p.route, p.route.done)) ? 'embarked'
     : p.march ? (p.purpose?.returning ? 'returning' : 'marching')
       : besieging ? 'besieging'
         : p.muster?.remaining > 0 ? 'mustering'

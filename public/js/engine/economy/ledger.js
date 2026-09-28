@@ -62,7 +62,7 @@ export function minesOf(state, h) {
 export function holdingRevenue(state, h, { tax = 'normal', trade = 1, labour = 1 } = {}) {
   const gross = (h.population || 0) * E.outputPerHead * (E.regionOutput[h.region] ?? 1) * prosperityFactor(h) * seasonFactor(state, h) * warFactor(h) * labour;
   const rents = gross * (E.rentShare[tax] ?? E.rentShare.normal) * (1 - Math.max(0, (h.unrest || 0) - 40) / 120);
-  const tr = (E.tradeBase[h.id] || 0) * trade * warFactor(h);
+  const tr = (E.tradeBase[h.id] || 0) * trade * warFactor(h) * (h.blockade ? 0.5 : 1); // a port blockaded trades by half (07 §9.4)
   const mines = minesOf(state, h) * warFactor(h);
   return { total: rents + tr + mines, lines: { rents, trade: tr, mines } };
 }

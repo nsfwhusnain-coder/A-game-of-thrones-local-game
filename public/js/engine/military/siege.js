@@ -40,6 +40,7 @@ export function castellanOf(state, h) {
 
 /** Whether ships of the besiegers' side lie before a holding: a sea-fed castle starves only then. */
 export function blockaded(state, h, by) {
+  if (h.blockade && realmOf(state, h.blockade.by) === realmOf(state, by)) return true;
   return Object.values(state.parties).some((p) => p.kind === 'fleet' && p.men > 0 && !p.march && realmOf(state, p.owner) === realmOf(state, by) && dist(p.pos, h.pos) <= 30);
 }
 /** Whether the castle's stores fall today: not while the sea or the high road feeds it. */

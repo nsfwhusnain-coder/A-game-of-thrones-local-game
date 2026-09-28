@@ -378,6 +378,17 @@ crossings take 3–7 days.
 `power = Σ ships × typeWeight (longship 1, galley 2, carrack 2.5, cog 0.8) × crewQuality (Iron Fleet 1.3) × admiral` ±
 noise; boarding captures ships; fire (wildfire: a canon verb, the Blackwater) destroys.
 
+*Implemented in WP C6* (`engine/military/naval.js`, `data/balance.js` SEA; [DECISIONS.md#D-048](DECISIONS.md)): each
+fleet's ships by kind (reckoned from its house and make-up, kept as it loses and takes ships); `embark_host` in port and
+`land_host` (a port a day, a beach two, longships half a day; the host cannot march until it is ashore); the hosts aboard
+sail with their fleet and fight only as it does; autumn and winter storms at sea (half as often near a coast);
+`blockade` (trade ×0.5, a besieged port starves, −5 relation) lifted when the fleet sails; `raid_coast` — a village every
+other day for a fortnight from the first landing, over the enemy's coast within ~220 miles of the one named, loot 1–3
+moons of rents by the raiders against the garrison, devastation +15–40, thralls told as a flavour line, a strong
+garrison beats them off — then home with the plunder; sea fights by §9.5 (a fleet gives battle at 1.2 or when sent
+against the other), a third of the lost ships taken as prizes; the ironborn's `iron_price` sends the longships reaving.
+The hosts that cross water on their own (A8's `shared/sea.js`) still do. Wildfire and hired passage wait for C7.
+
 ## 10. Sellswords, outlaws and others
 
 - **Companies** (`data/companies.js`, new): the Golden Company (10,000; Disputed Lands; contracted to Myr in 298),

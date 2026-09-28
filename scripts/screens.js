@@ -176,6 +176,22 @@ const SCENARIOS = {
     }
     throw new Error('no siege in fourteen weeks');
   },
+  // the sea (WP C6): Lord Stannis's host aboard the Dragonstone fleet, under sail for Storm's End — the fleet's card with
+  // its galleys, the host aboard and the room left
+  async fleet() {
+    const { id } = await api('/games', { scenario: 'agot_298', house: 'baratheon_ds', seed: 7 });
+    await api(`/games/${id}/act`, { kind: 'call_banners', vassals: [], at: 'baratheon_ds', ownLevies: 1500 });
+    let s = await api(`/games/${id}`);
+    const host = Object.values(s.parties).find((a) => a.owner === 'baratheon_ds' && a.kind === 'host' && a.at === 'baratheon_ds');
+    await api(`/games/${id}/act`, { verb: 'embark_host', params: { army: host.id, fleet: 'dragonstone_fleet' } });
+    await api(`/games/${id}/act`, { verb: 'march_host', params: { army: 'dragonstone_fleet', to: 'baratheon_se' } });
+    await api(`/games/${id}/advance`, { span: '2d', orders: [] });
+    s = await api(`/games/${id}`);
+    return { id, focus: s.parties.dragonstone_fleet.pos, dist: 700, page: async (page) => {
+      await page.evaluate(async () => { const m = await import('/js/ui/windows.js'); m.openSheet('army', 'dragonstone_fleet'); });
+      await page.waitForTimeout(500);
+    } };
+  },
   // the economy (WP C1): a moon's accounts in the Treasury window — rents, trade, tribute, the household, the field
   async economy() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 7 });
