@@ -3,6 +3,19 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — E5: every party has its token, and hosts on one spot stack
+
+- **Each kind of party looks like itself**: a host's plate gives its count and, from the middle zoom in, who leads it
+  ("~3,000 · Roose Bolton"); a host you know only by report is grey, with a "?" and how old the word is ("~6,000? · 7
+  days old"); fleets count their ships; outlaws fly a ragged pennant; a lord's retinue is a small pennant that names
+  the lord and where they ride when you point at it.
+- **The King's progress** has a gold-rimmed plate that is seen from the farthest zoom.
+- **Hosts on one spot merge into one plate** ("3 hosts · 7,400"); point at it and it fans out into its hosts.
+- **Garrisons are no longer tokens**: their count is on the castle's card.
+- **Routes**: your own parties' roads in gold with the days left at the end ("~9 days"); an ally's road faint; nobody
+  else's.
+- Owner to verify: `/dev/tokens.html?lod=0`, `?lod=1`, `?lod=1&fan=1`; in a game, march a host and look for its ETA.
+
 ## 2026-09-28 — E4: labels that never overlap, and tooltips that let go
 
 - **No two names on the map are drawn over one another any more** (the old "KIN~2,400~50 SHIPS NG"): every frame the

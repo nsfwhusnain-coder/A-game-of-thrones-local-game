@@ -33,6 +33,7 @@ import { colorFor as modeColor, atWarWith as modeAtWar, diplomacyOf, DIPLO } fro
 import { eyesOf } from '../engine/knowledge.js';
 import { SNOW, snowLineOf, riversFrozen } from './nature.js';
 import { placeLabels, kindOf, PRIORITY } from './labels.js';
+import { tokenOf, clusterPlates } from './tokens.js';
 export { LOD, lodOf, layerAlpha };
 
 export class MapScene {
@@ -356,6 +357,7 @@ export class MapScene {
   }
   /** Back to the whole realm (L0), framed on Westeros and the Narrow Sea. */
   home() { this.flyTo(L0_CENTRE, LOD[0]); }
+  dropEta(rec) { if (rec.eta) { rec.eta.el.remove(); this.labels = this.labels.filter((l) => l !== rec.eta); rec.eta = null; } }
   clearHover() { this.hoverKey = null; this.h.onHover?.(null); }
   flash(pos) { this.pulse(pos, 'flash'); }
 
@@ -454,8 +456,11 @@ export class MapScene {
       l.el.innerHTML = `<span class="flag"></span><b>~${fmt(v.men)}</b>`;
       l.el.title = `Unconfirmed: a host of ~${fmt(v.men)} reported ${ageText(v.age)} (${v.source})`; this.ghostLabels.push(l);
     }
-    for (const [id, rec] of this.armyObjs) if (!s.parties[id] || !isForce(s.parties[id])) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); if (rec.trail) this.scene.remove(rec.trail); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.armyObjs.delete(id); }
+    // a garrison is not a token (11 §6.1): its count is on its castle's card
+    const drawn = (a) => a && isForce(a) && a.kind !== 'garrison';
+    for (const [id, rec] of this.armyObjs) if (!drawn(s.parties[id])) { this.dropEta(rec); this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); if (rec.trail) this.scene.remove(rec.trail); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); this.armyObjs.delete(id); }
     for (const a of forces(s)) { // riders are drawn as riders (syncRiders), not as hosts
+      if (!drawn(a)) continue;
       const owner = s.houses[a.owner];
       let rec = this.armyObjs.get(a.id);
       // a host at sea is carried by ships: it is drawn as its fleet, on the water (shared/sea.js)
@@ -463,7 +468,7 @@ export class MapScene {
       const sig = `${a.owner}|${a.kind}|${armyFigureCount(a.men)}|${a.ships || 0}|${a.composition}|${atSea ? 'sea' : ''}`;
       if (!rec || rec.sig !== sig) {
         const oldPos = rec?.pos;
-        if (rec) { this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); }
+        if (rec) { this.dropEta(rec); this.scene.remove(rec.group); if (rec.route) this.scene.remove(rec.route); rec.label.el.remove(); this.labels = this.labels.filter((l) => l !== rec.label); }
         const group = buildArmy(atSea ? { ...a, kind: 'fleet', ships: a.sea.ships || 1 } : a, owner); this.scene.add(group);
         rec = { group, sig, pos: oldPos || (a.motion?.path?.length ? [...a.motion.path[0]] : [...a.pos]), anim: null, route: null, label: this.addLabel('', [0, 0, 0], 'army', { army: a.id }) }; // a march this turn replays from where it began
         this.armyObjs.set(a.id, rec);
@@ -483,22 +488,34 @@ export class MapScene {
       } else if (rec.trail && rec.trailTurn !== s.meta.turn) { this.scene.remove(rec.trail); rec.trail = null; }
       rec.pos = [...a.pos];
       if (rec.route) { this.scene.remove(rec.route); rec.route = null; }
+      // the road ahead (11 §6.3): your own parties' in gold with the days left at its end; an ally's faint; no one else's
       const ahead = this.roadAhead(a);
-      if (ahead) {
-        rec.route = this.routeMesh(ahead, a.owner === s.meta.player ? '#f6e27a' : this.atWarWith(a.owner) ? '#ff5a44' : '#e8e0d0');
+      const mineP = this.isMine(a.owner), ally = !mineP && ['allied', 'mine'].includes(diplomacyOf(s, { owner: a.owner }).key);
+      this.dropEta(rec);
+      if (ahead && (mineP || ally)) {
+        rec.route = this.routeMesh(ahead, mineP ? '#f6e27a' : '#9ab8e0', mineP ? 1.1 : 0.6);
         this.scene.add(rec.route);
+        const left = a.route?.days ? Math.max(1, Math.round(a.route.days - (a.route.done || 0) + (a.delay || 0))) : 0;
+        if (mineP && left) { const e = ahead.at(-1); rec.eta = this.addLabel(`~${left} day${left === 1 ? '' : 's'}`, [e[0], this.groundAt(e[0], e[1]) + 3, e[1]], 'eta', {}); }
       }
       const v = view.get(a.id); rec.view = v || null;
-      rec.group.visible = v?.known === 'seen'; rec.label.hidden = !v;
+      // what the player sees of it (map3d/tokens.js): its plate's words, and whether it is on their map at all
+      const tok = tokenOf(s, a, v, 3); rec.token = tok;
+      rec.group.visible = v?.known === 'seen' || (!!tok && ['progress', 'retinue'].includes(tok.kind));
+      rec.group.userData.tokenScale = tok?.scale || 1;
+      rec.label.hidden = !tok;
       if (v?.known === 'reported' && rec.route) { this.scene.remove(rec.route); rec.route = null; }
-      const men = a.kind === 'fleet' ? `${a.ships || '?'} ships` : fmt(v?.known === 'reported' ? v.men : a.men);
-      const cmd = a.commander && v?.known === 'seen' ? s.characters[a.commander]?.name : '';
-      // unconfirmed: a plain grey plate with the rumoured count; confirmed: the house's colours and who leads it
-      rec.label.el.innerHTML = v?.known === 'reported'
-        ? `<span class="flag"></span><b>~${men}</b>`
-        : `<span class="flag" style="background:${owner?.color || '#777'}"></span><b>${a.owner === s.meta.player ? '' : '~'}${men}</b>${cmd ? `<i>${cmd.split(' ').slice(-1)[0]}</i>` : ''}`;
-      rec.label.el.classList.toggle('reported', v?.known === 'reported');
-      rec.label.el.title = v?.known === 'reported' ? `Unconfirmed: a host of ~${men} reported ${ageText(v.age)} (${v.source})` : '';
+      if (tok) {
+        // unconfirmed: a grey plate with the rumoured count and its age; confirmed: the house's colours and who leads it
+        const flag = tok.reported ? '<span class="flag"></span>' : `<span class="flag" style="background:${owner?.color || '#777'}"></span>`;
+        // the plate far out is the count alone; from L1 in it names who leads the host (swapped in updateLabels)
+        const far = tokenOf(s, a, v, 0).plate;
+        rec.plates = [far, tok.plate].map((p) => `${flag}${p ? `<b>${esc(p)}</b>` : ''}`);
+        rec.label.el.innerHTML = rec.plates[this.lod >= 1 ? 1 : 0]; rec.plateNear = this.lod >= 1;
+        rec.label.cls = `army ${tok.cls}`;
+        rec.label.el.className = `lbl army ${tok.cls}`;
+        rec.label.el.title = tok.hover;
+      }
       rec.label.el.classList.toggle('mine', this.isMine(a.owner));
       rec.label.el.classList.toggle('enemy', this.atWarWith(a.owner));
       rec.label.el.classList.toggle('sel', a.id === this.selectedArmy);
@@ -702,7 +719,31 @@ export class MapScene {
       const kind = kindOf(c + (l.dot ? ' dot' : ''), { own: l.data?.holding && l.data.holding === seat });
       cand.push({ id: cand.length, l, x, y: y + (l.dy || 0) * scale, w: l.bw * scale, h: l.bh * scale, scale, pri: PRIORITY[kind] + (l.area ? Math.min(4, l.area / 2e5) : 0), move: kind === 'army', always: kind === 'pin' });
     }
-    const shown = placeLabels(cand);
+    // the plates follow the zoom: from L1 in a host's plate names who leads it
+    const near = this.lod >= 1;
+    for (const rec of this.armyObjs.values()) if (rec.plates && rec.plateNear !== near) { rec.plateNear = near; rec.label.el.innerHTML = rec.plates[near ? 1 : 0]; }
+    // hosts' plates within 18 px of one another merge into one stack ("3 hosts · 11,400"); the pointer on a stack fans it out
+    if (this.fan && (!this.mouseXY || Math.hypot(this.mouseXY[0] - this.fan.x, this.mouseXY[1] - this.fan.y) > 90)) this.fan = null;
+    const plates = cand.filter((c) => c.l.data?.army && c.l.cls.startsWith('army') && !/progress|retinue/.test(c.l.cls));
+    const stacks = clusterPlates(plates.map((c) => ({ id: c.id, x: c.x, y: c.y, token: this.armyObjs.get(c.l.data.army)?.token || { men: 0 } })));
+    const inStack = new Set(); this.stackPool = this.stackPool || []; let used = 0;
+    for (const st of stacks) {
+      const key = st.ids.map((i) => cand[i].l.data.army).sort().join('|');
+      if (this.fan?.key === key) continue;
+      for (const i of st.ids) inStack.add(i);
+      let sl = this.stackPool[used++];
+      if (!sl) {
+        const el = document.createElement('div'); el.className = 'lbl army stack'; this.labelLayer.appendChild(el);
+        sl = { el, cls: 'stack', data: {} }; this.stackPool.push(sl);
+        el.addEventListener('pointerenter', () => { if (sl.key) this.fan = { key: sl.key, x: sl.sx, y: sl.sy }; });
+      }
+      sl.key = key;
+      if (sl.text !== st.text) { sl.text = st.text; sl.el.innerHTML = `<span class="flag stackflag"></span><b>${esc(st.text)}</b>`; sl.el.style.display = ''; sl.bw = sl.el.offsetWidth || 90; sl.bh = sl.el.offsetHeight || 18; sl.dy = parseFloat(getComputedStyle(sl.el).marginTop) || 0; }
+      sl.el.title = st.ids.map((i) => cand[i].l.el.title || cand[i].l.el.textContent).filter(Boolean).join('\n');
+      cand.push({ id: `stack${used}`, l: sl, x: st.x, y: st.y + (sl.dy || 0), w: sl.bw, h: sl.bh, scale: 1, pri: PRIORITY.army + 1, move: true });
+    }
+    for (let k = used; k < this.stackPool.length; k++) if (this.stackPool[k].shown !== false) { this.stackPool[k].el.style.display = 'none'; this.stackPool[k].shown = false; this.stackPool[k].key = null; }
+    const shown = placeLabels(cand.filter((c) => !inStack.has(c.id)));
     for (const it of cand) {
       const l = it.l, at = shown.get(it.id);
       if (!at) { if (l.shown !== false) { l.el.style.display = 'none'; l.shown = false; } continue; }
@@ -752,7 +793,7 @@ export class MapScene {
     }
     for (const pl of this.places || []) pl.group.visible = this.dist < 520;
     const af = clamp(this.dist / 160, 1, 9);
-    for (const rec of this.armyObjs.values()) rec.group.scale.setScalar(af);
+    for (const rec of this.armyObjs.values()) rec.group.scale.setScalar(af * (rec.group.userData.tokenScale || 1)); // ∝ log10(men)
     // the trees grow out of the canopy's mass as the camera comes down (and sink back into it going up)
     if (this.forests) { this.forests.visible = this.dist < 900; this.forests.userData.uniforms.uGrow.value = 1 - clamp((this.dist - 640) / 260, 0, 1) * 0.8; }
     if (this.roadGroup) this.roadGroup.visible = this.dist < 1300;
@@ -800,6 +841,7 @@ export class MapScene {
           const now = performance.now(); if (last) { const dt = Math.max(8, now - last.t); this.velSample = { x: dx / dt * 1000, z: dz / dt * 1000 }; } last = { t: now };
         }
       } else {
+        this.mouseXY = [mx, my];
         const hit = this.hitTest(mx, my); const key = hit ? hit.type + hit.id : null;
         el.style.cursor = hit && !hit.area ? 'pointer' : 'default';
         if (key !== this.hoverKey) { this.hoverKey = key; }
@@ -933,7 +975,9 @@ export class MapScene {
           if (dx * dx + dz * dz < rr * rr) { p = [st.group.position.x + rr * 0.55, st.group.position.z + rr * 1.02]; break; }
         }
       }
-      // armies sharing a spot fan out so both models and labels stay readable
+      // armies sharing a spot fan out so the models stay readable; their plates stay on the true spot, where they
+      // merge into one stack plate (updateLabels, 11 §6.1)
+      const at = p;
       const key = Math.round(p[0] / 8) + ',' + Math.round(p[1] / 8);
       const idx = stacks.get(key) || 0; stacks.set(key, idx + 1);
       if (idx) { const ang = idx * 2.1; const r = 5 * rec.group.scale.x; p = [p[0] + Math.cos(ang) * r, p[1] + Math.sin(ang) * r]; }
@@ -944,7 +988,7 @@ export class MapScene {
       // a marching host strides: the files rise and fall and sway a little; at rest they stand still
       const marching = !!rec.anim && a.kind !== 'fleet' && !rec.atSea;
       for (const m of rec.group.children) if (m.isInstancedMesh) { m.position.y = marching ? Math.abs(Math.sin(time * 7 + m.id)) * 0.09 : 0; m.rotation.z = marching ? Math.sin(time * 3.5) * 0.02 : 0; }
-      rec.label.pos.set(p[0], y + 6 * rec.group.scale.x, p[1]);
+      rec.label.pos.set(at[0], this.groundAt(at[0], at[1]) + 6 * rec.group.scale.x, at[1]);
     }
     // the realm's small life walks on, turn or no turn
     if (this.life) this.life.frame(time, Math.min(0.1, dt));

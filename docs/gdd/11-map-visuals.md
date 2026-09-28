@@ -132,6 +132,9 @@ the player's view (knowledge-filtered). `MapScene.syncParties(prev, next, keyfra
 
 ### 6.1 Tokens (all zooms)
 
+> **Implemented (WP E5)** in `public/js/map3d/tokens.js` (the plates, the stack) and `MapScene.syncArmies`/`updateLabels`;
+> fixtures in `public/dev/tokens.html`. §6.2's figures are not yet rebuilt (D-057).
+
 | Party kind | Token | Plate |
 |---|---|---|
 | Host | a standard: pole + cloth banner (existing shader) in the owner's colours + sigil; size ∝ log10(men) | "4,200 · Robb Stark" (L1+: leader name) |
