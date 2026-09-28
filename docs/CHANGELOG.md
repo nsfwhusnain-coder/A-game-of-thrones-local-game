@@ -3,6 +3,17 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — E4: labels that never overlap, and tooltips that let go
+
+- **No two names on the map are drawn over one another any more** (the old "KIN~2,400~50 SHIPS NG"): every frame the
+  labels are placed most important first — your seat, the realms' names far out, the great seats, cities, hosts, castles
+  — and one that cannot fit clear is hidden until you come closer. A host's plate steps below or above a castle's name
+  before it gives way. At most 120 names at once.
+- **Halos**: light names on the land have a soft dark halo; the sea's names are dark ink with a light halo.
+- **Tooltips no longer stick** (B-31): they clear when the pointer leaves the map, when the window loses focus, and
+  whenever the camera moves under them.
+- Owner to verify: zoom out over King's Landing with a host and a fleet there; hover a castle and then drag the map.
+
 ## 2026-09-28 — E3: painted trees, a palette by region, and the snow line of the season
 
 - **The forests are painted trees now**, not low-poly cones: pines, broadleaves and here and there a white weirwood with

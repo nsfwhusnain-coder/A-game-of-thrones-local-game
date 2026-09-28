@@ -32,6 +32,7 @@ import { LOD, lodOf, layerAlpha, HOME_BOX, KNOWN_BOX, L0_CENTRE } from './lod.js
 import { colorFor as modeColor, atWarWith as modeAtWar, diplomacyOf, DIPLO } from './modes.js';
 import { eyesOf } from '../engine/knowledge.js';
 import { SNOW, snowLineOf, riversFrozen } from './nature.js';
+import { placeLabels, kindOf, PRIORITY } from './labels.js';
 export { LOD, lodOf, layerAlpha };
 
 export class MapScene {
@@ -350,11 +351,12 @@ export class MapScene {
     const to = { x: pos[0], z: pos[1], d: clamp(dist ?? Math.min(this.dist, 420), LOD[3], LOD[0]) };
     const far = Math.hypot(to.x - this.target.x, to.z - this.target.z) + Math.abs(Math.log(to.d / this.dist)) * 300;
     const dur = Math.max(clamp(0.9 + far / 2000, 0.9, 1.4), far / 450);
-    this.tween = { from: { x: this.target.x, z: this.target.z, d: this.dist }, to, t: 0, dur };
+    this.tween = { from: { x: this.target.x, z: this.target.z, d: this.dist }, to, t: 0, dur }; this.clearHover();
     this.goal = null; this.zoom = null;
   }
   /** Back to the whole realm (L0), framed on Westeros and the Narrow Sea. */
   home() { this.flyTo(L0_CENTRE, LOD[0]); }
+  clearHover() { this.hoverKey = null; this.h.onHover?.(null); }
   flash(pos) { this.pulse(pos, 'flash'); }
 
   // ───────────── settlements ─────────────
@@ -663,8 +665,9 @@ export class MapScene {
 
   updateLabels() {
     const w = this.cssW, h = this.cssH; const v = new THREE.Vector3(); const d = this.dist;
-    const placed = []; const armyBoxes = []; const nameBoxes = [];
-    // realm labels: size scales with realm and zoom, largest first to avoid collisions
+    // 1) which labels this zoom and mode would show, and where; 2) one greedy placement pass over them, most important
+    // first (map3d/labels.js): a label that cannot be placed clear of the others is hidden, never overlapped (11 §8)
+    const cand = []; const seat = this.state?.houses[this.state?.meta?.player]?.seat;
     for (const l of this.labels) {
       if (l.path) { const f = this.reelHold ? clamp(((this.reelF ?? 0) - l.span[0]) / Math.max(0.02, l.span[1] - l.span[0]), 0, 1) : 1; const [x, z] = pointAlong(l.path, f); l.pos.set(x, this.groundAt(x, z) + 4, z); if (f >= 1 && !this.reelHold) l.path = null; }
       else if (l.from) { const f = this.reelHold ? clamp(this.reelF ?? 0, 0, 1) : 1; const x = l.from[0] + (l.to[0] - l.from[0]) * f, z = l.from[1] + (l.to[1] - l.from[1]) * f; l.pos.set(x, this.groundAt(x, z) + 4, z); if (f >= 1 && !this.reelHold) l.from = null; }
@@ -692,31 +695,23 @@ export class MapScene {
       else if (c.startsWith('rider')) { show = vis && d < 1800; }
       else if (c.startsWith('place')) { show = vis && d < 330; }
       if (!show) { if (l.shown !== false) { l.el.style.display = 'none'; l.shown = false; } continue; }
-      if (l.shown !== true) { l.el.style.display = ''; l.shown = true; }
-      const x = (v.x * 0.5 + 0.5) * w; let y = (-v.y * 0.5 + 0.5) * h;
-      if (c.startsWith('army')) {
-        // stack army plates that would overlap on screen
-        const bw = (l.el.offsetWidth || 90), bh = (l.el.offsetHeight || 20) + 3;
-        let guard = 0;
-        // never across a castle's name: step the plate below it; then stack plates that would overlap
-        const nameBox = nameBoxes.find((b) => Math.abs(b.x - x) < (b.w + bw) / 2 && Math.abs(b.y - y) < (b.h + bh) / 2);
-        if (nameBox) y = nameBox.y + (nameBox.h + bh) / 2 + 1;
-        while (guard++ < 8 && armyBoxes.some((b) => Math.abs(b.x - x) < (b.w + bw) / 2 && Math.abs(b.y - y) < bh)) y += bh;
-        armyBoxes.push({ x, y, w: bw });
-      } else if (c.startsWith('holding') && !l.dot) {
-        // sizes are cached: reading them every frame would force a layout per label
-        if (!l.bw) { l.bw = l.el.offsetWidth || 80; l.bh = l.el.offsetHeight || 16; }
-        nameBoxes.push({ x, y, w: l.bw, h: l.bh });
-      }
-      l.sx = x; l.sy = y;
-      l.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)${scale !== 1 ? ` scale(${scale.toFixed(3)})` : ''}${l.rot ? ` rotate(${l.rot}rad)` : ''}`;
-      if (c.startsWith('realm')) {
-        const bw = (l.el.offsetWidth || 100) * scale, bh = 20 * scale;
-        const box = [x - bw / 2, y - bh / 2, x + bw / 2, y + bh / 2];
-        if (placed.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) { l.el.style.display = 'none'; l.shown = false; continue; }
-        placed.push(box);
-      }
+      // sizes are cached (reading them every frame would force a layout per label); a plate is re-measured when its words change
+      const words = l.el.textContent;
+      if (!l.bw || l.words !== words) { if (l.shown === false) l.el.style.display = ''; l.bw = l.el.offsetWidth || 80; l.bh = l.el.offsetHeight || 16; l.dy = parseFloat(getComputedStyle(l.el).marginTop) || 0; l.words = words; if (l.shown === false) l.el.style.display = 'none'; }
+      const x = (v.x * 0.5 + 0.5) * w; const y = (-v.y * 0.5 + 0.5) * h;
+      const kind = kindOf(c + (l.dot ? ' dot' : ''), { own: l.data?.holding && l.data.holding === seat });
+      cand.push({ id: cand.length, l, x, y: y + (l.dy || 0) * scale, w: l.bw * scale, h: l.bh * scale, scale, pri: PRIORITY[kind] + (l.area ? Math.min(4, l.area / 2e5) : 0), move: kind === 'army', always: kind === 'pin' });
     }
+    const shown = placeLabels(cand);
+    for (const it of cand) {
+      const l = it.l, at = shown.get(it.id);
+      if (!at) { if (l.shown !== false) { l.el.style.display = 'none'; l.shown = false; } continue; }
+      if (l.shown !== true) { l.el.style.display = ''; l.shown = true; }
+      // the box is placed where the label is drawn (its CSS margin sets it below or above its point); undo that here
+      const ly = at.y - (l.dy || 0) * it.scale; l.sx = at.x; l.sy = ly;
+      l.el.style.transform = `translate(${at.x.toFixed(1)}px, ${ly.toFixed(1)}px) translate(-50%, -50%)${it.scale !== 1 ? ` scale(${it.scale.toFixed(3)})` : ''}${l.rot ? ` rotate(${l.rot}rad)` : ''}`;
+    }
+    this.labelsShown = shown.size;
   }
 
   // ───────────── camera & input ─────────────
@@ -784,7 +779,7 @@ export class MapScene {
     el.addEventListener('mousedown', (e) => { if (e.detail > 1) e.preventDefault(); }); // no word-select on double click
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('wheel', (e) => {
-      e.preventDefault(); this.goal = null; this.tween = null; this.follow = null;
+      e.preventDefault(); this.goal = null; this.tween = null; this.follow = null; this.clearHover();
       // zoom toward the cursor, smoothed: the distance eases toward its goal, the point under the cursor stays put
       const r = el.getBoundingClientRect(); const sx = e.clientX - r.left, sy = e.clientY - r.top;
       const d = clamp((this.zoom?.d ?? this.dist) * Math.exp(e.deltaY * 0.0012), LOD[3], LOD[0]);
@@ -798,7 +793,7 @@ export class MapScene {
     el.addEventListener('pointermove', (e) => {
       const r = el.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top;
       if (drag) {
-        if (!moved && Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 4) { moved = true; this.dragging = true; try { el.setPointerCapture(drag.id); } catch { /* */ } }
+        if (!moved && Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 4) { moved = true; this.dragging = true; this.clearHover(); try { el.setPointerCapture(drag.id); } catch { /* */ } }
         if (moved) {
           const g = this.screenToGround(mx, my); const dx = drag.g.x - g.x, dz = drag.g.z - g.z;
           this.target.x += dx; this.target.z += dz; this.updateCamera(); el.style.cursor = 'grabbing';
@@ -827,7 +822,11 @@ export class MapScene {
       drag = null; this.dragging = false;
     });
     el.addEventListener('pointercancel', () => { drag = null; this.dragging = false; });
-    el.addEventListener('pointerleave', () => this.h.onHover?.(null));
+    // a tooltip never outlives the pointer over its thing (B-31): cleared on leaving the map, on the window losing focus,
+    // and whenever the camera moves under it (a drag, the wheel, a flight, the keys)
+    el.addEventListener('pointerleave', () => this.clearHover());
+    el.addEventListener('pointercancel', () => this.clearHover());
+    window.addEventListener('blur', () => this.clearHover());
     el.addEventListener('dblclick', (e) => { if (e.target.closest('.lbl')) return; const r = el.getBoundingClientRect(); const g = this.screenToGround(e.clientX - r.left, e.clientY - r.top); this.flyTo([g.x, g.z], Math.max(120, this.dist * 0.5)); });
     this.keys = new Set();
     window.addEventListener('keydown', (e) => {
@@ -836,7 +835,7 @@ export class MapScene {
       // Home: back to your seat (twice: the whole realm); F: follow the selected party (11 §2)
       if (k === 'home') { const seat = this.state?.holdings[this.state.houses[this.state.meta.player]?.seat]; const near = seat && Math.hypot(this.target.x - seat.pos[0], this.target.z - seat.pos[1]) < 20 && Math.abs(this.dist - LOD[2]) < 40; if (seat && !near) this.flyTo(seat.pos, LOD[2]); else this.home(); return; }
       if (k === 'f') { this.follow = this.follow ? null : this.selectedArmy || null; return; }
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.tween = null; this.follow = null; }
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.tween = null; this.follow = null; this.clearHover(); }
       this.keys.add(k);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));

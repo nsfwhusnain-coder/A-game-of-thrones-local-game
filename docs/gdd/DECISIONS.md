@@ -945,3 +945,16 @@ ransoms, `embargo`) and the price index of §6.3.
 - **Weirwoods are drawn by chance** (about one tree in 250 in the North, one in 1,250 south of the Neck), not
   placed at each godswood: the godswoods are inside the castles, which the settlement models draw.
 
+## D-056 · 2026-09-28 · Labels: realms above the great seats; pins always shown; plates may step (WP E4)
+
+- **The realms' names rank above the great seats** (11 §8 lists the player's seat, great seats, cities, plates, castles,
+  features, and does not place the realms). Realm names are shown only from L1 out, where they are what the map is
+  for; a great seat that collides with its realm's name gives way until the camera comes closer.
+- **News pins and waiting matters are always shown** and reserve their room first: they are small, few, and must stay
+  findable at every zoom (B10).
+- **A host's plate may step one line below, above or two below its point** before it is hidden, as the old stacking
+  did; nothing else moves.
+- **The overlap assertion is measured in the browser** (`dev/map-lod.html` counts overlapping drawn boxes, and the
+  `labels-*` screenshot scenarios fail on any) as well as on the pure placement in `tests/map-labels.test.js`; CI runs
+  only the latter (no browser in `npm test`).
+
