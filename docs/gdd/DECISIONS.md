@@ -612,7 +612,7 @@ every day. **After the fact**, the undo window offers "Stop the last turn sooner
 (`POST /api/games/:id/stop {day}`, `game.stopHere`): the turn is undone to its snapshot and played again with the same
 orders and the same minds' recorded choices (a live model's choices are reused, not asked again) as far as that day.
 The dice are the save's and the day loop runs a day at a time, so the days up to the stop come out fact for fact as
-they did (`tests/jump.test.js`); the ledger of the last, shortened week is settled for its shorter span. Ironman
+they did (`tests/jump.test.js`); what closes a turn — the ledger of the last, shortened week, and a matter the realm may raise as the turn ends — falls on the stop day. Ironman
 chronicles cannot be stopped after the fact.
 
 ## D-040 · 2026-09-28 · The Director chooses a hook and a place from lists; the engine does the rest (WP B12)
