@@ -349,6 +349,10 @@ const SCENARIOS = {
   async begin() {
     return { page: async (page) => { await page.click('.house-tile[data-h="stark"]'); await page.waitForSelector('#ironman'); await page.check('#ironman'); if (await page.$('#gravity')) await page.selectOption('#gravity', 'loose'); } };
   },
+  // a house's opening (WP D5): White Harbor's, written by hand — situation, strengths, weaknesses and levers
+  async opening() {
+    return { page: async (page) => { await page.click('#house-filters [data-f="north"]'); await page.click('.house-tile[data-h="manderly"]'); await page.waitForSelector('#begin'); } };
+  },
   // an island lord's men at sea: House Crowl or House Mormont sailing for the mainland (WP A8)
   async sea() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });
