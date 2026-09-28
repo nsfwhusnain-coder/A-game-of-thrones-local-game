@@ -123,6 +123,11 @@ const CANDIDATES = {
   hold_tourney: (w) => (LORDSHIP(w) && ['crown', 'paramount', 'major'].includes(w.me.rank) ? [{ params: {} }] : []),
   // (the Wall's verdict is "take_the_black" as a choice: "wall" is a prefix of the works' "walls")
   judge_prisoner: (w) => w.prisoners.flatMap((c) => ['release', 'ransom', 'wall', 'execute'].map((v) => ({ params: { character: c.id, verdict: v }, target: c.id, choice: v === 'wall' ? 'take_the_black' : v }))),
+  // the lenders' levers and a steward's prudence (06 §7, §10)
+  call_debt: (w) => (w.state.economy?.loans || []).filter((l) => l.lender === w.house && l.amount > 0 && !l.called && w.rel(l.debtor) <= -40).map((l) => ({ params: { debtor: l.debtor, months: 3 }, target: l.debtor })),
+  repay: (w) => [...new Set((w.state.economy?.loans || []).filter((l) => l.debtor === w.house && l.amount > 0 && l.pays === 'coin' && w.gold > l.amount * 3).map((l) => l.lender))].map((x) => ({ params: { lender: x }, choice: x })),
+  buy_grain: (w) => (LORDSHIP(w) && (Number(w.me.figures?.food?.v) || 0) < 2 && w.gold > 5000 ? [{ params: { moons: 2 } }] : []),
+  pay_ransom: (w) => w.kinHeld.filter((c) => c.house === w.house).map((c) => ({ params: { character: c.id }, target: c.id })),
   declare_war: (w) => w.rivals.slice(0, 3).map((h) => ({ params: { house: h.id, reason: `the wrongs done to House ${w.me.name}` }, target: h.id })),
 };
 

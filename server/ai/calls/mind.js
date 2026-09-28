@@ -24,7 +24,8 @@ const MEANS = {
   disband_host: 'send a host home', send_person: 'send one of your household with a small escort', set_tax: 'set the taxes on your smallfolk',
   set_dues: 'pay, delay or withhold the dues you owe your liege', fund_works: 'build', hire_men: 'hire men-at-arms', send_gift: 'send gold as a gift',
   hold_feast: 'hold a feast at your seat', hold_tourney: 'hold a tourney at your seat', judge_prisoner: 'decide the fate of a prisoner you hold',
-  declare_war: 'declare war', [HOLD]: 'keep your counsel and let the days pass',
+  declare_war: 'declare war', call_debt: 'call in a debt owed to you', repay: 'repay what you owe a lender', buy_grain: 'buy grain for your granaries',
+  embargo: 'forbid trade with a house', pay_ransom: 'pay the ransom of one of yours held captive', [HOLD]: 'keep your counsel and let the days pass',
 };
 
 export const INSTRUCTIONS = `YOUR TASK

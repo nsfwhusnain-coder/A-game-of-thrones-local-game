@@ -101,7 +101,16 @@ export const KINDS = {
   letter_intercepted: K(3, 'intrigue', 'secret'),
   envoy_arrived: K(3, 'diplomacy'),
   audience_held: K(2, 'diplomacy', 'houses'),
-  gift: K(2, 'diplomacy', 'houses'),       // gold sent to win a lord's goodwill
+  gift: K(2, 'diplomacy', 'houses'),
+  loan_taken: K(2, 'economy', 'houses'),       // coin borrowed from a lender (engine/economy/lenders.js)
+  loan_repaid: K(2, 'economy', 'houses'),
+  debt_called: K(4, 'economy'),                // a lender calls in what it is owed — the realm hears of it
+  loan_defaulted: K(4, 'economy'),
+  grain_bought: K(1, 'economy', 'houses'),
+  bribe: K(2, 'intrigue', 'secret'),           // gold for a favour; known to the two of them (and whoever finds out)
+  bribe_refused: K(3, 'intrigue', 'houses'),
+  ransom_demanded: K(3, 'court', 'houses'),
+  embargo: K(3, 'economy'),       // gold sent to win a lord's goodwill
   commitment_made: K(2, 'diplomacy', 'houses'),
   commitment_kept: K(2, 'diplomacy', 'houses'),
   commitment_broken: K(4, 'diplomacy'),

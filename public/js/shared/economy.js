@@ -7,6 +7,7 @@ import { RESOURCES, REGION_PROFILE, HOLDING_RESOURCES, POPULATION, POPULATION_DE
 import { random } from '../engine/rng.js';
 import { forces, sworn as swornOf } from '../engine/parties.js';
 import { ECONOMY } from '../../data/balance.js';
+import { lendersTick } from '../engine/economy/lenders.js';
 import { distributePopulation, holdingRevenue, householdCost, wagesOf, crownLoans, interestOf, labourFactor } from '../engine/economy/ledger.js';
 
 const MINES = new Set(['gold', 'silver', 'iron']);
@@ -173,6 +174,8 @@ export function settle(state, days) {
   const notes = [];
   const ord = (n) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
   const date = state.meta?.date ? `${state.meta.date.day} ${ord(state.meta.date.month)} moon, ${state.meta.date.year} AC` : '';
+  // 0. The lenders: loans due are called, called debts not repaid are defaults (engine/economy/lenders.js)
+  notes.push(...lendersTick(state));
   // 1. Gross incomes with luck per holding
   state.__tradeMods = Object.fromEntries(Object.keys(state.houses).map((id) => [id, tradeModifier(state, id)]));
   state.__labour = Object.fromEntries(Object.keys(state.houses).map((id) => [id, labourFactor(state, id)]));

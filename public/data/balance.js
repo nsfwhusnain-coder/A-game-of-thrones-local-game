@@ -93,6 +93,9 @@ export const ECONOMY = {
     { lender: 'faith', amount: 700000, rate: 0.04, pays: 'coin' },
     { lender: 'tyroshi', amount: 300000, rate: 0.25, pays: 'coin' },
   ],
+  // §6.3–6.4: grain, a man-moon; ransoms by who the captive is
+  grainPerManMoon: 0.12,
+  ransom: { heir: 50000, great: 50000, lord: 10000, minor: 2000, knight: 200, other: 100 },
   // what an ordinary loan (a shortfall borrowed to pay one's way) costs a year
   shortfallRate: 0.12,
   // §5.1: the smallfolk away with the levies do not till the fields

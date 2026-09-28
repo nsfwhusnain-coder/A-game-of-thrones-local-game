@@ -225,7 +225,8 @@ Kept simple and legible; no full goods simulation.
 ## 9. Economy verbs
 
 > *In the registry since WP B4* (`engine/actions/economy.js`): `set_tax`, `set_dues`, `fund_works`, `cancel_works`,
-> `hire_men` (men-at-arms or sellswords), `hire_officer`, `send_gift`. Grain, loans, ransoms and embargoes come with C1.
+> `hire_men` (men-at-arms or sellswords), `hire_officer`, `send_gift`. *Since C1b*: `borrow`, `repay`, `call_debt`,
+> `buy_grain`, `bribe`, `embargo` (with `lift`), `pay_ransom` (`engine/economy/lenders.js`; DECISIONS D-044).
 
 | Verb | Params | Legal when | Cost / effect |
 |---|---|---|---|

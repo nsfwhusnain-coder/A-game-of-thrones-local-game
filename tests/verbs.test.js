@@ -71,10 +71,17 @@ const CASES = {
   declare_war: { ok: () => ({ house: 'lannister', reason: 'the attack on Bran' }), no: () => [{ house: 'stark' }, 'no_target'] },
   plant_spy: { ok: () => ({ house: 'lannister' }), no: () => [{ house: 'stark' }, 'no_target'] },
   gather_secrets: { ok: () => ({ house: 'lannister' }), no: (s) => { s.houses.stark.figures.treasury.v = 100; return [{ house: 'lannister' }, 'gold']; } },
+  borrow: { ok: () => ({ lender: 'iron_bank', gold: 10000 }), no: () => [{ lender: 'iron_bank', gold: 50 }, 'too_little'] },
+  repay: { ok: (s) => { perform(s, 'borrow', { params: { lender: 'iron_bank', gold: 10000 } }); return { lender: 'iron_bank', gold: 5000 }; }, no: () => [{ lender: 'faith' }, 'no_debt'] },
+  call_debt: { house: 'lannister', ok: () => ({ debtor: 'baratheon' }), no: () => [{ debtor: 'stark' }, 'no_debt'] },
+  buy_grain: { ok: () => ({ moons: 2 }), no: () => [{ moons: 0.1 }, 'too_little'] },
+  bribe: { ok: () => ({ to: 'walder_frey', gold: 5000, aim: 'let us cross at the Twins' }), no: () => [{ to: 'walder_frey', gold: 1 }, 'too_little'] },
+  embargo: { ok: () => ({ house: 'lannister' }), no: () => [{ house: 'stark' }, 'no_target'] },
+  pay_ransom: { ok: (s) => { Object.assign(s.characters.jory_cassel, { status: 'imprisoned', loc: 'lannister' }); return { character: 'jory_cassel' }; }, no: () => [{ character: 'jon_snow' }, 'not_held'] },
   send_letter: { ok: () => ({ to: 'lysa_arryn', text: 'Sister, what did Jon Arryn say in his last days?' }), no: () => [{ to: 'lysa_arryn', text: '   ' }, 'empty'] },
 };
 // what a verb may bring about besides its own facts (the people it touches ride home; a tourney may kill a knight)
-const ALSO = { judge_prisoner: ['set_out', 'arrived'], hold_tourney: ['death'], answer_matter: null /* the matter's effects are its own */ };
+const ALSO = { judge_prisoner: ['set_out', 'arrived'], pay_ransom: ['set_out', 'arrived'], hold_tourney: ['death'], answer_matter: null /* the matter's effects are its own */ };
 
 test('every verb has a case here', () => assert.deepEqual(Object.keys(VERBS).filter((v) => !CASES[v]), []));
 

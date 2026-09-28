@@ -114,6 +114,13 @@ const RE = {
   tourney: /\b(hold|throw|host|give|call|proclaim|announce|have|prepare|plan)\b[^.]*\b(tourney|tournament|joust)\b/,
   tax: /\b(tax|taxes|taxation|levies on the smallfolk)\b/,
   dues: /\b(dues|tribute)\b/,
+  embargo: /\bembargo\b/,
+  repay: /\b(repay|pay back|pay off|settle (?:our|my|the) debts?)\b/,
+  borrow: /\b(borrow|take (?:out )?a loan|a loan of|seek a loan|ask (?:\w+ ){0,4}for a loan)\b/,
+  callDebt: /\bcall (?:in )?(?:the |their |his |her |its )?debts?\b|\bdemand (?:repayment|what (?:they|he|she) owes?)\b/,
+  grain: /\b(buy|purchase|import|bring in)\b[^.]*\b(grain|corn|wheat|barley|food|provisions)\b/,
+  bribe: /\bbribe\b/,
+  ransom: /\b(pay|offer)\b[^.]*\bransom\b|\bransom (?:back|home)\b/,
   gift: /\b(gift|present)\b|\bsend\b[^.]*\b(\d[\d,]*|\w+ (?:thousand|hundred))\s+(?:gold\s+)?(?:dragons|gold|coins)\b/,
   grant: /\b(grant|give|bestow|award)\b[^.]*\b(to house|to the|lands|castle|keep|holding|seat)\b/,
   judge: /\b(free|release|let (?:him|her|them) go|set (?:\w+ )?free|pardon|ransom|behead|execute|hang|put (?:\w+ ){0,3}to death|take (?:his|her) head|send (?:\w+ )+to the wall|take the black|to take the black)\b/,
@@ -252,6 +259,28 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       A('call_banners', { vassals: 'all', at });
       // "call the banners and raise my own levies", "gather all the men of the North into one host"
       if (/\b(own|my) levies\b|\braise\w*\s+(?:\w+\s+){0,3}levies\b|\ball\b[^.]*\bmen\b|able[- ]?bod|\bhost\b|\barmy\b/.test(t)) A('raise_levies', { at, ...(nums[0] ? { men: nums[0] } : {}), ...hostName(clause) });
+      return;
+    }
+    // lenders, grain, bribes, ransoms and embargoes (06 §9; WP C1b)
+    const lender = /iron bank|braavos/.test(t) ? 'iron_bank' : /\bfaith\b|septons|high septon/.test(t) ? 'faith' : /tyrosh|cartel/.test(t) ? 'tyroshi' : /bank of oldtown/.test(t) ? 'bank_of_oldtown' : housesNamed[0] || null;
+    const moonsIn = () => { const m = t.match(/(\d+|two|three|four|five|six)\s+(years?|moons?|months?)/); if (!m) return null; const n = Number(m[1]) || { two: 2, three: 3, four: 4, five: 5, six: 6 }[m[1]]; return /year/.test(m[2]) ? n * 12 : n; };
+    if (RE.embargo.test(t)) { const h = housesNamed[0]; const lift = /\b(lift|end|revoke|raise)\b/.test(t); if (h) A('embargo', { house: h, ...(lift ? { lift: 'yes' } : {}) }); else need('Embargo which house?', [], { verb: 'embargo', params: {} }); return; }
+    if (RE.repay.test(t) && !RE.ransom.test(t)) { if (lender) A('repay', { lender, ...(nums.find((n) => n >= 100) ? { gold: nums.find((n) => n >= 100) } : {}) }); else need('Repay whom?', [{ label: 'The Iron Bank', patch: { lender: 'iron_bank' } }, { label: 'The Faith', patch: { lender: 'faith' } }], { verb: 'repay', params: {} }); return; }
+    if (RE.borrow.test(t)) {
+      const gold = nums.find((n) => n >= 100); const months = moonsIn();
+      if (lender && gold) A('borrow', { lender, gold, ...(months ? { months } : {}) }); else need(lender ? 'How much should be borrowed?' : 'Borrow from whom?', lender ? [10000, 50000, 100000].map((n) => ({ label: `${n.toLocaleString('en-GB')} dragons`, patch: { gold: n } })) : [{ label: 'The Iron Bank', patch: { lender: 'iron_bank' } }, { label: 'The Tyroshi', patch: { lender: 'tyroshi' } }], { verb: 'borrow', params: { ...(lender ? { lender } : {}), ...(gold ? { gold } : {}) } });
+      return;
+    }
+    if (RE.callDebt.test(t)) { if (housesNamed[0]) A('call_debt', { debtor: housesNamed[0], ...(moonsIn() ? { months: moonsIn() } : {}) }); else need('Call in whose debt?', [], { verb: 'call_debt', params: {} }); return; }
+    if (RE.grain.test(t)) { A('buy_grain', { moons: moonsIn() || nums.find((n) => n > 0 && n <= 24) || 2 }); return; }
+    if (RE.bribe.test(t)) {
+      const who = others[0]; const gold = nums.find((n) => n >= 5); const aim = (clause.split(/\bto\b/).slice(1).join('to').trim() || '').slice(0, 120);
+      if (who && gold) A('bribe', { to: who.id, gold, ...(aim ? { aim } : {}) }); else need(who ? 'How much gold?' : 'Bribe whom?', who ? [100, 1000, 5000].map((n) => ({ label: `${n.toLocaleString('en-GB')} dragons`, patch: { gold: n } })) : pick('character'), { verb: 'bribe', params: { ...(who ? { to: who.id } : {}) } });
+      return;
+    }
+    if (RE.ransom.test(t)) {
+      const held = [...own, ...others].find((c) => c.house === house && /imprisoned|captive|hostage/.test(c.status || ''));
+      if (held) A('pay_ransom', { character: held.id }); else need('Ransom whom?', Object.values(state.characters).filter((c) => c.alive && c.house === house && /imprisoned|captive|hostage/.test(c.status || '')).slice(0, 4).map((c) => ({ label: c.name, patch: { character: c.id } })), { verb: 'pay_ransom', params: {} });
       return;
     }
     if (RE.tax.test(t) && !RE.dues.test(t)) {
