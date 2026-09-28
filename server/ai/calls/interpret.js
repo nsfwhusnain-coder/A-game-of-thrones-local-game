@@ -31,7 +31,7 @@ const CHOICE_OF = {
 const CHOICES = [...new Set(Object.values(CHOICE_OF).flat())].sort();
 // what each verb cannot do without ('person|houses': one of them)
 const NEEDS = {
-  march_host: ['subject', 'to'], attack_host: ['subject', 'to'], halt_host: ['subject'], disband_host: ['subject'],
+  march_host: ['subject', 'to'], attack_host: ['subject', 'to'], halt_host: ['subject'], wait_banners: ['subject'], disband_host: ['subject'],
   set_secrecy: ['subject', 'choice'], send_person: ['who', 'to'], recall_rider: ['who'], set_tax: ['choice'],
   set_dues: ['choice'], fund_works: ['choice'], cancel_works: ['choice'], hire_men: ['men'], hire_officer: ['choice'],
   send_gift: ['gold', 'person|houses'], appoint_office: ['who', 'choice'], grant_holding: ['at', 'houses'],
@@ -45,6 +45,7 @@ const MEANS = {
   march_host: 'a host [subject] marches to [to]; [who] to lead it if the order names a new leader; its aim in [note]',
   attack_host: 'a host [subject] marches against an enemy host [to = party:…]',
   halt_host: 'a host [subject] stops where it stands',
+  wait_banners: 'a host [subject] waits where it stands until the banners called to it are in, then goes on',
   merge_hosts: 'hosts standing in one place join into one ([subject]: one of them, or none for all there); leader [who]; name in [note]',
   disband_host: 'a host [subject] is sent home',
   set_secrecy: 'a host [subject] marches openly, hidden, or behind a feint toward [to] [choice: open|hidden|feint]',
@@ -245,7 +246,7 @@ export function valueOf(parse, ctx) {
     switch (verb) {
       case 'call_banners': a.at = place(q.at); if (Array.isArray(q.vassals)) a.houses = q.vassals.map((h) => memberOf(ctx.houses, h)).filter((m) => m !== 'none'); break;
       case 'raise_levies': a.at = place(q.at); a.men = q.men || 0; a.who = memberOf(ctx.own, q.commander); a.to = place(q.to); a.note = q.name || ''; break;
-      case 'march_host': case 'halt_host': case 'disband_host': case 'set_secrecy':
+      case 'march_host': case 'halt_host': case 'wait_banners': case 'disband_host': case 'set_secrecy':
         a.subject = memberOf(ctx.hosts, q.army); a.to = place(q.to); a.who = memberOf(ctx.own, q.commander); a.note = q.intent || ''; if (q.mode) a.choice = q.mode; break;
       case 'attack_host': a.subject = memberOf(ctx.hosts, q.army); a.to = ctx.foes.includes(q.to) ? q.to : 'none'; break;
       case 'merge_hosts': a.subject = memberOf(ctx.hosts, q.armies?.[0]); a.who = memberOf(ctx.own, q.commander); a.note = q.name || ''; break;
@@ -291,7 +292,7 @@ export function readingOf(value, state, { house = state.meta.player } = {}) {
         case 'raise_levies': return { at: id(a.at) || seat, ...(a.men ? { men: a.men } : {}), ...(id(a.who) ? { commander: a.who } : {}), ...(id(a.to) ? { to: a.to } : {}), ...(a.note ? { name: a.note } : {}) };
         case 'march_host': return { army: id(a.subject), to: id(a.to), ...(id(a.who) ? { commander: a.who } : {}), ...(a.note ? { intent: a.note } : {}) };
         case 'attack_host': return { army: id(a.subject), to: id(a.to), intent: a.note || 'bring them to battle' };
-        case 'halt_host': case 'disband_host': return { army: id(a.subject) };
+        case 'halt_host': case 'wait_banners': case 'disband_host': return { army: id(a.subject) };
         case 'set_secrecy': return { army: id(a.subject), mode: id(a.choice), ...(id(a.to) ? { to: a.to } : {}) };
         case 'merge_hosts': return { ...(id(a.subject) ? { armies: [a.subject] } : {}), ...(id(a.who) ? { commander: a.who } : {}), ...(a.note ? { name: a.note } : {}) };
         case 'send_person': return { character: id(a.who), to: id(a.to), men: a.men || 0 };

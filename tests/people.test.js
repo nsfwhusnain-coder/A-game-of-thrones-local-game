@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createInitialState, applyChanges } from '../public/js/shared/world.js';
 import { temperament, natureTags } from '../public/js/shared/temperament.js';
-import { vassalTick } from '../public/js/shared/vassals.js';
+import { musterTick } from '../public/js/engine/military/muster.js';
 import { isFemale } from '../public/js/shared/people.js';
 import { PERSONAS } from '../public/data/histories.js';
 import { NATURES, SWAY } from '../public/data/natures.js';
@@ -52,15 +52,15 @@ test('pronouns: every character has a sex, and the women of the books are women'
 test('pronouns: a lady answers the banners — every line of the engine says she and her', () => {
   const s = fresh();
   const women = ['mormont', 'dustin', 'hornwood'];
-  for (const v of women) Object.assign(s.houses[v].obligations = s.houses[v].obligations || {}, { levies: 'called', muster: 'stark', calledDays: 30 });
+  for (const v of women) Object.assign(s.houses[v].obligations = s.houses[v].obligations || {}, { levies: 'called', muster: 'stark' });
   const texts = [];
   // answered, with kin riding along
-  texts.push(...withDice(0.01, () => vassalTick(s, 20).events).filter((e) => women.some((v) => (e.houses || []).includes(v))).map((e) => `${e.title} ${e.text}`));
+  texts.push(...withDice(0.01, () => musterTick(s).events).filter((e) => women.some((v) => (e.houses || []).includes(v))).map((e) => `${e.title} ${e.text}`));
   // delayed, then refused
-  const s2 = fresh(); for (const v of women) Object.assign(s2.houses[v].obligations = s2.houses[v].obligations || {}, { levies: 'called', muster: 'stark', calledDays: 30 });
-  texts.push(...withDice(0.95, () => vassalTick(s2, 20).events).filter((e) => women.some((v) => (e.houses || []).includes(v))).map((e) => `${e.title} ${e.text}`));
-  const s3 = fresh(); for (const v of women) { Object.assign(s3.houses[v].obligations = s3.houses[v].obligations || {}, { levies: 'called', muster: 'stark', calledDays: 30 }); s3.characters[s3.houses[v].lord].loyalty = 0; s3.relations[[v, 'stark'].sort().join('|')] = { v: -100 }; }
-  texts.push(...withDice(0.95, () => vassalTick(s3, 20).events).filter((e) => women.some((v) => (e.houses || []).includes(v))).map((e) => `${e.title} ${e.text}`));
+  const s2 = fresh(); for (const v of women) Object.assign(s2.houses[v].obligations = s2.houses[v].obligations || {}, { levies: 'called', muster: 'stark' });
+  texts.push(...withDice(0.95, () => musterTick(s2).events).filter((e) => women.some((v) => (e.houses || []).includes(v))).map((e) => `${e.title} ${e.text}`));
+  const s3 = fresh(); for (const v of women) { Object.assign(s3.houses[v].obligations = s3.houses[v].obligations || {}, { levies: 'called', muster: 'stark' }); s3.characters[s3.houses[v].lord].loyalty = 0; s3.relations[[v, 'stark'].sort().join('|')] = { v: -100 }; }
+  texts.push(...withDice(0.95, () => musterTick(s3).events).filter((e) => women.some((v) => (e.houses || []).includes(v))).map((e) => `${e.title} ${e.text}`));
   assert.ok(texts.length >= 6, `the three ladies were heard from (${texts.length})`);
   for (const t of texts) assert.ok(!/\b(he|him|his|himself)\b/i.test(t.replace(/Winterfell|the harvest|the men/gi, '')), t);
   assert.ok(texts.some((t) => /riding with her|Her men|She will come|her own borders|her neighbour/.test(t)), texts.join('\n'));

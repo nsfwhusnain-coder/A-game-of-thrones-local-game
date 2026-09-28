@@ -28,6 +28,7 @@ All merged into `claude/brave-ramanujan-i8dt0q` with CI green on windows-latest 
 | B11 | #14 | The days are lived one by one and told a week at a time, streamed to the screen; *Stop the days here*, and *Stop the last turn sooner* in the undo window. The old five-agent council is gone. |
 | B12 | #15 | A Director: some eighty grounded beginnings (a hedge knight, a septon, outlaws, a wreck, a fever…), many as matters for your word; no week passes with nothing of note. |
 | B13 | #16 | Lords remember what their house knows (relevant memory); the chronicle is consolidated from the facts, and its open threads must name real things. |
+| C2 | #17 | The banners come as lords would bring them: raven, deliberation, gathering at home, the march; the host card shows who is present, on the road (with the day) and expected; *Wait for the banners*. **Milestone 1.** |
 
 ## 2. What CI verifies, and what you should verify
 
@@ -89,8 +90,7 @@ the dataset the recipe will build from. Never train on book text.
 
 ## 5. Known limits and open questions
 
-- The economy still settles per week, not per day; musters and movement are the old modules run a day at a time
-  (Phase C rewrites them: C2 muster v2 is next, for Milestone 1).
+- The economy still settles per week, not per day; movement is the old module run a day at a time (Phase C).
 - Winterfell → the Twins by road is about 1,000 miles (the road graph; Phase C).
 - The realm's lords do not sail fleets (C6) and do not start letters of their own (D6).
 - One soak run broke an invariant for Tyrell at turn 82 on a seed that was not recorded; six re-runs with fixed seeds
@@ -100,6 +100,6 @@ the dataset the recipe will build from. Never train on book text.
 
 ## 6. What comes next
 
-C2 (muster v2 — the last piece of Milestone 1, "a truthful turn"), then C1, C3–C8 (movement, battles, sieges, economy,
+C1, C3–C8 (movement, battles, sieges, economy,
 fleets, the realm's health), D (politics), E (the map), F (the interface, portraits and trees), G (content), H (audio,
 the fine-tuning recipe, the playtest reports).

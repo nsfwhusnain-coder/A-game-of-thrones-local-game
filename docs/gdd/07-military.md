@@ -137,6 +137,11 @@ A contingent's orders are `{ kind: 'rendezvous', target: grandHostId }`, **never
 with a timeline, and two buttons: **March now — the banners will follow** (default behaviour) and **Wait for the
 banners** (orders.kind `hold` until X % present or a date).
 
+*(C2, implemented: `public/js/engine/military/muster.js` — `summon`, the daily `musterTick` (letter → deliberating →
+answered / delayed / refused → gathering → departed → joined, with the odds, men and gathering days above), `answer`,
+`musterOf` (the host card's present / on the road / expected / refused), `waitForBanners` and the verb `wait_banners`;
+the rendezvous stays in `shared/vassals.js` `gatherMusters`. DECISIONS D-042.)*
+
 ### 3.5 Service, pay and restlessness
 
 Kept from `fieldService` and retuned: after 40 days in the field, the liege pays the contingent's food ([06](06-economy.md)

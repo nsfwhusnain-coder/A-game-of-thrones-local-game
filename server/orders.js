@@ -245,6 +245,8 @@ export function advanceMusters(state, days) {
     if (!add) continue;
     a.men += add; a.muster.remaining -= add;
     if (a.muster.remaining <= 0) { delete a.muster; settle(state, a); }
+    // a sworn lord's levies gathering at his seat grow quietly (a fact, never a card: 07 §3.2); the lord's own, openly
+    if (a.muster?.quiet || (!a.muster && a.serving)) { emit(state, 'muster_grew', { actors: [a.commander], houses: [a.owner], place: a.at || null, importance: 1, data: { party: a.id, men: add, total: a.men }, cause: { type: 'rule', ref: 'muster' } }); continue; }
     events.push(fact(state, 'muster_grew', { title: `${a.name} grows in the fields`, text: `${add.toLocaleString('en-GB')} more men have reached the camp. The host now numbers ${a.men.toLocaleString('en-GB')}.`, where: a.at || null, importance: 2, houses: [a.owner] }, { actors: [a.commander], data: { party: a.id, men: add, total: a.men }, cause: { type: 'rule', ref: 'muster' } }));
   }
   return events;

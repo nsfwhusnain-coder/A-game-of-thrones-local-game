@@ -648,3 +648,27 @@ must name a person, house or place the dossier names (the facts, and what the en
 the marches of its hosts and its sworn lords', promises, matters and letters in flight), or it is refused and dropped:
 the model cannot start a thread of its own. With the mock (and as the fallback) the open threads are the engine's own.
 The old turn-record digest (`engineFacts`) and the free-JSON consolidation prompt are gone.
+
+## D-042 · 2026-09-28 · The muster runs a day at a time, with the old words kept (WP C2)
+
+**What.** Each called lord's answer is a small machine (`engine/military/muster.js`) stepped once a day in the day
+loop, as 07 §3.2 lays out, with its odds by temper, its men by the call's scope and the lord's zeal, and its gathering
+days by country. Departures and details:
+- `obligations.levies` keeps its old values (`called`, `delayed`, `answered`, `refused`) for everything that reads them
+  (minds, officers, the realm window); the finer step is `obligations.stage` and the dated record is
+  `obligations.call`. A save from before is adopted on its first day: a lord already called weighs it that day.
+- The call's raven is not a letter entity in `state.post`: its flight is the raven's days between the two seats (a day
+  per 300 miles), because the lord's call is one act and hundreds of letters would crowd the Letters tab.
+- A call is `quick` unless the order or the verb says `full` (canon: the North's quick muster brought ~18,000).
+- A lord's levies gather **at his seat** as a host serving his liege that grows quietly each day (a `muster_grew` fact,
+  never a card); they set out on the day the gathering ends, with every man, for the host they are to join wherever it
+  is (the rendezvous of `gatherMusters`). The lord's answer (`call_answered`) says how many and when they will march; the
+  departure (`set_out`) says how many days out.
+- Every date the card shows is the engine's own: *predicted* at the call (raven, two days' thought, the gathering, the
+  march), then fixed when he answers and again when he sets out; a lord who must cross the sea gets no promised day
+  (ships decide it). In the soak's test every lord who marched by land joined within 0–2 days of the day reckoned when
+  he set out (early by the contact distance, never late).
+- **Wait for the banners** holds a host where it stands, its march kept, until eight tenths of the men called and still
+  coming are with it or the last expected is three days overdue; then it marches. **March now** is the ordinary march:
+  the banners still coming follow it (and it stops waiting).
+- "His own lands threatened" is a host of his liege's enemies of 500 or more within 120 miles of his seat.

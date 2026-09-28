@@ -8,6 +8,8 @@ import { marchDays } from '../../shared/warfare.js';
 import { unitsOf, unitsFor, addUnits, unitsText } from '../../shared/units.js';
 import { emit } from '../facts/log.js';
 import { raiseForLiege } from '../../shared/vassals.js';
+import { summon, waitForBanners, musterOf } from '../military/muster.js';
+import { dayNumber } from '../time.js';
 
 const fmtN = (n) => Math.round(n).toLocaleString('en-GB');
 const lordName = (state, house) => state.characters[state.houses[house]?.lord]?.name || `House ${state.houses[house]?.name}`;
@@ -87,7 +89,7 @@ export function raiseLevies(state, { house = state.meta.player, at, men, command
 }
 
 /** Call the banners: sworn lords are summoned to muster (they answer, delay or refuse by their nature, over days). */
-export function callBanners(state, { house = state.meta.player, vassals, at, cause }) {
+export function callBanners(state, { house = state.meta.player, vassals, at, scope = 'quick', cause }) {
   const me = state.houses[house];
   const all = Object.values(state.houses).filter((h) => h.liege === house);
   const list = vassals === 'all' || !Array.isArray(vassals) || !vassals.length ? all : all.filter((h) => vassals.some((v) => slug(v) === h.id || String(v).toLowerCase().includes(h.name.toLowerCase())));
@@ -95,9 +97,13 @@ export function callBanners(state, { house = state.meta.player, vassals, at, cau
   const muster = resolvePlaceId(at) || destination(state, at) || me.seat;
   // the host already standing at the muster (the lord's own levies) is the one the banners join, wherever it later goes
   const join = fieldHostAt(state, house, muster)?.id || null;
-  for (const v of list) v.obligations = { ...(v.obligations || {}), levies: 'called', muster, calledDays: 0, join };
+  // a raven to each: the answer is theirs, a day at a time (engine/military/muster.js)
+  const sc = scope === 'full' ? 'full' : 'quick';
+  for (const v of list) summon(state, v, { host: join, muster, scope: sc });
+  const last = Math.max(...list.map((v) => v.obligations.call.predicted)); const today = dayNumber(state.meta.date);
   emit(state, 'levies_called', { actors: [me.lord], houses: [house, ...list.map((v) => v.id)], place: resolvePlaceId(muster) || null, data: { vassals: list.map((v) => v.id), muster }, cause, text: `House ${me.name} calls its banners: ${list.length} sworn house${list.length > 1 ? 's are' : ' is'} summoned to ${placeName(state, muster)}.` });
-  return { lines: [`The banners are called: ${list.length} sworn house${list.length > 1 ? 's' : ''} summoned to muster at ${placeName(state, muster)} (${list.slice(0, 8).map((v) => v.name).join(', ')}${list.length > 8 ? '…' : ''}); each answers in their own time and temper`], vassals: list.map((v) => v.id), muster };
+  const men = list.reduce((n, v) => n + (v.obligations.call.men || 0), 0);
+  return { lines: [`The banners are called${sc === 'full' ? ' in full' : ''}: ${list.length} sworn house${list.length > 1 ? 's' : ''} summoned to muster at ${placeName(state, muster)} (${list.slice(0, 8).map((v) => v.name).join(', ')}${list.length > 8 ? '…' : ''}); each answers in their own time and temper`, `if all answer, about ${fmtN(Math.round(men / 500) * 500)} men; the last expected in ~${last - today} days`], vassals: list.map((v) => v.id), muster };
 }
 
 /** Bring hosts at one place together under one banner. */
@@ -126,7 +132,7 @@ const eta = (state, a, to) => { const pos = isRef(to) ? partyAt(state, to)?.pos 
 export const MILITARY = [
   {
     id: 'call_banners', family: 'military', label: 'Call the banners',
-    params: { vassals: 'vassals', at: 'place', ownLevies: 'number?', deadline: 'text?', note: 'text?' },
+    params: { vassals: 'vassals', at: 'place', ownLevies: 'number?', scope: 'text?', deadline: 'text?', note: 'text?' },
     who: (state, i) => Object.values(state.houses).some((h) => h.liege === i.house),
     legal: (state, i) => {
       const sworn = Object.values(state.houses).filter((h) => h.liege === i.house);
@@ -136,7 +142,7 @@ export const MILITARY = [
       return null;
     },
     start: (state, i) => {
-      const done = callBanners(state, { house: i.house, vassals: i.params.vassals, at: i.params.at, cause: i.source });
+      const done = callBanners(state, { house: i.house, vassals: i.params.vassals, at: i.params.at, scope: i.params.scope, cause: i.source });
       // the lord's own levies are raised at the same muster, if asked
       if (Number(i.params.ownLevies) >= 50) {
         try { const r = raiseLevies(state, { house: i.house, at: done.muster, men: i.params.ownLevies, cause: i.source }); done.lines.push(...r.lines); } catch (e) { done.lines.push(`could not raise your own levies: ${e.message}`); }
@@ -198,6 +204,8 @@ export const MILITARY = [
       const a = hostOf(state, i); const to = resolvePlaceId(i.params.to) || destination(state, i.params.to); const m = eta(state, a, to);
       // the host is where it is until the turn walks it; the road is planned now, so the map shows the way it will take
       // (engine/movement.js), over the sea by ship
+      // marching now: whoever has not come will follow (the rendezvous), so the host no longer waits for them
+      delete a.wait;
       a.march = { to, since: state.meta.turn }; planRoute(state, a, placePos(to, state.holdings), to, { toName: placeName(state, to) }); settle(state, a);
       // the one the order names leads it, and rides with it
       const cmd = i.params.commander && state.characters[i.params.commander]; if (cmd) { a.commander = cmd.id; joinParty(state, cmd, a); }
@@ -207,6 +215,26 @@ export const MILITARY = [
     receipt: (state, i, d) => { const a = state.parties[d.host]; return [{ ok: true, text: `${a.name} (${fmtN(a.men)} men${a.commander ? ` under ${state.characters[a.commander]?.name}` : ''}) marches for ${placeName(state, d.to)}${d.miles ? ` — ~${fmtN(d.miles)} miles, ~${d.days} days` : ''}.`, eta: d.days ?? null }]; },
     said: (state, i, d) => ({ status: 'underway', text: `${state.parties[d.host].name} marches on ${placeName(state, d.to)}${d.miles ? ` (~${d.miles} miles, ~${d.days} days)` : ''}${i.params.intent ? ' — ' + i.params.intent : ''}.` }),
     facts: ['set_out'], mind: { allowed: true },
+  },
+  {
+    // hold a host where it stands until the banners are in (07 §3.4): the host card's "Wait for the banners"
+    id: 'wait_banners', family: 'military', label: 'Wait for the banners',
+    params: { army: 'party:own', share: 'number?' },
+    legal: (state, i) => {
+      const a = hostOf(state, i); if (!a) return { code: 'not_yours', text: 'That host is not yours to command.' };
+      const m = musterOf(state, a.id);
+      if (!m || !(m.road.length + m.expected.length)) return { code: 'none_coming', text: `No banners are coming to ${a.name}: there is no one to wait for.` };
+      return null;
+    },
+    start: (state, i) => {
+      const a = hostOf(state, i); const share = Math.max(0.3, Math.min(1, Number(i.params.share) > 1 ? Number(i.params.share) / 100 : Number(i.params.share) || 0.8));
+      const w = waitForBanners(state, a, { share });
+      const today = dayNumber(state.meta.date);
+      return { lines: [`${a.name} waits${a.at ? ` at ${placeName(state, a.at)}` : ''} until ${Math.round(share * 100)}% of the men called are with it, or ${w.until - today} days have passed${w.to ? `; then it marches for ${isRef(w.to) ? state.parties[idOf(w.to)]?.name : placeName(state, w.to)}` : ''}`] };
+    },
+    receipt: (state, i, done) => lines(done),
+    said: (state, i) => ({ status: 'underway', text: `${hostOf(state, i)?.name || 'The host'} waits for the banners.` }),
+    facts: [], mind: { allowed: false },
   },
   {
     id: 'attack_host', family: 'military', label: 'March against a host',

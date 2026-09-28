@@ -90,18 +90,27 @@ test('the house ways: kin taken, a siege, a summons, a prisoner, winter — each
   for (let k = 0; k < 20; k++) { const c = withRng(s, () => treeChoice(s, 'tywin_lannister')); assert.ok(!['call_banners', 'raise_levies', 'declare_war', 'march_host'].includes(c.verb), c.verb); }
 });
 
-test('a vassal answering his liege\'s call raises his men and marches them to the muster', () => {
+test('a vassal answering his liege\'s call gathers his men at his seat, then marches them to the muster', () => {
   const s = world('stark', [{ op: 'obligation', house: 'mallister', levies: 'called', muster: 'tully' }]);
   s.meta.clock = { turn: 1, from: 100, to: 100 };
   const r = withRng(s, () => perform(s, 'answer_call', { actor: 'jason_mallister', house: 'mallister' }));
   assert.ok(r.ok, r.refusal?.text);
   const host = Object.values(s.parties).find((a) => a.owner === 'mallister' && a.serving === 'tully');
-  assert.ok(host && host.men > 0 && host.march?.to === 'tully');
+  const ob = s.houses.mallister.obligations;
+  assert.ok(host && host.men > 0 && !host.march && host.at === 'mallister', 'the levies gather at Seagard first');
+  assert.equal(ob.stage, 'gathering'); assert.ok(ob.call.depart > dayNumber(s.meta.date));
+  // the day they are gathered, they set out
+  ob.call.depart = dayNumber(s.meta.date);
+  withRng(s, () => musterTick(s));
+  assert.equal(ob.stage, 'departed'); assert.equal(host.men, ob.call.men, 'every man called is with it');
+  assert.equal(host.march?.to, 'tully');
   assert.equal(s.houses.mallister.obligations.levies, 'answered');
   assert.ok(s.facts.some((f) => f.kind === 'call_answered' && f.cause?.type === 'order'));
   assert.equal(check(s, intentFor(s, 'answer_call', { house: 'stark' })).code, 'who', 'the player answers a summons at court');
 });
 import { perform } from '../public/js/engine/actions/registry.js';
+import { musterTick } from '../public/js/engine/military/muster.js';
+import { dayNumber } from '../public/js/engine/time.js';
 
 test('a week of minds on the mock: lords decide through the verbs, at least three act, one far away (Q4)', async () => {
   const s = world(); s.meta.clock = { turn: 1, from: 100, to: 100 };

@@ -69,8 +69,12 @@ test('officers-know-truth: after the banners are called, Maester Luwin\'s audien
   const s = game.loadState(id);
   const ctx = CALLS.audience.context(s, { character: 'luwin', words: 'How stand the banners?', stance: { verdict: null, I: { question: true } } });
   assert.match(ctx.dossier, /THE BANNERS: /);
-  assert.match(ctx.dossier, /On the road: \w+ [\d,]+ for .*~\d+ days out/);
-  assert.match(ctx.dossier, /No answer yet: .*Bolton/);
+  // a week in: the lords who answered are gathering their levies at their seats, and say when they will set out
+  assert.match(ctx.dossier, /Gathering at their seats: [\w ]+ [\d,]+ men, setting out in ~\d+ days/);
+  // two weeks more: the first of them are on the road, and it is known how far out they are
+  await game.advance(id, { span: '14d', orders: [] }); await game.settled(id);
+  const later = CALLS.audience.context(game.loadState(id), { character: 'luwin', words: 'How stand the banners?', stance: { verdict: null, I: { question: true } } });
+  assert.match(later.dossier, /On the road: \w+ [\d,]+ for .*~\d+ days out|Gathered: .*\(/);
   assert.match(ctx.dossier, /THE HOUSE'S STRENGTH \(true/);
   const r = await game.talk(id, 'luwin', 'How stand the banners?');
   assert.ok(r.reply && !r.applied.some((a) => /promises/.test(a.text)));
