@@ -672,3 +672,27 @@ days by country. Departures and details:
   coming are with it or the last expected is three days overdue; then it marches. **March now** is the ordinary march:
   the banners still coming follow it (and it stops waiting).
 - "His own lands threatened" is a host of his liege's enemies of 500 or more within 120 miles of his seat.
+
+## D-043 · 2026-09-28 · The economy's calibration knobs, and C1 in two parts (WP C1)
+
+**What.** 06 §5.1's formulas are in `engine/economy/ledger.js` with every number in `data/balance.js ECONOMY`, and
+`scripts/balance-sim.js` (`npm run balance`, and `tests/economy.test.js` in CI) holds them to §5.2. To land every great
+house within ±15 % with one output per head, three knobs were needed that 06 does not name:
+- **`regionOutput`**: what a head yields by the land (the Reach and the Westerlands 1.0, the North 0.8, the Vale 0.75,
+  the Riverlands 0.65 — many lords, many wars — the Stormlands 0.8, the Iron Islands 0.5).
+- **`domainOf`**: lords whose lands are wider or narrower than a castle's (the Dreadfort, Karhold, Last Hearth, the
+  Twins wider; Dragonstone's rock narrower). Within a region people are shared by domain size, the cities keeping their
+  own figures (King's Landing and Oldtown 500,000, Lannisport 160,000, Gulltown 90,000, White Harbor 60,000).
+- **`tradeBase`**: markets, ports, tolls and customs per holding — King's Landing's customs are most of the Crown's
+  income (72,000), White Harbor's most of Manderly's.
+Tribute is a share of the sworn lord's revenue by the liege's rank (0.2; 0.1 to the Crown), no longer scaled by the
+liege's taxes. The Crown's debts are loans (`state.economy.loans`): the Iron Bank, the Faith, the Tyroshi and the
+Tyrells are paid in coin; **the Lannisters' interest is added to the debt** (leverage, not coin: their income stays at
+§5.2's 34,000). Robert's court costs 45,000 a moon and his pleasures 25,000 more while he lives, so the Crown runs the
+deficit the books describe (its coin runs out in a few moons and it borrows). The **war chest** of §12 is the coin
+against a full muster's campaign cost a moon (Stark: 120,000 against ~7,300 → 16.5 moons). An older save keeps its
+coin; its people grow to the new count and each house's measure of its lands with them.
+
+**C1 in two parts.** C1a (this) is the model and its balance. C1b adds the lenders as actors (creditworthiness, the
+Iron Bank's temper, default), the economy verbs of 06 §9 (`borrow`, `repay`, `call_debt`, `buy_grain`, `bribe`,
+ransoms, `embargo`) and the price index of §6.3.

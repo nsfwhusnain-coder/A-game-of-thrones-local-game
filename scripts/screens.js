@@ -113,6 +113,15 @@ const SCENARIOS = {
       await page.waitForSelector('.muster');
     } };
   },
+  // the economy (WP C1): a moon's accounts in the Treasury window — rents, trade, tribute, the household, the field
+  async economy() {
+    const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 7 });
+    await api(`/games/${id}/advance`, { span: '30d', orders: [] });
+    return { id, focus: state.holdings.stark.pos, dist: 1100, page: async (page) => {
+      await page.evaluate(async () => { const m = await import('/js/ui/windows.js'); m.openWindow('economy'); });
+      await page.waitForTimeout(500);
+    } };
+  },
   // a card's action is a verb, and the receipt is what the lord is told (WP B4): the Stark host marches for Moat Cailin
   async receipt() {
     const { id, state } = await api('/games', { scenario: 'agot_298', house: 'stark' });

@@ -34,7 +34,7 @@ THE COUNCIL:
 - rodrik_cassel: Ser Rodrik Cassel, Master-at-Arms of Winterfell. Speaks: Gruff soldier's speech; tugs his white whiskers; plain counts of men and horses.
   Knows the hosts: Winterfell Household 400 at Winterfell; men-at-arms 1,200; the banners: Gathered: Winterfell Household at Winterfell, 400 men..
 - vayon_poole: Vayon Poole, Steward of Winterfell. Nature: careful, honest, meticulous.
-  Knows the ledger: coin 60,000 dragons, +2,650 a moon; debt 0; food 30 moons; levies not called 16,000.
+  Knows the ledger: coin 120,000 dragons, +9,497 a moon; debt 0; food 30 moons; levies not called 16,000.
 
 THE LORD ASKS: "Can we afford a war?"
 Answer.

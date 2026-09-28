@@ -3,6 +3,22 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-28 — C1a: gold means something (WP C1, first part)
+
+- **The realm is as populous as the books.** The North holds two million souls, the Reach seven and a half; each
+  holding carries the people of its lands, and the great cities their own.
+- **Incomes as the books would have them.** Winterfell takes about 12,000 dragons a moon, Casterly Rock 34,000,
+  Highgarden 48,000, the Crown 95,000 — rents by your taxes, markets and ports, the mines, and your sworn lords'
+  tribute. The Lannisters start with half a million in coin, but the Crown owes them three million; the Rock's gold
+  mines are quietly running dry. The Crown spends more than it takes (Robert's court and pleasures, the interest on six
+  million of debt) and borrows to pay its way.
+- **War costs what war costs.** A levy in the field costs a quarter of a dragon a moon in food and coin, a sellsword
+  two; the fields the levies left untilled yield less while they are away. Stark begins with 120,000 dragons — about
+  sixteen moons of a full muster.
+- An older save keeps its coin; its people and incomes are brought up to the new count.
+- Owner to verify: `npm run balance` prints each great house's income against the books' and passes; start a Stark
+  game and read the Economy window's accounts after a moon.
+
 ## 2026-09-28 — C2: the banners come as the realm's lords would bring them (WP C2 — Milestone 1)
 
 - **Calling the banners takes the time it takes.** The raven reaches each lord, he weighs it for a day or three — by his

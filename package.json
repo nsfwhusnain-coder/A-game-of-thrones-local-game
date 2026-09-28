@@ -13,6 +13,7 @@
     "soak": "node scripts/soak.js",
     "bench": "node scripts/bench.js",
     "playtest": "node scripts/playtest.js",
+    "balance": "node scripts/balance-sim.js",
     "fetch-music": "node scripts/fetch-music.js",
     "serve": "node server/index.js",
     "check:syntax": "node --experimental-vm-modules --no-warnings scripts/check-syntax.mjs"
