@@ -30,7 +30,7 @@ const game = await import('../server/game.js');
 const world = () => createInitialState('agot_298', 'stark', { seed: 298 });
 const week = (s) => { const d0 = dayNumber(s.meta.date); s.meta.clock = { turn: s.meta.turn + 1, from: d0 + 1, to: d0 + 7 }; return s; };
 
-test('stories: facts that share a party, a cause or a place within two days are one; the small change is the Meanwhile', () => {
+test('stories: facts that share a party, a cause, or the same day, place and people are one; the small change is the Meanwhile', () => {
   const s = week(world());
   const o = { type: 'order', ref: 'o1' };
   const a = emit(s, 'levies_called', { actors: ['eddard_stark'], houses: ['stark'], place: 'stark', on: 1, cause: o });
@@ -47,11 +47,10 @@ test('stories: facts that share a party, a cause or a place within two days are 
   assert.deepEqual(meanwhile, [g]);
   assert.equal(of(a).pov.id, 'eddard_stark'); assert.deepEqual(of(a).days, [1, 2]); assert.equal(of(a).importance, Math.max(a.importance, b.importance));
   assert.deepEqual(stories.map((x) => x.id), stories.map((_, k) => `S${k + 1}`));
-  // at most eight stories; the least of the rest are left to their own cards
+  // no cap (18 §2.4 C6): twelve feasts in twelve halls are twelve stories, and none is left to `rest`
   const many = Array.from({ length: 12 }, (_, k) => emit(s, 'feast', { actors: [], houses: ['tyrell'], place: Object.keys(s.holdings)[k * 3], on: 1 + (k % 7), importance: 2 + (k % 3) }));
   const big = clusterFacts(s, many);
-  assert.ok(big.stories.length <= 8 && big.rest.length >= 4);
-  assert.ok(Math.min(...big.stories.map((x) => x.importance)) >= Math.max(...big.rest.map((x) => x.importance)), 'the weightiest are told');
+  assert.equal(big.stories.length, 12); assert.deepEqual(big.rest, []);
   // no one named: a witness of the place tells it
   const w = clusterFacts(s, [emit(s, 'village_burned', { houses: ['tully'], place: 'tully', on: 2 })]).stories[0];
   assert.match(w.pov.name, /at Riverrun$/);

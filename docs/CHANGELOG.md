@@ -3,6 +3,70 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-29 — N3 + N4: every story told in a headline and a line, one card per story
+
+- **Not yet in the feed.** The narrator still tells the chronicle its own way; N5 hands it these cards as its drafts and
+  its fallback, and N6 puts them in the turn record. What exists now is the writer and the clustering underneath.
+- **The writer** (N3, `public/js/engine/facts/heads.js`, `headline.js`): `cardOf(state, story)` builds a card — a
+  headline of at most twelve words and one or two plain sentences — for every kind of fact, from the fact's slots alone
+  (never from the engine's log lines): a person as the subject, the outcome as the verb, the place when it is the story,
+  numbers as words; other houses' exact figures only in the details, rounded to two figures. Two to four ways of saying
+  each kind, chosen by the fact, never by the dice. Read on the recorded Stark turns: "Eddard Stark raises the northern
+  banners at Winterfell", "Five northern hosts leave for Winterfell — the Karstarks have the longest road, near two
+  months", "Donella Hornwood refuses to march for Stark", "Old Nan dies of a fever at Winterfell — she was
+  ninety-four", "Doran Martell summons his bannermen at Sunspear — nothing yet says against whom".
+- **One card per story** (N4, `cluster.js`): the hosts leaving for Winterfell are one story, not five cards; a refusal
+  inside a muster is its own story; a battle, its captives and its dead are one; news heard late by raven is never
+  joined to news seen with your own eyes; the small journeys of lords go to one Meanwhile line; no story is dropped past
+  a cap. On the recorded muster game: 65 facts in 24 stories (2.7 a story).
+- Owner to verify: `node --test tests/writer.test.js tests/clusters.test.js`.
+- PR: (PR #45)
+## 2026-09-29 — R1–R3: the realm's figures, as your house knows them (PR #44)
+
+Nothing on screen yet (the window is R4); what exists is the data under it, and one way to look at it.
+
+- **A weekly record of every house's figures** (R1, [GDD 19](gdd/19-realm-ledger.md) §3.1): swords, coin, income, bread,
+  ships, lands, people and Power for all 158 houses of the scenario, taken when the turn closes and once when a game
+  begins (an old save begins its record at load). It lives in the save, so undo unmakes it, and a whole row is kept in
+  each turn's file. A long game stays small: the newest 16 weeks whole, older ones one to a four-week bucket, 48 at most
+  (about 0.5 MB at 40 turns, 0.8 MB at the cap). It draws no dice, so no game plays differently for it.
+- **What your house learns of the others** (R2): your own house is exact; a house sworn to you is known to a few in a
+  hundred; everyone else only by what your house has seen, been told or been taught, each figure with its way and its
+  age: `~` an estimate, `≈` a band, `≥` at least, `—` unknown, or a word ("sound", "modest") for a coffer no one has
+  counted. A hidden treasury, the Rock's failing mines or a war's true score cannot change any of it until word reaches
+  you.
+- **`GET /api/games/:id/realm`** (R3): the player's house's view of the realm; there is no way to ask with another house's
+  eyes (`?viewer=` is ignored) and it changes nothing. Options: `lens` (`strength`, `economy`, `land`), `scope`
+  (`great`, `mine`, `war`, `all`), `realm=1`, `window` (3, 6 or 12 moons), `house=<id>` for one house's detail.
+- **A leak closed before it shipped**: the new record held every house's true figures and would have gone to the browser
+  inside the game state (`GET /api/games/:id`); it and the turn records' `realm` row now stay on the server, and invariant
+  10 checks both.
+- Owner to verify: `node --test tests/realm-stats.test.js tests/realm-view.test.js tests/realm-http.test.js`; then, with
+  the game running, open `http://127.0.0.1:3298/api/games/<id>/realm?scope=all` in the browser: your house exact, the
+  others `~`, `≈`, `≥`, `—` or a word, each with an age.
+## 2026-09-29 — N1 + N2: the measure of a good headline, and facts that say who did it
+
+- **Nothing changes on screen yet.** The feed, the cards, the pins and the turn-end summary read exactly as they did.
+  This is the ground the headlines of [GDD 18](gdd/18-headlines.md) are built on: the next packages write each headline
+  from the slots below and are held to the scorer below, so a card that reads badly fails a test instead of reaching you.
+- **A yardstick for headlines** (N1): `scoreCard` (`server/ai/validate/headline.js`) reads a headline and its summary
+  against the story they tell and names each rule broken: twelve words at most, says who (and where), has a verb, no
+  digits, brackets or dashes, none of the ledger's phrases ("is raised at", "calls up N levies", "House The Free Folk"),
+  no name the story does not hold, the slayer never swapped with the slain, a summary that adds to its headline and ends
+  on a full stop. It comes with a golden set of 71 stories (facts as the engine records them, each with a reference
+  headline) and 69 bad strings (the old engine's own lines among them), each with the rule it must fail. Today's telling
+  is asserted to score under half on the golden set: that is the "before" the writer of N3 has to beat.
+- **Headline tense** (D-058): a headline is news: the present ("Lady Hornwood refuses Stark's summons") or a bare
+  participle ("Robb Stark slain by Tywin Lannister at the Green Fork"); the summary under it is in the simple past.
+- **Facts that say who did it** (N2): a battle names the winning and losing houses and what decided it; the slain and the
+  captured of a field name who did it, in which battle and where; an execution names the lord who ordered it; a death
+  says how (age, illness, wound, fever, winter); a refused summons says why and to whom. Additive: no fact is added,
+  removed or reordered (tested).
+- **Names that read like names** (N2, `public/js/engine/facts/label.js`): "the Crown", "House Martell", "the Free
+  Folk", "the Stark host", "Lord Umber", "nearly two thousand". Nothing calls them yet.
+- Owner to verify: `node --test tests/headlines.test.js tests/labels.test.js`; then open
+  `tests/fixtures/headlines/golden.json` and read the `reference` headlines: is this how you want events to read?
+- PR: (PR #43)
 ## 2026-09-29 — U0 — the look: the maester's desk
 
 - **Nothing changes in the game itself yet.** U0 builds the new look as a *style tile* — the pieces the next packages
@@ -20,7 +84,33 @@ for the player, and what the owner should verify.
   committed: about 110 KB in `public/img/ui`. Each material falls back to its base colour if a file is missing.
 - Owner to verify: `npm start`, then open http://127.0.0.1:3298/dev/style.html (and `?house=lannister`,
   `?house=tyrell`, `?house=greyjoy`) and ask: *does this look like Westeros?* The screenshots at 1920×1080 and 1366×768
-  are in `docs/screens/u0/`. (PR pending.)
+  are in `docs/screens/u0/`. (PR #41)
+## 2026-09-29 — SB: a bug sweep from the first playtest (PR #42)
+
+Found by playing Stark, Lannister and Greyjoy on the mock; one line per bug as you now see it (B-32c … B-38).
+
+- **Bran's fall tells only what was seen** (B-33): the card ends at Maester Luwin by his bed, not "The Lannisters are
+  very kind", and Bran's note no longer says "or was pushed" — no hint at a culprit, to any house.
+- **A refused order calls no banners** (B-34): "assemble the men of the north at Winterfell" as a Lannister is refused
+  whole, with the ✗ ("Winterfell is not your land"), and nothing marches. Banners muster only on your land, a sworn
+  lord's or an active ally's.
+- **A lord cannot move a host that is not his** (B-35): "Robb is to march the Northern Host to Moat Cailin" as a
+  Lannister is refused plainly ("No one of yours by that name") instead of sending your biggest host; a host named that
+  you do not have is "no host in the field"; when the words do not say which host, the reading is marked unsure.
+- **Crossings speak plainly** (B-37a): "is held up 6 days", "loses 1 man on the crossing" — never "loses 0 men and 6
+  days" or "1 men".
+- **A generated lord's heir is a new cousin** (B-37b): when a made-up lord dies with no heir, the man who claims the seat
+  has another name and age, no longer the dead lord's clone.
+- **A muster no longer tells the same card every day** (B-37c): a card when the levies begin to gather, one a week while
+  the camp fills, one when the host is whole — each naming the place.
+- **A vassal's answer is not heard by the whole realm** (B-32c): "answers the call with 2,000 men" is known to the
+  vassal's house and his liege's; the rest learn by news. (The rest of B-32 — late news shown on the day it happened —
+  is fixed with the headline work, N4–N6.)
+- Dev: `node scripts/playtest.js` runs without a `config.json` (on the mock) and reports an audience that became a
+  raven as "letter sent by raven (N days, answer due …)", not "> null" (B-36, B-38).
+- Owner to verify: `node --test tests/bugs-sb.test.js`; in a game as Lannister type "assemble the men of the north at
+  Winterfell" — a ✗ and nothing marches; as Stark call the banners and watch the muster cards over two weeks (one
+  when it begins, one a week, one when it is whole).
 
 ## 2026-09-29 — Handoff at E5: the plan for what comes next, and two old bugs closed
 

@@ -975,6 +975,66 @@ ransoms, `embargo`) and the price index of §6.3.
   (it was red): the map shows what the player would know of others' orders, which is nothing.
 - **This week's word carries no age** on a reported plate ("~6,000?"); older word says how old ("· 7 days old").
 
+## D-058 · 2026-09-29 · Headline tense: the news present, or a bare participle; summaries in the past (WP N1)
+
+- **A headline is news-headline present, or a bare passive participle when the patient is the news**: "Lady Hornwood
+  refuses Stark's summons", "King Robert crosses the Green Fork", "Robb Stark slain by Tywin Lannister at the Green
+  Fork". **The summary under it is in the simple past.**
+- **Why.** 18's own §4 examples and 20 §5 are in the present, and newspapers and Pax are too; "past, always" (18 H2)
+  would read "Lady Hornwood refused Stark's summons" in a feed that is already history, and contradicts the examples
+  the same document gives.
+- **Replaces** 18 H2 ("past tense … past, always") and §3.2's instruction to the narrator, and the scorer's rule `past`,
+  which is now `verb`: the headline holds a finite verb or a participle from `HEADLINE_VERBS` (`public/data/style.js`); a
+  bare noun phrase ("Battle near the Twins") fails.
+
+## D-059 · 2026-09-29 · Work packages ship in slices (all WPs)
+
+- **Related work packages of one chain share a branch and a PR**: N1+N2 (Slice 1), then, as planned, R1–R3, N3+N4,
+  U1–U3, N5+N6+N9 and so on. Every WP keeps its own acceptance criteria, its own roadmap mark and (in the slice's
+  changelog entry) its own line; a slice is merged only when all of its packages are.
+- **Why.** The packages of a chain share files and are tested together (N2's slots are read by N1's fixtures; the writer of
+  N3 is scored by N1), and `00-agent-brief.md` §5 (item 4) allows a PR "per small group of related packages". One PR per
+  package would be four reviews of the same files.
+- **Departs from** the one-branch-per-package wording of `docs/gdd/18-headlines.md` §5 ("its own branch
+  `wp/n<k>-<slug>`") and of `CLAUDE.md`'s Git rules, for chains only; the branch is then named for the slice
+  (`wp/n1-n2-headline-foundations`).
+
+## D-060 · 2026-09-29 · The headline scorer's shape (WP N1)
+
+- **`BOILERPLATE` and `JARGON` are new exports of `public/data/style.js`, separate from `FORBIDDEN`**, so the audience,
+  council and consolidate validators, which read `FORBIDDEN`, are unchanged. The scorer's `boiler` rule reads all of
+  them. "Rides for" is not boilerplate ([20](20-pax-reference.md) §5.2 row 16 calls "King Robert rides for Winterfell"
+  good); "Banners of" is, unless "the" follows ("the banners of the North" is English).
+- **Beyond 18 §5.2 the scorer also fails**: an uncalled-for "House X" or "the Xs" (`invented`: a house the story does
+  not hold, the player's own excepted); a house written "X of Place" (`boiler`: the ledger's form); a headline ending in
+  `!` or `?` (`punct`). It **accepts the story's houses for `who`** (a house of the story counts as a name, as a person
+  or a place does).
+- **An anachronism phrase is allowed when the story's own facts say it** ("crowned King in the North" in the story of the
+  crowning): the guard is against a headline that knows more than its facts, not against the facts.
+- **`roles` is read on the summary as well as the headline; `outcome` on the headline only** (a summary may say how a
+  death came without claiming an outcome the headline does not).
+
+## D-061 · 2026-09-29 · Fact slots and labels as built (WP N2)
+
+- **The slots** (additive; a slot is present only when the engine knows it):
+  `battle`: `winnerHouse`, `loserHouse`, `how`; `slain_in_battle`: `by`, `how`, `battle`, `place`;
+  `captured_in_battle`: `by`, `battle`, `place`; `executed`: `by`; `death`: `how` ∈ `age | illness | wound | fever |
+  winter`; `call_refused`: `why`, `liege` (no `why` when it was only the roll of the dice). Emitters:
+  `shared/battles.js`, `shared/world.js` (`note()`), `engine/military/muster.js`, `engine/actions/court.js`,
+  `engine/people/life.js`, `server/turn/day.js`. `shared/diplomacy.js` emits nothing and `engine/military/battle.js` only
+  resolves, so neither changed. The slots for `siege_*`, `crowned`, `wedding` and `arrived` in 18 §3.1 are not built.
+- **Battle `how` reuses the battle report's decisive-factor phrases** ("numbers and arms", "generalship", "the ground",
+  "surprise", "fortune"), not 18's `'charged' | 'held' | 'ambushed' | 'night'`: the engine resolves by factors, not
+  tactics, and the writer of N3 turns a factor into a clause. A draw has `null` houses and no `how`.
+- **`captured_in_battle.data.by` is a commander's id, else the captor house's id**: consumers look up characters first,
+  then houses. A slain man is put to the enemy commander who stood at the end of the day, never to one who fell or was
+  taken on the same field.
+- **Labels** (`public/js/engine/facts/label.js`): "the Crown" for the crown; "House Martell" (the data's "Nymeros" epithet
+  dropped); "House Baratheon", not "Baratheon of King's Landing"; a branch's host by its seat when two houses share a name
+  ("the Dragonstone host"); five or more names become a count with two named ("six in all, Umber and Manderly among
+  them"). `ago/soon` is not built.
+- **The lint rule** "importance ≥ 3 ⇒ a `HEAD` entry" of 18 §3.1 (and "⇒ has slots" of N2's row) becomes a test in N3:
+  `scripts/lint-engine.js` is a line scanner and cannot see a fact's importance.
 ## D-062 · 2026-09-29 · Art direction "the maester's desk" replaces the dark glass panels (WP U0)
 
 - **[GDD 21](21-art-direction.md) supersedes [12](12-ui-ux.md) §3.1 and §3.3** (dark glass panels, a flat gold accent).
@@ -1011,4 +1071,94 @@ ransoms, `embargo`) and the price index of §6.3.
   Headlines and the digest are numbered instead, the first numeral in gold leaf.
 - **Lining figures everywhere for now:** the bundled EB Garamond subset has no old-style figures (`onum`), so `.wc-prose`
   gets them only when the fonts are re-subset (F1).
+
+## D-067 · 2026-09-29 · Refused and unsure orders (WP SB)
+
+- **`call_banners` holds to a land rule, as `raise_levies` does** (B-34). The muster point must be the house's own land,
+  a sworn lord's, an active ally's, or a point that is no holding; anywhere else the verb is refused whole
+  ("Winterfell is not your land: the banners cannot muster there"). It is a little wider than `raise_levies`, which
+  takes only the house's own land and its sworn lords': a host may gather among allies, but a lord's own levies are
+  raised only where he rules.
+- **An order that names another house's person is not bound to your biggest host** (B-35). "Robb is to march the
+  Northern Host…" as a Lannister is read as `send_person` for Robb, which the verb refuses ("No one of yours by that
+  name"); a sworn lord who leads a host that answers to the house is still the house's to move. A "the <Adj> host" that
+  is none of the lord's (nor a generic word such as "whole" or "royal") is `march_host` with no host: "no host in the
+  field".
+- **A guessed host marks the reading unsure** (`complete = false`): when nothing in the words said which host, the
+  house's biggest is a best guess, and a model may be asked (with its schema, mock and fallback) rather than the rule
+  moving an army on a hunch.
+
+**Why.** A receipt must never say ✗ while half the order runs (B-34), and a lord must not move the wrong army (B-35).
+
+**Cost.** The pre-parser's sure readings on the order suite go 266 → 263 (three orders now ask); the exact reading on
+the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
+## D-068 · 2026-09-29 · The realm sample covers every house of the scenario, thinned by 28-day buckets (WP R1)
+
+- **Every house of the scenario is sampled** (158 today: the houses of standing and every minor house sworn to one), not
+  the ~30 that 19 §3.1 pictured. Older samples are thinned to the first of each 28-day bucket (by the day's own number, so
+  thinning twice changes nothing); the newest 16 are kept whole, and never more than 48 in all.
+- **Budget: 60 ms and about 0.8 MB at the cap, instead of 10 ms and 110 KB** (≈ 0.5 MB at 40 turns). Why: the tests and the
+  ledger's "all known" scope need the minor houses, and the save stays far under the 5 MB state budget.
+- **`people` is stored in whole souls, holdings are counted from the map's public owners** (19 said hundreds).
+- **Follow-up (R7):** an owner index inside `standing()` and `project()`, which scan every holding per house (a prototype
+  reached 15 ms). `tests/soak.test.js` does not yet assert the sampling budget (19 §9 said it did); R7's soak should.
+
+## D-069 · 2026-09-29 · The truth series never leaves the server (WP R1)
+
+- **`playerView` drops `realmStats`, `viewTurn` drops `record.realm`, and invariant 10 flags both** (`hiddenTruths`).
+- Found by the R builder: before the fix, `GET /api/games/:id` carried every house's true figures (coin, levies, income).
+  The State of the Realm is asked of the server (`GET /realm`), which builds it from the house's knowledge, so the
+  browser has no use for the series and must not have it.
+
+## D-070 · 2026-09-29 · The State of the Realm opens with R, not S (WP R4, decided in R1–R3)
+
+- **The hotkey is `R`**, the Realm button of 17 §2.2, not `S`: 19 §6.1 found `S` free among the dock's letters, but `S`
+  pans the map (`public/js/map3d/MapScene.js`, with `W A D` and the arrows). 19 §6.1, §10 and R4's acceptance, and 17's
+  reconciliation note, are corrected.
+- **One look, no light theme** (GDD 21): R4's screenshots are at the two resolutions only, not "light and dark".
+
+## D-071 · 2026-09-29 · Estimates as built: the tiers, and where they depart from 19 §4.2 (WP R2)
+
+- **The tiers.** Self: exact, live. Sworn house: read live, blurred by ±4.5 % (so 3 significant figures never read
+  further than ±5 % off) — an ally's coin is a band (±25 %). Every other house: the newest observation of each figure,
+  by the way it came — swords and ships `≥` (hosts and fleets seen or reported), people and holdings `~`, income and
+  Power `≈` bands, levies a band from believed people × the rank's muster share, gold a word ("sound", "modest",
+  "pressed") unless a spy has taught it (then `~`, 3 figures, dated).
+- **Power of others is `standing()` run on the displayed inputs**, shown as a band (`≈`, the middle is what ranks), so the
+  viewer's ranking is the one it could make.
+- **Who is listed:** a minor house only once it has been heard of; the greater ranks from turn 0, on a rank-based prior
+  (`rumour`) until an observation replaces it.
+- **A reported series of fewer than two points has no direction** (`—`, not "steady"); a house watched live with one
+  sample says `—` too, until the record has a second.
+- **`observe` runs in `updateKnowledge`, for the player's house only** (as 19 §3.2 allowed), with `hash32` noise and no
+  dice. A spy's figure is a fact with `data.realm = { house, field, value }`, kept by `learn()` beside what was learned
+  (the fact itself leaves the log at the turn's end). Wars are listed when a friend is a side or a
+  `war_declared`/`war_joined` fact is known; flags, facts and focus are empty until R6. Extra scopes: `mine`, `war`.
+
+## D-072 · 2026-09-29 · Clustering as built (WP N4)
+
+- **Cuts:** a story is cut at an archetype boundary above 6 facts and at a place boundary above 8 (18 §2.4 said 6 for
+  both: a muster of one place with its host's forming reads as one story); a story that buries news of weight 4 or more
+  in another archetype is cut however small (a refusal inside a muster).
+- **Roll-ups by road**, beyond set-outs: vassals answering one call (`call_answered` by `data.to`), hosts joining one
+  host (`host_joined`), arrivals at one place. A host's same-day, same-place, same-people facts ride with it.
+- **The Meanwhile (C7) takes more:** a lone minor march (importance ≤ 2) touching neither the player's house nor seat,
+  and "ambient" stories (kinds whose default importance is 1) — about a third of all cards in a 60-turn soak were such
+  noise. Nothing is dropped: they are one sentence.
+- **Arrival:** facts heard at different times (`heard.via` and day) are never one story (B-32); the narrator copies each
+  card's `heard`/`late` onto its facts before clustering. Ids sort naturally (f3.9 before f3.10).
+- Why: GDD 18 §2.4's aim — one card per story, not one line per fact — measured on two recorded games (tests/fixtures/
+  headlines/turns); facts per story 2.7 on a muster game, 1.5 on a quiet one.
+
+## D-073 · 2026-09-29 · The writer as built (WP N3)
+
+- Templates per kind (`HEAD`, `SUM`, `DETAIL`) with two to four forms chosen by a hash of the fact id; a natural death
+  always reads "<name> dies (of X) at <place>" (plain beats varied there).
+- Other houses' figures appear only in `details`, rounded to two significant figures ("about 10,000"); the viewer's
+  own house, its vassals and allies keep exact figures. Headlines and summaries never hold digits.
+- A holding named for the one who leads it ("Mance Rayder's host") is never used as a place clause; an order, a tribe
+  or a company is never pluralised ("the Night's Watch", not "Night's Watchs"); a foreign call to arms says against
+  whom when a war is public, and "nothing yet says against whom" when it is not.
+- Open: a minor lord under a regent (Robert Arryn) is named as the subject; naming the regent (Lysa Arryn) may read
+  better — left for N5/N6 with the owner's eye.
 

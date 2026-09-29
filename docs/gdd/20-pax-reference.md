@@ -151,7 +151,14 @@ must enforce; use the pairs in §5.2 as golden-set seeds for N1 (`bench/suites/h
 | 20 | Raven received from The Eyrie (importance 3) | Lysa Arryn refuses to send men |
 
 Note: rows 7, 10, 14 mean the **fact slots must carry the doer/victim/place** (N2/N3); a model may not invent them
-([18 §3.3](18-headlines.md)).
+([18 §3.3](18-headlines.md)). *N2 (Slice 1) gave a death in battle its slayer, the battle and the place (row 14), an
+execution its lord and a death its manner; the tourney's champion (row 7) is not a slot yet.*
+
+Note on row 16: "King Robert rides for Winterfell" is a good headline (a person, a verb in the present, the place
+he is bound for) and the scorer's boilerplate list does not ban "rides for" (`public/data/style.js` `BOILERPLATE`;
+`DECISIONS.md#D-060`). What is wrong with today's line is what the ledger adds to it: "Men say he means to…", the men, the
+days. The phrases the list does ban are the ledger's own ("sets out from", "knights and riders under the … banner",
+"is raised at"), never the plain verbs of travel.
 
 ### 5.3 Summary rules (with S1–S6 in 18 §2.3)
 

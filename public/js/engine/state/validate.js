@@ -8,6 +8,8 @@
 //   8  every letter in flight lands after it was sent
 //   9  what a house has learned it learned after it happened, and a secret only by a spy, a scheme or a confession
 //  11  under Canon gravity no one the story keeps died of chance before their time (engine/people/life.js)
+//  12  the realm ledger's series is whole: every row as wide as its fields, all numbers, days only going forward;
+//      what a house has observed of the others is dated in the past and kept short (engine/realm/)
 // (10 — the player's view holds no hidden truth — is the server's: server/view.js `hiddenTruths`; 5–7 need commitments
 // and the segmented jump: WP B10–B11.)
 import { JUNCTIONS } from '../../../data/geography.js';
@@ -16,7 +18,9 @@ import { ACTIVITIES } from '../activity.js';
 import { landmassOf } from '../geo.js';
 import { capacityOf } from '../military/supply.js';
 import { CANON_DEATHS, CANON_PROTECTED } from '../../../data/fates.js';
-import { dateOfDay } from '../time.js';
+import { dateOfDay, dayNumber } from '../time.js';
+import { FIELDS } from '../realm/figures.js';
+import { KEEP_MAX } from '../realm/stats.js';
 
 const finite = (p) => Array.isArray(p) && p.length === 2 && p.every((x) => typeof x === 'number' && isFinite(x));
 const isPlace = (state, id) => !!(state.holdings?.[id] || JUNCTIONS[id]);
@@ -107,6 +111,37 @@ export const INVARIANTS = {
       const d = dateOfDay(c.diedDay); const ym = d.year * 12 + d.month - 1; const w = CANON_DEATHS[c.id];
       if (w && ym < w.from[0] * 12 + w.from[1] - 1) out.push(`11: ${c.name} died of ${c.cause || 'chance'} in ${d.month}/${d.year}, before the story's time for it (${w.cause})`);
       if (CANON_PROTECTED.includes(c.id) && d.year <= 300) out.push(`11: ${c.name}, whom the story carries through 300 AC, died of ${c.cause || 'chance'} in ${d.month}/${d.year}`);
+    }
+    return out;
+  },
+  12: function realmLedger(state) {
+    const out = [];
+    const R = state.realmStats;
+    if (R) {
+      // the series is whole: the fields it was written under are the ones the engine reads it by (said once, not for every row),
+      // each row is that wide and all whole numbers, days go strictly forward, no sample is from a turn not yet played, and
+      // there are never more than the thinning keeps
+      const fieldsOk = JSON.stringify(R.fields) === JSON.stringify(FIELDS); let prev = -Infinity;
+      if (!fieldsOk) out.push(`12: the realm series is written under fields (${JSON.stringify(R.fields)}) that are not the engine's`);
+      if ((R.samples || []).length > KEEP_MAX) out.push(`12: the realm series keeps ${R.samples.length} samples, more than ${KEEP_MAX}`);
+      for (const s of R.samples || []) {
+        if (!(s.day > prev)) out.push(`12: the realm sample of turn ${s.turn} is on day ${s.day}, not after day ${prev}`);
+        prev = s.day;
+        if (!(s.turn <= state.meta.turn)) out.push(`12: the realm sample of day ${s.day} is of turn ${s.turn}, which is not yet played (turn ${state.meta.turn})`);
+        if (!fieldsOk) continue;
+        for (const [house, row] of Object.entries(s.h || {})) {
+          if (!Array.isArray(row) || row.length !== FIELDS.length) out.push(`12: ${house}'s realm row of day ${s.day} is ${row?.length ?? 'no'} wide, not ${FIELDS.length}`);
+          else if (!row.every((x) => Number.isInteger(x))) out.push(`12: ${house}'s realm row of day ${s.day} has a figure that is no whole number`);
+        }
+      }
+    }
+    const today = dayNumber(state.meta.date);
+    for (const [house, k] of Object.entries(state.knowledge || {})) {
+      for (const [subject, e] of Object.entries(k.realm || {})) {
+        const obs = e?.obs || [];
+        if (obs.length > 24) out.push(`12: House ${house} keeps ${obs.length} observations of ${subject}`);
+        for (const o of obs) if (!(o.turn <= state.meta.turn && o.day <= today)) out.push(`12: House ${house} observed ${subject} on day ${o.day} of turn ${o.turn}, which is not yet`);
+      }
     }
     return out;
   },

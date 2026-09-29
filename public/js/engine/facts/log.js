@@ -35,6 +35,12 @@ export function emit(state, kind, f = {}) {
   if (f.pos) fact.pos = f.pos.map((x) => Math.round(x * 10) / 10);
   if (f.data && Object.keys(f.data).length) fact.data = f.data;
   if (f.cause) fact.cause = f.cause;
+  // A war's fact carries the war as it stood that day (its name and sides), so a house that hears of it later learns
+  // what was declared then, not what the war has become since (19 §5: sides as known).
+  if ((kind === 'war_declared' || kind === 'war_joined' || kind === 'peace_made') && fact.data?.war) {
+    const w = (state.wars || []).find((x) => x.id === fact.data.war);
+    if (w) fact.data = { name: w.name, attackers: [...w.attackers], defenders: [...w.defenders], ...fact.data };
+  }
   fact.vis = f.vis || { scope: K.vis };
   fact.importance = f.importance != null ? clamp(Math.round(f.importance)) : weigh(state, K.importance, actors, houses);
   if (f.thread) fact.thread = f.thread;

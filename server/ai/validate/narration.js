@@ -23,7 +23,7 @@ const ROAD = 25; // miles either side of a road a party walks this turn
 
 // ── Reading names ────────────────────────────────────────────────────────────────────────────────────────────────────
 const tables = new WeakMap();
-function tablesFor(state) {
+export function tablesFor(state) {
   let t = tables.get(state);
   if (t && t.n === Object.keys(state.characters).length) return t;
   const people = personAliases(state, { alive: false });
@@ -37,7 +37,7 @@ function tablesFor(state) {
   tables.set(state, t);
   return t;
 }
-const words = (sentence) => [...sentence.matchAll(/[A-Za-z][A-Za-z'’-]*/g)].map((m) => ({ w: m[0].replace(/['’]s$/, ''), at: m.index, end: m.index + m[0].length }));
+export const words = (sentence) => [...sentence.matchAll(/[A-Za-z][A-Za-z'’-]*/g)].map((m) => ({ w: m[0].replace(/['’]s$/, ''), at: m.index, end: m.index + m[0].length }));
 const cap = (w) => /^[A-Z]/.test(w);
 export const sentencesOf = (text) => String(text || '').replace(/\s+/g, ' ').split(/(?<=[.!?…]["”’]?)\s+(?=["“‘]?[A-Z0-9])/).filter(Boolean);
 
@@ -106,7 +106,7 @@ export function numbersOf(facts) {
 
 // ── The forbidden words (10 §8.2; data/style.js) ────────────────────────────────────────────────────────────────────────────────────
 export const GAME_WORDS = [...FORBIDDEN.map((w) => new RegExp(w, 'i')), ...FORBIDDEN_EXACT.map((w) => new RegExp(w))];
-const MATURE = /\b(genitals?|intercourse|orgasm\w*|cunt)\b/i;
+export const MATURE = /\b(genitals?|intercourse|orgasm\w*|cunt)\b/i;
 
 // ── The story's world ────────────────────────────────────────────────────────────────────────────────────────────────
 const ARRIVAL_KINDS = new Set(['arrived', 'landed', 'host_joined', 'envoy_arrived', 'letter_arrived', 'crossed', 'met_on_road', 'host_formed']);

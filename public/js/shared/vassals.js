@@ -33,7 +33,8 @@ export function vassalTemper(state, vid) {
   const hs = Object.values(state.holdings).filter((h) => h.owner === vid);
   const unrest = hs.length ? hs.reduce((s, h) => s + (h.unrest || 0), 0) / hs.length : 0;
   t -= Math.max(0, unrest - 30) * 0.3;
-  if ((Number(v.figures?.food?.v) || 99) < 2) t -= 10;
+  const food = v.figures?.food?.v; // an empty granary is hunger, not "unknown": only a missing figure is spared
+  if (food != null && Number(food) < 2) t -= 10;
   return Math.round(clamp(t, 0, 100));
 }
 

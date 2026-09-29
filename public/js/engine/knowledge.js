@@ -16,6 +16,7 @@ import { placeOf, forces, TRAVELLERS } from './parties.js';
 import { dayNumber, dateOfDay, dateStr } from './time.js';
 import { factById } from './facts/log.js';
 import { MILES_PER_UNIT } from '../../data/geography.js';
+import { observe } from './realm/estimate.js';
 
 /** Sight in map units: own castles, sworn castles, own hosts, allies', one's people abroad — the fog of war's radii as
  * they were tuned in play (09 §7.2 proposes 60/40/80/50; D-032). */
@@ -108,7 +109,9 @@ export function knows(state, house, f, today = dayNumber(state.meta.date), E = n
 /** A fact a house learned by a way the engine cannot work out (a spy, a letter, a confession). */
 export function learn(state, house, f, { day = dayNumber(state.meta.date), via = 'spy', confidence = 1 } = {}) {
   if (!LEARNED.has(via)) throw new Error(`a fact is not learned by ${via}`); // a programming error, caught by the tests
-  knowledgeOf(state, house).facts[f.id] = { day: Math.max(day, f.day), via, confidence, happened: f.day, scope: f.vis?.scope || 'public' };
+  // a spy who counts a treasury brings the figure with him (`data.realm = { house, field, value }`): it is kept here with what
+  // was learned, because the fact itself leaves the turn's log at the turn's end (the realm ledger notes it: engine/realm/estimate.js)
+  knowledgeOf(state, house).facts[f.id] = { day: Math.max(day, f.day), via, confidence, happened: f.day, scope: f.vis?.scope || 'public', ...(f.data?.realm ? { figure: { ...f.data.realm } } : {}) };
 }
 
 // ── News in the chronicle ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -184,6 +187,8 @@ export function updateKnowledge(state, house = state.meta.player, r = random) {
   // what was learned by spies and letters is forgotten after a season; the facts themselves are in the log
   const today = dayNumber(state.meta.date);
   for (const [id, n] of Object.entries(k.facts)) if (today - n.day > 120) delete k.facts[id];
+  // what the house makes of the other houses' strength, from all it has now seen and heard — by the hash, not the dice
+  observe(state, house);
 }
 
 /**
