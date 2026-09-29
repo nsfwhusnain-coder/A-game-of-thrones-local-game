@@ -232,8 +232,11 @@ the dataset the recipe will build from. Never train on book text.
 1. **U1–U3, the quiet screen** (GDD 17 §2, §4; the look of GDD 21; mockups 02, 03, 07, 08). Branch
    `wp/u1-u3-quiet-screen` holds the failing tests (`tests/hud.test.js`: the pure logic in a new `public/js/ui/hud.js`
    — `vitalsOf`, `inboxOf`, `MENU`/`routeKey`, `stripOf`, `turnLabel` — and the markup rules on `public/index.html`) and
-   `scripts/ui-gate.mjs` (dev-only Playwright gate of GDD 17 §5; its "before" table is in the branch's first commit
-   message). Merge the default branch into it first. U1+U2 then U3, one builder at a time (they share `index.html`,
+   `scripts/ui-gate.mjs` (dev-only Playwright gate of GDD 17 §5; today's screen fails it everywhere — 30 controls, the
+   HUD over 41 % of the pixels, a 106 px top bar, 9 overlapping pairs — the full "before" table is in the message of
+   the branch's commit `test: U1, U2 and U3 acceptance, failing`). The contract of `hud.js` is in the test file's
+   header; one reading to confirm with the owner: a "running audience" in the Inbox is a chat whose last entry is the
+   lord's reply this turn and whose mood is not closed. The branch already carries the latest default branch. U1+U2 then U3, one builder at a time (they share `index.html`,
    `style.css`, `app.js`); ship the three in one PR so no half-built screen reaches the default branch.
 2. **N5+N6+N9** (GDD 18 §3.2, §5): the narrator's story sheet, schema with `summary`, `cardOf` as draft, mock and
    fallback, the headline validator; the card shape in the turn record (`headline/summary/details[]/tier/score`, the
