@@ -108,17 +108,22 @@ Card = {
 ### 2.2 Headline rules (H1–H10; enforced by the scorer in N1 and the validator in N5)
 
 1. **H1** at most 12 words and 80 characters; one clause; ends without a full stop.
-2. **H2** subject–verb–object, past tense, active unless the patient is the news (slain, taken, crowned): *"Jon Snow
-   reaches Castle Black"* → *"Jon Snow reached Castle Black"* (past, always; the feed is history).
+2. **H2** a news headline: subject–verb–object in the present (*"Jon Snow reaches Castle Black"*, *"Lady Hornwood refuses
+   Stark's summons"*), or a bare passive participle when the patient is the news (*"Robb Stark slain by Tywin
+   Lannister"*, taken, crowned). The summary under it is in the simple past. (Corrected: this said "past, always"; see
+   `DECISIONS.md#D-058`. §4's own examples were always in the present.)
 3. **H3** it names **who** (a person, or a house only if no person is the subject) and **where** (a place, when the story
    has one) — from the story's own facts.
 4. **H4** it names nothing that is not in the story (the validator's `names`/`places` rules extended to headlines).
 5. **H5** at most one number, only if the story gives it, and only as a word or round figure ("thousands", "three
    hundred"); no `(~12 days)`, no `strong`, no `men`-counts to the digit.
 6. **H6** no parentheses, colon, semicolon, em dash, ellipsis.
-7. **H7** none of `FORBIDDEN` plus the **boilerplate list** (new, `style.js` `BOILERPLATE`): `is raised at`, `sets out from`,
-   `answers the call with`, `begins works at`, `calls up N levies`, `rides for`, `strong`, `the host now numbers`,
-   `House The`, `Banners of`, `importance`, `op`, `fact`, `story`.
+7. **H7** none of `FORBIDDEN` plus the **boilerplate list** (new, `style.js` `BOILERPLATE`, with the ledger's nouns in
+   `JARGON`): `is raised at`, `sets out from`, `answers the call with`, `begins works at`, `calls up N levies`, `strong`,
+   `the host now numbers`, `House The`, `Banners of` (but "the banners of the North" is English), `importance`, `op`,
+   `fact`, `story`. *Implemented in N1 (Slice 1); the lists as built are in `public/data/style.js`.* `rides for` was on
+   this list and is not: "King Robert rides for Winterfell" is a good headline ([20](20-pax-reference.md) §5.2 row 16),
+   and the ledger's own line is "knights and riders under the … banner" (`DECISIONS.md#D-060`).
 8. **H8** the outcome is never reversed: the killer is not the victim, the victor not the vanquished (role check per kind, §3.3).
 9. **H9** different stories get different headlines; ≥ 70 % of a turn's headlines have a distinct main verb.
 10. **H10** after nothing later than 298 AC: `data/anachronisms.js`, as now.
@@ -196,19 +201,48 @@ still reads a good card, because the deterministic writer is the floor and not a
   `sum(f, s)` that build the sentence from the fact's **slots** (`actors`, `data`, `place`), not from `f.text`. Examples:
   `slain_in_battle: (f,s) => \`${nm(victim)} slain${by ? ' by ' + nm(by) : ''}${at}\``,
   `call_answered: … \`${short(house)} answers Stark's call\``, `levies_called: \`${lordShort} calls the banners\``.
-* **Label helpers** (`engine/facts/label.js`, new) that fix root cause 5: `houseLabel(h)` ("House Stark", "the Free Folk", "the
-  Crown", never "House The Free Folk"/"Baratheon of King's Landing"), `who(c)` (short natural name: "Robb Stark",
-  "Lord Umber" for a byname, "Ser Rodrik"), `partyLabel(p)` ("the Stark host", never "The Banners of Stark"), `roughly(n)` ("some
-  three hundred", "nearly two thousand", "thousands"), `ago/soon(days)` ("within the month").
+* **Label helpers** (`engine/facts/label.js`, new) that fix root cause 5: `houseLabel(state, id)` ("House Stark", "the Free Folk", "the
+  Crown", never "House The Free Folk"/"Baratheon of King's Landing"), `who(state, id)` (a natural name: "Robb Stark",
+  "Lord Umber" for a byname), `partyLabel(state, p)` ("the Stark host", never "The Banners of Stark"), `roughly(n)` ("some
+  three hundred", "nearly two thousand"), `ago/soon(days)` ("within the month"; not built).
+  *Implemented in N2 (Slice 1), as built:* every helper takes the state first; there is also `houseShort(state, id)`
+  ("Stark", for "the Stark host"); `who` returns the name as the data has it and only drops a quoted byname ("Lord Umber"
+  for the Greatjon, "Smalljon Umber" for his son), so a short "Ser Rodrik" form is not built; `roughly` never says
+  "thousands" and never a digit ("seven", "some three hundred", "nearly two thousand", "about a million"; `""` for
+  what is no number); **`ago/soon` is not built** (no head needs it yet). A house of the data is "House X" without its
+  place ("Baratheon of King's Landing" is "House Baratheon", the Crown "the Crown", the Free Folk "the Free Folk", the
+  Night's Watch "the Night's Watch"); the details are in `DECISIONS.md#D-061`.
 * **Fitting:** if the headline exceeds 12 words: drop the place clause → replace names by `who()` short form → drop the object →
   fall back to the archetype's short template. It always ends with something that passes H1–H8; a unit test asserts it for all kinds.
-* **Roll-ups (C2)** use `list(names)` ("Umber, Manderly and Karstark"; ≥ 5 names → "Six northern houses").
+* **Roll-ups (C2)** use `list(names)` ("Umber, Manderly and Karstark"; ≥ 5 names → "Six northern houses"). *As built in
+  N2, `list` gives five or more names as a count with two of them named ("six in all, Umber and Manderly among them");
+  the phrase "Six northern houses" (a region and a noun) is the roll-up writer's, N3/N4.*
 * **The summary** is built as: sentence 1 = the lead fact's plain statement; sentence 2 = a `data.how/why/cause/outcome` clause
   if the slot exists; sentence 3 = for the player's house only, the plain consequence the engine already has as a fact
   (never a feeling). If a slot is missing the sentence is left out — never padded with boilerplate.
-* **New slots** on the emitters that matter most (N2): `battle` (`data.winner, data.loser, data.lost, data.how: 'charged'|'held'|'ambushed'|'night'…` from `military/battle.js`'s
-  decisive factor — the "what decided it" it already computes for the battle report), `slain_in_battle`/`executed`/`death` (`data.by`, `data.how`), `captured_in_battle`
-  (`data.by`), `siege_*`, `call_refused` (`data.why`), `crowned` (`data.title`), `wedding`, `arrived` (`data.from`). A **lint rule** in `scripts/lint-engine.js`: a fact of importance ≥ 3 must have a `HEAD` entry.
+* **New slots** on the emitters that matter most (N2), read by the writer's `head`/`sum` and the scorer's role check.
+  *Implemented in N2 (Slice 1).* The slots as built (this list replaces the plan's, which named `data.how:
+  'charged'|'held'|'ambushed'|'night'` and slots for `siege_*`, `crowned`, `wedding` and `arrived`; `DECISIONS.md#D-061`).
+  A slot is present only when the engine knows it, and nothing else about a fact changes (no fact is added, removed or
+  reordered).
+  * `battle`: `winnerHouse`, `loserHouse` (the houses behind the two hosts; `null` in a draw) and `how`, the battle's
+    decisive factor in the words of the battle report ("numbers and arms", "generalship", "the ground", "surprise",
+    "fortune"…), not `'charged'|'held'|'ambushed'|'night'`: the engine resolves by factors, not tactics. `winner`,
+    `loser` (party ids) and `lost` were already there.
+  * `slain_in_battle`: `by` (the enemy commander left standing, absent if none), `how` (`'battle'`), `battle` (the
+    battle's fact id), `place`.
+  * `captured_in_battle`: `by` (a character, or the captor house's id when no commander stood), `battle`, `place`.
+  * `executed`: `by` (the lord who ordered it).
+  * `death`: `how` ∈ `age | illness | wound | fever | winter`, beside the `cause` and `age` it already had.
+  * `call_refused`: `liege` and `why` (plain words: "bad blood between the houses", "the liege's heavy taxes"…; absent when
+    it was only the roll of the dice).
+  * Not built in N2: the slots of `siege_*`, `crowned` (`data.title`), `wedding` and `arrived` (`data.from`).
+  * The emitters are `public/js/shared/battles.js`, `public/js/shared/world.js` (`note()`, which puts `by`, `how`,
+    `battle` and `place` from a character's change onto the death or capture it tells), `engine/military/muster.js`,
+    `engine/actions/court.js`, `engine/people/life.js` and `server/turn/day.js` (`theYears`). `shared/diplomacy.js` emits
+    no facts, and `engine/military/battle.js` only resolves a battle (`shared/battles.js` tells it).
+  * **The check that a fact of importance ≥ 3 has a `HEAD` entry is a test in N3, not a lint rule:**
+    `scripts/lint-engine.js` is a line scanner and cannot see a fact's importance or a table's keys.
 
 ### 3.2 The narrator: headline + summary from facts only
 
@@ -240,8 +274,9 @@ events: arr(obj({
 meanwhile: str(200)
 ```
 
-*Instructions* (`instructionsFor`, `style.js`): `HEADLINE` becomes "a headline in the form *who did what to whom, where* — past
-tense, at most 12 words, no numbers unless round and given, no brackets or dashes" with **six few-shot headline+summary
+*Instructions* (`instructionsFor`, `style.js`): `HEADLINE` becomes "a headline in the form *who did what to whom, where* — news
+present ("Lady Hornwood refuses Stark's summons") or a bare participle ("Robb Stark slain by Tywin Lannister"), at most 12
+words, no numbers unless round and given, no brackets or dashes" (D-058; the summary is in the simple past) with **six few-shot headline+summary
 pairs of other houses** (a battle, a death, a march roll-up, a refusal, a wedding, a harvest) and the **anti-patterns
 list** taken from §1.3 ("never write `Host of House X sets out (~N days)`; never `calls up N levies`"). The voice list
 (senses, dry humour) is kept for `scene` only; `summary` is plain: "one plain sentence of what happened, a second of
@@ -265,6 +300,9 @@ itself the readable baseline. (Today the mock returns `plainEvent`, which is the
 ### 3.3 Role table (for H8)
 
 `heads.js` also exports `ROLES = { slain_in_battle: { patient: 'victim' }, captured_in_battle: { patient: 'captive', agent: 'captor' }, battle: { winner, loser }, executed: {…} }` — both the writer and the validator read it, so they cannot disagree.
+*Implemented in N1 (Slice 1), as `ROLES` in `server/ai/validate/headline.js`:* paths into the fact (`patient: 'actors.0'`,
+`agent: 'data.by'`; a battle's `winner: 'data.winnerHouse'`, `loser: 'data.loserHouse'`) for `slain_in_battle`, `executed`,
+`death`, `captured_in_battle`, `captured` and `battle`. N3 moves the table to `heads.js` and the writer reads it too.
 
 ### 3.4 Where the model is *not* used
 
@@ -309,13 +347,13 @@ the shape for battles, deaths and captures that the mock game had not yet reache
 ## 5. Work packages
 
 Order: **N1 first** (the golden set and the scorer make every later package test-driven); then N2 and N3; N4 with N3; N5 needs
-N1+N3; N6 needs N3+N5; N7 and N8 need N6; N9 with N4; N10 last. Each package: its own branch `wp/n<k>-<slug>`, a PR per
+N1+N3; N6 needs N3+N5; N7 and N8 need N6; N9 with N4; N10 last. Each package: its own branch `wp/n<k>-<slug>` (or one branch for a slice of related packages, `DECISIONS.md#D-059`), a PR per
 CLAUDE.md, `docs/CHANGELOG.md` entry, tests on `WC_PROVIDER=mock` only.
 
 | ID | Package | Files | Acceptance (all on the mock; no live model) | Size |
 |---|---|---|---|---|
-| **N1** | **Golden set + scorer.** The measure before the fix. | `server/ai/validate/headline.js` (new: `scoreCard(card, story, state) → { pass, faults[] }` implementing H1–H10, S1–S6); `public/data/style.js` (+ `BOILERPLATE`, `JARGON`, `HEADLINE_MAX_WORDS`); `tests/fixtures/headlines/golden.json` (≈ 60 story bundles: fact lists with slots, `must: [names]`, `mustNot: [names]`, `maxWords`, a reference headline); `tests/fixtures/headlines/bad.json` (the §1.3 B1–B13 strings and 20 more, each with the rule it must fail); `tests/headlines.test.js` | The scorer **fails every string in `bad.json` on the named rule** and **passes every reference headline** in `golden.json`; rule unit tests (length 12/13 words, digits, parentheses, `House The`, reversed slain/slayer, invented name "Ser Barristan" in a Stark muster story, ellipsis). Test also asserts the *current* mock output scores < 50 % on the golden set (regression evidence; the assertion is flipped to ≥ 100 % in N3). | M |
-| **N2** | **Fact hygiene: labels and slots.** | `public/js/engine/facts/label.js` (new: `houseLabel`, `who`, `partyLabel`, `roughly`, `list`); emitters in `shared/battles.js`, `shared/world.js` (`note`), `engine/military/battle.js` & `siege.js`, `server/turn/day.js` (`theYears`), `shared/plots.js`/`engine/world/beats.js`, `shared/diplomacy.js` (add `data.by / how / why / loser / title / from` — additive); `scripts/lint-engine.js` (importance ≥ 3 ⇒ has slots) | `houseLabel` never yields "House The …" or "… of King's Landing" (table test over all 100+ houses in `data/houses.js`); `roughly` boundaries; battle/slain/death/capture/refusal facts carry their slots in a scripted scenario (`tests/facts.test.js` extended); `npm run check` lint passes; no change to fact ids, order or counts (soak invariant). | M |
+| **N1** | **Golden set + scorer.** The measure before the fix. | `server/ai/validate/headline.js` (new: `scoreCard(card, story, state) → { pass, faults[] }` implementing H1–H10, S1–S6); `public/data/style.js` (+ `BOILERPLATE`, `JARGON`, `HEADLINE_MAX_WORDS`); `tests/fixtures/headlines/golden.json` (≈ 60 story bundles: fact lists with slots, `must: [names]`, `mustNot: [names]`, `maxWords`, a reference headline; built: 71); `tests/fixtures/headlines/bad.json` (the §1.3 B1–B13 strings and 20 more, each with the rule it must fail; built: 69); `tests/headlines.test.js` | The scorer **fails every string in `bad.json` on the named rule** and **passes every reference headline** in `golden.json`; rule unit tests (length 12/13 words, digits, parentheses, `House The`, reversed slain/slayer, invented name "Ser Barristan" in a Stark muster story, ellipsis). Test also asserts the *current* mock output scores < 50 % on the golden set (regression evidence; the assertion is flipped to ≥ 100 % in N3). | M |
+| **N2** | **Fact hygiene: labels and slots.** | `public/js/engine/facts/label.js` (new: `houseLabel`, `houseShort`, `who`, `partyLabel`, `roughly`, `list`); the emitters `shared/battles.js`, `shared/world.js` (`note`), `engine/military/muster.js`, `engine/actions/court.js`, `engine/people/life.js`, `server/turn/day.js` (`theYears`), adding the slots of §3.1 — additive (`engine/military/battle.js` only resolves, and `shared/diplomacy.js` emits nothing, so neither is touched); the importance ≥ 3 check is N3's test, not a lint rule (§3.1) | `houseLabel` never yields "House The …" or "… of King's Landing" (table test over every house of the 298 AC scenario, 100+, in `tests/labels.test.js`); `roughly` boundaries; battle/slain/death/capture/refusal facts carry their slots in a scripted scenario (`tests/labels.test.js`); `npm run check` passes; no change to fact ids, order or counts (soak invariant; asserted on a battle's facts). | M |
 | **N3** | **Deterministic writer.** | `public/js/engine/facts/heads.js` (new: `HEAD`, `SUM`, `ROLES` for all 126 kinds; rank for C4); `public/js/engine/facts/headline.js` (new: `cardOf(state, story)` with fitting); `tests/headlines.test.js` | For **every kind in `KINDS`** a synthetic fact → a card that `scoreCard` passes (H1–H8, S1–S4); the whole golden set passes ≥ 98 % (target 100 %); B1–B13's underlying facts read like §4; headlines are pure functions of facts (same input → same output, no `Math.random`); works in the browser (no `node:` imports) — asserted by importing it in a client-side test. | L |
 | **N4** | **Clustering v2 + roll-ups + tiers.** | `public/js/engine/facts/cluster.js` (archetype C1, roll-up C2, split C3, lead rank C4, merge C5, no hard cap C6, Meanwhile C7); `server/narrator.js` (`clusterFacts` call sites) | On the six mock turns above: turn 2 gives **one** march card (not three), turn 1's muster is 2 stories (muster + refusal), no story > 8 facts unless one archetype/place; **cards per turn ≤ 10 and facts per card mean ≥ 1.5** in the soak (`scripts/soak.js` prints both); a fact never appears in two cards; `tests/facts.test.js` still green; the old `together` hint still honoured. | M |
 | **N5** | **Narrator v3: schema, story sheet, validator, mock, fallback.** | `server/ai/calls/narrate.js` (new `context` story sheet with WHO/HAPPENED/WHY/COUNTS/DRAFT; `schema` with `summary`; `instructionsFor` with six few-shot pairs and anti-patterns; `mock` = `cardOf`; `fallback` = `cardOf`; drop `plainEvent`/`herald`); `server/ai/validate/narration.js` (`checkHeadline`, headline in every existing rule, role check); `public/data/style.js` (`HEADLINE`, `BOILERPLATE`, `EXAMPLES` with headline+summary); `server/narrator.js`; `tests/narrator.test.js`, `tests/ai-contract.test.js`, `tests/replay.test.js` (fixtures updated) | Contract test: the schema accepts the writer's card and rejects a 14-word headline, a bracket, a digit-string; the mock's telling passes the validator on **100 %** of `bundles()` weeks (the old ≥ 98 % gate raised); replay-provider fixtures with **bad model outputs** (invented "Ser Barristan", reversed slayer, "Host of House X sets out (~9 days)", a CJK leak) are each rejected with the right rule, salvage retells once, then the writer's card stands; a failed model call yields cards with `told:'writer'` that still pass `scoreCard`. | L |
@@ -324,6 +362,9 @@ CLAUDE.md, `docs/CHANGELOG.md` entry, tests on `WC_PROVIDER=mock` only.
 | **N8** | **Pins.** | `public/js/shared/pins.js` (`pinworthy` by tier/`mine`; battle pins from `cardOf`; expiry unchanged), `public/js/ui/pins.js` (window = headline, summary, Details), `public/js/map*/…` pin label = headline on hover; `tests/map-*.test.js` | `openPins` unit test: a tier-`great` fact with a place gets a pin, a minor unrelated one does not, `mine` minor does; battle away from a castle pins with the writer's headline (regression against `"X defeated Y."`); pin label ≤ 12 words; ack behaviour unchanged (`acks` keys stable across N6); screenshot. | S |
 | **N9** | **Importance ranking and the Meanwhile sentence.** | `public/js/engine/facts/rank.js` (new: `score`, `tier`, fatigue), `headline.js` (`meanwhileOf(facts)`), `server/game.js` (digest); `tests/headlines.test.js` | Table-driven ranking tests (own-house +1, first-of-kind +1, fatigue −1 after two of an archetype); on six mock turns the tier-`great` card is the same the human reviewer of §4 would pick (asserted on fixtures: turn 1 → the muster, turn 4 → the tourney, turn 5 → the feast); Meanwhile sentence ≤ 200 chars, ends with a full stop, contains no more than 3 clauses, contains none of `BOILERPLATE`. | S |
 | **N10** | **Bench suite, soak invariants, owner check, docs.** | `bench/suites/headlines/*.json` + `bench/lib/headlines.js` (reuses `bundles()` from `bench/lib/narrate.js`); `scripts/bench.js` (`--suite headlines`); `scripts/soak.js` (every card passes `scoreCard`; prints cards/turn, facts/card, boilerplate hits = 0); `scripts/headlines-check.js` (owner-run: plays 5 weeks, tells them with the configured live model, prints before/after and the scorer's faults — never in CI); `docs/gdd/04-ai-system.md` §6, `10-narrative-events.md` §8, `12-ui-ux.md` §6 updated; `docs/gdd/DECISIONS.md` (D-0xx: card = headline + summary, model rewrites, writer is the floor; `scene` optional); `docs/CHANGELOG.md`; `docs/HANDOFF.md` (owner checklist) | `npm run bench -- --suite headlines` on the mock writes `bench/headlines-mock-<date>.md` with **pass rate 100 %**, headline length mean ≤ 9 words / max ≤ 12, boilerplate 0, names-present ≥ 99 %, distinct-verb ratio ≥ 70 %, facts/card ≥ 1.5; `npm test` runs a 6-week mini-soak of the same; the replay suite holds recorded model outputs (from `docs/gdd/assets/bench-2026-09-27` style) so the validator's rejection rates are tracked without a model. **Owner to verify** (cannot be tested in the cloud): with the live model, ≥ 90 % of headlines pass first try and a 1–5 judge/eyeball score ≥ 4 on "the headline alone tells what happened". | M |
+
+*Implemented in N1/N2 (Slice 1, one branch and one PR; `DECISIONS.md#D-059`): N1 ✅ N2 ✅. Tests: `node --test
+tests/headlines.test.js tests/labels.test.js`. Nothing changes on screen; N3 onward are held to this scorer.*
 
 ### 5.1 The golden set (N1) in detail
 
@@ -348,7 +389,7 @@ storm at sea), and a story whose only actor is not known to the player's house (
 | `len` | headline words 3–12, chars ≤ 80; summary ≤ 3 sentences, ≤ 340 chars |
 | `who` | ≥ 1 name from `must` / the story's actors, house or place present in the headline |
 | `invented` | every capitalised token resolves to the story (reuse `tablesFor`); none from `mustNot` |
-| `past` | headline has a past-tense or passive-participle verb (list of regular `-ed` + irregulars: slain, taken, held, met, won, lost, fell, rode, sent, crowned …) or a kind verb |
+| `verb` | headline has a finite verb (present or past) or a bare passive participle from `HEADLINE_VERBS` in `style.js` (slain, taken, held, refuses, marches, crowned …); a bare noun phrase ("Battle near the Twins") fails. Was `past` (past tense or participle); changed by D-058 |
 | `numbers` | ≤ 1 number, in the story's data, no `~`, no `N men`/`N strong` |
 | `punct` | no `()`, `:`, `;`, `—`, `…`, no trailing full stop in headline; no `…` in summary |
 | `boiler` | none of `FORBIDDEN`, `FORBIDDEN_EXACT`, `BOILERPLATE`, `JARGON` |
@@ -356,6 +397,18 @@ storm at sea), and a story whose only actor is not known to the player's house (
 | `dup` | summary is not the headline restated (token overlap < 0.8) |
 | `outcome` | outcome verbs are backed by a fact kind in the story |
 | `script`, `anachronism`, `maturity` | existing validators |
+
+*Implemented in N1 (Slice 1): `scoreCard(card, story, state) → { pass, faults, detail }` in `server/ai/validate/headline.js`,
+its data in `public/data/style.js`. As built, beyond the table (`DECISIONS.md#D-060`):*
+* `invented` also fails a house the story does not hold, said as "House X" or "the Xs" (the player's own house excepted);
+  `who` accepts the story's houses.
+* `boiler` also fails a house written in its ledger form "X of Place". `BOILERPLATE` and `JARGON` are separate exports
+  from `FORBIDDEN`, so the audience, council and consolidate validators, which read `FORBIDDEN`, are unchanged.
+* `punct` also fails a headline that ends in `!` or `?`. `numbers`: no digit or `~` anywhere, at most one number word in
+  the headline, a number above twelve only when the story gives it (±2 %).
+* `roles` is read on the summary as well as the headline; `outcome` on the headline only.
+* `anachronism` lets a phrase through when the story's own facts say it ("crowned King in the North" in the story of the
+  crowning).
 
 ---
 

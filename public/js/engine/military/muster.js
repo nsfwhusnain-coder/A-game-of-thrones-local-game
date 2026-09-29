@@ -8,7 +8,7 @@
 //   obligations.levies: 'called' | 'delayed' | 'answered' | 'refused'     (what the realm sees, as before)
 //   obligations.stage:  'letter' | 'deliberating' | 'gathering' | 'departed' | 'joined' | 'delayed' | 'refused'
 //   obligations.call:   { host, muster, scope, sent, arrive, decide, depart, retry, men, gather, predicted, eta, late }
-import { applyChanges, placePos, placeName } from '../../shared/world.js';
+import { applyChanges, placePos, placeName, getRelation } from '../../shared/world.js';
 import { ref, isRef, idOf, joinParty, settle, partyAt, forces } from '../parties.js';
 import { marchDays, atWar, MILES_PER_UNIT } from '../../shared/warfare.js';
 import { vassalTemper } from '../../shared/vassals.js';
@@ -21,6 +21,8 @@ import { dayNumber } from '../time.js';
 import { MUSTER } from '../../../data/balance.js';
 
 const round50 = (n) => Math.round(n / 50) * 50;
+// who hears a lord's answer to the call, exact men and all: the lord's house and his liege (if he has one), once each
+const answerHouses = (v) => [...new Set([v.id, v.liege].filter(Boolean))];
 const RAVEN_MILES = 300; // a day's flight (engine/actions/diplomacy.js)
 
 /** The days a sworn lord's levies take to gather at his seat, by his country (07 §3.2; data/balance.js MUSTER). */
@@ -43,6 +45,22 @@ export function answerOdds(state, v, { scope = 'quick', late = false } = {}) {
   // a second asking: those who hedged once hedge less; a second delay is a refusal in all but name
   if (late) { r += Math.round(d / 2); d = Math.round(d / 2); }
   return { answered: a, delayed: d, refused: r, temper: t };
+}
+/**
+ * Why a lord will not march, in the plain words of what already weighed on his temper (shared/vassals.js vassalTemper):
+ * bad blood, no loyalty, the tax, hungry lands, a second asking, or simply no heart for it. Null when it was only the
+ * roll of the dice (a dutiful lord refuses one time in fifty and has no reason): the fact then says nothing rather than guess.
+ */
+export function whyRefused(state, v, call) {
+  const lord = state.characters[v.lord]; const tax = state.houses[v.liege]?.policy?.tax;
+  if (getRelation(state, v.id, v.liege) <= -30) return 'bad blood between the houses';
+  if ((lord?.loyalty ?? 60) < 30) return 'little loyalty to the liege';
+  if (tax === 'crushing' || tax === 'heavy') return "the liege's heavy taxes";
+  const food = v.figures?.food?.v; // an empty granary (0) is hunger; only a granary nobody has counted is not
+  if ((food == null ? 99 : Number(food)) < 2) return 'hungry lands at home';
+  if (call?.late) return 'already put the call off once';
+  if ((vassalTemper(state, v.id) ?? 50) < MUSTER.bands.dutiful) return 'no heart for the war';
+  return null;
 }
 /** Men a lord sends: of his levies by the call's scope and his zeal, and of his men-at-arms; a late answer, fewer. */
 export function menSent(state, v, { scope = 'quick', late = false } = {}) {
@@ -104,7 +122,7 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
   if (sent.men < 50 || !seatPos) {
     ob.stage = 'joined'; call.men = 0;
     const text = `${lordName} sends word that ${P.he} has no men left to send.`;
-    return { applied: [], events: shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { men: 0 }, cause })), men: 0, party: null, text };
+    return { applied: [], events: shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text, where: v.seat, importance: 2, type: 'war', houses: answerHouses(v) }, { actors: [v.lord], data: { men: 0 }, cause })), men: 0, party: null, text };
   }
   const name = `Host of House ${v.name}`;
   const first = Math.min(sent.men, Math.max(50, round50(sent.men / call.gather)));
@@ -128,7 +146,7 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
   call.predicted = call.depart + marchFrom(state, v, call, seatPos);
   const t = targetOf(state, call);
   const text = `${lordName} answers the call with ${sent.men.toLocaleString('en-GB')} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with ${P.him}` : ''}; they gather at ${placeName(state, v.seat)} and march for ${t.name} in about ${call.gather} days.`;
-  const events = shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] }, { actors: [v.lord, ...riding.map((c) => c.id)], data: { men: sent.men, party: a?.id || null, to: call.host ? ref(call.host) : call.muster || null, depart: call.depart }, cause }));
+  const events = shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: answerHouses(v) }, { actors: [v.lord, ...riding.map((c) => c.id)], data: { men: sent.men, party: a?.id || null, to: call.host ? ref(call.host) : call.muster || null, depart: call.depart }, cause }));
   return { applied: r.applied, events, men: sent.men, party: a?.id || null, text };
 }
 
@@ -175,10 +193,10 @@ export function musterTick(state, touched = new Set()) {
         events.push(...shown(mine, fact(state, 'call_delayed', { title: `House ${v.name} delays`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { retry: call.retry } })));
       } else {
         ob.levies = 'refused'; ob.stage = 'refused';
-        const text = `${lordName} refuses the summons. ${P.His} men will stay at home.`;
+        const text = `${lordName} refuses the summons. ${P.His} men will stay at home.`; const why = whyRefused(state, v, call);
         const k = [v.id, v.liege].sort().join('|');
         state.relations[k] = { ...(state.relations[k] || {}), v: Math.max(-100, Math.min(100, (state.relations[k]?.v ?? 0) - 10)) };
-        events.push(...shown(mine, fact(state, 'call_refused', { title: `House ${v.name} refuses the call`, text, where: v.seat, importance: 4, type: 'war', houses: [v.id] }, { actors: [v.lord] })));
+        events.push(...shown(mine, fact(state, 'call_refused', { title: `House ${v.name} refuses the call`, text, where: v.seat, importance: 4, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { liege: v.liege, ...(why ? { why } : {}) } })));
       }
       applied.push({ op: 'obligation', text: `House ${v.name}: banners ${ob.levies}` });
     }

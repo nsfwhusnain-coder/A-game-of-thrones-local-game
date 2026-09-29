@@ -33,7 +33,7 @@ export const KINDS = {
   lost_at_sea: K(4, 'disaster'),
   // ── Military ──
   levies_called: K(3, 'war'),
-  call_answered: K(2, 'war'),
+  call_answered: K(2, 'war', 'houses'), // a vassal's answer, with his exact men: for him and his liege, not the whole realm (B-32c)
   call_delayed: K(2, 'war', 'houses'),
   call_refused: K(4, 'war', 'houses'),
   muster_grew: K(1, 'war', 'local'),

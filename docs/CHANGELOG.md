@@ -3,7 +3,7 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
-## 2026-09-29 — R1–R3: the realm's figures, as your house knows them (PR pending)
+## 2026-09-29 — R1–R3: the realm's figures, as your house knows them (PR #44)
 
 Nothing on screen yet (the window is R4); what exists is the data under it, and one way to look at it.
 
@@ -26,6 +26,73 @@ Nothing on screen yet (the window is R4); what exists is the data under it, and 
 - Owner to verify: `node --test tests/realm-stats.test.js tests/realm-view.test.js tests/realm-http.test.js`; then, with
   the game running, open `http://127.0.0.1:3298/api/games/<id>/realm?scope=all` in the browser: your house exact, the
   others `~`, `≈`, `≥`, `—` or a word, each with an age.
+## 2026-09-29 — N1 + N2: the measure of a good headline, and facts that say who did it
+
+- **Nothing changes on screen yet.** The feed, the cards, the pins and the turn-end summary read exactly as they did.
+  This is the ground the headlines of [GDD 18](gdd/18-headlines.md) are built on: the next packages write each headline
+  from the slots below and are held to the scorer below, so a card that reads badly fails a test instead of reaching you.
+- **A yardstick for headlines** (N1): `scoreCard` (`server/ai/validate/headline.js`) reads a headline and its summary
+  against the story they tell and names each rule broken: twelve words at most, says who (and where), has a verb, no
+  digits, brackets or dashes, none of the ledger's phrases ("is raised at", "calls up N levies", "House The Free Folk"),
+  no name the story does not hold, the slayer never swapped with the slain, a summary that adds to its headline and ends
+  on a full stop. It comes with a golden set of 71 stories (facts as the engine records them, each with a reference
+  headline) and 69 bad strings (the old engine's own lines among them), each with the rule it must fail. Today's telling
+  is asserted to score under half on the golden set: that is the "before" the writer of N3 has to beat.
+- **Headline tense** (D-058): a headline is news: the present ("Lady Hornwood refuses Stark's summons") or a bare
+  participle ("Robb Stark slain by Tywin Lannister at the Green Fork"); the summary under it is in the simple past.
+- **Facts that say who did it** (N2): a battle names the winning and losing houses and what decided it; the slain and the
+  captured of a field name who did it, in which battle and where; an execution names the lord who ordered it; a death
+  says how (age, illness, wound, fever, winter); a refused summons says why and to whom. Additive: no fact is added,
+  removed or reordered (tested).
+- **Names that read like names** (N2, `public/js/engine/facts/label.js`): "the Crown", "House Martell", "the Free
+  Folk", "the Stark host", "Lord Umber", "nearly two thousand". Nothing calls them yet.
+- Owner to verify: `node --test tests/headlines.test.js tests/labels.test.js`; then open
+  `tests/fixtures/headlines/golden.json` and read the `reference` headlines: is this how you want events to read?
+- PR: (PR #43)
+## 2026-09-29 — U0 — the look: the maester's desk
+
+- **Nothing changes in the game itself yet.** U0 builds the new look as a *style tile* — the pieces the next packages
+  (the quiet HUD, the headline feed, the State of the Realm) are laid out in, so the screen is built in it once
+  ([GDD 21](gdd/21-art-direction.md)). It replaces the dark glass panels with things a lord has on his table: vellum
+  for what the maester wrote, oak and leather for the frame, iron for what you press, wax for what awaits your word,
+  gold leaf for what to read first.
+- **The house you rule tints the table**: its two colours dress the ribbon behind the crest and the rim of the
+  portrait, and its richer pigment is the wax of the Inbox seal (Stark oxblood on a grey ribbon; Lannister crimson;
+  Tyrell green; Greyjoy gold).
+- **Engraved icons** in the game's own stroked hand: a maester's chain for Settings, a weirwood for People, a book for
+  Help, a wax seal, the headline tiers (three diamonds for the great, down to a pip and three dots for "Meanwhile") and an
+  inkpot for the command bar.
+- **The textures are painted by a script** (`scripts/paint-ui.js`, fixed seeds, the same bytes every run) and
+  committed: about 110 KB in `public/img/ui`. Each material falls back to its base colour if a file is missing.
+- Owner to verify: `npm start`, then open http://127.0.0.1:3298/dev/style.html (and `?house=lannister`,
+  `?house=tyrell`, `?house=greyjoy`) and ask: *does this look like Westeros?* The screenshots at 1920×1080 and 1366×768
+  are in `docs/screens/u0/`. (PR #41)
+## 2026-09-29 — SB: a bug sweep from the first playtest (PR #42)
+
+Found by playing Stark, Lannister and Greyjoy on the mock; one line per bug as you now see it (B-32c … B-38).
+
+- **Bran's fall tells only what was seen** (B-33): the card ends at Maester Luwin by his bed, not "The Lannisters are
+  very kind", and Bran's note no longer says "or was pushed" — no hint at a culprit, to any house.
+- **A refused order calls no banners** (B-34): "assemble the men of the north at Winterfell" as a Lannister is refused
+  whole, with the ✗ ("Winterfell is not your land"), and nothing marches. Banners muster only on your land, a sworn
+  lord's or an active ally's.
+- **A lord cannot move a host that is not his** (B-35): "Robb is to march the Northern Host to Moat Cailin" as a
+  Lannister is refused plainly ("No one of yours by that name") instead of sending your biggest host; a host named that
+  you do not have is "no host in the field"; when the words do not say which host, the reading is marked unsure.
+- **Crossings speak plainly** (B-37a): "is held up 6 days", "loses 1 man on the crossing" — never "loses 0 men and 6
+  days" or "1 men".
+- **A generated lord's heir is a new cousin** (B-37b): when a made-up lord dies with no heir, the man who claims the seat
+  has another name and age, no longer the dead lord's clone.
+- **A muster no longer tells the same card every day** (B-37c): a card when the levies begin to gather, one a week while
+  the camp fills, one when the host is whole — each naming the place.
+- **A vassal's answer is not heard by the whole realm** (B-32c): "answers the call with 2,000 men" is known to the
+  vassal's house and his liege's; the rest learn by news. (The rest of B-32 — late news shown on the day it happened —
+  is fixed with the headline work, N4–N6.)
+- Dev: `node scripts/playtest.js` runs without a `config.json` (on the mock) and reports an audience that became a
+  raven as "letter sent by raven (N days, answer due …)", not "> null" (B-36, B-38).
+- Owner to verify: `node --test tests/bugs-sb.test.js`; in a game as Lannister type "assemble the men of the north at
+  Winterfell" — a ✗ and nothing marches; as Stark call the banners and watch the muster cards over two weeks (one
+  when it begins, one a week, one when it is whole).
 
 ## 2026-09-29 — Handoff at E5: the plan for what comes next, and two old bugs closed
 

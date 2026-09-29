@@ -43,7 +43,7 @@ export function lifeTick(state, r, { spared = new Set() } = {}) {
       if (today >= c.wound.heals) {
         const w = c.wound; delete c.wound;
         if (w.festers && mayDie(state, c, spared)) {
-          events.push(fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}'s wound festered, and the maesters could not save ${c.sex === 'f' ? 'her' : 'him'}.`, where: null, importance: state.houses[c.house]?.lord === c.id ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause: 'a festering wound' }, cause: { type: 'rule', ref: 'life' } }));
+          events.push(fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}'s wound festered, and the maesters could not save ${c.sex === 'f' ? 'her' : 'him'}.`, where: null, importance: state.houses[c.house]?.lord === c.id ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause: 'a festering wound', how: 'wound' }, cause: { type: 'rule', ref: 'life' } }));
           changes.push({ op: 'character', id: c.id, alive: false, cause: 'a festering wound' });
         } else {
           events.push(fact(state, 'recovered', { title: `${c.name} recovers`, houses: [c.house], importance: 2 }, { actors: [c.id], cause: { type: 'rule', ref: 'life' } }));
@@ -58,7 +58,7 @@ export function lifeTick(state, r, { spared = new Set() } = {}) {
     const risk = (age >= 70 ? 0.0015 * (age - 68) : age >= 60 ? 0.0004 : 0) * (winter ? 2.5 : 1) + (ailing ? 0.003 : 0) + (winter && age < 6 ? 0.0008 : 0);
     if (!risk || r() >= risk || !mayDie(state, c, spared)) continue;
     const cause = winter ? 'a winter chill' : ailing ? 'a long illness' : 'a fever';
-    events.push(fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}${c.title ? `, ${c.title},` : ''} has died of ${cause}, aged ${age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause, age }, cause: { type: 'rule', ref: 'life' } }));
+    events.push(fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}${c.title ? `, ${c.title},` : ''} has died of ${cause}, aged ${age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause, age, how: winter ? 'winter' : ailing ? 'illness' : 'fever' }, cause: { type: 'rule', ref: 'life' } }));
     changes.push({ op: 'character', id: c.id, alive: false, cause });
   }
   return { events, changes };

@@ -31,7 +31,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
+import { fileURLToPath, pathToFileURL } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, all) => (x.startsWith('--') ? [...a, [x.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true]] : a), []));
@@ -134,8 +134,8 @@ const base = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'c
 const cfg = { ...base, ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.effort ? { reasoningEffort: args.effort === 'default' ? '' : args.effort } : {}), ...(args.thinking ? { thinking: args.thinking } : {}), ...(args.mock ? { provider: 'mock' } : {}) };
 fs.writeFileSync(path.join(work, 'config.json'), JSON.stringify(cfg, null, 2));
 process.chdir(work);
-const game = await import(path.join(work, 'server/game.js'));
-const { extractJson } = await import(path.join(work, 'server/llm.js'));
+const game = await import(pathToFileURL(path.join(work, 'server/game.js')).href);
+const { extractJson } = await import(pathToFileURL(path.join(work, 'server/llm.js')).href);
 
 const report = []; const score = {};
 const add = (k, ok) => { score[k] = score[k] || [0, 0]; score[k][1]++; if (ok) score[k][0]++; };

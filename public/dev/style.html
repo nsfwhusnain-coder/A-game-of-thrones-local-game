@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>style tile</title>
+<link href="/fonts/fonts.css" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/theme.css">
+<style>
+  /* The STYLE TILE (GDD 21): every component of the maester's desk, laid out as one composed screen on the real map.
+     Positions are in rem, and the game's own root size makes 1920×1080 and 1366×768 the same picture at two scales.
+     ?house=stark|lannister|greyjoy|tyrell  shows the house's tint on the ribbon, the wax and the portrait's rim. */
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0e0b08; }
+  #table { position: fixed; inset: 0; background: #16232a url(assets/map.jpg) center / cover no-repeat; }
+  #table > .t-at { position: absolute; z-index: 2; }
+  #table > .wc-candle { position: absolute; inset: 0; z-index: 1; }
+  .t-row { display: flex; gap: .6rem; align-items: flex-start; }
+  /* the sample pages */
+  .t-ev h2 { font: 600 1.32rem/1.16 var(--wc-serif); font-variant-caps: small-caps; letter-spacing: .04em; margin: .25rem 0 .3rem; }
+  .t-meta { display: flex; align-items: center; gap: .4rem; font-size: .97rem; color: var(--ink-soft); margin-bottom: .45rem; }
+  .t-meta .ico { width: .95rem; height: .95rem; }
+  .t-lead { font-size: 1.04rem; line-height: 1.32; }
+  .t-det { list-style: none; margin: .55rem 0 0; padding: 0; font-size: .98rem; }
+  .t-det li { display: flex; justify-content: space-between; gap: 1rem; padding: .2rem 0; border-bottom: 1px dotted rgba(42, 29, 18, .32); }
+  .t-det li span:first-child { color: var(--ink-soft); } .t-det li b { font-weight: 500; text-align: right; }
+  .t-foot { display: flex; gap: .55rem; align-items: center; margin-top: .65rem; }
+  .t-dg .t-item { position: relative; padding: .32rem 0 .38rem; border-bottom: 1px solid rgba(42, 29, 18, .16); }
+  .t-dg .t-item h3 { font: 600 1.05rem/1.2 var(--wc-serif); font-variant-caps: small-caps; letter-spacing: .04em; }
+  .t-dg .t-item p { font-size: 1.02rem; line-height: 1.3; margin-top: .1rem; }
+  .t-dg .t-item { padding-left: 2.6rem; }
+  .t-dg .t-first { min-height: 3.2rem; }
+  .t-dg .wc-numeral { position: absolute; left: .1rem; top: .3rem; }
+  .t-dg .wc-numeral--leaf { top: .05rem; }
+  .t-dg .t-mean { font-style: italic; font-size: 1.02rem; line-height: 1.25; margin-top: .15rem; }
+  .t-dg .t-foot, .t-wl .t-foot { justify-content: space-between; align-items: flex-end; margin-top: .5rem; gap: 1rem; }
+  .t-dg .t-foot > div { flex: 1; min-width: 0; }
+  .t-wl .t-lead { margin-top: .35rem; }
+  .t-wl .t-foot i { font-size: .95rem; color: var(--ink-soft); }
+</style></head>
+<body>
+<div id="table">
+  <div class="wc-candle"></div>
+</div>
+<script type="module">
+import { icon } from '../js/ui/icons.js';
+import { HOUSES } from '../data/houses.js';
+import { CHARACTERS } from '../data/characters.js';
+import { applyHouseTheme } from '../js/ui/common.js';
+import { portraitURL } from '../js/ui/portrait.js';
+import { sigilURL } from '../js/sigils.js';
+
+const q = new URLSearchParams(location.search);
+const houseId = ['stark', 'lannister', 'greyjoy', 'tyrell'].includes(q.get('house')) ? q.get('house') : 'stark';
+const house = HOUSES.find((h) => h.id === houseId);
+const lord = CHARACTERS.find((c) => c.house === houseId && c.roles.includes('lord'));
+applyHouseTheme(house);
+const I = (n) => icon(n);
+const por = portraitURL({ ...lord, alive: true }, house, 256);
+const sig = sigilURL(house.sigil, 64);
+
+const other = houseId === 'lannister' ? 'Tyrell' : 'Lannister';
+const spark = (pts, cls = '', est = false) => { // six moons, drawn as a rough line; the estimated stretch is dashed
+  const max = Math.max(...pts), min = Math.min(...pts), w = 86, h = 26;
+  const xy = pts.map((v, i) => [2 + (i * (w - 4)) / (pts.length - 1), h - 3 - ((v - min) / (max - min || 1)) * (h - 8)]);
+  const d = xy.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join('');
+  const last = xy[xy.length - 1];
+  return `<svg class="wc-spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path class="${cls} ${est ? 'est' : ''}" d="${d}"/><circle cx="${last[0]}" cy="${last[1]}" r="2" class="${cls}" style="color:${cls === 'up' ? 'var(--verdigris-ink)' : cls === 'down' ? 'var(--madder-ink)' : 'var(--ink-iron)'}"/></svg>`;
+};
+
+document.getElementById('table').insertAdjacentHTML('beforeend', `
+  <!-- top left: the crest, the day and the three vitals -->
+  <div class="t-at" style="left:.6rem;top:.6rem">
+    <div class="t-row" style="align-items:stretch">
+      <div class="wc-oak wc-crest">
+        <span class="wc-ribbon"><img src="${sig}" alt=""></span>
+        <div><div class="wc-label">House ${house.name}</div><div class="wc-crest__date">15th of the 8th moon, 298 AC</div><div class="wc-crest__season">${I('sun')} Late summer · the days shorten</div></div>
+      </div>
+      <div class="wc-oak wc-vitals">
+        <div class="wc-vital">${I('coin')}<div><b>120,000</b><small>Coin</small></div><span class="wc-trend wc-trend--up">${I('up')}</span></div>
+        <div class="wc-vital">${I('swords')}<div><b>17,200</b><small>Men</small></div><span class="wc-trend wc-trend--flat">—</span></div>
+        <div class="wc-vital">${I('wheat')}<div><b>30 <span style="font:600 .87rem var(--wc-display);letter-spacing:.06em;color:var(--bone-dim)">moons</span></b><small>Food</small></div><span class="wc-trend wc-trend--down">${I('down')}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- top right: the Inbox seal, End turn and its reason, the menu; and the first coach mark -->
+  <div class="t-at" style="right:.6rem;top:.6rem">
+    <div class="t-row" style="align-items:center">
+      <button class="wc-seal" aria-label="Inbox: 3 matters await"><b>3</b></button>
+      <div class="wc-oak wc-endturn"><button class="wc-plate"><span>End turn</span>${I('play')}</button><div class="wc-endturn__why">next: <b>7 days</b> — the banners gather</div></div>
+      <button class="wc-btn wc-btn--icon is-on" aria-label="Menu" aria-expanded="true">${I('menu')}</button>
+    </div>
+  </div>
+  <div class="t-at" style="right:.6rem;top:5.7rem;width:8.9rem">
+    <div class="wc-coach"><i class="wc-coach__dot" style="margin-left:1.7rem"></i>
+      <div class="wc-slip" data-arrow="up" style="--arrow-x:1.4rem"><span class="wc-kicker">Tip 2 of 3</span>Then let the world move.</div></div>
+  </div>
+
+  <div class="t-at" style="right:.6rem;top:13.6rem">
+    <nav class="wc-oak wc-menu" aria-label="Menu">
+      <div class="wc-menu__head wc-label">The menu</div>
+      <button class="wc-menu__item">${I('crown')} Realm <kbd>R</kbd></button>
+      <button class="wc-menu__item">${I('weirwood')} People <kbd>P</kbd></button>
+      <button class="wc-menu__item">${I('scroll')} Chronicle <kbd>H</kbd></button>
+      <div class="wc-menu__quiet"><button title="Settings">${I('chain')}</button><button title="Help">${I('book')}</button><button title="Focus">${I('eye')}</button></div>
+    </nav>
+  </div>
+
+  <!-- left: the Chronicle opened, and the strip it grows from -->
+  <div class="t-at" style="left:.6rem;top:6.6rem">
+    <section class="wc-oak wc-chronicle">
+      <div class="wc-chronicle__head"><h2>Chronicle</h2><span class="wc-label">8th moon · <b>5 new</b></span></div>
+      <div class="wc-chronicle__filters"><button class="wc-chip is-on">${I('check')} Matters</button><button class="wc-chip">Mine</button><button class="wc-chip">War</button></div>
+      <div class="wc-chronicle__cards">
+        <article class="wc-card wc-tier-great"><h3 class="wc-card__head">The King’s progress reaches Winterfell</h3>
+          <p class="wc-card__body">King Robert rides in with the Queen and three hundred knights. Men say he will make Lord Eddard his Hand.</p>
+          <div class="wc-card__meta">${I('pin')}<span>15th of the 8th moon</span><span class="wc-chip wc-chip--vellum">Your house</span><a class="wc-card__more" href="#">Details ›</a></div></article>
+        <article class="wc-card wc-tier-major"><h3 class="wc-card__head">Robb Stark calls the banners</h3>
+          <p class="wc-card__body">Nineteen sworn houses are told to bring their men to Winterfell.</p>
+          <div class="wc-card__meta">${I('pin')}<span>13th of the 8th moon</span><a class="wc-card__more" href="#">Details ›</a></div></article>
+        <article class="wc-card wc-tier-news"><h3 class="wc-card__head">Lady Hornwood refuses Stark’s summons</h3>
+          <div class="wc-card__meta">${I('pin')}<span>11th of the 8th moon</span><a class="wc-card__more" href="#">Details ›</a></div></article>
+        <article class="wc-card wc-tier-minor"><h3 class="wc-card__head">Lord Bolton begins a market</h3></article>
+        <article class="wc-card wc-tier-meanwhile"><h3 class="wc-card__head">Lords ride to feasts and hunts across the Reach</h3></article>
+      </div>
+    </section>
+  </div>
+  <div class="t-at" style="left:.6rem;bottom:.6rem">
+    <section class="wc-oak wc-strip">
+      <div class="wc-strip__head"><span class="wc-label">Chronicle · <b>2 new</b></span><a href="#">All ›</a></div>
+      <ul class="wc-strip__lines"><li>${I('tier1')}Eleven northern houses answer Stark’s call</li><li>${I('tier1')}Lord Hoster Tully falls ill at Riverrun</li><li class="is-old">${I('pip')}Snow falls on the Wall</li></ul>
+    </section>
+  </div>
+
+  <!-- the centre: two pages laid on the table, and below them the ledger and the welcome -->
+  <div class="t-at" style="left:28.6rem;top:6.4rem;width:51.6rem">
+    <div class="t-row" style="gap:1.1rem;align-items:flex-start">
+      <article class="wc-vellum wc-corners-leaf t-ev" style="width:23.8rem;flex:none">
+        <div class="wc-kicker"><span class="rubric">Great</span> · battle</div>
+        <h2>Northmen scatter ironborn raiders on the Stony Shore</h2>
+        <div class="t-meta">${I('pin')}<span>12th of the 8th moon · The Stony Shore</span></div>
+        <p class="t-lead">Ser Rodrik’s riders caught three longships beached at dusk.</p>
+        <ul class="t-det"><li class="wc-loss"><span>Your losses</span><b class="wc-est">40 dead, 70 wounded</b></li><li class="wc-gain"><span>Their losses</span><b class="wc-est">110 dead, 23 taken</b></li></ul>
+        <div class="t-foot"><button class="wc-btn wc-btn--small wc-btn--gold">${I('pin')} Show on map</button><button class="wc-btn wc-btn--small">Ransom</button></div>
+      </article>
+      <section class="wc-vellum t-dg" style="width:26.7rem;flex:none">
+        <div class="wc-kicker" style="text-align:center">The maester’s report</div>
+        <h2 class="wc-title" style="margin-top:.15rem;font-size:1.3rem">The week of the 8th moon</h2>
+        <div class="wc-rule"></div>
+        <div class="t-item t-first"><span class="wc-numeral wc-numeral--leaf">1</span><h3>Eleven houses answer Stark’s call</h3></div>
+        <div class="t-item"><span class="wc-numeral">2</span><h3>The King’s progress reaches Winterfell</h3></div>
+        <div class="t-item"><span class="wc-numeral">3</span><h3>Lord Hoster Tully falls ill</h3></div>
+        <div class="t-foot"><div><div class="wc-kicker">Meanwhile…</div><p class="t-mean">Lords ride to feasts and hunts across the Reach.</p></div><button class="wc-btn wc-btn--gold">Continue ${I('play')}</button></div>
+      </section>
+    </div>
+    <div class="t-row" style="gap:1.1rem;align-items:flex-start;margin-top:.9rem">
+      <div class="wc-ledger" style="width:27.6rem;flex:none">
+        <div class="wc-tabs"><button class="wc-tab" aria-selected="true">Strength</button><button class="wc-tab" aria-selected="false">Economy</button><button class="wc-tab" aria-selected="false">Lands</button><button class="wc-tab" aria-selected="false">Wars</button></div>
+        <div class="wc-ledger__book"><div class="wc-ledger__page">
+          <table class="wc-table"><thead><tr><th>House</th><th>Power</th><th>Men</th><th>Six moons</th></tr></thead><tbody>
+            <tr><td><span class="wc-table__house">${other}</span><span class="wc-table__note">raven, 6 days old</span></td><td class="wc-est">71</td><td class="wc-est">52,000</td><td>${spark([40, 44, 43, 52, 58, 71], 'up', true)}</td></tr>
+            <tr class="is-you"><td><span class="wc-table__house">${house.name} <span class="wc-chip wc-chip--wax" style="vertical-align:.1em;padding-block:.08rem">You</span></span></td><td>58</td><td>17,200</td><td>${spark([30, 33, 38, 40, 47, 58], 'up')}</td></tr>
+            <tr><td><span class="wc-table__house">Martell</span><span class="wc-table__note">long unheard of</span></td><td class="wc-none">—</td><td class="wc-none">—</td><td></td></tr>
+          </tbody></table>
+        </div></div>
+      </div>
+      <section class="wc-vellum wc-corners-knot t-wl" style="width:22.9rem;flex:none">
+        <div class="wc-kicker" style="text-align:center">A game of thrones · 298 AC</div>
+        <h2 class="wc-title" style="margin-top:.2rem">Your situation</h2>
+        <p class="t-lead wc-lede"><span class="wc-initial" aria-hidden="true"><b>T</b></span><span class="wc-sr">T</span>he North is a third of the realm and holds a tenth of its people. Summer is ending, and in the North winter kills.</p>
+        <div class="t-foot"><i>You will not see this again.</i><button class="wc-btn wc-btn--gold">Begin ${I('play')}</button></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- bottom centre: the command bar with one order and its receipt -->
+  <div class="t-at" style="left:50%;bottom:.6rem;transform:translateX(-50%)">
+    <div class="wc-leather wc-cmd">
+      <div class="wc-cmd__orders"><span class="wc-order"><span>Send Ser Rodrik to hold the Stony Shore</span><span class="wc-receipt">${I('check')} Done</span></span></div>
+      <div class="wc-cmd__row"><label class="wc-input">${I('inkpot')}<input type="text" placeholder="Command your house…" aria-label="Command your house"></label><button class="wc-btn wc-btn--icon" aria-label="More">${I('plus')}</button></div>
+    </div>
+  </div>
+
+  <!-- bottom right: the ruler in the medallion, and a tooltip -->
+  <div class="t-at" style="right:.9rem;bottom:2.4rem">
+    <div class="t-row" style="align-items:flex-end">
+      <div class="wc-oak wc-nameplate" style="margin-bottom:.4rem"><b>${lord.name}</b><small>${lord.title}</small><span class="wc-mood">in good health</span></div>
+      <div class="wc-medallion wc-has-tip"><span class="wc-medallion__face"><img src="${por}" alt="${lord.name}"></span><i class="wc-medallion__jewel"></i>
+        <div class="wc-tooltip is-open" data-arrow="down" style="right:.2rem;bottom:calc(100% + 1.5rem);width:9rem;--arrow-x:4.9rem"><span class="wc-kicker">Your lord</span>Sworn to the North; your maester says he is well.</div></div>
+    </div>
+  </div>
+`);
+document.fonts.ready.then(() => { document.title = 'ready'; });
+</script>
+</body></html>

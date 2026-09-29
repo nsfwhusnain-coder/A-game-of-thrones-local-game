@@ -112,14 +112,18 @@ summary. Three plans answer it; each has its own work packages, files and accept
 | Phase | Plan | Work packages | What changes for the player |
 |---|---|---|---|
 | **N** | [18 — Headlines](18-headlines.md) | N1–N10 | every event one card: headline + 1–3 plain sentences, details folded; one card per story; a weekly digest; ranking that favours your own news |
-| **U** | [17 — Declutter](17-ui-declutter.md) | U1–U4, U8, U9 (U5–U7 → R) | a quiet HUD (date, 3 vitals, End turn, one inbox, one menu), three menu entries instead of eight docks, the command bar freed, contextual cards, first-run guidance that goes away, focus mode |
+| **U** | [17 — Declutter](17-ui-declutter.md), [21 — Art direction](21-art-direction.md) | U0 (the look), U1–U4, U8, U9 (U5–U7 → R) | a quiet HUD (date, 3 vitals, End turn, one inbox, one menu), three menu entries instead of eight docks, the command bar freed, contextual cards, first-run guidance that goes away, focus mode |
 | **R** | [19 — The State of the Realm](19-realm-ledger.md) | R1–R7 | a hidden-by-default ledger: every house's strength, coin, food, lands and trend, knowledge-filtered; rising and falling houses; the same numbers feed the minds and the council |
+
+**Status (2026-09-29):** U0 ✅ (art direction, pulled from F1: [21](21-art-direction.md), D-062; `public/css/theme.css`, `scripts/paint-ui.js`, `public/dev/style.html`).
 
 **Order:** N1 → N2 → N3 → N4 → N5 → N6 (the engine side of the headlines; the golden set first) · in parallel U1 → U2 →
 U3 (the HUD and the menu; U3 needs N6's cards for the headline strip) · R1 → R2 → R3 (the data and the filter), then
-N7–N10, U4, R4–R7, U8, U9. **Phase F is re-cut by U:** F2 (layout) and F5 (cards) are done as U1–U4; F1, F3, F4, F6,
+N7–N10, U4, R4–R7, U8, U9. **Phase F is re-cut by U:** F2 (layout) and F5 (cards) are done as U1–U4; F1 (partly done as U0), F3, F4, F6,
 F7, F8, F9 remain and follow U. Then E6–E8, G, H.
 
+**Status of Phase N (2026-09-29):** N1 ✅ N2 ✅ (Slice 1: the two shipped together on one branch and one PR, see
+`DECISIONS.md#D-059`; each keeps its own acceptance in [18](18-headlines.md) §5).
 **Status:** R1 ✅ R2 ✅ R3 ✅ (Slice 2) — the figures, what a house learns of the others, and `GET /api/games/:id/realm`
 (`public/js/engine/realm/`, `tests/realm-stats.test.js`, `tests/realm-view.test.js`, `tests/realm-http.test.js`;
 DECISIONS D-068–D-071). Nothing is on screen until R4.
@@ -139,7 +143,7 @@ DECISIONS D-068–D-071). Nothing is on screen until R4.
 
 | WP | Title | Depends | Size | Acceptance |
 |---|---|---|---|---|
-| F1 | Design tokens, components, SVG-only icons (remove emoji from markup) | — | M | checklist items 4, 12, 19 |
+| F1 | Design tokens, components, SVG-only icons (remove emoji from markup) | — | M | checklist items 4, 12, 19 — partly done as U0 (tokens, textures, components, icons; see [21](21-art-direction.md)) |
 | F2 | New layout: top bar, 4-item strip, corners, chronicle panel; the Book with tabs; settings tabs | F1 | L | checklist 1, 2, 15, 17 |
 | F3 | Command composer v2: receipts, clarification chips, counsel ideas, polish | B6, F2 | M | checklist 8, 9 |
 | F4 | Audience, letters, council panels v2 | B10, F2 | M | letters in flight shown; outcome chips |
