@@ -1,0 +1,701 @@
+[
+  {
+    "id": "g-battle-01", "archetype": "battle",
+    "facts": [
+      {"id":"f1.1","kind":"battle","actors":["roose_bolton","tywin_lannister"],"houses":["lannister","bolton"],"place":"frey","data":{"attacker":"host_bolton","defender":"host_lannister","winner":"host_lannister","loser":"host_bolton","winnerHouse":"lannister","loserHouse":"bolton","wiped":false,"lost":{"host_lannister":1500,"host_bolton":3100},"outcome":"victory","decided":["numbers and arms","generalship"],"how":"held the ford and threw the northmen back"},"importance":4,"title":"Lannister victorious near The Twins","text":"Lord Tywin's host defeated The northern foot."}
+    ],
+    "must": ["Tywin Lannister","Roose Bolton","Twins"], "mustNot": ["Jaime","Riverrun","Robb"], "maxWords": 12, "verb": "beats",
+    "reference": "Tywin Lannister beats Roose Bolton at the Twins",
+    "summary": "The northmen came at the Lannister line across the ford and were thrown back with heavy loss. Lord Tywin's host held the field."
+  },
+  {
+    "id": "g-battle-02", "archetype": "battle",
+    "facts": [
+      {"id":"f1.1","kind":"battle","actors":["robb_stark","kevan_lannister"],"houses":["stark","lannister"],"place":"tully","data":{"attacker":"host_stark","defender":"host_lannister_camp","winner":"host_stark","loser":"host_lannister_camp","winnerHouse":"stark","loserHouse":"lannister","wiped":false,"lost":{"host_stark":700,"host_lannister_camp":4200},"outcome":"crushing","surprise":true,"decided":["surprise"],"how":"fell on the camps by night"},"importance":5,"title":"Stark victorious near Riverrun","text":"The Young Wolf's host routed The siege camps."}
+    ],
+    "must": ["Robb Stark","Riverrun"], "mustNot": ["Jaime","Casterly Rock"], "maxWords": 12, "verb": "breaks",
+    "reference": "Robb Stark breaks the Lannister camps at Riverrun",
+    "summary": "The riders came down on the sleeping siege lines by night. Before dawn the besiegers were scattered."
+  },
+  {
+    "id": "g-battle-03", "archetype": "battle",
+    "facts": [
+      {"id":"f1.1","kind":"battle","actors":["addam_marbrand","edmure_tully"],"houses":["lannister","tully"],"place":"butterwell","data":{"attacker":"host_marbrand","defender":"host_tully","winner":null,"loser":null,"wiped":false,"lost":{"host_marbrand":1800,"host_tully":1700},"outcome":"drawn","decided":[],"how":"neither side would yield the field"},"importance":4,"title":"A bloody draw near Whitewalls","text":"The host of Lannister and The host of Tully fought near Whitewalls until neither could fight on."}
+    ],
+    "must": ["Addam Marbrand","Edmure Tully","Whitewalls"], "mustNot": ["Tywin","Robb"], "maxWords": 12, "verb": "fight",
+    "reference": "Addam Marbrand and Edmure Tully fight to a draw near Whitewalls",
+    "summary": "Neither would give way, and at dusk both drew off to count their dead."
+  },
+  {
+    "id": "g-battle-04", "archetype": "battle", "hard": ["party"],
+    "facts": [
+      {"id":"f1.1","kind":"battle","actors":["tywin_lannister","theon_greyjoy"],"houses":["lannister","stark"],"place":"butterwell","data":{"attacker":"host_lannister","defender":"host_stark_van","winner":"host_lannister","loser":"host_stark_van","winnerHouse":"lannister","loserHouse":"stark","wiped":false,"lost":{"host_lannister":1500,"host_stark_van":3100},"outcome":"crushing","caught":true,"decided":["numbers and arms","generalship"],"how":"broke the line at the first charge"},"importance":5,"title":"Lannister victorious near Whitewalls","text":"Lord Tywin's host routed The Stark van."}
+    ],
+    "must": ["Tywin Lannister","Whitewalls"], "mustNot": ["Robb"], "maxWords": 12, "verb": "beats",
+    "reference": "Tywin Lannister beats the Stark host near Whitewalls",
+    "summary": "The Stark line broke at the first charge and never re-formed. Theon Greyjoy commanded it."
+  },
+  {
+    "id": "g-slain-01", "archetype": "death-in-battle",
+    "facts": [
+      {"id":"f1.1","kind":"slain_in_battle","actors":["robb_stark"],"houses":["stark"],"place":"frey","data":{"cause":"killed in battle near The Twins","by":"tywin_lannister","how":"charged into the Lannister centre"},"importance":5,"text":"Robb Stark is slain — killed in battle near The Twins."}
+    ],
+    "must": ["Robb Stark","Tywin Lannister","Twins"], "mustNot": ["Jaime","Riverrun"], "maxWords": 12, "verb": "slain",
+    "reference": "Robb Stark slain by Tywin Lannister at the Twins",
+    "summary": "Robb charged into the Lannister centre and was cut down there."
+  },
+  {
+    "id": "g-slain-02", "archetype": "death-in-battle",
+    "facts": [
+      {"id":"f1.1","kind":"slain_in_battle","actors":["stevron_frey"],"houses":["frey"],"place":"butterwell","data":{"cause":"killed in battle near Whitewalls","by":"addam_marbrand","how":"caught in open ground by the first charge"},"importance":4,"text":"Ser Stevron Frey is slain — killed in battle near Whitewalls."}
+    ],
+    "must": ["Stevron Frey","Addam Marbrand","Whitewalls"], "mustNot": ["Walder","Robb"], "maxWords": 12, "verb": "slain",
+    "reference": "Ser Stevron Frey slain by Addam Marbrand at Whitewalls",
+    "summary": "The Frey column was caught on open ground, and their heir fell in the first Lannister charge."
+  },
+  {
+    "id": "g-slain-03", "archetype": "death-in-battle",
+    "facts": [
+      {"id":"f1.1","kind":"slain_in_battle","actors":["vardis_egen"],"houses":["arryn"],"place":"bloody_gate","data":{"cause":"killed in battle near The Bloody Gate","how":"held the gate against the clansmen"},"importance":4,"text":"Ser Vardis Egen is slain — killed in battle near The Bloody Gate."}
+    ],
+    "must": ["Vardis Egen","Bloody Gate"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "slain",
+    "reference": "Ser Vardis Egen slain at the Bloody Gate",
+    "summary": "Egen held the gate against the clansmen until he was killed."
+  },
+  {
+    "id": "g-slain-04", "archetype": "death-in-battle", "hard": ["byname"],
+    "facts": [
+      {"id":"f1.1","kind":"slain_in_battle","actors":["greatjon_umber"],"houses":["umber"],"place":"butterwell","data":{"cause":"killed in battle near Whitewalls","by":"gregor_clegane","how":"ridden down in the open"},"importance":4,"text":"Jon \"Greatjon\" Umber is slain — killed in battle near Whitewalls."}
+    ],
+    "must": ["Umber","Gregor Clegane","Whitewalls"], "mustNot": ["Smalljon"], "maxWords": 12, "verb": "slain",
+    "reference": "Lord Umber slain by Gregor Clegane near Whitewalls",
+    "summary": "Clegane's riders ran down the Umber column in open country. The lord fell at the head of it."
+  },
+  {
+    "id": "g-death-01", "archetype": "death-natural",
+    "facts": [
+      {"id":"f1.1","kind":"death","actors":["rickard_karstark"],"houses":["karstark"],"place":"karstark","data":{"cause":"old age","age":61,"how":"age"},"importance":4,"title":"Rickard Karstark is dead","text":"Rickard Karstark, Lord of Karhold, has died of old age, aged 61."},
+      {"id":"f1.2","kind":"succession","actors":["harrion_karstark"],"houses":["karstark"],"place":"karstark","importance":4,"text":"Harrion Karstark is now head of House Karstark."}
+    ],
+    "must": ["Rickard Karstark","Karhold"], "mustNot": ["Winterfell","Umber"], "maxWords": 12, "verb": "dies",
+    "reference": "Rickard Karstark dies of old age at Karhold",
+    "summary": "The old lord's years caught up with him. His son Harrion now holds the seat."
+  },
+  {
+    "id": "g-death-02", "archetype": "death-natural",
+    "facts": [
+      {"id":"f1.1","kind":"death","actors":["old_nan"],"houses":["stark"],"place":"stark","data":{"cause":"old age","age":95,"how":"age"},"importance":3,"title":"Old Nan is dead","text":"Old Nan, Nursemaid, has died of old age, aged 95."}
+    ],
+    "must": ["Old Nan","Winterfell"], "mustNot": ["Eddard","Robb"], "maxWords": 12, "verb": "dies",
+    "reference": "Old Nan dies at Winterfell",
+    "summary": "She had nursed three generations of Starks and died of old age."
+  },
+  {
+    "id": "g-death-03", "archetype": "death-natural",
+    "facts": [
+      {"id":"f1.1","kind":"death","actors":["luwin"],"houses":["stark"],"place":"stark","data":{"cause":"a fever","age":60,"how":"fever"},"importance":3,"title":"Maester Luwin is dead","text":"Maester Luwin, Maester of Winterfell, has died of a fever, aged 60."}
+    ],
+    "must": ["Luwin","Winterfell"], "mustNot": ["Eddard","Riverrun"], "maxWords": 12, "verb": "dies",
+    "reference": "Maester Luwin dies of a fever at Winterfell",
+    "summary": "The fever came on in the week, and the maester did not recover from it."
+  },
+  {
+    "id": "g-death-04", "archetype": "death-natural",
+    "facts": [
+      {"id":"f1.1","kind":"death","actors":["rodrik_cassel"],"houses":["stark"],"place":"stark","data":{"cause":"a festering wound","age":60,"how":"wound"},"importance":3,"title":"Ser Rodrik Cassel is dead","text":"Ser Rodrik Cassel's wound festered, and the maesters could not save him."}
+    ],
+    "must": ["Rodrik Cassel","Winterfell"], "mustNot": ["Eddard","Riverrun"], "maxWords": 12, "verb": "dies",
+    "reference": "Ser Rodrik Cassel dies of his wound at Winterfell",
+    "summary": "His wound festered, and the maesters could not save him."
+  },
+  {
+    "id": "g-exec-01", "archetype": "execution",
+    "facts": [
+      {"id":"f1.1","kind":"executed","actors":["amory_lorch"],"houses":["lannister"],"place":"stark","data":{"cause":"beheaded for murder","by":"eddard_stark","how":"beheaded"},"importance":5,"text":"Ser Amory Lorch is put to death — beheaded for murder."}
+    ],
+    "must": ["Eddard Stark","Amory Lorch","Winterfell"], "mustNot": ["Robb","Riverrun"], "maxWords": 12, "verb": "beheads",
+    "reference": "Eddard Stark beheads Ser Amory Lorch at Winterfell",
+    "summary": "The knight was condemned for murder and beheaded that day."
+  },
+  {
+    "id": "g-exec-02", "archetype": "execution",
+    "facts": [
+      {"id":"f1.1","kind":"executed","actors":["gerold_dayne"],"houses":["dayne"],"place":"tarly","data":{"cause":"hanged for raiding","by":"randyll_tarly","how":"hanged"},"importance":5,"text":"Ser Gerold Dayne is put to death — hanged for raiding."}
+    ],
+    "must": ["Gerold Dayne","Randyll Tarly","Horn Hill"], "mustNot": ["Mace","Highgarden"], "maxWords": 12, "verb": "hanged",
+    "reference": "Ser Gerold Dayne hanged by Randyll Tarly at Horn Hill",
+    "summary": "The raider was condemned by the lord of the castle and hanged."
+  },
+  {
+    "id": "g-exec-03", "archetype": "execution",
+    "facts": [
+      {"id":"f1.1","kind":"executed","actors":["dontos_hollard"],"houses":["baratheon"],"place":"baratheon","data":{"cause":"beheaded on the King's word","by":"ilyn_payne","how":"beheaded"},"importance":5,"text":"Ser Dontos Hollard is put to death — beheaded on the King's word."}
+    ],
+    "must": ["Ilyn Payne","Dontos Hollard","King's Landing"], "mustNot": ["Eddard","Winterfell"], "maxWords": 12, "verb": "beheads",
+    "reference": "Ilyn Payne beheads Ser Dontos Hollard at King's Landing",
+    "summary": "The sentence was carried out at once by the royal justice."
+  },
+  {
+    "id": "g-capture-01", "archetype": "capture",
+    "facts": [
+      {"id":"f1.1","kind":"battle","actors":["robb_stark","jaime_lannister"],"houses":["stark","lannister"],"place":"tully","data":{"attacker":"host_stark_riders","defender":"host_lannister_jaime","winner":"host_stark_riders","loser":"host_lannister_jaime","winnerHouse":"stark","loserHouse":"lannister","wiped":false,"lost":{"host_stark_riders":500,"host_lannister_jaime":3000},"outcome":"crushing","surprise":true,"decided":["surprise"],"how":"fell on the camp from the trees at night"},"importance":5,"title":"Stark victorious near Riverrun","text":"Robb Stark's riders routed The Kingslayer's host; Jaime Lannister was taken captive."},
+      {"id":"f1.2","kind":"captured_in_battle","actors":["jaime_lannister"],"houses":["lannister"],"place":"tully","data":{"by":"robb_stark","note":"Taken captive in battle near Riverrun","how":"taken with his household knights"},"importance":5,"text":"Ser Jaime Lannister is taken captive on the field."}
+    ],
+    "must": ["Jaime Lannister","Robb Stark"], "mustNot": ["Tywin","Casterly Rock"], "maxWords": 12, "verb": "captured",
+    "reference": "Jaime Lannister captured by Robb Stark near Riverrun",
+    "summary": "The riders fell on the Lannister camp from the trees at night. Jaime was taken with his household knights."
+  },
+  {
+    "id": "g-capture-02", "archetype": "capture",
+    "facts": [
+      {"id":"f1.1","kind":"captured_in_battle","actors":["theon_greyjoy"],"houses":["greyjoy"],"place":"butterwell","data":{"by":"tywin_lannister","note":"Taken captive in battle near Whitewalls","how":"taken when the line broke"},"importance":4,"text":"Theon Greyjoy is taken captive on the field."}
+    ],
+    "must": ["Theon Greyjoy","Tywin Lannister","Whitewalls"], "mustNot": ["Balon","Pyke"], "maxWords": 12, "verb": "captured",
+    "reference": "Theon Greyjoy captured by Tywin Lannister near Whitewalls",
+    "summary": "He was taken when the Stark line broke."
+  },
+  {
+    "id": "g-capture-03", "archetype": "capture",
+    "facts": [
+      {"id":"f1.1","kind":"captured","actors":["edmure_tully"],"houses":["tully"],"place":"darry","data":{"by":"lannister","note":"Taken in battle at the fords"},"importance":4,"text":"Edmure Tully is taken captive and held by House Lannister."}
+    ],
+    "must": ["Edmure Tully","Darry"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "captured",
+    "reference": "Edmure Tully captured by the Lannisters at Darry",
+    "summary": "He was taken at the fords and is held by the enemy now."
+  },
+  {
+    "id": "g-siege-01", "archetype": "siege-begun",
+    "facts": [
+      {"id":"f1.1","kind":"siege_begun","actors":["jaime_lannister"],"houses":["lannister","tully"],"place":"tully","data":{"holding":"tully","by":"lannister","men":15000},"importance":4,"title":"The siege of Riverrun","text":"The Host of the West (15,000 men) sits before the walls of Riverrun."}
+    ],
+    "must": ["Jaime Lannister","Riverrun"], "mustNot": ["Tywin","Robb"], "maxWords": 12, "verb": "besieges",
+    "reference": "Jaime Lannister besieges Riverrun",
+    "summary": "Some fifteen thousand Lannister men now sit before the walls of the castle. The Tully garrison is shut inside."
+  },
+  {
+    "id": "g-siege-02", "archetype": "siege-begun",
+    "facts": [
+      {"id":"f1.1","kind":"siege_begun","actors":["gregor_clegane"],"houses":["clegane","whent"],"place":"whent","data":{"holding":"whent","by":"clegane","men":3000},"importance":3,"title":"The siege of Harrenhal","text":"The Mountain's Men (3,000 men) sits before the walls of Harrenhal."}
+    ],
+    "must": ["Gregor Clegane","Harrenhal"], "mustNot": ["Tywin","Robb"], "maxWords": 12, "verb": "lays",
+    "reference": "Gregor Clegane lays siege to Harrenhal",
+    "summary": "About three thousand men have drawn up before the walls of the old castle."
+  },
+  {
+    "id": "g-siege-03", "archetype": "siege-begun", "hard": ["suffix-house"],
+    "facts": [
+      {"id":"f1.1","kind":"siege_begun","actors":["stannis_baratheon"],"houses":["baratheon_ds","baratheon_se"],"place":"baratheon_se","data":{"holding":"baratheon_se","by":"baratheon_ds","men":4000},"importance":4,"title":"The siege of Storm's End","text":"The Dragonstone Host (4,000 men) sits before the walls of Storm's End."}
+    ],
+    "must": ["Stannis Baratheon","Storm's End"], "mustNot": ["Renly","Tyrell"], "maxWords": 12, "verb": "besieges",
+    "reference": "Stannis Baratheon besieges Storm's End",
+    "summary": "A host from Dragonstone sits before the gates, and the castle's gates are closed against it."
+  },
+  {
+    "id": "g-fell-01", "archetype": "siege-fell",
+    "facts": [
+      {"id":"f1.1","kind":"holding_fell","actors":["tywin_lannister","shella_whent"],"houses":["lannister","whent"],"place":"whent","data":{"holding":"whent","by":"lannister","how":"starved","terms":"yield_and_swear","kept":true},"importance":4,"title":"Harrenhal yields","text":"Harrenhal yields, starved, to The Host of the West. House Lannister holds it now."}
+    ],
+    "must": ["Harrenhal","Tywin Lannister"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "falls",
+    "reference": "Harrenhal falls to Tywin Lannister",
+    "summary": "The stores ran out before relief came. Lady Whent gave up the castle, and the Lannisters hold it now."
+  },
+  {
+    "id": "g-fell-02", "archetype": "siege-fell", "hard": ["suffix-house"],
+    "facts": [
+      {"id":"f1.1","kind":"holding_fell","actors":["stannis_baratheon","cortnay_penrose"],"houses":["baratheon_ds","baratheon_se"],"place":"baratheon_se","data":{"holding":"baratheon_se","by":"baratheon_ds","how":"betrayed","terms":null,"kept":false},"importance":4,"title":"Storm's End betrayed","text":"Storm's End is betrayed: a postern opens in the night, and House Baratheon of Dragonstone holds it by dawn."}
+    ],
+    "must": ["Storm's End","Stannis Baratheon"], "mustNot": ["Renly","Tyrell"], "maxWords": 12, "verb": "betrayed",
+    "reference": "Storm's End betrayed to Stannis Baratheon in the night",
+    "summary": "A postern was opened from within, and the walls were held by dawn."
+  },
+  {
+    "id": "g-fell-03", "archetype": "siege-fell",
+    "facts": [
+      {"id":"f1.1","kind":"storm_assault","actors":["gregor_clegane"],"houses":["clegane","darry"],"place":"darry","data":{"holding":"darry","by":"clegane","carried":true,"lost":400,"odds":1.3},"importance":4,"title":"Darry is stormed","text":"The Mountain's Men carries the walls of Darry by storm. House Clegane holds it now."}
+    ],
+    "must": ["Gregor Clegane","Darry"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "storms",
+    "reference": "Gregor Clegane storms Darry",
+    "summary": "The walls were carried at dawn with ladders and rams. The attackers lost some four hundred men on them."
+  },
+  {
+    "id": "g-muster-01", "archetype": "muster",
+    "facts": [
+      {"id":"f1.1","kind":"levies_called","actors":["eddard_stark"],"houses":["stark","bolton","karstark","umber","mormont","glover","manderly","reed","tallhart","hornwood","cerwyn","dustin","ryswell","flint","locke","forrester","wull","norrey","liddle","crowl"],"place":"stark","data":{"vassals":["bolton","karstark","umber","mormont","glover","manderly","reed","tallhart","hornwood","cerwyn","dustin","ryswell","flint","locke","forrester","wull","norrey","liddle","crowl"],"muster":"stark"},"importance":5,"text":"House Stark calls its banners: 19 sworn houses are summoned to Winterfell."}
+    ],
+    "must": ["Eddard Stark","Winterfell"], "mustNot": ["Barristan","Robert","Riverrun"], "maxWords": 12, "verb": "calls",
+    "reference": "Eddard Stark calls the northern banners to Winterfell",
+    "summary": "Nineteen sworn houses are told to bring their men to the castle."
+  },
+  {
+    "id": "g-muster-02", "archetype": "muster", "hard": ["byname"],
+    "facts": [
+      {"id":"f1.1","kind":"host_formed","actors":["greatjon_umber"],"houses":["umber"],"place":"umber","data":{"party":"host_umber","men":150,"kind":"host"},"importance":3,"text":"Host of House Umber (150 men) is raised at Last Hearth."},
+      {"id":"f1.2","kind":"call_answered","actors":["greatjon_umber"],"houses":["umber","stark"],"place":"umber","data":{"men":2000,"party":"host_umber","to":"stark","depart":12},"importance":3,"title":"House Umber answers the call","text":"Jon \"Greatjon\" Umber answers the call with 2,000 men; they gather at Last Hearth and march for The Banners of Stark in about 12 days."}
+    ],
+    "must": ["Greatjon Umber","Last Hearth"], "mustNot": ["Smalljon","Karstark"], "maxWords": 12, "verb": "raises",
+    "reference": "Greatjon Umber raises his men at Last Hearth",
+    "summary": "Lord Umber's men are gathering at his seat. Some two thousand will march for Winterfell once they are all in."
+  },
+  {
+    "id": "g-muster-03", "archetype": "muster",
+    "facts": [
+      {"id":"f1.1","kind":"levies_called","actors":["lysa_arryn"],"houses":["arryn"],"place":"arryn","data":{"party":"host_arryn","men":9977,"now":1200},"importance":4,"text":"House Arryn calls up 9,977 levies at The Eyrie; 8,777 of them are still coming in from the fields."}
+    ],
+    "must": ["Lysa Arryn","Eyrie"], "mustNot": ["Robb","Riverrun"], "maxWords": 12, "verb": "raises",
+    "reference": "Lysa Arryn raises the Vale's banners at the Eyrie",
+    "summary": "Nearly ten thousand men are called to the castle. Nothing yet says against whom they will march."
+  },
+  {
+    "id": "g-muster-04", "archetype": "muster", "hard": ["free-folk"],
+    "facts": [
+      {"id":"f1.1","kind":"levies_called","actors":["mance_rayder"],"houses":["free_folk"],"place":"free_folk","data":{"party":"free_folk_host","men":45000,"now":6000},"importance":4,"text":"House The Free Folk calls up 45,000 levies at Mance Rayder's host; 39,000 of them are still coming in from the fields."},
+      {"id":"f1.2","kind":"host_formed","actors":["mance_rayder"],"houses":["free_folk"],"place":"free_folk","data":{"party":"free_folk_host","men":6000,"kind":"host"},"importance":3,"text":"The Host of Mance Rayder (6,000 men) is raised at Mance Rayder's host."}
+    ],
+    "must": ["Mance Rayder"], "mustNot": ["Winterfell","Robb"], "maxWords": 12, "verb": "gathers",
+    "reference": "Mance Rayder gathers the wildlings beyond the Wall",
+    "summary": "A great host of wildlings is answering his call."
+  },
+  {
+    "id": "g-muster-05", "archetype": "muster", "hard": ["21-facts"],
+    "facts": [
+      {"id":"f1.1","kind":"levies_called","actors":["eddard_stark"],"houses":["stark","bolton","karstark","umber","mormont","glover","manderly","reed","tallhart","hornwood","cerwyn","dustin","ryswell","flint","locke","forrester","wull","norrey","liddle","crowl"],"place":"stark","data":{"vassals":["bolton","karstark","umber","mormont","glover","manderly","reed","tallhart","hornwood","cerwyn","dustin","ryswell","flint","locke","forrester","wull","norrey","liddle","crowl"],"muster":"stark"},"importance":5,"text":"House Stark calls its banners: 19 sworn houses are summoned to Winterfell."},
+      {"id":"f1.2","kind":"call_answered","actors":["roose_bolton"],"houses":["bolton","stark"],"place":"bolton","data":{"men":2000,"party":"host_bolton","to":"stark","depart":8},"importance":3,"title":"House Bolton answers the call","text":"Roose Bolton answers the call with 2,000 men; they gather at The Dreadfort and march for The Banners of Stark in about 8 days."},
+      {"id":"f1.3","kind":"call_answered","actors":["rickard_karstark"],"houses":["karstark","stark"],"place":"karstark","data":{"men":2000,"party":"host_karstark","to":"stark","depart":11},"importance":3,"title":"House Karstark answers the call","text":"Rickard Karstark answers the call with 2,000 men; they gather at Karhold and march for The Banners of Stark in about 11 days."},
+      {"id":"f1.4","kind":"call_answered","actors":["greatjon_umber"],"houses":["umber","stark"],"place":"umber","data":{"men":2000,"party":"host_umber","to":"stark","depart":14},"importance":3,"title":"House Umber answers the call","text":"Jon \"Greatjon\" Umber answers the call with 2,000 men; they gather at Last Hearth and march for The Banners of Stark in about 14 days."},
+      {"id":"f1.5","kind":"call_answered","actors":["maege_mormont"],"houses":["mormont","stark"],"place":"mormont","data":{"men":550,"party":"host_mormont","to":"stark","depart":17},"importance":3,"title":"House Mormont answers the call","text":"Maege Mormont answers the call with 550 men; they gather at Bear Island and march for The Banners of Stark in about 17 days."},
+      {"id":"f1.6","kind":"call_answered","actors":["galbart_glover"],"houses":["glover","stark"],"place":"glover","data":{"men":550,"party":"host_glover","to":"stark","depart":20},"importance":3,"title":"House Glover answers the call","text":"Galbart Glover answers the call with 550 men; they gather at Deepwood Motte and march for The Banners of Stark in about 20 days."},
+      {"id":"f1.7","kind":"call_answered","actors":["wyman_manderly"],"houses":["manderly","stark"],"place":"manderly","data":{"men":2000,"party":"host_manderly","to":"stark","depart":9},"importance":3,"title":"House Manderly answers the call","text":"Wyman Manderly answers the call with 2,000 men; they gather at White Harbor and march for The Banners of Stark in about 9 days."},
+      {"id":"f1.8","kind":"call_answered","actors":["howland_reed"],"houses":["reed","stark"],"place":"reed","data":{"men":450,"party":"host_reed","to":"stark","depart":12},"importance":3,"title":"House Reed answers the call","text":"Howland Reed answers the call with 450 men; they gather at Greywater Watch and march for The Banners of Stark in about 12 days."},
+      {"id":"f1.9","kind":"call_answered","actors":["helman_tallhart"],"houses":["tallhart","stark"],"place":"tallhart","data":{"men":550,"party":"host_tallhart","to":"stark","depart":15},"importance":3,"title":"House Tallhart answers the call","text":"Helman Tallhart answers the call with 550 men; they gather at Torrhen's Square and march for The Banners of Stark in about 15 days."},
+      {"id":"f1.10","kind":"call_answered","actors":["donella_hornwood"],"houses":["hornwood","stark"],"place":"hornwood","data":{"men":550,"party":"host_hornwood","to":"stark","depart":18},"importance":3,"title":"House Hornwood answers the call","text":"Donella Hornwood answers the call with 550 men; they gather at Hornwood and march for The Banners of Stark in about 18 days."},
+      {"id":"f1.11","kind":"call_answered","actors":["medger_cerwyn"],"houses":["cerwyn","stark"],"place":"cerwyn","data":{"men":400,"party":"host_cerwyn","to":"stark","depart":21},"importance":3,"title":"House Cerwyn answers the call","text":"Medger Cerwyn answers the call with 400 men; they gather at Castle Cerwyn and march for The Banners of Stark in about 21 days."},
+      {"id":"f1.12","kind":"call_answered","actors":["barbrey_dustin"],"houses":["dustin","stark"],"place":"dustin","data":{"men":500,"party":"host_dustin","to":"stark","depart":10},"importance":3,"title":"House Dustin answers the call","text":"Barbrey Dustin answers the call with 500 men; they gather at Barrowton and march for The Banners of Stark in about 10 days."},
+      {"id":"f1.13","kind":"call_answered","actors":["rodrik_ryswell"],"houses":["ryswell","stark"],"place":"ryswell","data":{"men":350,"party":"host_ryswell","to":"stark","depart":13},"importance":3,"title":"House Ryswell answers the call","text":"Rodrik Ryswell answers the call with 350 men; they gather at The Rills and march for The Banners of Stark in about 13 days."},
+      {"id":"f1.14","kind":"call_answered","actors":["rodwell_flint"],"houses":["flint","stark"],"place":"flint","data":{"men":550,"party":"host_flint","to":"stark","depart":16},"importance":3,"title":"House Flint answers the call","text":"Rodwell Flint answers the call with 550 men; they gather at Widow's Watch and march for The Banners of Stark in about 16 days."},
+      {"id":"f1.15","kind":"call_answered","actors":["jonnel_locke"],"houses":["locke","stark"],"place":"locke","data":{"men":400,"party":"host_locke","to":"stark","depart":19},"importance":3,"title":"House Locke answers the call","text":"Jonnel Locke answers the call with 400 men; they gather at Oldcastle and march for The Banners of Stark in about 19 days."},
+      {"id":"f1.16","kind":"call_answered","actors":["donnor_forrester"],"houses":["forrester","stark"],"place":"forrester","data":{"men":350,"party":"host_forrester","to":"stark","depart":8},"importance":3,"title":"House Forrester answers the call","text":"Donnor Forrester answers the call with 350 men; they gather at Ironrath and march for The Banners of Stark in about 8 days."},
+      {"id":"f1.17","kind":"call_answered","actors":["rickard_wull"],"houses":["wull","stark"],"place":"wull","data":{"men":400,"party":"host_wull","to":"stark","depart":11},"importance":3,"title":"House Wull answers the call","text":"Rickard Wull answers the call with 400 men; they gather at Wull Mountains and march for The Banners of Stark in about 11 days."},
+      {"id":"f1.18","kind":"call_answered","actors":["torrhen_norrey"],"houses":["norrey","stark"],"place":"norrey","data":{"men":450,"party":"host_norrey","to":"stark","depart":14},"importance":3,"title":"House Norrey answers the call","text":"Torrhen Norrey answers the call with 450 men; they gather at The Norrey and march for The Banners of Stark in about 14 days."},
+      {"id":"f1.19","kind":"call_answered","actors":["edwyle_liddle"],"houses":["liddle","stark"],"place":"liddle","data":{"men":350,"party":"host_liddle","to":"stark","depart":17},"importance":3,"title":"House Liddle answers the call","text":"Edwyle Liddle answers the call with 350 men; they gather at Liddle Hills and march for The Banners of Stark in about 17 days."},
+      {"id":"f1.20","kind":"call_answered","actors":["jonnel_crowl"],"houses":["crowl","stark"],"place":"crowl","data":{"men":400,"party":"host_crowl","to":"stark","depart":20},"importance":3,"title":"House Crowl answers the call","text":"Jonnel Crowl answers the call with 400 men; they gather at Deepdown and march for The Banners of Stark in about 20 days."},
+      {"id":"f1.21","kind":"host_formed","actors":["eddard_stark"],"houses":["stark"],"place":"stark","data":{"party":"host_stark","men":4000,"kind":"host"},"importance":3,"text":"The Banners of Stark (4,000 men) is raised at Winterfell."}
+    ],
+    "must": ["Stark"], "mustNot": ["Barristan","Robert"], "maxWords": 12, "verb": "answer",
+    "reference": "Nineteen northern houses answer Stark's call",
+    "summary": "The Umbers, Manderlys, Karstarks and Boltons gathered their men and took the road to Winterfell. Each lord brought what his lands could spare."
+  },
+  {
+    "id": "g-march-01", "archetype": "march",
+    "facts": [
+      {"id":"f1.1","kind":"set_out","actors":["rickard_karstark"],"houses":["karstark","stark"],"place":"karstark","data":{"party":"host_karstark","to":"stark","eta":20,"days":20},"importance":2,"title":"Host of House Karstark sets out","text":"Host of House Karstark, 1,800 strong, sets out from Karhold for The Banners of Stark (~20 days)."},
+      {"id":"f1.2","kind":"set_out","actors":["greatjon_umber"],"houses":["umber","stark"],"place":"umber","data":{"party":"host_umber","to":"stark","eta":27,"days":27},"importance":2,"title":"Host of House Umber sets out","text":"Host of House Umber, 1,800 strong, sets out from Last Hearth for The Banners of Stark (~27 days)."},
+      {"id":"f1.3","kind":"set_out","actors":["wyman_manderly"],"houses":["manderly","stark"],"place":"manderly","data":{"party":"host_manderly","to":"stark","eta":34,"days":34},"importance":2,"title":"Host of House Manderly sets out","text":"Host of House Manderly, 3,150 strong, sets out from White Harbor for The Banners of Stark (~34 days)."},
+      {"id":"f1.4","kind":"set_out","actors":["jonnel_locke"],"houses":["locke","stark"],"place":"locke","data":{"party":"host_locke","to":"stark","eta":41,"days":41},"importance":2,"title":"Host of House Locke sets out","text":"Host of House Locke, 378 strong, sets out from Oldcastle for The Banners of Stark (~41 days)."},
+      {"id":"f1.5","kind":"set_out","actors":["rickard_wull"],"houses":["wull","stark"],"place":"wull","data":{"party":"host_wull","to":"stark","eta":48,"days":48},"importance":2,"title":"Host of House Wull sets out","text":"Host of House Wull, 369 strong, sets out from Wull Mountains for The Banners of Stark (~48 days)."},
+      {"id":"f1.6","kind":"set_out","actors":["barbrey_dustin"],"houses":["dustin","stark"],"place":"dustin","data":{"party":"host_dustin","to":"stark","eta":25,"days":25},"importance":2,"title":"Host of House Dustin sets out","text":"Host of House Dustin, 441 strong, sets out from Barrowton for The Banners of Stark (~25 days)."}
+    ],
+    "must": ["Winterfell"], "mustNot": ["Barristan","Riverrun"], "maxWords": 12, "verb": "march",
+    "reference": "Six northern houses march for Winterfell",
+    "summary": "Karstark, Umber and Manderly were the first on the road, and the Karstarks have the longest way to come."
+  },
+  {
+    "id": "g-march-02", "archetype": "march",
+    "facts": [
+      {"id":"f1.1","kind":"set_out","actors":["rickard_karstark"],"houses":["karstark","stark"],"place":"karstark","data":{"party":"host_karstark","to":"stark","eta":48,"days":48},"importance":2,"title":"Host of House Karstark sets out","text":"Host of House Karstark, 1,796 strong, sets out from Karhold for The Banners of Stark (~48 days)."}
+    ],
+    "must": ["Karstark"], "mustNot": ["Umber","Riverrun"], "maxWords": 12, "verb": "marches",
+    "reference": "Lord Karstark marches south with his host",
+    "summary": "The road to Winterfell is long, and the host will be on it for the better part of two months."
+  },
+  {
+    "id": "g-march-03", "archetype": "march",
+    "facts": [
+      {"id":"f1.1","kind":"set_out","actors":["alester_florent"],"houses":["florent","tyrell"],"place":"florent","data":{"party":"rider_florent","to":"tyrell","days":6},"importance":1,"text":"Alester Florent leaves Brightwater Keep with 110 knights and riders under the Florent banner, to pay his respects to Mace Tyrell at Highgarden."}
+    ],
+    "must": ["Alester Florent","Highgarden"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "rides",
+    "reference": "Alester Florent rides to Highgarden",
+    "summary": "He goes to pay his respects to the lord of Highgarden."
+  },
+  {
+    "id": "g-march-04", "archetype": "march", "hard": ["21-same-kind"],
+    "facts": [
+      {"id":"f1.1","kind":"set_out","actors":["roose_bolton"],"houses":["bolton","stark"],"place":"bolton","data":{"party":"host_bolton","to":"stark","eta":20,"days":20},"importance":2,"title":"Host of House Bolton sets out","text":"Host of House Bolton, 2,250 strong, sets out from The Dreadfort for The Banners of Stark (~20 days)."},
+      {"id":"f1.2","kind":"set_out","actors":["rickard_karstark"],"houses":["karstark","stark"],"place":"karstark","data":{"party":"host_karstark","to":"stark","eta":27,"days":27},"importance":2,"title":"Host of House Karstark sets out","text":"Host of House Karstark, 1,800 strong, sets out from Karhold for The Banners of Stark (~27 days)."},
+      {"id":"f1.3","kind":"set_out","actors":["greatjon_umber"],"houses":["umber","stark"],"place":"umber","data":{"party":"host_umber","to":"stark","eta":34,"days":34},"importance":2,"title":"Host of House Umber sets out","text":"Host of House Umber, 1,800 strong, sets out from Last Hearth for The Banners of Stark (~34 days)."},
+      {"id":"f1.4","kind":"set_out","actors":["maege_mormont"],"houses":["mormont","stark"],"place":"mormont","data":{"party":"host_mormont","to":"stark","eta":41,"days":41},"importance":2,"title":"Host of House Mormont sets out","text":"Host of House Mormont, 504 strong, sets out from Bear Island for The Banners of Stark (~41 days)."},
+      {"id":"f1.5","kind":"set_out","actors":["galbart_glover"],"houses":["glover","stark"],"place":"glover","data":{"party":"host_glover","to":"stark","eta":48,"days":48},"importance":2,"title":"Host of House Glover sets out","text":"Host of House Glover, 495 strong, sets out from Deepwood Motte for The Banners of Stark (~48 days)."},
+      {"id":"f1.6","kind":"set_out","actors":["wyman_manderly"],"houses":["manderly","stark"],"place":"manderly","data":{"party":"host_manderly","to":"stark","eta":25,"days":25},"importance":2,"title":"Host of House Manderly sets out","text":"Host of House Manderly, 3,150 strong, sets out from White Harbor for The Banners of Stark (~25 days)."},
+      {"id":"f1.7","kind":"set_out","actors":["howland_reed"],"houses":["reed","stark"],"place":"reed","data":{"party":"host_reed","to":"stark","eta":32,"days":32},"importance":2,"title":"Host of House Reed sets out","text":"Host of House Reed, 387 strong, sets out from Greywater Watch for The Banners of Stark (~32 days)."},
+      {"id":"f1.8","kind":"set_out","actors":["helman_tallhart"],"houses":["tallhart","stark"],"place":"tallhart","data":{"party":"host_tallhart","to":"stark","eta":39,"days":39},"importance":2,"title":"Host of House Tallhart sets out","text":"Host of House Tallhart, 473 strong, sets out from Torrhen's Square for The Banners of Stark (~39 days)."},
+      {"id":"f1.9","kind":"set_out","actors":["donella_hornwood"],"houses":["hornwood","stark"],"place":"hornwood","data":{"party":"host_hornwood","to":"stark","eta":46,"days":46},"importance":2,"title":"Host of House Hornwood sets out","text":"Host of House Hornwood, 482 strong, sets out from Hornwood for The Banners of Stark (~46 days)."},
+      {"id":"f1.10","kind":"set_out","actors":["medger_cerwyn"],"houses":["cerwyn","stark"],"place":"cerwyn","data":{"party":"host_cerwyn","to":"stark","eta":23,"days":23},"importance":2,"title":"Host of House Cerwyn sets out","text":"Host of House Cerwyn, 378 strong, sets out from Castle Cerwyn for The Banners of Stark (~23 days)."},
+      {"id":"f1.11","kind":"set_out","actors":["barbrey_dustin"],"houses":["dustin","stark"],"place":"dustin","data":{"party":"host_dustin","to":"stark","eta":30,"days":30},"importance":2,"title":"Host of House Dustin sets out","text":"Host of House Dustin, 441 strong, sets out from Barrowton for The Banners of Stark (~30 days)."},
+      {"id":"f1.12","kind":"set_out","actors":["rodrik_ryswell"],"houses":["ryswell","stark"],"place":"ryswell","data":{"party":"host_ryswell","to":"stark","eta":37,"days":37},"importance":2,"title":"Host of House Ryswell sets out","text":"Host of House Ryswell, 311 strong, sets out from The Rills for The Banners of Stark (~37 days)."},
+      {"id":"f1.13","kind":"set_out","actors":["rodwell_flint"],"houses":["flint","stark"],"place":"flint","data":{"party":"host_flint","to":"stark","eta":44,"days":44},"importance":2,"title":"Host of House Flint sets out","text":"Host of House Flint, 504 strong, sets out from Widow's Watch for The Banners of Stark (~44 days)."},
+      {"id":"f1.14","kind":"set_out","actors":["jonnel_locke"],"houses":["locke","stark"],"place":"locke","data":{"party":"host_locke","to":"stark","eta":21,"days":21},"importance":2,"title":"Host of House Locke sets out","text":"Host of House Locke, 378 strong, sets out from Oldcastle for The Banners of Stark (~21 days)."},
+      {"id":"f1.15","kind":"set_out","actors":["donnor_forrester"],"houses":["forrester","stark"],"place":"forrester","data":{"party":"host_forrester","to":"stark","eta":28,"days":28},"importance":2,"title":"Host of House Forrester sets out","text":"Host of House Forrester, 306 strong, sets out from Ironrath for The Banners of Stark (~28 days)."},
+      {"id":"f1.16","kind":"set_out","actors":["rickard_wull"],"houses":["wull","stark"],"place":"wull","data":{"party":"host_wull","to":"stark","eta":35,"days":35},"importance":2,"title":"Host of House Wull sets out","text":"Host of House Wull, 369 strong, sets out from Wull Mountains for The Banners of Stark (~35 days)."},
+      {"id":"f1.17","kind":"set_out","actors":["torrhen_norrey"],"houses":["norrey","stark"],"place":"norrey","data":{"party":"host_norrey","to":"stark","eta":42,"days":42},"importance":2,"title":"Host of House Norrey sets out","text":"Host of House Norrey, 392 strong, sets out from The Norrey for The Banners of Stark (~42 days)."},
+      {"id":"f1.18","kind":"set_out","actors":["edwyle_liddle"],"houses":["liddle","stark"],"place":"liddle","data":{"party":"host_liddle","to":"stark","eta":49,"days":49},"importance":2,"title":"Host of House Liddle sets out","text":"Host of House Liddle, 315 strong, sets out from Liddle Hills for The Banners of Stark (~49 days)."},
+      {"id":"f1.19","kind":"set_out","actors":["jonnel_crowl"],"houses":["crowl","stark"],"place":"crowl","data":{"party":"host_crowl","to":"stark","eta":26,"days":26},"importance":2,"title":"Host of House Crowl sets out","text":"Host of House Crowl, 338 strong, sets out from Deepdown for The Banners of Stark (~26 days)."},
+      {"id":"f1.20","kind":"set_out","actors":["smalljon_umber"],"houses":["umber","stark"],"place":"umber","data":{"party":"host_umber","to":"stark","eta":33,"days":33},"importance":2,"title":"Host of House Umber sets out","text":"Host of House Umber, 1,800 strong, sets out from Last Hearth for The Banners of Stark (~33 days)."},
+      {"id":"f1.21","kind":"set_out","actors":["harrion_karstark"],"houses":["karstark","stark"],"place":"karstark","data":{"party":"host_karstark","to":"stark","eta":40,"days":40},"importance":2,"title":"Host of House Karstark sets out","text":"Host of House Karstark, 1,800 strong, sets out from Karhold for The Banners of Stark (~40 days)."}
+    ],
+    "must": ["Winterfell"], "mustNot": ["Barristan","Riverrun"], "maxWords": 12, "verb": "march",
+    "reference": "Lords from across the North march for Winterfell",
+    "summary": "Every sworn lord of the North has put his host on the road. The nearest will reach Winterfell in days; the farthest have weeks to go."
+  },
+  {
+    "id": "g-march-05", "archetype": "march", "hard": ["party"],
+    "facts": [
+      {"id":"f1.1","kind":"embarked","actors":["stannis_baratheon"],"houses":["baratheon"],"place":"baratheon","data":{"party":"royal_fleet","to":"baratheon_ds"},"importance":2,"text":"The Royal Fleet embarks at King's Landing for Dragonstone."}
+    ],
+    "must": ["Stannis Baratheon","Royal Fleet"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "sails",
+    "reference": "Stannis Baratheon sails the Royal Fleet to Dragonstone",
+    "summary": "The fleet left the harbour of King's Landing with its lord admiral at its head."
+  },
+  {
+    "id": "g-refusal-01", "archetype": "refusal",
+    "facts": [
+      {"id":"f1.1","kind":"call_refused","actors":["donella_hornwood"],"houses":["hornwood"],"place":"hornwood","data":{"why":"the harvest is not yet in"},"importance":4,"title":"House Hornwood refuses the call","text":"Donella Hornwood refuses the summons. Her men will stay at home.","vis":{"scope":"houses"}}
+    ],
+    "must": ["Hornwood"], "mustNot": ["Barristan","Karstark"], "maxWords": 12, "verb": "refuses",
+    "reference": "Lady Hornwood refuses Stark's summons",
+    "summary": "Donella Hornwood will keep her men at home, saying the harvest is not yet in."
+  },
+  {
+    "id": "g-refusal-02", "archetype": "refusal",
+    "facts": [
+      {"id":"f1.1","kind":"call_refused","actors":["rickard_wull"],"houses":["wull"],"place":"wull","data":{"why":"the clansmen will not leave the mountains"},"importance":4,"title":"House Wull refuses the call","text":"Rickard Wull refuses the summons. His men will stay at home.","vis":{"scope":"houses"}}
+    ],
+    "must": ["Wull"], "mustNot": ["Barristan","Karstark"], "maxWords": 12, "verb": "turns",
+    "reference": "Lord Wull turns down Stark's call to arms",
+    "summary": "His clansmen will not leave the mountains, and his men will stay at home."
+  },
+  {
+    "id": "g-refusal-03", "archetype": "refusal",
+    "facts": [
+      {"id":"f1.1","kind":"call_refused","actors":["jonos_bracken"],"houses":["bracken"],"place":"bracken","data":{"why":"an old quarrel with the Blackwoods"},"importance":4,"title":"House Bracken refuses the call","text":"Jonos Bracken refuses the summons. His men will stay at home.","vis":{"scope":"houses"}}
+    ],
+    "must": ["Jonos Bracken","Stone Hedge"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "refuses",
+    "reference": "Jonos Bracken refuses the summons at Stone Hedge",
+    "summary": "He cites an old quarrel with the Blackwoods and will keep his men at home."
+  },
+  {
+    "id": "g-wed-01", "archetype": "wedding",
+    "facts": [
+      {"id":"f1.1","kind":"betrothal","actors":["joffrey_baratheon","sansa_stark"],"houses":["baratheon","stark"],"data":{"pact":"p1","type":"marriage"},"importance":4,"text":"Joffrey Baratheon is betrothed to Sansa Stark."}
+    ],
+    "must": ["Joffrey Baratheon","Sansa Stark"], "mustNot": ["Tommen","Robb"], "maxWords": 12, "verb": "betrothed",
+    "reference": "Joffrey Baratheon betrothed to Sansa Stark",
+    "summary": "The match binds the crown to the North."
+  },
+  {
+    "id": "g-wed-02", "archetype": "wedding", "hard": ["suffix-house"],
+    "facts": [
+      {"id":"f1.1","kind":"wedding","actors":["renly_baratheon","margaery_tyrell"],"houses":["baratheon_se","tyrell"],"place":"tyrell","importance":3,"text":"Renly Baratheon and Margaery Tyrell are wed."}
+    ],
+    "must": ["Renly Baratheon","Margaery Tyrell","Highgarden"], "mustNot": ["Loras","Robert"], "maxWords": 12, "verb": "weds",
+    "reference": "Renly Baratheon weds Margaery Tyrell at Highgarden",
+    "summary": "The match ties the stormlands to the Reach."
+  },
+  {
+    "id": "g-wed-03", "archetype": "wedding",
+    "facts": [
+      {"id":"f1.1","kind":"wedding","actors":["robb_stark","jeyne_westerling"],"houses":["stark","westerling"],"place":"westerling","importance":5,"text":"Robb Stark and Jeyne Westerling are wed."}
+    ],
+    "must": ["Robb Stark","Jeyne Westerling","Crag"], "mustNot": ["Frey","Walder"], "maxWords": 12, "verb": "weds",
+    "reference": "Robb Stark weds Jeyne Westerling at the Crag",
+    "summary": "Jeyne is the daughter of a small western house."
+  },
+  {
+    "id": "g-crown-01", "archetype": "crowning",
+    "facts": [
+      {"id":"f1.1","kind":"crowned","actors":["robb_stark"],"houses":["stark"],"place":"tully","data":{"title":"King in the North","outcome":"crowned","victory":true},"importance":5,"text":"Robb Stark is crowned King in the North at Riverrun."}
+    ],
+    "must": ["Robb Stark","Riverrun"], "mustNot": ["Robert","Tywin"], "maxWords": 12, "verb": "crowned",
+    "reference": "Robb Stark crowned King in the North at Riverrun",
+    "summary": "The northern lords named him their king."
+  },
+  {
+    "id": "g-crown-02", "archetype": "crowning", "hard": ["suffix-house"],
+    "facts": [
+      {"id":"f1.1","kind":"claim_proclaimed","actors":["stannis_baratheon"],"houses":["baratheon_ds"],"place":"baratheon_ds","data":{"title":"King of the Andals and the First Men"},"importance":5,"text":"House Baratheon of Dragonstone proclaims: King of the Andals and the First Men."}
+    ],
+    "must": ["Stannis Baratheon","Dragonstone"], "mustNot": ["Renly","Robb"], "maxWords": 12, "verb": "proclaims",
+    "reference": "Stannis Baratheon proclaims himself king at Dragonstone",
+    "summary": "The lord of Dragonstone styles himself king of the Andals and the First Men."
+  },
+  {
+    "id": "g-crown-03", "archetype": "crowning", "hard": ["suffix-house"],
+    "facts": [
+      {"id":"f1.1","kind":"crowned","actors":["joffrey_baratheon"],"houses":["baratheon"],"place":"baratheon","data":{"title":"King of the Andals and the First Men","outcome":"crowned","victory":true},"importance":5,"text":"Joffrey Baratheon is crowned King of the Andals and the First Men at King's Landing."}
+    ],
+    "must": ["Joffrey Baratheon","King's Landing"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "crowned",
+    "reference": "Joffrey Baratheon crowned king at King's Landing",
+    "summary": "The Iron Throne has a new king."
+  },
+  {
+    "id": "g-letter-01", "archetype": "letter",
+    "facts": [
+      {"id":"f1.1","kind":"letter_arrived","actors":["lysa_arryn","catelyn_stark"],"houses":["arryn","stark"],"data":{"from":"lysa_arryn","to":"catelyn_stark"},"importance":3,"text":"Lysa Arryn writes to Catelyn Stark."}
+    ],
+    "must": ["Lysa Arryn","Catelyn Stark"], "mustNot": ["Robb","Tywin"], "maxWords": 12, "verb": "writes",
+    "reference": "Lysa Arryn writes to Catelyn Stark",
+    "summary": "The letter came by raven and was put into Catelyn's own hands."
+  },
+  {
+    "id": "g-letter-02", "archetype": "letter",
+    "facts": [
+      {"id":"f1.1","kind":"letter_arrived","actors":["hoster_tully","eddard_stark"],"houses":["tully","stark"],"place":"stark","data":{"raven":"r1","from":"hoster_tully"},"importance":3,"text":"A raven from Hoster Tully reaches Eddard Stark at Winterfell."}
+    ],
+    "must": ["Hoster Tully","Eddard Stark","Winterfell"], "mustNot": ["Robb","Tywin"], "maxWords": 12, "verb": "reaches",
+    "reference": "Raven from Hoster Tully reaches Eddard Stark at Winterfell",
+    "summary": "The bird came in the night with a message sealed by the Tully lord."
+  },
+  {
+    "id": "g-letter-03", "archetype": "letter",
+    "facts": [
+      {"id":"f1.1","kind":"letter_sent","actors":["eddard_stark","robert_baratheon"],"houses":["stark","baratheon"],"data":{"to":"robert_baratheon","days":14,"post":"r2"},"importance":2,"text":"A raven flies from Eddard Stark to Robert Baratheon (~14 days).","vis":{"scope":"houses","houses":["stark","baratheon"]}}
+    ],
+    "must": ["Eddard Stark","King Robert"], "mustNot": ["Robb","Tywin"], "maxWords": 12, "verb": "writes",
+    "reference": "Eddard Stark writes to King Robert",
+    "summary": "The raven flies south and will take about two weeks."
+  },
+  {
+    "id": "g-rumour-01", "archetype": "rumour",
+    "facts": [
+      {"id":"f1.1","kind":"rumour","actors":["roose_bolton"],"houses":["bolton"],"place":"bolton","importance":3,"title":"Whispers about House Bolton","text":"Word reaches you that Roose Bolton has been talking with strangers at the Dreadfort. It may be nothing.","vis":{"scope":"houses","houses":["stark"]}}
+    ],
+    "must": ["Roose Bolton","Dreadfort"], "mustNot": ["Tywin","Lannister"], "maxWords": 12, "verb": "spread",
+    "reference": "Whispers spread about Roose Bolton at the Dreadfort",
+    "summary": "Word has it that he has been talking with strangers. It may be nothing."
+  },
+  {
+    "id": "g-rumour-02", "archetype": "rumour", "hard": ["unknown-actor"],
+    "facts": [
+      {"id":"f1.1","kind":"rumour","actors":[],"houses":["tully"],"place":"whent","data":{"party":"host_tully","feint":"whent","false":true},"importance":1,"text":"Word goes about that The Host of Riverrun marches on Harrenhal."}
+    ],
+    "must": ["Harrenhal"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "spreads",
+    "reference": "Word spreads that the Tully host marches on Harrenhal",
+    "summary": "The tale is going about the roads, though no one can say who began it."
+  },
+  {
+    "id": "g-rumour-03", "archetype": "rumour",
+    "facts": [
+      {"id":"f1.1","kind":"rumour","actors":[],"houses":["stark","clegane"],"data":{"report":true,"party":"mountain_riders","men":3000,"false":false},"importance":3,"text":"Word reaches House Stark of The Mountain's Men (~3,000 men).","vis":{"scope":"houses","houses":["stark"]}}
+    ],
+    "must": ["Gregor Clegane"], "mustNot": ["Tywin","Winterfell"], "maxWords": 12, "verb": "reaches",
+    "reference": "Word reaches the North of Gregor Clegane's riders",
+    "summary": "Travellers speak of some three thousand riders on the roads."
+  },
+  {
+    "id": "g-omen-01", "archetype": "omen", "hard": ["no-person"],
+    "facts": [
+      {"id":"f1.1","kind":"happening","actors":[],"houses":["stark"],"place":"stark","data":{"tpl":"n_godswood"},"importance":1,"title":"A weirwood speaks","text":"At Winterfell the weirwood's face weeps red sap, and the smallfolk say it is an omen."}
+    ],
+    "must": ["Winterfell"], "mustNot": ["Eddard","Robb"], "maxWords": 12, "verb": "weeps",
+    "reference": "Weirwood weeps red sap at Winterfell",
+    "summary": "The smallfolk say it is an omen."
+  },
+  {
+    "id": "g-omen-02", "archetype": "omen", "hard": ["no-person"],
+    "facts": [
+      {"id":"f1.1","kind":"happening","actors":[],"houses":["karstark"],"place":"karstark","data":{"tpl":"n_snow_summer"},"importance":1,"title":"Snow in summer at Karhold","text":"A summer snow fell on Karhold; it melted by noon, but the old people say it is a sign that winter is coming."}
+    ],
+    "must": ["Karhold"], "mustNot": ["Rickard","Winterfell"], "maxWords": 12, "verb": "blankets",
+    "reference": "A summer snow blankets Karhold",
+    "summary": "It melted by noon, but the old people call it a sign that winter is coming."
+  },
+  {
+    "id": "g-omen-03", "archetype": "omen", "hard": ["no-person"],
+    "facts": [
+      {"id":"f1.1","kind":"happening","actors":[],"houses":["hornwood"],"place":"hornwood","data":{"tpl":"g_ravens_dead"},"importance":1,"title":"A bad omen at Hornwood","text":"A two-headed calf was born near Hornwood. The smallfolk say the gods are warning the lords of something."}
+    ],
+    "must": ["Hornwood"], "mustNot": ["Donella","Winterfell"], "maxWords": 12, "verb": "born",
+    "reference": "A two-headed calf is born near Hornwood",
+    "summary": "The smallfolk say the gods are warning the lords of something."
+  },
+  {
+    "id": "g-works-01", "archetype": "works",
+    "facts": [
+      {"id":"f1.1","kind":"works_begun","actors":["roose_bolton"],"houses":["bolton"],"place":"bolton","data":{"project":"market","name":"Charter a market & fair at The Dreadfort","cost":400,"months":6},"importance":1,"text":"House Bolton begins works at The Dreadfort: charter a market & fair."}
+    ],
+    "must": ["Roose Bolton","Dreadfort"], "mustNot": ["Eddard","Robb"], "maxWords": 12, "verb": "opens",
+    "reference": "Roose Bolton opens a market at the Dreadfort",
+    "summary": "The Boltons have set up a market and fair in their own lands."
+  },
+  {
+    "id": "g-works-02", "archetype": "works",
+    "facts": [
+      {"id":"f1.1","kind":"works_begun","actors":["wyman_manderly"],"houses":["manderly"],"place":"manderly","data":{"project":"shipyard","name":"Build warships at White Harbor","cost":900,"months":8},"importance":1,"text":"House Manderly begins works at White Harbor: build warships."}
+    ],
+    "must": ["Wyman Manderly","White Harbor"], "mustNot": ["Eddard","Robb"], "maxWords": 12, "verb": "begins",
+    "reference": "Wyman Manderly begins building warships at White Harbor",
+    "summary": "New ships will be built in the yards of the city."
+  },
+  {
+    "id": "g-works-03", "archetype": "works", "hard": ["no-person"],
+    "facts": [
+      {"id":"f1.1","kind":"works_done","actors":[],"houses":["karstark"],"place":"karstark","data":{"building":"a granary"},"importance":2,"text":"Karhold raises a granary."}
+    ],
+    "must": ["Karhold"], "mustNot": ["Rickard","Winterfell"], "maxWords": 12, "verb": "raises",
+    "reference": "Karhold raises a new granary",
+    "summary": "The building is finished, and the stores are being moved in."
+  },
+  {
+    "id": "g-harvest-01", "archetype": "harvest", "hard": ["no-person"],
+    "facts": [
+      {"id":"f1.1","kind":"happening","actors":[],"houses":["tyrell"],"place":"tyrell","data":{"tpl":"harvest_good"},"importance":1,"title":"A full harvest at Highgarden","text":"The barley harvest around Highgarden is the best in ten years. Tyrell's steward is buying new granaries."}
+    ],
+    "must": ["Highgarden"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "fills",
+    "reference": "Best harvest in years fills the barns at Highgarden",
+    "summary": "The fields round the castle are heavy, and the steward is buying new granaries."
+  },
+  {
+    "id": "g-harvest-02", "archetype": "harvest", "hard": ["no-person"],
+    "facts": [
+      {"id":"f1.1","kind":"happening","actors":[],"houses":["tarly"],"place":"tarly","data":{"tpl":"harvest_bad"},"importance":1,"title":"Blight at Horn Hill","text":"A black rot has taken the wheat around Horn Hill. The septon says it is the Stranger's work."}
+    ],
+    "must": ["Horn Hill"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "takes",
+    "reference": "Black rot takes the wheat at Horn Hill",
+    "summary": "The steward is counting what is left of the crop."
+  },
+  {
+    "id": "g-harvest-03", "archetype": "harvest", "hard": ["no-person"],
+    "facts": [
+      {"id":"f1.1","kind":"famine","actors":[],"houses":["tully"],"place":"tully","importance":4,"text":"Famine grips the Riverlands."}
+    ],
+    "must": ["Riverrun"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "grips",
+    "reference": "Famine grips the lands round Riverrun",
+    "summary": "The barns are empty, and the smallfolk are hungry."
+  },
+  {
+    "id": "g-tourney-01", "archetype": "tourney",
+    "facts": [
+      {"id":"f1.1","kind":"tourney","actors":["robert_arryn"],"houses":["arryn","stark","tully"],"place":"arryn","data":{"cost":800,"guests":16},"importance":5,"text":"House Arryn holds a tourney at The Eyrie; 16 houses send knights."},
+      {"id":"f1.2","kind":"tourney_result","actors":["rodrik_cassel"],"houses":["arryn","stark"],"place":"arryn","importance":3,"text":"Ser Rodrik Cassel is champion of the tourney at The Eyrie."}
+    ],
+    "must": ["Rodrik Cassel","Eyrie"], "mustNot": ["Robb","Riverrun"], "maxWords": 12, "verb": "wins",
+    "reference": "Ser Rodrik Cassel wins the tourney at the Eyrie",
+    "summary": "Sixteen houses sent knights, and it was the biggest tourney the Vale had seen in years."
+  },
+  {
+    "id": "g-tourney-02", "archetype": "tourney", "hard": ["suffix-house"],
+    "facts": [
+      {"id":"f1.1","kind":"tourney","actors":["robert_baratheon"],"houses":["baratheon","lannister","tyrell"],"place":"baratheon","data":{"cost":1200,"guests":12},"importance":4,"text":"House Baratheon of King's Landing holds a tourney at King's Landing; 12 houses send knights."}
+    ],
+    "must": ["King Robert","King's Landing"], "mustNot": ["Eddard","Winterfell"], "maxWords": 12, "verb": "holds",
+    "reference": "King Robert holds a tourney at King's Landing",
+    "summary": "Twelve houses have sent knights to the lists, and the city is full of banners."
+  },
+  {
+    "id": "g-tourney-03", "archetype": "tourney",
+    "facts": [
+      {"id":"f1.1","kind":"tourney_result","actors":["loras_tyrell"],"houses":["tyrell"],"place":"tyrell","importance":3,"text":"Ser Loras Tyrell is champion of the tourney at Highgarden."}
+    ],
+    "must": ["Loras Tyrell","Highgarden"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "wins",
+    "reference": "Ser Loras Tyrell wins the tourney at Highgarden",
+    "summary": "The lists ended with a Tyrell as champion."
+  },
+  {
+    "id": "g-feast-01", "archetype": "feast",
+    "facts": [
+      {"id":"f1.1","kind":"feast","actors":["mace_tyrell"],"houses":["tyrell"],"place":"tyrell","data":{"cost":600,"brawl":false},"importance":2,"text":"Mace Tyrell holds a feast at Highgarden for the lords of the Reach."}
+    ],
+    "must": ["Mace Tyrell","Highgarden"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "holds",
+    "reference": "Mace Tyrell holds a feast at Highgarden",
+    "summary": "The lords of the Reach came to eat at his table."
+  },
+  {
+    "id": "g-feast-02", "archetype": "feast",
+    "facts": [
+      {"id":"f1.1","kind":"feast","actors":["wyman_manderly"],"houses":["manderly"],"place":"manderly","data":{"cost":500,"brawl":true},"importance":2,"text":"Wyman Manderly feasts 5 sworn lords at White Harbor; a brawl breaks out."}
+    ],
+    "must": ["Wyman Manderly"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "breaks",
+    "reference": "A brawl breaks out at Wyman Manderly's feast",
+    "summary": "Old quarrels were aired over the wine, and the hall was in uproar before the night was out."
+  },
+  {
+    "id": "g-feast-03", "archetype": "feast", "hard": ["suffix-house"],
+    "facts": [
+      {"id":"f1.1","kind":"feast","actors":["lanna_lannister"],"houses":["lannisport"],"place":"lannisport","data":{"cost":300,"brawl":false},"importance":2,"text":"Lanna Lannister holds a feast for the household at Lannisport."}
+    ],
+    "must": ["Lanna Lannister","Lannisport"], "mustNot": ["Tywin","Winterfell"], "maxWords": 12, "verb": "holds",
+    "reference": "Lanna Lannister holds a feast at Lannisport",
+    "summary": "The feast was for her own household."
+  },
+  {
+    "id": "g-meanwhile-01", "archetype": "meanwhile",
+    "facts": [
+      {"id":"f1.1","kind":"set_out","actors":["alester_florent"],"houses":["florent","tyrell"],"place":"florent","data":{"party":"rider_florent","to":"tyrell","days":3},"importance":1,"text":"Alester Florent leaves Brightwater Keep with 60 knights and riders under the Florent banner, to feast with Mace Tyrell at Highgarden."},
+      {"id":"f1.2","kind":"set_out","actors":["mace_tyrell"],"houses":["tyrell","redwyne"],"place":"tyrell","data":{"party":"rider_tyrell","to":"redwyne","days":4},"importance":1,"text":"Mace Tyrell leaves Highgarden with 70 knights and riders under the Tyrell banner, to feast with Paxter Redwyne at The Arbor."},
+      {"id":"f1.3","kind":"set_out","actors":["randyll_tarly"],"houses":["tarly","rowan"],"place":"tarly","data":{"party":"rider_tarly","to":"rowan","days":5},"importance":1,"text":"Randyll Tarly leaves Horn Hill with 80 knights and riders under the Tarly banner, to feast with Mathis Rowan at Goldengrove."},
+      {"id":"f1.4","kind":"set_out","actors":["leyton_hightower"],"houses":["hightower","tyrell"],"place":"hightower","data":{"party":"rider_hightower","to":"tyrell","days":6},"importance":1,"text":"Leyton Hightower leaves The Hightower with 90 knights and riders under the Hightower banner, to feast with Mace Tyrell at Highgarden."},
+      {"id":"f1.5","kind":"set_out","actors":["mathis_rowan"],"houses":["rowan","redwyne"],"place":"rowan","data":{"party":"rider_rowan","to":"redwyne","days":3},"importance":1,"text":"Mathis Rowan leaves Goldengrove with 100 knights and riders under the Rowan banner, to feast with Paxter Redwyne at The Arbor."},
+      {"id":"f1.6","kind":"set_out","actors":["orton_fossoway"],"houses":["fossoway","tyrell"],"place":"fossoway","data":{"party":"rider_fossoway","to":"tyrell","days":4},"importance":1,"text":"Orton Fossoway leaves Cider Hall with 110 knights and riders under the Fossoway banner, to feast with Mace Tyrell at Highgarden."},
+      {"id":"f1.7","kind":"set_out","actors":["arthor_caswell"],"houses":["caswell","tyrell"],"place":"caswell","data":{"party":"rider_caswell","to":"tyrell","days":5},"importance":1,"text":"Arthor Caswell leaves Bitterbridge with 120 knights and riders under the Caswell banner, to feast with Mace Tyrell at Highgarden."},
+      {"id":"f1.8","kind":"set_out","actors":["lyonel_ashford"],"houses":["ashford","tarly"],"place":"ashford","data":{"party":"rider_ashford","to":"tarly","days":6},"importance":1,"text":"Lyonel Ashford leaves Ashford with 130 knights and riders under the Ashford banner, to feast with Randyll Tarly at Horn Hill."}
+    ],
+    "must": ["Reach"], "mustNot": ["Winterfell","Robb"], "maxWords": 12, "verb": "ride",
+    "reference": "Lords ride to feasts and hunts across the Reach",
+    "summary": "Alester Florent goes to pay his respects at Highgarden, and seven other lords are on the roads to feasts and hunts."
+  },
+  {
+    "id": "g-meanwhile-02", "archetype": "meanwhile", "hard": ["no-person"],
+    "facts": [
+      {"id":"f1.1","kind":"happening","actors":[],"houses":["stark"],"place":"stark","data":{"tpl":"n_wolfswood"},"importance":1,"title":"Wolves in the wolfswood","text":"Woodsmen say the wolves of the wolfswood have grown bold; one pack followed a party from Deepwood Motte right to the gates."},
+      {"id":"f1.2","kind":"happening","actors":[],"houses":["stark"],"place":"stark","importance":1,"text":"Poachers are hanged in the wolfswood."},
+      {"id":"f1.3","kind":"happening","actors":[],"houses":["stark"],"place":"stark","data":{"tpl":"deserters"},"importance":1,"title":"Deserters hanged at Winterfell","text":"Four men who ran from the host were caught near Winterfell and hanged at the crossroads."}
+    ],
+    "must": ["wolfswood"], "mustNot": ["Eddard","Robb"], "maxWords": 12, "verb": "grow",
+    "reference": "Wolves grow bold in the wolfswood",
+    "summary": "Woodsmen say a pack followed travellers right to the castle gates. Poachers and deserters have been hanged."
+  },
+  {
+    "id": "g-meanwhile-03", "archetype": "meanwhile", "hard": ["no-person"],
+    "facts": [
+      {"id":"f1.1","kind":"lost_at_sea","actors":[],"houses":["pentos"],"place":"flint","data":{"ships":1,"drowned":40},"importance":1,"text":"A gale falls on a Pentoshi galley off Widow's Watch: 1 ship founders, and 40 men with it."},
+      {"id":"f1.2","kind":"feast","actors":["mace_tyrell"],"houses":["tyrell"],"place":"tyrell","importance":1,"text":"Mace Tyrell holds a feast at Highgarden for the lords of the Reach."}
+    ],
+    "must": ["Widow's Watch"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "wrecked",
+    "reference": "A Pentoshi galley is wrecked off Widow's Watch",
+    "summary": "A gale caught the ship off the coast, and some forty men were lost. Mace Tyrell feasts his lords at Highgarden."
+  },
+  {
+    "id": "g-storm-01", "archetype": "other", "hard": ["no-person","party"],
+    "facts": [
+      {"id":"f1.1","kind":"lost_at_sea","actors":[],"houses":["greyjoy"],"place":"greyjoy","data":{"party":"iron_fleet","ships":3,"drowned":600},"importance":4,"title":"A storm scatters The Iron Fleet","text":"An autumn gale falls on The Iron Fleet: 3 ships founder, and 600 men with them."}
+    ],
+    "must": ["Iron Fleet","Pyke"], "mustNot": ["Balon","Robb"], "maxWords": 12, "verb": "scatters",
+    "reference": "A storm scatters the Iron Fleet off Pyke",
+    "summary": "Three ships foundered, and some six hundred men went down with them."
+  },
+  {
+    "id": "g-storm-02", "archetype": "other", "hard": ["no-person","party"],
+    "facts": [
+      {"id":"f1.1","kind":"lost_at_sea","actors":[],"houses":["redwyne"],"place":"redwyne","data":{"party":"redwyne_fleet","ships":2,"drowned":300},"importance":3,"title":"A storm scatters Redwyne Fleet","text":"An autumn gale falls on Redwyne Fleet: 2 ships founder, and 300 men with them."}
+    ],
+    "must": ["Arbor"], "mustNot": ["Balon","Tywin"], "maxWords": 12, "verb": "sinks",
+    "reference": "Storm sinks two Redwyne ships off the Arbor",
+    "summary": "Some three hundred men went down with them."
+  },
+  {
+    "id": "g-unknown-01", "archetype": "other", "hard": ["unknown-actor"],
+    "facts": [
+      {"id":"f1.1","kind":"village_burned","actors":[],"houses":["greyjoy","goodbrook"],"place":"goodbrook","importance":3,"text":"A village near Saltpans is burned by raiders from the sea.","vis":{"scope":"public"}}
+    ],
+    "must": ["Saltpans"], "mustNot": ["Balon","Victarion","Euron"], "maxWords": 12, "verb": "burn",
+    "reference": "Ironborn raiders burn a village near Saltpans",
+    "summary": "Raiders from the sea came ashore, burned the houses and rowed away."
+  },
+  {
+    "id": "g-unknown-02", "archetype": "other", "hard": ["unknown-actor"],
+    "facts": [
+      {"id":"f1.1","kind":"rumour","actors":[],"houses":["stark"],"data":{"report":true,"men":5000,"false":false},"importance":3,"text":"Word reaches House Stark of a host on the Kingsroad (~5,000 men).","vis":{"scope":"houses","houses":["stark"]}}
+    ],
+    "must": ["Kingsroad"], "mustNot": ["Tywin","Jaime","Lannister"], "maxWords": 12, "verb": "reaches",
+    "reference": "Word reaches Stark of a host on the Kingsroad",
+    "summary": "Travellers speak of some five thousand men on the road, and no one knows whose banner they follow."
+  }
+]

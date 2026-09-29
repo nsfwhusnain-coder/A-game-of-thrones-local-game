@@ -898,9 +898,14 @@ function applyOne(state, ch, ctx) {
       const f = { actors: [c.id], houses: [c.house], place: where() };
       const held = (x) => /imprisoned|captive|hostage/.test(x || '');
       const why = `${ch.cause || ''} ${ch.note || ''}`;
-      if (was.alive && !c.alive) note(/battle|victory|slain|the field|fell /i.test(why) ? 'slain_in_battle' : /execut|behead|hanged|headsman/i.test(why) ? 'executed' : 'death', { ...f, data: { cause: ch.cause || null } });
-      else if (c.alive) {
-        if (held(c.status) && !held(was.status)) note(/battle/i.test(why) ? 'captured_in_battle' : 'captured', { ...f, data: { by: resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner || null, note: ch.note || null } });
+      if (was.alive && !c.alive) {
+        const kind = /battle|victory|slain|the field|fell /i.test(why) ? 'slain_in_battle' : /execut|behead|hanged|headsman/i.test(why) ? 'executed' : 'death';
+        // the slots a headline is written from, when the caller knows them: who did it, how, in which battle
+        note(kind, { ...f, data: { cause: ch.cause || null, ...(ch.by ? { by: ch.by } : {}), ...(ch.how ? { how: ch.how } : {}), ...(kind === 'slain_in_battle' && ch.battle ? { battle: ch.battle } : {}) } });
+      } else if (c.alive) {
+        // a captive of the field is held by the host's commander (or, failing him, its house); one taken at a castle, by its lord's house
+        const inBattle = /battle/i.test(why);
+        if (held(c.status) && !held(was.status)) note(inBattle ? 'captured_in_battle' : 'captured', { ...f, ...(inBattle && !f.place && ch.place ? { place: ch.place } : {}), data: { by: (inBattle ? ch.by : null) ?? (resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner || null), note: ch.note || null, ...(inBattle && ch.battle ? { battle: ch.battle } : {}) } });
         else if (held(was.status) && !held(c.status)) note(/ransom/i.test(why) ? 'ransomed' : 'released', f);
         if (c.status === 'wounded' && was.status !== 'wounded') note('wounded', { ...f, data: { note: ch.note || null } });
         if (/missing|vanish/i.test(c.status || '') && !/missing|vanish/i.test(was.status || '')) note('vanished', f);
@@ -1017,7 +1022,11 @@ function applyOne(state, ch, ctx) {
       state.battles.push({ name: ch.name || `Battle at ${placeName(state, ch.at)}`, pos, date, turn: state.meta.turn, attacker: findHouse(state, ch.attacker), defender: findHouse(state, ch.defender), victor: findHouse(state, ch.victor), losses: ch.losses || {}, summary: ch.summary || '' });
       state.battles = state.battles.slice(-40);
       const bt = state.battles.at(-1);
-      note('battle', { actors: [], houses: [bt.attacker, bt.defender], place: resolvePlaceId(ch.at || ch.location) || null, pos, data: { attacker: bt.attacker, defender: bt.defender, winner: bt.victor, lost: bt.losses }, text: `${bt.name}${bt.victor ? `: victory for House ${state.houses[bt.victor]?.name}` : ''}.${bt.summary ? ` ${bt.summary}` : ''}` });
+      // the slots a headline is written from (as on the engine's own battles, shared/battles.js): a story battle names houses, not
+      // hosts, so its `winner` is already a house; the loser is the other side; `how` only if the op says it, in plain words
+      const loserHouse = bt.victor === bt.attacker ? bt.defender : bt.victor === bt.defender ? bt.attacker : null;
+      const how = typeof ch.how === 'string' && /^[a-z][a-z ,'-]{2,59}$/i.test(ch.how.trim()) ? ch.how.trim() : null;
+      note('battle', { actors: [], houses: [bt.attacker, bt.defender], place: resolvePlaceId(ch.at || ch.location) || null, pos, data: { attacker: bt.attacker, defender: bt.defender, winner: bt.victor, lost: bt.losses, winnerHouse: bt.victor || null, loserHouse: bt.victor ? loserHouse ?? null : null, ...(how ? { how } : {}) }, text: `${bt.name}${bt.victor ? `: victory for House ${state.houses[bt.victor]?.name}` : ''}.${bt.summary ? ` ${bt.summary}` : ''}` });
       return { op, text: `BATTLE: ${state.battles.at(-1).name}${ch.victor ? ' — victory for ' + (state.houses[findHouse(state, ch.victor)]?.name || ch.victor) : ''}` };
     }
     case 'raven': case 'letter': case 'message': {

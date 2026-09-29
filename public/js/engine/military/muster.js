@@ -8,7 +8,7 @@
 //   obligations.levies: 'called' | 'delayed' | 'answered' | 'refused'     (what the realm sees, as before)
 //   obligations.stage:  'letter' | 'deliberating' | 'gathering' | 'departed' | 'joined' | 'delayed' | 'refused'
 //   obligations.call:   { host, muster, scope, sent, arrive, decide, depart, retry, men, gather, predicted, eta, late }
-import { applyChanges, placePos, placeName } from '../../shared/world.js';
+import { applyChanges, placePos, placeName, getRelation } from '../../shared/world.js';
 import { ref, isRef, idOf, joinParty, settle, partyAt, forces } from '../parties.js';
 import { marchDays, atWar, MILES_PER_UNIT } from '../../shared/warfare.js';
 import { vassalTemper } from '../../shared/vassals.js';
@@ -45,6 +45,22 @@ export function answerOdds(state, v, { scope = 'quick', late = false } = {}) {
   // a second asking: those who hedged once hedge less; a second delay is a refusal in all but name
   if (late) { r += Math.round(d / 2); d = Math.round(d / 2); }
   return { answered: a, delayed: d, refused: r, temper: t };
+}
+/**
+ * Why a lord will not march, in the plain words of what already weighed on his temper (shared/vassals.js vassalTemper):
+ * bad blood, no loyalty, the tax, hungry lands, a second asking, or simply no heart for it. Null when it was only the
+ * roll of the dice (a dutiful lord refuses one time in fifty and has no reason): the fact then says nothing rather than guess.
+ */
+export function whyRefused(state, v, call) {
+  const lord = state.characters[v.lord]; const tax = state.houses[v.liege]?.policy?.tax;
+  if (getRelation(state, v.id, v.liege) <= -30) return 'bad blood between the houses';
+  if ((lord?.loyalty ?? 60) < 30) return 'little loyalty to the liege';
+  if (tax === 'crushing' || tax === 'heavy') return "the liege's heavy taxes";
+  const food = v.figures?.food?.v; // an empty granary (0) is hunger; only a granary nobody has counted is not
+  if ((food == null ? 99 : Number(food)) < 2) return 'hungry lands at home';
+  if (call?.late) return 'already put the call off once';
+  if ((vassalTemper(state, v.id) ?? 50) < MUSTER.bands.dutiful) return 'no heart for the war';
+  return null;
 }
 /** Men a lord sends: of his levies by the call's scope and his zeal, and of his men-at-arms; a late answer, fewer. */
 export function menSent(state, v, { scope = 'quick', late = false } = {}) {
@@ -177,10 +193,10 @@ export function musterTick(state, touched = new Set()) {
         events.push(...shown(mine, fact(state, 'call_delayed', { title: `House ${v.name} delays`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { retry: call.retry } })));
       } else {
         ob.levies = 'refused'; ob.stage = 'refused';
-        const text = `${lordName} refuses the summons. ${P.His} men will stay at home.`;
+        const text = `${lordName} refuses the summons. ${P.His} men will stay at home.`; const why = whyRefused(state, v, call);
         const k = [v.id, v.liege].sort().join('|');
         state.relations[k] = { ...(state.relations[k] || {}), v: Math.max(-100, Math.min(100, (state.relations[k]?.v ?? 0) - 10)) };
-        events.push(...shown(mine, fact(state, 'call_refused', { title: `House ${v.name} refuses the call`, text, where: v.seat, importance: 4, type: 'war', houses: [v.id] }, { actors: [v.lord] })));
+        events.push(...shown(mine, fact(state, 'call_refused', { title: `House ${v.name} refuses the call`, text, where: v.seat, importance: 4, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { liege: v.liege, ...(why ? { why } : {}) } })));
       }
       applied.push({ op: 'obligation', text: `House ${v.name}: banners ${ob.levies}` });
     }
