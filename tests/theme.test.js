@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -103,7 +103,7 @@ test('no emoji in theme.css or the style tile (the icons are the game\'s own)', 
 
 test('the new icons of GDD 21 §5 are in the set and draw', async () => {
   const src = read('public/js/ui/icons.js');
-  const { icon } = await import(path.join(ROOT, 'public/js/ui/icons.js'));
+  const { icon } = await import(pathToFileURL(path.join(ROOT, 'public/js/ui/icons.js')).href);
   for (const n of ['chain', 'weirwood', 'book', 'seal', 'tier3', 'tier2', 'tier1', 'pip', 'dots', 'inkpot']) {
     assert.match(src, new RegExp(`^\\s+${n}: '`, 'm'), `icons.js has no ${n}`);
     assert.match(icon(n), /^<svg class="ico [^"]*" viewBox="0 0 24 24"/, `${n} does not draw`);
@@ -121,7 +121,7 @@ test('index.html loads theme.css after style.css, and applyHouseTheme gives the 
 // The wax rule of applyHouseTheme on the real arms: wax is pigment (a rich colour, not pale, not near black, not a grey), never
 // the metal. The game's own `pigment` and `hexToHsl` are lifted from the source so this cannot drift from what the page does.
 test('the wax is the richest of the arms\' colours, and oxblood when the arms are only white, grey and black', async () => {
-  const { HOUSES } = await import(path.join(ROOT, 'public/data/houses.js'));
+  const { HOUSES } = await import(pathToFileURL(path.join(ROOT, 'public/data/houses.js')).href);
   const src = read('public/js/ui/common.js');
   const hexToHsl = new Function(`${src.match(/function hexToHsl[\s\S]*?\n}\n/)[0]}\nreturn hexToHsl;`)();
   const pigment = new Function('hexToHsl', `return ${src.match(/const pigment = (\(hex\) => \{.*\});/)[1]};`)(hexToHsl);
