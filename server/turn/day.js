@@ -47,7 +47,7 @@ function theYears(state, applied) {
     if (risk && random() < Math.min(0.85, risk)) dead.push({ c, cause: ailing ? 'illness' : 'old age' });
   }
   // the years' dead are told in the years' own words: their facts are recorded here, before the heirs' (not by the op)
-  const cards = dead.map(({ c, cause }) => fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause, age: c.age }, cause: { type: 'rule', ref: 'the years' } }));
+  const cards = dead.map(({ c, cause }) => fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}${c.title ? ', ' + c.title + ',' : ''} has died of ${c.bio && /ailing|dying/i.test(c.bio) ? 'a long illness' : 'old age'}, aged ${c.age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id || ['paramount', 'crown'].includes(state.houses[c.house]?.rank) ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause, age: c.age, how: cause === 'illness' ? 'illness' : 'age' }, cause: { type: 'rule', ref: 'the years' } }));
   const r = applyChanges(state, dead.map(({ c, cause }) => ({ op: 'character', id: c.id, alive: false, cause })), { source: 'The years', spanDays: 1, told: ['character'] });
   applied.push(...r.applied);
   return cards;

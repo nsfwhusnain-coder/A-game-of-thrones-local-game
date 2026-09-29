@@ -51,10 +51,14 @@ function fight(state, att, def, days, r, { surprise = false, caught = false, sta
   if (B.spoils) { win.rations += B.spoils; if (!B.wiped) lose.rations = Math.max(0, lose.rations - B.spoils); }
   // the fates of the story's people: slain, taken to the victor's host, or hurt
   const fates = [];
+  // a fallen or captured man is put to the enemy commander who stood at the end of the day; a commander who was himself
+  // slain or taken on this field is not (a slot says who did it only when it is so: the fact log is history)
+  const fell = new Set(B.fates.filter((f) => f.fate === 'slain' || f.fate === 'captured').map((f) => f.c.id));
+  const cmdOf = (p) => (p.commander && state.characters[p.commander]?.alive && !fell.has(p.commander) ? p.commander : null);
   for (const { c, fate } of B.fates) {
     const theirs = [win.members || [], win.commander].flat().includes(c.id) ? win : lose; const foe = theirs === win ? lose : win;
-    if (fate === 'slain') { changes.push({ op: 'character', id: c.id, alive: false, cause: `killed in battle near ${place?.name}` }); fates.push(`${c.name} was slain`); }
-    else if (fate === 'captured' && state.parties[foe.id] && !(B.wiped && foe === lose)) { changes.push({ op: 'character', id: c.id, status: 'imprisoned', loc: ref(foe.id), note: `Taken captive in battle near ${place?.name}` }); fates.push(`${c.name} was taken captive`); }
+    if (fate === 'slain') { changes.push({ op: 'character', id: c.id, alive: false, cause: `killed in battle near ${place?.name}`, how: 'battle', ...(cmdOf(foe) ? { by: cmdOf(foe) } : {}), place: place?.id }); fates.push(`${c.name} was slain`); }
+    else if (fate === 'captured' && state.parties[foe.id] && !(B.wiped && foe === lose)) { changes.push({ op: 'character', id: c.id, status: 'imprisoned', loc: ref(foe.id), note: `Taken captive in battle near ${place?.name}`, by: cmdOf(foe) || foe.owner, place: place?.id }); fates.push(`${c.name} was taken captive`); }
     else if (fate === 'wounded' || fate === 'captured') { changes.push({ op: 'character', id: c.id, status: 'wounded', note: `Wounded in battle near ${place?.name}` }); fates.push(`${c.name} was wounded`); }
   }
   // the men who held back or turned leave the host they came with
@@ -88,7 +92,12 @@ function fight(state, att, def, days, r, { surprise = false, caught = false, sta
   const report = { outcome: B.outcome, odds: Math.round(B.odds * 100) / 100, fortune: Math.round(B.fortune * 100) / 100, ground: B.site.ground, surprise, caught, stances, decided: B.decided, pursuit: Math.round(B.pursuit * 100) / 100, spoils: B.spoils, power: { [att.id]: Math.round(B.a.power), [def.id]: Math.round(B.d.power) } };
   const title = B.drawn ? `A bloody draw near ${place?.name}` : `${W?.name} victorious near ${place?.name}`;
   const text = B.drawn ? `${att.name} and ${def.name} fought near ${place?.name} until neither could fight on.` : `${win.name} ${B.wiped ? 'destroyed' : B.broken ? 'routed' : 'defeated'} ${lose.name}${fates.length ? '; ' + fates[0] : ''}.`;
-  const event = fact(state, 'battle', { title, text, details, where: place?.id, importance: mine ? 5 : 4, type: 'war', houses: [win.owner, lose.owner], day: days > 1 ? 1 + Math.floor(r() * days) : 1 }, { actors: [att.commander, def.commander], data: { attacker: att.id, defender: def.id, winner: B.drawn ? null : win.id, loser: B.drawn ? null : lose.id, wiped: B.wiped, lost: { [win.id]: winLoss, [lose.id]: loseLoss }, ...report }, pos: place?.pos });
+  // the slots a headline is written from (docs/gdd/18-headlines.md §3.1): the houses behind the two hosts, and what decided
+  // it — the first of the factors the report already weighs (a win with none furthest from even was the day's fortune)
+  const slots = B.drawn ? { winnerHouse: null, loserHouse: null } : { winnerHouse: win.owner, loserHouse: lose.owner, how: B.decided[0] || 'fortune' };
+  const event = fact(state, 'battle', { title, text, details, where: place?.id, importance: mine ? 5 : 4, type: 'war', houses: [win.owner, lose.owner], day: days > 1 ? 1 + Math.floor(r() * days) : 1 }, { actors: [att.commander, def.commander], data: { attacker: att.id, defender: def.id, winner: B.drawn ? null : win.id, loser: B.drawn ? null : lose.id, wiped: B.wiped, lost: { [win.id]: winLoss, [lose.id]: loseLoss }, ...report, ...slots }, pos: place?.pos });
+  // the dead and the taken are told with the battle they fell in (world.js `note` puts it on their facts)
+  for (const c of changes) if (c.op === 'character') c.battle = event.fact;
   if (B.broken && !B.wiped) fact(state, 'rout', { title: `${lose.name} routed`, text: `${lose.name} breaks and flees the field near ${place?.name}.`, where: place?.id, houses: [lose.owner, win.owner], day: event.day }, { actors: [lose.commander], data: { party: lose.id }, alongside: event.fact });
   return { changes, event, B };
 }

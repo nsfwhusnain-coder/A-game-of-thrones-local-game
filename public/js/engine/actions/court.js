@@ -52,7 +52,7 @@ function tourney(state, house, cause) {
   let blood = '';
   if (champ) ch.push({ op: 'character', id: champ.id, note: `Champion of the tourney at ${state.holdings[me.seat]?.name}.`, opinion: clamp((champ.opinion || 0) + 10, -100, 100) });
   const fallen = knights.filter((k) => k !== champ && !keptByStory(state, k)); // the story's people do not die in the lists by chance
-  if (fallen.length && random() < 0.12) { const k = pick(fallen); ch.push({ op: 'character', id: k.id, alive: false, cause: 'a lance through the throat in the lists' }, { op: 'relation', a: house, b: k.house, delta: -4, reason: 'a knight dead in your lists' }); blood = ` ${k.name} died in the lists, a splinter through the throat.`; }
+  if (fallen.length && random() < 0.12) { const k = pick(fallen); ch.push({ op: 'character', id: k.id, alive: false, cause: 'a lance through the throat in the lists', how: 'wound' }, { op: 'relation', a: house, b: k.house, delta: -4, reason: 'a knight dead in your lists' }); blood = ` ${k.name} died in the lists, a splinter through the throat.`; }
   // the lords of the region ride to it for a moon (shared/retinues.js)
   if (me.seat) { state.plots = state.plots || {}; (state.plots.tourneys = state.plots.tourneys || {})[me.seat] = dayNumber(state.meta.date); }
   emit(state, 'tourney', { actors: [me.lord], houses: [house, ...guests.map((g) => g.id)], place: me.seat || null, data: { cost: TOURNEY_COST, guests: guests.length }, cause, text: `House ${me.name} holds a tourney at ${state.holdings[me.seat]?.name || 'its seat'}; ${guests.length} houses send knights.` });
@@ -86,7 +86,7 @@ function judge(state, house, { character, verdict }, cause) {
     ch.push({ op: 'character', id: c.id, status: 'free', house: 'nights_watch', loc: 'nights_watch', title: 'Brother of the Night\'s Watch', note: `Sent to take the black by House ${me.name}.` }, { op: 'relation', a: house, b: c.house, delta: -12, reason: `${c.name} sent to the Wall` }, { op: 'figure', house: 'nights_watch', field: 'menAtArms', delta: 1, source: 'A new brother' });
     summary = `${c.name} takes the black. The Watch gains a man; House ${h?.name} loses one, and will not thank you.`;
   } else {
-    ch.push({ op: 'character', id: c.id, alive: false, cause: `executed by order of House ${me.name}` }, { op: 'relation', a: house, b: c.house, delta: -45, reason: `${c.name} executed` });
+    ch.push({ op: 'character', id: c.id, alive: false, cause: `executed by order of House ${me.name}`, ...(me.lord ? { by: me.lord } : {}) }, { op: 'relation', a: house, b: c.house, delta: -45, reason: `${c.name} executed` });
     // the realm watches: honourable lords are troubled, the hard ones approve
     for (const v of vassalsOf(state, house)) { const l = state.characters[state.houses[v].lord]; if (!l?.alive) continue; const T = temperament(l); const d = T.guile < 0.3 && T.warmth > 0.5 ? -6 : T.warmth < 0.3 ? 3 : -2; ch.push({ op: 'character', id: l.id, loyalty: clamp((l.loyalty ?? 60) + d, -100, 100) }); }
     summary = `${c.name} is executed. House ${h?.name} will not forget it; your own lords take it each after their nature.`;

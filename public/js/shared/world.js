@@ -890,9 +890,14 @@ function applyOne(state, ch, ctx) {
       const f = { actors: [c.id], houses: [c.house], place: where() };
       const held = (x) => /imprisoned|captive|hostage/.test(x || '');
       const why = `${ch.cause || ''} ${ch.note || ''}`;
-      if (was.alive && !c.alive) note(/battle|victory|slain|the field|fell /i.test(why) ? 'slain_in_battle' : /execut|behead|hanged|headsman/i.test(why) ? 'executed' : 'death', { ...f, data: { cause: ch.cause || null } });
-      else if (c.alive) {
-        if (held(c.status) && !held(was.status)) note(/battle/i.test(why) ? 'captured_in_battle' : 'captured', { ...f, data: { by: resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner || null, note: ch.note || null } });
+      if (was.alive && !c.alive) {
+        const kind = /battle|victory|slain|the field|fell /i.test(why) ? 'slain_in_battle' : /execut|behead|hanged|headsman/i.test(why) ? 'executed' : 'death';
+        // the slots a headline is written from, when the caller knows them: who did it, how, in which battle, where
+        note(kind, { ...f, ...(kind === 'slain_in_battle' && !f.place && ch.place ? { place: ch.place } : {}), data: { cause: ch.cause || null, ...(ch.by ? { by: ch.by } : {}), ...(ch.how ? { how: ch.how } : {}), ...(kind === 'slain_in_battle' && ch.battle ? { battle: ch.battle } : {}) } });
+      } else if (c.alive) {
+        // a captive of the field is held by the host's commander (or, failing him, its house); one taken at a castle, by its lord's house
+        const inBattle = /battle/i.test(why);
+        if (held(c.status) && !held(was.status)) note(inBattle ? 'captured_in_battle' : 'captured', { ...f, ...(inBattle && !f.place && ch.place ? { place: ch.place } : {}), data: { by: (inBattle ? ch.by : null) ?? (resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner || null), note: ch.note || null, ...(inBattle && ch.battle ? { battle: ch.battle } : {}) } });
         else if (held(was.status) && !held(c.status)) note(/ransom/i.test(why) ? 'ransomed' : 'released', f);
         if (c.status === 'wounded' && was.status !== 'wounded') note('wounded', { ...f, data: { note: ch.note || null } });
         if (/missing|vanish/i.test(c.status || '') && !/missing|vanish/i.test(was.status || '')) note('vanished', f);
