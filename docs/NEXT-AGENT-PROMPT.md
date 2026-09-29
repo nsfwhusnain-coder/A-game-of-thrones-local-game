@@ -33,7 +33,21 @@ This is a **massive, long-running project**: a full Game Design Document, a road
    - `docs/gdd/18-headlines.md` (Phase N);
    - `docs/gdd/17-ui-declutter.md` (Phase U);
    - `docs/gdd/19-realm-ledger.md` (Phase R; it supersedes 17's U5–U7).
-6. `docs/gdd/DECISIONS.md` (D-001 … D-057): past departures from the GDD. `docs/CHANGELOG.md`: what each merged package changed for the player.
+6. **`docs/AGENT-PLAYBOOK.md`: your operating manual.** It defines nine subagent roles (Builder, Test-writer, Visual
+   QA, Player's-eye reviewer, Knowledge/spoiler auditor, Determinism and perf auditor, Docs keeper, Diff reviewer,
+   Explorer), each with a ready prompt template headed by the COMMON RULES block. It also has the per-WP pipeline and
+   its gates, a file map and waves for running N, U and R in parallel, the rubrics, and the failure modes met so far.
+   Use it for every work package.
+7. **The target, drawn: `docs/mockups/README.md`.** It holds eight mockups at 1920×1080 and 1366×768: today's clutter,
+   annotated; the quiet HUD; the headline feed; an opened event card; the week's digest; the State of the Realm; the
+   menu with a castle card; the first run. Look at every image before building U, N7–N9 or R6. Your Visual QA compares
+   the real screens against them at each PR. Regenerate or extend them with `node scripts/mockups.js` (generator in
+   `docs/mockups/build.mjs`).
+8. **`docs/gdd/20-pax-reference.md`: what we take from the official Pax Historia.** It covers the loop, the screen,
+   the headline and summary rules, and twenty Westeros before/after headline pairs (seeds for N1's golden set). The
+   official site is thin and its wiki blocked our fetcher, so claims about Pax's exact layout are marked uncertain.
+   The rules are what matter.
+9. `docs/gdd/DECISIONS.md` (D-001 … D-057): past departures from the GDD. `docs/CHANGELOG.md`: what each merged package changed for the player.
 
 ## 2. Where things stand
 
@@ -75,6 +89,19 @@ CI runs `npm run check` and `npm test` on windows-latest and ubuntu-latest with 
 Put unfinished rebuilds behind `config.json` switches, so the default branch stays playable at every merge.
 
 ## 4. How to work: use Sonnet 5.5 subagents extensively
+
+**Follow `docs/AGENT-PLAYBOOK.md`.** For each work package:
+1. The **Test-writer** turns the GDD's acceptance criteria into failing tests.
+2. **Builders** (at most three at once, on disjoint files or in worktrees) make them pass.
+3. You run `npm run check && npm test` yourself.
+4. **Visual QA** screenshots and compares against `docs/mockups/`.
+5. The **Player's-eye reviewer** plays a mock game and grades the headlines and screens as a player would.
+6. The **Knowledge auditor** checks for leaked truths.
+7. The **Diff reviewer** attacks the branch.
+8. The **Docs keeper** writes the CHANGELOG, roadmap, GDD and DECISIONS entries.
+9. You open the PR, and merge only when CI is green.
+
+The detail follows.
 
 You lead; **Sonnet 5.5 subagents do the building.** This is a long task: keep your own context for planning, reviewing and merging, and delegate the reading and writing of code.
 

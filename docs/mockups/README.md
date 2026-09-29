@@ -1,5 +1,9 @@
 # Mockups: the target interface
 
+> **Read with care:** the backgrounds are real screenshots from before E5, so a garrison plate ("400 Cassel") still
+> shows at Winterfell. E5 removed garrison tokens, and E4 already fixed the colliding labels of callout 11 in mockup 01.
+> The mockups show the *layout, hierarchy and tone* to build, not pixel-exact art; improve on them where you can.
+
 Static pictures of what GDD [17](../gdd/17-ui-declutter.md), [18](../gdd/18-headlines.md) and
 [19](../gdd/19-realm-ledger.md) ask for, so the person building it can *see* the goal. They are **design targets, not
 screenshots of running code**: the map behind them is a real screenshot from `docs/screens/`, the faces and banners are
