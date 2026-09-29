@@ -57,7 +57,7 @@ function fight(state, att, def, days, r, { surprise = false, caught = false, sta
   const cmdOf = (p) => (p.commander && state.characters[p.commander]?.alive && !fell.has(p.commander) ? p.commander : null);
   for (const { c, fate } of B.fates) {
     const theirs = [win.members || [], win.commander].flat().includes(c.id) ? win : lose; const foe = theirs === win ? lose : win;
-    if (fate === 'slain') { changes.push({ op: 'character', id: c.id, alive: false, cause: `killed in battle near ${place?.name}`, how: 'battle', ...(cmdOf(foe) ? { by: cmdOf(foe) } : {}), place: place?.id }); fates.push(`${c.name} was slain`); }
+    if (fate === 'slain') { changes.push({ op: 'character', id: c.id, alive: false, cause: `killed in battle near ${place?.name}`, how: 'battle', ...(cmdOf(foe) ? { by: cmdOf(foe) } : {}) }); fates.push(`${c.name} was slain`); }
     else if (fate === 'captured' && state.parties[foe.id] && !(B.wiped && foe === lose)) { changes.push({ op: 'character', id: c.id, status: 'imprisoned', loc: ref(foe.id), note: `Taken captive in battle near ${place?.name}`, by: cmdOf(foe) || foe.owner, place: place?.id }); fates.push(`${c.name} was taken captive`); }
     else if (fate === 'wounded' || fate === 'captured') { changes.push({ op: 'character', id: c.id, status: 'wounded', note: `Wounded in battle near ${place?.name}` }); fates.push(`${c.name} was wounded`); }
   }

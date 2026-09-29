@@ -58,10 +58,12 @@ export const BOILERPLATE = [
   '\\bcalls? up\\b[^.]*\\blevies\\b', '\\bhost of house\\b', '\\bhouse the\\b', '\\bbanners of (?!the\\b)',
   '\\bhouse [\\w\'’-]+ of (?:the )?[a-z]', '\\bknights and riders\\b', '\\bunder the [\\w\'’-]+ banner\\b', '\\braven received\\b',
 ];
-// The ledger's own words: counts as a suffix, the roll-call, the engine's nouns (H7: importance, fact, story).
+// The ledger's own words: a count as a suffix ("1,796 strong"), the roll-call ("the host now numbers"), and the engine's own
+// nouns and ids ("importance 3", "fact f1.2", "story S3", "an op"). Only the engine's usage: "an old story of the Long Night",
+// "in fact" and "raises his levies" are English, and a herald may say them.
 export const JARGON = [
   '\\b(?:\\d[\\d,]*|hundred|thousand|dozen|score) strong\\b', '\\bthe (?:host|levy|muster) (?:now )?(?:numbers|totals|stands at)\\b',
-  '\\blevies\\b', '\\bimportance\\b', '\\bfacts?\\b', '\\bstor(?:y|ies)\\b', '\\bcharter an? \\w+',
+  '\\bimportance\\b', '\\bfacts? f?\\d', '\\bstor(?:y|ies) S?\\d', '\\bS\\d+\\b', '\\bop\\b', '\\bcharter an? \\w+',
 ];
 
 // The verbs of the news (D-058): a headline holds a finite verb (present or past) or a bare passive participle, so
@@ -99,11 +101,37 @@ const VERB_TABLE = `
   scour ruin spoil lash swallow bury flatten level topple overrun outflank surround trap rescue relieve reinforce strengthen
   weaken divide join force compel persuade convince tempt lure trick fool deceive cheat swindle betray expose denounce
   condemn lament grieve rejoice triumph prevail conquer vanquish overcome subdue tame break
+  clash drive/drove/driven jail arrest name ring/rang/rung threaten abduct accompany acquire adopt allow ask assist avenge await
+  bind/bound/bound bite block board boast bolster bombard breach broker burst cancel cast/cast/cast catch/caught/caught cause
+  check choose/chose/chosen circle clear collapse collect come/came/come complain concede confirm confiscate consult contest
+  count crumble dare deal/dealt/dealt decide demolish descend deserve detain determine disarm disown dispute disperse
+  dominate draw/drew/drawn drink/drank/drunk dwindle earn eat/ate/eaten elect embrace employ encircle endorse endure engage
+  ensnare entertain erupt escort evacuate exceed expand expel explode extend face falter fetch finance fine flatter flock
+  flourish flow forge forsake fund gamble go/went/gone govern grab guide harass hasten hatch have/had/had head hear/heard/heard
+  hinder hint hurry ignite ignore impose impress incite insist install instruct invest involve issue jump kick kidnap kiss
+  know/knew/known lack last laugh leak lean leap let/let/let light/lit/lit linger live loan look loom love maintain
+  make/made/made manage mark match mean/meant/meant measure melt mention miss mobilise mobilize move nail need negotiate
+  nominate notify obey object oblige observe obtain offend organise organize overtake own pace paint parade pause perform
+  permit pick pin pitch plan plant play point ponder position pour prepare present preserve prevent proceed produce promote
+  propose protect protest prove provide provoke publish punish purchase purge quell question race rank rattle react reap
+  recall reclaim recognise recognize recommend reconcile record redeem reduce refer reform regain register regret reign
+  reinforce relax rely remember remind remove renew rent reopen repel repent report represent repress request require
+  resemble reserve reside resolve retain retaliate retrieve reunite revenge revive reward ripple roam roar rock roll rule rush
+  salute sanction satisfy scare scold score scorn scramble search secure seek/sought/sought seem sense separate serve
+  shake/shook/shaken share shield shift shine/shone/shone shock show/showed/shown shrug signal silence skirmish slash
+  slide/slid/slid slip slow smile snatch soften solve sound spark spawn speed/sped/sped spend/spent/spent spill spin spit
+  spot spring/sprang/sprung sprout spur stagger stall stamp stare state stem step stir stumble suffer suggest suit
+  suppose suppress surface surge surprise survive suspect suspend sustain swing tackle talk target taste tear/tore/torn
+  tempt tend tender testify thank thrive throw/threw/thrown thwart tie tighten tolerate touch tour track trample transfer
+  transport tread treat tremble trigger trust tug twist undergo undermine understand/understood/understood undo unleash
+  unload unveil update uphold upset use utter venture verify vote wade wager waive wander want wash waste weaken
+  wear/wore/worn weigh wish withhold withstand witness wonder work worry worship approve avoid change delay fear help
 `;
 const inflect = (spec) => {
   const [base, past, part] = spec.split('/');
-  const s3 = /(?:s|x|z|ch|sh)$/.test(base) ? `${base}es` : /[^aeiou]y$/.test(base) ? `${base.slice(0, -1)}ies` : `${base}s`;
+  const s3 = /(?:s|x|z|ch|sh|o)$/.test(base) ? `${base}es` : /[^aeiou]y$/.test(base) ? `${base.slice(0, -1)}ies` : `${base}s`;
   const ed = base.endsWith('e') ? `${base}d` : /[^aeiou]y$/.test(base) ? `${base.slice(0, -1)}ied` : `${base}ed`;
   return [base, s3, past || ed, part || past || ed, ...(past === 'hung' ? ['hanged'] : [])];
 };
-export const HEADLINE_VERBS = [...new Set(VERB_TABLE.split(/\s+/).filter(Boolean).flatMap(inflect).concat(['borne', 'ridden', 'wed', 'wedded', 'betrothed', 'beheaded']))].filter((v) => /^[a-z]+$/.test(v));
+// ("dead" is headline-ese for a participle: "Rickard Karstark dead at Karhold")
+export const HEADLINE_VERBS = [...new Set(VERB_TABLE.split(/\s+/).filter(Boolean).flatMap(inflect).concat(['borne', 'ridden', 'wed', 'wedded', 'betrothed', 'beheaded', 'dead']))].filter((v) => /^[a-z]+$/.test(v));

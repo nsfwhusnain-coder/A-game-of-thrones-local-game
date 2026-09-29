@@ -54,7 +54,8 @@ export function whyRefused(state, v, call) {
   if (getRelation(state, v.id, v.liege) <= -30) return 'bad blood between the houses';
   if ((lord?.loyalty ?? 60) < 30) return 'little loyalty to the liege';
   if (tax === 'crushing' || tax === 'heavy') return "the liege's heavy taxes";
-  if ((Number(v.figures?.food?.v) || 99) < 2) return 'hungry lands at home';
+  const food = v.figures?.food?.v; // an empty granary (0) is hunger; only a granary nobody has counted is not
+  if ((food == null ? 99 : Number(food)) < 2) return 'hungry lands at home';
   if (call?.late) return 'already put the call off once';
   if ((vassalTemper(state, v.id) ?? 50) < MUSTER.bands.dutiful) return 'no heart for the war';
   return null;

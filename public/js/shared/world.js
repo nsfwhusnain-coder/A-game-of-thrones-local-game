@@ -892,8 +892,8 @@ function applyOne(state, ch, ctx) {
       const why = `${ch.cause || ''} ${ch.note || ''}`;
       if (was.alive && !c.alive) {
         const kind = /battle|victory|slain|the field|fell /i.test(why) ? 'slain_in_battle' : /execut|behead|hanged|headsman/i.test(why) ? 'executed' : 'death';
-        // the slots a headline is written from, when the caller knows them: who did it, how, in which battle, where
-        note(kind, { ...f, ...(kind === 'slain_in_battle' && !f.place && ch.place ? { place: ch.place } : {}), data: { cause: ch.cause || null, ...(ch.by ? { by: ch.by } : {}), ...(ch.how ? { how: ch.how } : {}), ...(kind === 'slain_in_battle' && ch.battle ? { battle: ch.battle } : {}) } });
+        // the slots a headline is written from, when the caller knows them: who did it, how, in which battle
+        note(kind, { ...f, data: { cause: ch.cause || null, ...(ch.by ? { by: ch.by } : {}), ...(ch.how ? { how: ch.how } : {}), ...(kind === 'slain_in_battle' && ch.battle ? { battle: ch.battle } : {}) } });
       } else if (c.alive) {
         // a captive of the field is held by the host's commander (or, failing him, its house); one taken at a castle, by its lord's house
         const inBattle = /battle/i.test(why);
@@ -1014,7 +1014,11 @@ function applyOne(state, ch, ctx) {
       state.battles.push({ name: ch.name || `Battle at ${placeName(state, ch.at)}`, pos, date, turn: state.meta.turn, attacker: findHouse(state, ch.attacker), defender: findHouse(state, ch.defender), victor: findHouse(state, ch.victor), losses: ch.losses || {}, summary: ch.summary || '' });
       state.battles = state.battles.slice(-40);
       const bt = state.battles.at(-1);
-      note('battle', { actors: [], houses: [bt.attacker, bt.defender], place: resolvePlaceId(ch.at || ch.location) || null, pos, data: { attacker: bt.attacker, defender: bt.defender, winner: bt.victor, lost: bt.losses }, text: `${bt.name}${bt.victor ? `: victory for House ${state.houses[bt.victor]?.name}` : ''}.${bt.summary ? ` ${bt.summary}` : ''}` });
+      // the slots a headline is written from (as on the engine's own battles, shared/battles.js): a story battle names houses, not
+      // hosts, so its `winner` is already a house; the loser is the other side; `how` only if the op says it, in plain words
+      const loserHouse = bt.victor === bt.attacker ? bt.defender : bt.victor === bt.defender ? bt.attacker : null;
+      const how = typeof ch.how === 'string' && /^[a-z][a-z ,'-]{2,59}$/i.test(ch.how.trim()) ? ch.how.trim() : null;
+      note('battle', { actors: [], houses: [bt.attacker, bt.defender], place: resolvePlaceId(ch.at || ch.location) || null, pos, data: { attacker: bt.attacker, defender: bt.defender, winner: bt.victor, lost: bt.losses, winnerHouse: bt.victor || null, loserHouse: bt.victor ? loserHouse ?? null : null, ...(how ? { how } : {}) }, text: `${bt.name}${bt.victor ? `: victory for House ${state.houses[bt.victor]?.name}` : ''}.${bt.summary ? ` ${bt.summary}` : ''}` });
       return { op, text: `BATTLE: ${state.battles.at(-1).name}${ch.victor ? ' — victory for ' + (state.houses[findHouse(state, ch.victor)]?.name || ch.victor) : ''}` };
     }
     case 'raven': case 'letter': case 'message': {
