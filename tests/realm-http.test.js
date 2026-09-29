@@ -143,3 +143,58 @@ test('asking for the realm changes nothing that follows: the same turns, with an
   assert.deepEqual(b.dice, a.dice, 'the save\'s dice have not moved');
   assert.equal(JSON.stringify(b), JSON.stringify(a), 'the world, the series and what the house has observed are the same');
 });
+
+// ── the truth series stays on the server (19 §3.1: "never sent to the browser"; invariant 10) ───────────────────────────
+/** Every key of a JSON value, at every depth. */
+const keysOf = (x, out = []) => { if (Array.isArray(x)) x.forEach((y) => keysOf(y, out)); else if (x && typeof x === 'object') for (const [k, v] of Object.entries(x)) { out.push(k); keysOf(v, out); } return out; };
+const turnFile = (id, n) => path.join(saves, id, 'turns', `${String(n).padStart(6, '0')}.json`);
+/** A game with one turn played and its background work done. */
+async function playedGame(seed) {
+  const { id } = await api('/games', { scenario: 'agot_298', house: 'stark', seed });
+  await api(`/games/${id}/advance`, { span: '7d', orders: [] }); await quiet(id);
+  return id;
+}
+
+test('the game the browser is sent has no realmStats and no other house\'s observations; nor has a turn any realm row', async () => {
+  const id = await playedGame(14);
+  const disk = JSON.parse(fs.readFileSync(stateFile(id), 'utf8'));
+  assert.ok(disk.realmStats.samples.length >= 2 && Object.keys(disk.knowledge.stark.realm).length > 0, 'the save holds the series and what the house has observed: the check has teeth');
+  assert.ok(JSON.parse(fs.readFileSync(turnFile(id, 1), 'utf8')).realm?.h?.lannister, 'and the turn\'s file holds the row of every house');
+  const g = JSON.parse((await raw(`/games/${id}`)).text);
+  assert.ok(!keysOf(g).includes('realmStats'), 'GET /games/:id carries no realmStats, at any depth');
+  assert.deepEqual(Object.keys(g.knowledge), ['stark'], 'only the player\'s own knowledge, so no other house\'s realm observations');
+  assert.ok(g.history.length >= 1 && g.history.every((t) => !('realm' in t)), 'the turns in the history carry no realm row');
+  const t = JSON.parse((await raw(`/games/${id}/turns/1`)).text);
+  assert.equal(t.turn, 1); assert.ok(!('realm' in t), 'GET /games/:id/turns/1 has no realm row');
+  // and a turn's answer from advance
+  const r = await api(`/games/${id}/advance`, { span: '7d', orders: [] });
+  assert.ok(!keysOf(r).includes('realmStats') && !('realm' in r.turn) && r.state.history.every((x) => !('realm' in x)), 'nor has the answer of a played turn');
+  await quiet(id);
+});
+
+test('invariant 10 knows the truth series: a view or a served turn that carries it is flagged', async () => {
+  const id = await playedGame(15);
+  const { playerView, hiddenTruths } = await import('../server/view.js');
+  const disk = JSON.parse(fs.readFileSync(stateFile(id), 'utf8'));
+  const view = playerView(disk);
+  assert.deepEqual(hiddenTruths(disk, view), [], 'the view the server makes hides it');
+  assert.ok(hiddenTruths(disk, { ...view, realmStats: disk.realmStats }).some((p) => /realm/.test(p)), 'realmStats in a view');
+  const turn = JSON.parse(fs.readFileSync(turnFile(id, 1), 'utf8'));
+  assert.ok(hiddenTruths(disk, { ...view, history: [...view.history, turn] }).some((p) => /realm/.test(p)), 'a realm row in a served turn record');
+});
+
+test('non-interference over the wire: another house\'s figures changed in the saved series move no byte of the game, the turn or the realm sent', async () => {
+  const id = await playedGame(16);
+  const get = async () => ({ game: (await raw(`/games/${id}`)).text, turn: (await raw(`/games/${id}/turns/1`)).text, realm: (await raw(`/games/${id}/realm?scope=all`)).text });
+  const before = await get();
+  const disk = JSON.parse(fs.readFileSync(stateFile(id), 'utf8'));
+  const mine = new Set(['stark', ...Object.values(disk.houses).filter((h) => h.liege === 'stark').map((h) => h.id)]);
+  const spoil = (rows) => { for (const h of Object.keys(rows)) if (!mine.has(h)) rows[h] = rows[h].map((_, i) => 987654321 + i); };
+  for (const s of disk.realmStats.samples) spoil(s.h);
+  fs.writeFileSync(stateFile(id), JSON.stringify(disk));
+  const rec = JSON.parse(fs.readFileSync(turnFile(id, 1), 'utf8')); spoil(rec.realm.h); fs.writeFileSync(turnFile(id, 1), JSON.stringify(rec));
+  const after = await get();
+  assert.equal(after.game, before.game, 'GET /games/:id');
+  assert.equal(after.turn, before.turn, 'GET /games/:id/turns/1');
+  assert.equal(after.realm, before.realm, 'GET /games/:id/realm');
+});

@@ -68,13 +68,16 @@ export function playerView(state) {
     history: (state.history || []).map(viewTurn),
   };
   delete view.minds; delete view.pendingReplies;
+  // the realm ledger's truth series holds every house's true coin, levies and income: the browser never has it — the State
+  // of the Realm is asked of the server, which builds it from what the house knows (GET /realm, engine/realm/view.js)
+  delete view.realmStats;
   return view;
 }
 
 /** A turn record as the player may read it: the chronicle, not the engine's workings. */
 export function viewTurn(t) {
   if (!t || typeof t !== 'object') return t;
-  const { minds, hooks, applied, rejected, invariants, ...rest } = t;
+  const { minds, hooks, applied, rejected, invariants, realm, ...rest } = t; // `realm` is the turn's row of every house's true figures
   return rest;
 }
 
@@ -106,5 +109,7 @@ export function hiddenTruths(state, view) {
   if ((view.post || []).some((l) => l.reply && l.status === 'in flight')) out.push('10: an answer still on the road is sent');
   for (const h of Object.keys(view.knowledge || {})) if (h !== me) out.push(`10: House ${h}'s knowledge is sent`);
   for (const t of view.history || []) if (t.minds || t.hooks) out.push(`10: turn ${t.turn}'s minds or hooks are sent`);
+  if (view.realmStats) out.push('10: the realm ledger\'s true series is sent');
+  for (const t of view.history || []) if (t.realm) out.push(`10: turn ${t.turn}'s true realm figures are sent`);
   return out;
 }
