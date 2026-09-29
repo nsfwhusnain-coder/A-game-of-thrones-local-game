@@ -82,6 +82,8 @@ Cards appear top-down in day order; the current card expanded, others collapsed 
 
 ## 3. Design system
 
+> **Status:** Superseded for colour, materials, shape and motion by [21 — Art direction](21-art-direction.md) (D-062); §3.2 type and §3.4 components stand, restyled there.
+
 `public/css/tokens.css` (new; `style.css` imports it). The house theme (existing `THEMES` in `common.js`) sets the
 `--house-*` variables.
 

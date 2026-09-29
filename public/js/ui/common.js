@@ -225,6 +225,17 @@ export function applyHouseTheme(house) {
   const root = document.documentElement.style;
   const color = house?.color;
   const T = house && houseTheming() ? THEMES[house.id] : null;
+  // the two colours of the house's arms (the field and the charge) tint the ribbon behind its crest and the rim of its ruler's
+  // portrait (theme.css, GDD 21). Wax is pigment, not metal: the seal takes whichever of the two is the richest colour (not
+  // gold-bright, not pale, not black), so a red field with a gold lion gives red wax and a green one green; arms that are only
+  // white, grey and black (Stark) get oxblood.
+  const arms = house && houseTheming() ? house.sigil : null;
+  if (arms?.f) {
+    const one = arms.f, two = arms.cc || T?.metal || arms.f;
+    const pigment = (hex) => { const c = hexToHsl(hex); if (!c) return 0; const [, s, l] = c; return s >= 30 && l >= 10 && l <= 80 ? (s / 100) * (1 - l / 100) ** 2 : 0; };
+    const best = pigment(two) > pigment(one) ? two : one;
+    root.setProperty('--house-1', one); root.setProperty('--house-2', two); root.setProperty('--wax', pigment(best) > 0 ? best : '#7b1e17');
+  } else { root.removeProperty('--house-1'); root.removeProperty('--house-2'); root.removeProperty('--wax'); }
   if (T) {
     const set = (k, v) => root.setProperty(k, v); const { hue: h, sat: s } = T;
     set('--bg', `hsl(${h} ${Math.round(s * 0.7)}% 5%)`);

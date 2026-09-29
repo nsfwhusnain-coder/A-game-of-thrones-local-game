@@ -975,3 +975,40 @@ ransoms, `embargo`) and the price index of §6.3.
   (it was red): the map shows what the player would know of others' orders, which is nothing.
 - **This week's word carries no age** on a reported plate ("~6,000?"); older word says how old ("· 7 days old").
 
+## D-062 · 2026-09-29 · Art direction "the maester's desk" replaces the dark glass panels (WP U0)
+
+- **[GDD 21](21-art-direction.md) supersedes [12](12-ui-ux.md) §3.1 and §3.3** (dark glass panels, a flat gold accent).
+  Each surface is a material with a meaning: *vellum* = the maester wrote it; *oak and leather* = the frame you hold;
+  *iron* = press it; *wax* = awaits your word; *gold leaf* = read first. No `backdrop-filter` on chrome; one ornament
+  per surface.
+- **Why:** the owner's review found the interface "modern, made by AI"; the setting needs heart. Pulled forward from
+  F1 so that U1–U3 are built in the new look once, not restyled afterwards. §3.2 (type) and §3.4 (the component list)
+  of 12 stand, restyled in 21.
+
+## D-063 · 2026-09-29 · Textures are generated, not fetched (WP U0)
+
+- **`scripts/paint-ui.js` paints them** in a browser canvas with fixed seeds (byte-identical runs) and the files are
+  committed to `public/img/ui` (about 110 KB).
+- **Why:** no licences, no network, deterministic, tiny. Every material degrades to its base colour if a file is
+  missing.
+
+## D-064 · 2026-09-29 · Wax is pigment; the ribbon keeps the arms (WP U0)
+
+- **`--wax` is the richer of the arms' two colours** (saturation ≥ 30 %, lightness 10–80 %), else oxblood `#7b1e17`.
+  The ribbon and the portrait's rim keep the arms' colours: `--house-1` and `--house-2` come from the house's sigil
+  (`house.sigil.f` and `.cc`), not from `THEMES` (whose Stark is blue).
+- **In play:** Stark, oxblood wax on a grey ribbon; Lannister, crimson; Tyrell, green; Greyjoy, gold.
+
+## D-065 · 2026-09-29 · Icons keep the game's stroked hand (WP U0)
+
+- **The existing set is kept** (69 icons before U0, 79 after), drawn on a 24-unit grid in the current colour. U0 adds
+  `chain`, `weirwood`, `book`, `seal`, the tier marks and `inkpot` in the same stroke, rather than redrawing the set as
+  filled silhouettes.
+
+## D-066 · 2026-09-29 · Illuminated initials are for prose only (WP U0)
+
+- **The illuminated initial belongs to prose** (the welcome, letters), with the rest of the first line in small caps.
+  Headlines and the digest are numbered instead, the first numeral in gold leaf.
+- **Lining figures everywhere for now:** the bundled EB Garamond subset has no old-style figures (`onum`), so `.wc-prose`
+  gets them only when the fonts are re-subset (F1).
+
