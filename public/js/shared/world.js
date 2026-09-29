@@ -21,6 +21,7 @@ import { sameLand } from '../engine/geo.js';
 import { toV3 } from '../engine/state/migrate.js';
 import { settleWorld } from '../engine/state/settle.js';
 import { emit } from '../engine/facts/log.js';
+import { sampleRealm } from '../engine/realm/stats.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
 export const FIGURE_LABELS = {
@@ -178,6 +179,7 @@ function buildInitialState(scenarioId, playerHouse, seed) {
   }
   settleWorld(state);
   seedKnowledge(state); // what every lord knows at the start: where the realm's hosts and fleets were last heard of
+  sampleRealm(state); // the first row of the realm's figures, so a series never begins empty (19 §3.1)
   return state;
 }
 
@@ -213,6 +215,8 @@ export function migrateState(state) {
   // of war begin with what everyone knows
   if (state.intel) { const k = knowledgeOf(state); Object.assign(k.parties, state.intel.parties || {}); Object.assign(k.spies, state.intel.spies || {}); delete state.intel; }
   if (!state.knowledge?.[state.meta.player]) seedKnowledge(state);
+  // an older save has no history of the realm's figures to invent: the series begins at the world as it now stands
+  if (!state.realmStats) sampleRealm(state);
   return state;
 }
 

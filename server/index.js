@@ -101,6 +101,13 @@ route('POST', '/api/games/:id/undo', async (req, p) => game.undo(p.id, await rea
 // the history of the save: its facts (as the player's house may know them) and each turn's record
 route('GET', '/api/games/:id/facts', (req, p) => { const q = new URL(req.url, 'http://x').searchParams; return game.readFacts(p.id, { from: q.get('from'), to: q.get('to'), house: q.get('house'), kind: q.get('kind'), limit: q.get('limit'), view: 'player' }); });
 route('GET', '/api/games/:id/turns/:n', (req, p) => viewTurn(game.readTurn(p.id, p.n)));
+// the State of the Realm (19 §7): the strengths and fortunes of the houses as the player's house knows them. The answer is
+// built from that house's knowledge (engine/realm/view.js) and is not a state, so it does not go through playerView; there
+// is no viewer parameter — whatever `?viewer=` says, it is the house of this save that looks.
+route('GET', '/api/games/:id/realm', (req, p) => {
+  const q = new URL(req.url, 'http://x').searchParams;
+  return game.realmView(p.id, { lens: q.get('lens'), scope: q.get('scope'), realm: q.get('realm') === '1', window: q.get('window'), house: q.get('house') });
+});
 route('POST', '/api/games/:id/talk', async (req, p) => { const b = await readBody(req); return game.talk(p.id, b.character, String(b.message || '').slice(0, 4000)); });
 route('POST', '/api/games/:id/suggest', (req, p) => game.suggest(p.id));
 route('POST', '/api/games/:id/act', async (req, p) => game.act(p.id, await readBody(req)));

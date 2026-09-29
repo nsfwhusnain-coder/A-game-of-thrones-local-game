@@ -37,6 +37,8 @@ import { deliverLetters, reveal } from './letters.js';
 import { replyText, promisesIn } from './ai/calls/audience.js';
 import { makeCommitment, COMMITMENTS, commitmentsTick } from '../public/js/engine/politics/commitments.js';
 import { runCall } from './ai/client.js';
+import { sampleRealm } from '../public/js/engine/realm/stats.js';
+import { realmViewFor } from '../public/js/engine/realm/view.js';
 import { parseOrder } from './orders/parse.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
@@ -179,6 +181,16 @@ export function undoDepth(id, state = loadState(id)) {
   while (n < KEEP_SNAPSHOTS && state.meta.turn - n >= 1 && fs.existsSync(path.join(d, `${pad(state.meta.turn - n)}.json.gz`))) n++;
   if (!n && fs.existsSync(path.join(dir(id), 'prev-state.json'))) n = 1; // a save from before snapshots kept one undo point
   return n;
+}
+
+/**
+ * The State of the Realm as the player's house may see it (docs/gdd/19-realm-ledger.md §7). There is no viewer to ask
+ * for: it is always the house of this save, so no request can borrow another house's eyes. Read-only — the state is
+ * loaded, looked at and let go; nothing is written, not even the series an old save has yet to begin.
+ */
+export function realmView(id, opts = {}) {
+  const state = loadState(id);
+  return realmViewFor(state, state.meta.player, opts);
 }
 
 export function writeChronicle(id, text) { fs.writeFileSync(path.join(dir(id), 'chronicle.md'), text); }
@@ -458,6 +470,8 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   state.chronicle = [];
   // the world holds together (03 §14), checked every turn: a broken invariant is an engine bug, reported, never hidden
   settleWorld(state);
+  // the realm's figures as the settled books show them: one row a turn in the save (thinned there) and, whole, in the turn's file
+  record.realm = sampleRealm(state);
   const broken = validate(state);
   if (broken.length) { record.invariants = broken.slice(0, 20); console.warn(`turn ${record.turn}: ${broken.length} invariant(s) broken — ${broken.slice(0, 3).join('; ')}`); }
   const made = state.facts || []; record.facts = { count: made.length, ...(made.length ? { first: made[0].id, last: made.at(-1).id } : {}) };

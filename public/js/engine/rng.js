@@ -75,3 +75,18 @@ export const shuffle = (a) => current().shuffle(a);
 export function newSeed() {
   try { const b = new Uint32Array(1); globalThis.crypto.getRandomValues(b); return b[0]; } catch { return u32(Date.now() ^ 0x5bd1e995); } // lint-allow: a new game's seed, not a roll
 }
+
+/**
+ * A pure 32-bit hash of its arguments (strings and numbers): the same parts always give the same number, and no part
+ * can slide into its neighbour ("ab","c" is not "a","bc"). It touches no stream and no save: it is how a figure the
+ * house only estimates gets its blur without one roll of the dice (docs/gdd/19-realm-ledger.md §2 M5), so reopening the
+ * view, reloading a save or replaying a turn shows the same `~`. FNV-1a over the parts, then a splitmix finaliser.
+ */
+export function hash32(...parts) {
+  let h = 2166136261;
+  const s = parts.map(String).join('\u0001');
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  let z = u32(h + 0x9e3779b9);
+  z = Math.imul(z ^ (z >>> 16), 0x85ebca6b); z = Math.imul(z ^ (z >>> 13), 0xc2b2ae35);
+  return u32(z ^ (z >>> 16));
+}
