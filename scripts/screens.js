@@ -388,6 +388,18 @@ const SCENARIOS = {
       if (!plates.some((p) => /King's progress/.test(p))) throw new Error(`${name}: the King's progress has no plate (${JSON.stringify(plates)})`);
     },
   })])),
+  // the maester's desk (WP U0, GDD 21): every component of theme.css on one composed screen over the real map, and the same
+  // table tinted for House Lannister; the run fails if a component of §6 is missing from the tile or the page errors
+  ...Object.fromEntries([['style', ''], ['style-lannister', '?house=lannister']].map(([name, q]) => [name, async () => ({
+    page: async (page) => {
+      const errs = []; page.on('pageerror', (e) => errs.push(e.message)); page.on('response', (r) => { if (r.status() >= 400 && !r.url().includes('/assets/sigils/')) errs.push(`${r.status()} ${r.url()}`); }); // (the title screen's optional sigil art is not the tile's)
+      await page.goto(`http://127.0.0.1:${PORT}/dev/style.html${q}`, { waitUntil: 'domcontentloaded', timeout: 120000 }); // (the title screen's map is still drawing on this CPU)
+      await page.waitForFunction(() => document.title === 'ready', null, { timeout: 120000, polling: 250 });
+      await page.waitForFunction(() => [...document.images].every((i) => i.complete), null, { timeout: 30000 });
+      const missing = await page.evaluate(() => ['oak', 'leather', 'vellum', 'btn', 'plate', 'seal', 'medallion', 'chip', 'tab', 'rule', 'initial', 'numeral', 'tier-great', 'tier-major', 'tier-news', 'tier-minor', 'tier-meanwhile', 'tooltip', 'coach', 'table'].filter((c) => !document.querySelector(`.wc-${c}`)));
+      if (missing.length || errs.length) throw new Error(`${name}: missing components [${missing}] · page errors [${errs}]`);
+    },
+  })])),
   // the map's modes at L0 (WP E2): Diplomacy, Knowledge and War beside Realms, each with its key; Stark at war with the West
   ...Object.fromEntries(['political', 'diplomacy', 'knowledge', 'war'].map((m) => [`mode-${m}`, async () => {
     const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });

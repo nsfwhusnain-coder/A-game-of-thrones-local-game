@@ -2,6 +2,7 @@
 import { sfx } from './sfx.js';
 import { sigilSrc, bannerURL } from '../sigils.js';
 import { portraitLazy } from './portrait.js';
+import { hexToHsl, waxOf } from './heraldry.js';
 import { placeName, getRelation, fmt } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
 import { statusText } from '../engine/parties.js';
@@ -186,13 +187,6 @@ export function houseTheming() { return store.get('house-theme') !== 'off'; }
 export function setHouseTheming(on) { store.set('house-theme', on ? 'on' : 'off'); }
 setUiScale(uiScale());
 
-function hexToHsl(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
-  const n = parseInt(m[1], 16); const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
-  const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2;
-  if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
-  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
-}
 const THEME_VARS = ['--bg', '--panel', '--panel-solid', '--panel2', '--line', '--line2', '--gold', '--gold2', '--muted', '--red', '--accent'];
 /** Tint the whole interface in a house's colours (Stark steel-blue, Lannister crimson…). Pass null for the default gold. */
 // The colours each great house wears (from the books' heraldry): panels take the house hue,
@@ -225,6 +219,15 @@ export function applyHouseTheme(house) {
   const root = document.documentElement.style;
   const color = house?.color;
   const T = house && houseTheming() ? THEMES[house.id] : null;
+  // the two colours of the house's arms (the field and the charge) tint the ribbon behind its crest and the rim of its ruler's
+  // portrait (theme.css, GDD 21). Wax is pigment, not metal: the seal takes whichever of the two is the richest colour (not
+  // gold-bright, not pale, not black), so a red field with a gold lion gives red wax and a green one green; arms that are only
+  // white, grey and black (Stark) get oxblood.
+  const arms = house && houseTheming() ? house.sigil : null;
+  if (arms?.f) {
+    const one = arms.f, two = arms.cc || T?.metal || arms.f;
+    root.setProperty('--house-1', one); root.setProperty('--house-2', two); root.setProperty('--wax', waxOf(one, two));
+  } else { root.removeProperty('--house-1'); root.removeProperty('--house-2'); root.removeProperty('--wax'); }
   if (T) {
     const set = (k, v) => root.setProperty(k, v); const { hue: h, sat: s } = T;
     set('--bg', `hsl(${h} ${Math.round(s * 0.7)}% 5%)`);

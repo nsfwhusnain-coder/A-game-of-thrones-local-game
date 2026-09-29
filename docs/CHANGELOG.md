@@ -3,7 +3,25 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
-## 2026-09-29 — SB: a bug sweep from the first playtest (PR pending)
+## 2026-09-29 — U0 — the look: the maester's desk
+
+- **Nothing changes in the game itself yet.** U0 builds the new look as a *style tile* — the pieces the next packages
+  (the quiet HUD, the headline feed, the State of the Realm) are laid out in, so the screen is built in it once
+  ([GDD 21](gdd/21-art-direction.md)). It replaces the dark glass panels with things a lord has on his table: vellum
+  for what the maester wrote, oak and leather for the frame, iron for what you press, wax for what awaits your word,
+  gold leaf for what to read first.
+- **The house you rule tints the table**: its two colours dress the ribbon behind the crest and the rim of the
+  portrait, and its richer pigment is the wax of the Inbox seal (Stark oxblood on a grey ribbon; Lannister crimson;
+  Tyrell green; Greyjoy gold).
+- **Engraved icons** in the game's own stroked hand: a maester's chain for Settings, a weirwood for People, a book for
+  Help, a wax seal, the headline tiers (three diamonds for the great, down to a pip and three dots for "Meanwhile") and an
+  inkpot for the command bar.
+- **The textures are painted by a script** (`scripts/paint-ui.js`, fixed seeds, the same bytes every run) and
+  committed: about 110 KB in `public/img/ui`. Each material falls back to its base colour if a file is missing.
+- Owner to verify: `npm start`, then open http://127.0.0.1:3298/dev/style.html (and `?house=lannister`,
+  `?house=tyrell`, `?house=greyjoy`) and ask: *does this look like Westeros?* The screenshots at 1920×1080 and 1366×768
+  are in `docs/screens/u0/`. (PR #41)
+## 2026-09-29 — SB: a bug sweep from the first playtest (PR #42)
 
 Found by playing Stark, Lannister and Greyjoy on the mock; one line per bug as you now see it (B-32c … B-38).
 
