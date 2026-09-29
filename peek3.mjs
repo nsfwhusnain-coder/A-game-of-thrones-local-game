@@ -1,0 +1,11 @@
+process.env.WC_PROVIDER='mock';
+import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
+process.env.WC_SAVES = fs.mkdtempSync(path.join(os.tmpdir(),'wc-x-'));
+const L = await import('/home/user/wc-s1/public/js/engine/facts/label.js');
+const { createInitialState } = await import('/home/user/wc-s1/public/js/shared/world.js');
+const s = createInitialState('agot_298','stark',{seed:298});
+const G = s.characters.greatjon_umber, S = s.characters.smalljon_umber;
+for (const [c,n] of [[G,"Jon 'Greatjon' Umber"],[S,"Jon 'Smalljon' Umber"],[G,"Jon ‘Greatjon’ Umber"],[S,"Jon ‘Smalljon’ Umber"],[S,"'Smalljon' Umber"],[S,"Ser Wyl O'Rourke"],[S,"Jon \"Smalljon\" Umber"],[S,"Dickon Nightsong's"]]) console.log(n,'→',L.who(s,{...c,name:n}));
+const P=(owner,name,kind='host')=>({owner,name,kind});
+for (const p of [P('stark','The Stark Host'),P('stark','Stark Host'),P('braavos',''),P('braavos','Host of Braavos'),P('braavos','The Braavos Host'),P('free_cities',''),P('free_cities','Free Cities Host'),P('free_cities','Host of the Free Cities'),P('stark','Iron Fleet','fleet'),P('stark','The Stark Fleet'),P('golden_company',''),P('golden_company','Host of the Golden Company'),P('dothraki',''),P('nights_watch',''),P('free_folk','')]) console.log(JSON.stringify(p),'→',L.partyLabel(s,p));
+fs.rmSync(process.env.WC_SAVES,{recursive:true,force:true});

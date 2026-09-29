@@ -1,0 +1,3171 @@
+
+> westeros-chronicles@0.2.1 test
+> node --test tests/*.test.js
+
+TAP version 13
+# Subtest: probe: the mock is schema-valid, the prompt fits its budget and its snapshot
+ok 1 - probe: the mock is schema-valid, the prompt fits its budget and its snapshot
+  ---
+  duration_ms: 169.736015
+  type: 'test'
+  ...
+# Subtest: probe: a dead server gives the fallback, never an exception; the wire schema is strict
+ok 2 - probe: a dead server gives the fallback, never an exception; the wire schema is strict
+  ---
+  duration_ms: 132.982135
+  type: 'test'
+  ...
+# Subtest: interpret: the mock is schema-valid, the prompt fits its budget and its snapshot
+ok 3 - interpret: the mock is schema-valid, the prompt fits its budget and its snapshot
+  ---
+  duration_ms: 252.347724
+  type: 'test'
+  ...
+# Subtest: interpret: a dead server gives the fallback, never an exception; the wire schema is strict
+ok 4 - interpret: a dead server gives the fallback, never an exception; the wire schema is strict
+  ---
+  duration_ms: 172.460163
+  type: 'test'
+  ...
+# Subtest: mind: the mock is schema-valid, the prompt fits its budget and its snapshot
+ok 5 - mind: the mock is schema-valid, the prompt fits its budget and its snapshot
+  ---
+  duration_ms: 95.97239
+  type: 'test'
+  ...
+# Subtest: mind: a dead server gives the fallback, never an exception; the wire schema is strict
+ok 6 - mind: a dead server gives the fallback, never an exception; the wire schema is strict
+  ---
+  duration_ms: 123.533101
+  type: 'test'
+  ...
+# Subtest: narrate: the mock is schema-valid, the prompt fits its budget and its snapshot
+ok 7 - narrate: the mock is schema-valid, the prompt fits its budget and its snapshot
+  ---
+  duration_ms: 136.882345
+  type: 'test'
+  ...
+# Subtest: narrate: a dead server gives the fallback, never an exception; the wire schema is strict
+ok 8 - narrate: a dead server gives the fallback, never an exception; the wire schema is strict
+  ---
+  duration_ms: 69.287809
+  type: 'test'
+  ...
+# Subtest: audience: the mock is schema-valid, the prompt fits its budget and its snapshot
+ok 9 - audience: the mock is schema-valid, the prompt fits its budget and its snapshot
+  ---
+  duration_ms: 88.077071
+  type: 'test'
+  ...
+# Subtest: audience: a dead server gives the fallback, never an exception; the wire schema is strict
+ok 10 - audience: a dead server gives the fallback, never an exception; the wire schema is strict
+  ---
+  duration_ms: 111.148263
+  type: 'test'
+  ...
+# Subtest: council: the mock is schema-valid, the prompt fits its budget and its snapshot
+ok 11 - council: the mock is schema-valid, the prompt fits its budget and its snapshot
+  ---
+  duration_ms: 84.145408
+  type: 'test'
+  ...
+# Subtest: council: a dead server gives the fallback, never an exception; the wire schema is strict
+ok 12 - council: a dead server gives the fallback, never an exception; the wire schema is strict
+  ---
+  duration_ms: 85.873864
+  type: 'test'
+  ...
+# Subtest: director: the mock is schema-valid, the prompt fits its budget and its snapshot
+ok 13 - director: the mock is schema-valid, the prompt fits its budget and its snapshot
+  ---
+  duration_ms: 222.846275
+  type: 'test'
+  ...
+# Subtest: director: a dead server gives the fallback, never an exception; the wire schema is strict
+ok 14 - director: a dead server gives the fallback, never an exception; the wire schema is strict
+  ---
+  duration_ms: 141.564358
+  type: 'test'
+  ...
+# Subtest: consolidate: the mock is schema-valid, the prompt fits its budget and its snapshot
+ok 15 - consolidate: the mock is schema-valid, the prompt fits its budget and its snapshot
+  ---
+  duration_ms: 51.899961
+  type: 'test'
+  ...
+# Subtest: consolidate: a dead server gives the fallback, never an exception; the wire schema is strict
+ok 16 - consolidate: a dead server gives the fallback, never an exception; the wire schema is strict
+  ---
+  duration_ms: 58.586669
+  type: 'test'
+  ...
+# Subtest: adversarial replies: each is accepted or refused as its fixture says, and aliases become ids
+ok 17 - adversarial replies: each is accepted or refused as its fixture says, and aliases become ids
+  ---
+  duration_ms: 2253.258185
+  type: 'test'
+  ...
+# Subtest: enums: every natural name is a member, and no member is a prefix of another thing's
+ok 18 - enums: every natural name is a member, and no member is a prefix of another thing's
+  ---
+  duration_ms: 65.467456
+  type: 'test'
+  ...
+# Subtest: buildEnum drops the clashing name that its thing can spare
+ok 19 - buildEnum drops the clashing name that its thing can spare
+  ---
+  duration_ms: 0.249734
+  type: 'test'
+  ...
+# Subtest: the validator speaks the JSON Schema we send, and canonicalize follows the schema
+ok 20 - the validator speaks the JSON Schema we send, and canonicalize follows the schema
+  ---
+  duration_ms: 0.592256
+  type: 'test'
+  ...
+# Subtest: a foreign script in the prose is caught (the Qwen leak) and can be stripped
+ok 21 - a foreign script in the prose is caught (the Qwen leak) and can be stripped
+  ---
+  duration_ms: 0.358684
+  type: 'test'
+  ...
+# Subtest: the request is grammar-constrained, thinking off, routed to its model and slot
+ok 22 - the request is grammar-constrained, thinking off, routed to its model and slot
+  ---
+  duration_ms: 223.821953
+  type: 'test'
+  ...
+# Subtest: a reply that fails the checks is asked for again with the problems named; twice wrong falls back
+ok 23 - a reply that fails the checks is asked for again with the problems named; twice wrong falls back
+  ---
+  duration_ms: 211.323733
+  type: 'test'
+  ...
+# Subtest: an unreadable reply is a problem, not a crash
+ok 24 - an unreadable reply is a problem, not a crash
+  ---
+  duration_ms: 98.424423
+  type: 'test'
+  ...
+# Subtest: calls of one jump on different models are a problem unless swaps are allowed
+ok 25 - calls of one jump on different models are a problem unless swaps are allowed
+  ---
+  duration_ms: 0.508368
+  type: 'test'
+  ...
+# Subtest: the request is read from the words, and the verdict decides what may be promised
+ok 26 - the request is read from the words, and the verdict decides what may be promised
+  ---
+  duration_ms: 183.526331
+  type: 'test'
+  ...
+# Subtest: audience-binds: Roose Bolton promises his men at Moat Cailin; a sincere promise turns his host the next day and is judged when due
+ok 27 - audience-binds: Roose Bolton promises his men at Moat Cailin; a sincere promise turns his host the next day and is judged when due
+  ---
+  duration_ms: 11580.802178
+  type: 'test'
+  ...
+# Subtest: officers-know-truth: after the banners are called, Maester Luwin's audience knows who has come, who is on the road and when
+ok 28 - officers-know-truth: after the banners are called, Maester Luwin's audience knows who has come, who is on the road and when
+  ---
+  duration_ms: 2794.235809
+  type: 'test'
+  ...
+# Subtest: promises: paid when the gift is sent, broken by a war on the one promised peace, void when the maker dies
+ok 29 - promises: paid when the gift is sent, broken by a war on the one promised peace, void when the maker dies
+  ---
+  duration_ms: 75.010508
+  type: 'test'
+  ...
+# Subtest: power by arms and ground: knights are worth four levies in the open, two in the woods; bowmen on a hill more
+ok 30 - power by arms and ground: knights are worth four levies in the open, two in the woods; bowmen on a hill more
+  ---
+  duration_ms: 163.313519
+  type: 'test'
+  ...
+# Subtest: the chances: even odds are a coin or a bloody draw; twice the power is a certain victory
+ok 31 - the chances: even odds are a coin or a bloody draw; twice the power is a certain victory
+  ---
+  duration_ms: 0.385975
+  type: 'test'
+  ...
+# Subtest: stances: a lord attacks at good odds, holds at even, falls back at bad; standing orders speak for the player
+ok 32 - stances: a lord attacks at good odds, holds at even, falls back at bad; standing orders speak for the player
+  ---
+  duration_ms: 70.409482
+  type: 'test'
+  ...
+# Subtest: neither will begin it: two hosts face each other, and the chronicle says so once
+ok 33 - neither will begin it: two hosts face each other, and the chronicle says so once
+  ---
+  duration_ms: 304.078575
+  type: 'test'
+  ...
+# Subtest: the weaker falls back; caught, it fights on the march
+ok 34 - the weaker falls back; caught, it fights on the march
+  ---
+  duration_ms: 482.213758
+  type: 'test'
+  ...
+# Subtest: a battle: losses by the margin, the pursuit, the baggage, the loser falls back, the report says what decided it
+ok 35 - a battle: losses by the margin, the pursuit, the baggage, the loser falls back, the report says what decided it
+  ---
+  duration_ms: 76.734915
+  type: 'test'
+  ...
+# Subtest: the story keeps its people: Robert does not die in a battle before his boar; a sandbox keeps no one
+ok 36 - the story keeps its people: Robert does not die in a battle before his boar; a sandbox keeps no one
+  ---
+  duration_ms: 99.622828
+  type: 'test'
+  ...
+# Subtest: the taken ride with the victor as his captives
+ok 37 - the taken ride with the victor as his captives
+  ---
+  duration_ms: 271.876094
+  type: 'test'
+  ...
+# Subtest: the Green Fork: Roose Bolton's northmen attack Lord Tywin's host and are thrown back, but not destroyed
+ok 38 - the Green Fork: Roose Bolton's northmen attack Lord Tywin's host and are thrown back, but not destroyed
+  ---
+  duration_ms: 5403.48281
+  type: 'test'
+  ...
+# Subtest: the Whispering Wood: Robb Stark's riders fall on the Kingslayer unawares among the trees, and take him
+ok 39 - the Whispering Wood: Robb Stark's riders fall on the Kingslayer unawares among the trees, and take him
+  ---
+  duration_ms: 5263.224033
+  type: 'test'
+  ...
+# Subtest: the Camps: the Young Wolf falls on the Lannister siege camps before Riverrun by night, and breaks them
+ok 40 - the Camps: the Young Wolf falls on the Lannister siege camps before Riverrun by night, and breaks them
+  ---
+  duration_ms: 5291.333091
+  type: 'test'
+  ...
+# Subtest: a beat waits for its window, then fires on its date
+ok 41 - a beat waits for its window, then fires on its date
+  ---
+  duration_ms: 4.563384
+  type: 'test'
+  ...
+# Subtest: an arrival trigger waits for the party to reach the place
+ok 42 - an arrival trigger waits for the party to reach the place
+  ---
+  duration_ms: 0.726811
+  type: 'test'
+  ...
+# Subtest: a death trigger waits on the death; an after-trigger waits its days behind the other beat
+ok 43 - a death trigger waits on the death; an after-trigger waits its days behind the other beat
+  ---
+  duration_ms: 0.837357
+  type: 'test'
+  ...
+# Subtest: when the world no longer fits a beat, a fitting alternate happens instead
+ok 44 - when the world no longer fits a beat, a fitting alternate happens instead
+  ---
+  duration_ms: 0.48745
+  type: 'test'
+  ...
+# Subtest: a beat whose window closes lapses, leaves what its lapse says, and the thread goes on
+ok 45 - a beat whose window closes lapses, leaves what its lapse says, and the thread goes on
+  ---
+  duration_ms: 1.082232
+  type: 'test'
+  ...
+# Subtest: canon gravity: Canon keeps every beat, Loose only the pillars, Sandbox none
+ok 46 - canon gravity: Canon keeps every beat, Loose only the pillars, Sandbox none
+  ---
+  duration_ms: 1.262777
+  type: 'test'
+  ...
+# Subtest: the people a near beat names are canon-locked, and the realm's minds do not send them away
+ok 47 - the people a near beat names are canon-locked, and the realm's minds do not send them away
+  ---
+  duration_ms: 137.426134
+  type: 'test'
+  ...
+# Subtest: the real canon: with Lord Eddard far from King's Landing, Robert's death crowns Joffrey quietly
+ok 48 - the real canon: with Lord Eddard far from King's Landing, Robert's death crowns Joffrey quietly
+  ---
+  duration_ms: 507.121867
+  type: 'test'
+  ...
+# Subtest: the §5 houses have hand-written openings
+ok 49 - the §5 houses have hand-written openings
+  ---
+  duration_ms: 1.272227
+  type: 'test'
+  ...
+# Subtest: every playable house has a whole brief, in its own words
+ok 50 - every playable house has a whole brief, in its own words
+  ---
+  duration_ms: 181.035682
+  type: 'test'
+  ...
+# Subtest: what the council has heard is news, never what is to come
+ok 51 - what the council has heard is news, never what is to come
+  ---
+  duration_ms: 68.872861
+  type: 'test'
+  ...
+# Subtest: B-33: the fall of Bran tells what any house could see — no card and no note points at a culprit
+ok 52 - B-33: the fall of Bran tells what any house could see — no card and no note points at a culprit
+  ---
+  duration_ms: 251.544342
+  type: 'test'
+  ...
+# Subtest: B-34: a Lannister may not muster the North at Winterfell — the whole order is refused, no half of it is done
+ok 53 - B-34: a Lannister may not muster the North at Winterfell — the whole order is refused, no half of it is done
+  ---
+  duration_ms: 83.362019
+  type: 'test'
+  ...
+# Subtest: B-34: the same order is still lawful for a Stark, and a house may muster on its own, its vassals' and an ally's land
+ok 54 - B-34: the same order is still lawful for a Stark, and a house may muster on its own, its vassals' and an ally's land
+  ---
+  duration_ms: 464.079271
+  type: 'test'
+  ...
+# Subtest: B-35: "Robb is to march the Northern Host to Moat Cailin" as a Lannister binds no host of his — it is a refused order about Robb
+ok 55 - B-35: "Robb is to march the Northern Host to Moat Cailin" as a Lannister binds no host of his — it is a refused order about Robb
+  ---
+  duration_ms: 101.302197
+  type: 'test'
+  ...
+# Subtest: B-35: an unmatched "the Northern Host" with no one named is "no host", and the reading says it is unsure; unnamed and own hosts still bind
+ok 56 - B-35: an unmatched "the Northern Host" with no one named is "no host", and the reading says it is unsure; unnamed and own hosts still bind
+  ---
+  duration_ms: 152.814448
+  type: 'test'
+  ...
+# Subtest: B-36/B-38: the playtest script plays two turns with no config.json, names the provider, and says when an audience became a raven
+ok 57 - B-36/B-38: the playtest script plays two turns with no config.json, names the provider, and says when an audience became a raven
+  ---
+  duration_ms: 2473.378199
+  type: 'test'
+  ...
+# Subtest: B-37a: crossings never say "0 men", "1 men" or "1 days", and a crossing that costs no man says the host is held up
+ok 58 - B-37a: crossings never say "0 men", "1 men" or "1 days", and a crossing that costs no man says the host is held up
+  ---
+  duration_ms: 59.557051
+  type: 'test'
+  ...
+# Subtest: B-37b: when a generated lord dies with no heir, the cousin who claims the seat is not his clone (sandbox, deterministic)
+ok 59 - B-37b: when a generated lord dies with no heir, the cousin who claims the seat is not his clone (sandbox, deterministic)
+  ---
+  duration_ms: 199.304737
+  type: 'test'
+  ...
+# Subtest: B-37c: a levy camp tells its muster when it begins, once a week, and when it is whole — each naming the place
+ok 60 - B-37c: a levy camp tells its muster when it begins, once a week, and when it is whole — each naming the place
+  ---
+  duration_ms: 52.004297
+  type: 'test'
+  ...
+# Subtest: B-32c: a vassal's answer to the call, with its exact numbers, is for the houses it touches — not the whole realm
+ok 61 - B-32c: a vassal's answer to the call, with its exact numbers, is for the houses it touches — not the whole realm
+  ---
+  duration_ms: 50.936333
+  type: 'test'
+  ...
+# Subtest: B-32c: an AI liege hears its own vassal's answer to the call (the real muster path); a far house does not
+ok 62 - B-32c: an AI liege hears its own vassal's answer to the call (the real muster path); a far house does not
+  ---
+  duration_ms: 53.786543
+  type: 'test'
+  ...
+# Subtest: every canon stage is scheduled inside its window of the GDD
+ok 63 - every canon stage is scheduled inside its window of the GDD
+  ---
+  duration_ms: 4.181077
+  type: 'test'
+  ...
+# Subtest: with nothing in the way, the threads fire in the books' order: the Red Wedding before the Purple Wedding
+ok 64 - with nothing in the way, the threads fire in the books' order: the Red Wedding before the Purple Wedding
+  ---
+  duration_ms: 69.743136
+  type: 'test'
+  ...
+# Subtest: a stage the world no longer fits lapses after its grace, and the thread goes on
+ok 65 - a stage the world no longer fits lapses after its grace, and the thread goes on
+  ---
+  duration_ms: 0.81589
+  type: 'test'
+  ...
+# clusters on the audit's turns: muster game 65 facts in 24 stories (2.71 a story); quiet game 25 in 17 (1.47)
+# Subtest: the recorded turns: six of each, facts of real kinds, the clock and the hosts they name
+ok 66 - the recorded turns: six of each, facts of real kinds, the clock and the hosts they name
+  ---
+  duration_ms: 208.821635
+  type: 'test'
+  ...
+# Subtest: engine code, not server code: cluster.js has no node: import, no dice and no clock
+ok 67 - engine code, not server code: cluster.js has no node: import, no dice and no clock
+  ---
+  duration_ms: 1.089308
+  type: 'test'
+  ...
+# Subtest: the shape: { stories, meanwhile, rest } as before, and each story with archetype, lead and rolled as well
+ok 68 - the shape: { stories, meanwhile, rest } as before, and each story with archetype, lead and rolled as well
+  ---
+  duration_ms: 81.214233
+  type: 'test'
+  ...
+# Subtest: the order the recordings and the prompt snapshot rely on: earliest day first, facts by day then id, S1…Sk
+ok 69 - the order the recordings and the prompt snapshot rely on: earliest day first, facts by day then id, S1…Sk
+  ---
+  duration_ms: 95.572584
+  type: 'test'
+  ...
+# Subtest: the six recorded turns of both games: every fact in exactly one story, nothing dropped, rest empty, importance 1 in the Meanwhile
+ok 70 - the six recorded turns of both games: every fact in exactly one story, nothing dropped, rest empty, importance 1 in the Meanwhile
+  ---
+  duration_ms: 658.254666
+  type: 'test'
+  ...
+# Subtest: the six recorded turns: at most ten cards a turn, no story of more than eight facts unless one archetype and one place (or a roll-up), a fact mean of 1.5
+ok 71 - the six recorded turns: at most ten cards a turn, no story of more than eight facts unless one archetype and one place (or a roll-up), a fact mean of 1.5
+  ---
+  duration_ms: 503.609292
+  type: 'test'
+  ...
+# Subtest: turn 1, the call of the banners: the muster is told as one, the refusal in it is a story of its own (C2, C3)
+ok 72 - turn 1, the call of the banners: the muster is told as one, the refusal in it is a story of its own (C2, C3)
+  ---
+  duration_ms: 58.362261
+  type: 'test'
+  ...
+# Subtest: turn 2, the hosts leave: five hosts on the road to Winterfell are ONE story, a roll-up (B5, C2)
+ok 73 - turn 2, the hosts leave: five hosts on the road to Winterfell are ONE story, a roll-up (B5, C2)
+  ---
+  duration_ms: 50.506992
+  type: 'test'
+  ...
+# Subtest: turn 3, eleven more hosts: the hosts with no other business are one roll-up; a voyage and a delay stay with their own host
+ok 74 - turn 3, eleven more hosts: the hosts with no other business are one roll-up; a voyage and a delay stay with their own host
+  ---
+  duration_ms: 42.20139
+  type: 'test'
+  ...
+# Subtest: the tourney and its champion are one story (18 §4 A9); its dead man, of the same cause, may ride with it
+ok 75 - the tourney and its champion are one story (18 §4 A9); its dead man, of the same cause, may ride with it
+  ---
+  duration_ms: 114.903873
+  type: 'test'
+  ...
+# Subtest: C4: the lead is the weightiest fact, then the kind that reads as the news; never the first in the list
+ok 76 - C4: the lead is the weightiest fact, then the kind that reads as the news; never the first in the list
+  ---
+  duration_ms: 405.175551
+  type: 'test'
+  ...
+# Subtest: C5: a battle, its captives and its dead are one story; the pursuit the next day is another
+ok 77 - C5: a battle, its captives and its dead are one story; the pursuit the next day is another
+  ---
+  duration_ms: 44.928915
+  type: 'test'
+  ...
+# Subtest: C2: three or more facts of one kind that share a cause, of weight 3 or less, are one story with rolled: true
+ok 78 - C2: three or more facts of one kind that share a cause, of weight 3 or less, are one story with rolled: true
+  ---
+  duration_ms: 48.413456
+  type: 'test'
+  ...
+# Subtest: C3: a muster of a dozen answers with a refusal in it is two stories — the muster and the refusal — however they are linked
+ok 79 - C3: a muster of a dozen answers with a refusal in it is two stories — the muster and the refusal — however they are linked
+  ---
+  duration_ms: 52.261353
+  type: 'test'
+  ...
+# Subtest: a heap: thirty facts of a dozen kinds in ten places, all on one thread — every rule of the shape still holds
+ok 80 - a heap: thirty facts of a dozen kinds in ten places, all on one thread — every rule of the shape still holds
+  ---
+  duration_ms: 65.145262
+  type: 'test'
+  ...
+# Subtest: C6: no cap — a dozen stories are a dozen stories, none hidden, none left over, whatever `max` is asked
+ok 81 - C6: no cap — a dozen stories are a dozen stories, none hidden, none left over, whatever `max` is asked
+  ---
+  duration_ms: 73.823916
+  type: 'test'
+  ...
+# Subtest: C7: importance 1 goes to the Meanwhile, even beside a story; three small journeys of others are the Meanwhile too, but hosts for the viewer's seat are news
+ok 82 - C7: importance 1 goes to the Meanwhile, even beside a story; three small journeys of others are the Meanwhile too, but hosts for the viewer's seat are news
+  ---
+  duration_ms: 118.944605
+  type: 'test'
+  ...
+# Subtest: together: the facts of one card are one story, however far apart (the narrator's hint, honoured as before)
+ok 83 - together: the facts of one card are one story, however far apart (the narrator's hint, honoured as before)
+  ---
+  duration_ms: 46.831236
+  type: 'test'
+  ...
+# Subtest: B-32(a): a fact seen and a fact heard late do not share a story, even at one place on one day
+ok 84 - B-32(a): a fact seen and a fact heard late do not share a story, even at one place on one day
+  ---
+  duration_ms: 59.2701
+  type: 'test'
+  ...
+# Subtest: B-32(a), the real turns: the news that reached the chronicle late is told apart from what was seen, and carries how it came
+ok 85 - B-32(a), the real turns: the news that reached the chronicle late is told apart from what was seen, and carries how it came
+  ---
+  duration_ms: 675.95828
+  type: 'test'
+  ...
+# Subtest: determinism: the same facts, the same stories and ids — in any order, on a copy of the world, with nothing changed and no dice drawn
+ok 86 - determinism: the same facts, the same stories and ids — in any order, on a copy of the world, with nothing changed and no dice drawn
+  ---
+  duration_ms: 1525.039154
+  type: 'test'
+  ...
+# Subtest: hire the Golden Company: a moon paid on signing, the company yours, and hired ships to bring it over
+ok 87 - hire the Golden Company: a moon paid on signing, the company yours, and hired ships to bring it over
+  ---
+  duration_ms: 1287.669149
+  type: 'test'
+  ...
+# Subtest: a company unpaid marches off
+ok 88 - a company unpaid marches off
+  ---
+  duration_ms: 111.208005
+  type: 'test'
+  ...
+# Subtest: the Brave Companions go over for half as much again; the Golden Company keeps its word
+ok 89 - the Brave Companions go over for half as much again; the Golden Company keeps its word
+  ---
+  duration_ms: 147.690047
+  type: 'test'
+  ...
+# Subtest: the khalasar cannot embark: the Dothraki will not cross the poison water
+ok 90 - the khalasar cannot embark: the Dothraki will not cross the poison water
+  ---
+  duration_ms: 66.370314
+  type: 'test'
+  ...
+# Subtest: outlaws rise where war has laid the land waste, and scatter when the lord's host comes
+ok 91 - outlaws rise where war has laid the land waste, and scatter when the lord's host comes
+  ---
+  duration_ms: 94.073135
+  type: 'test'
+  ...
+# Subtest: the Night's Watch takes recruits and no side
+ok 92 - the Night's Watch takes recruits and no side
+  ---
+  duration_ms: 91.806826
+  type: 'test'
+  ...
+# Subtest: the catalogue: some eighty hooks, each well formed, none that kills or says what is to come
+ok 93 - the catalogue: some eighty hooks, each well formed, none that kills or says what is to come
+  ---
+  duration_ms: 3.651855
+  type: 'test'
+  ...
+# Subtest: the offer: only hooks the world fits, at their own places, the same offer twice (no dice)
+ok 94 - the offer: only hooks the world fits, at their own places, the same offer twice (no dice)
+  ---
+  duration_ms: 277.07905
+  type: 'test'
+  ...
+# Subtest: a hook in the lord's lands is a fact and a matter; elsewhere a fact only; the same place and dice tell it the same
+ok 95 - a hook in the lord's lands is a fact and a matter; elsewhere a fact only; the same place and dice tell it the same
+  ---
+  duration_ms: 245.684482
+  type: 'test'
+  ...
+# Subtest: no whole week is empty: each has three facts of note in the realm, or a hook (09 §9 point 3)
+ok 96 - no whole week is empty: each has three facts of note in the realm, or a hook (09 §9 point 3)
+  ---
+  duration_ms: 7349.929088
+  type: 'test'
+  ...
+# Subtest: the Director on the mock: a hook on a week's first day at most once a fortnight, recorded and kept from the player
+ok 97 - the Director on the mock: a hook on a week's first day at most once a fortnight, recorded and kept from the player
+  ---
+  duration_ms: 2720.182472
+  type: 'test'
+  ...
+# Subtest: Q10: every great house within ±15 % of its income, the Crown in deficit, no coin negative, Stark's war chest 8–20 moons
+ok 98 - Q10: every great house within ±15 % of its income, the Crown in deficit, no coin negative, Stark's war chest 8–20 moons
+  ---
+  duration_ms: 1359.56444
+  type: 'test'
+  ...
+# Subtest: the people of the realm: each region as §4 counts it, the great cities their own
+ok 99 - the people of the realm: each region as §4 counts it, the great cities their own
+  ---
+  duration_ms: 74.538442
+  type: 'test'
+  ...
+# Subtest: the Lannisters: half a million in coin, three million owed by the Crown, the mines running dry
+ok 100 - the Lannisters: half a million in coin, three million owed by the Crown, the mines running dry
+  ---
+  duration_ms: 76.327223
+  type: 'test'
+  ...
+# Subtest: an older save keeps its coin; its people grow to the new count, and what its lands can bear grows with them
+ok 101 - an older save keeps its coin; its people grow to the new count, and what its lands can bear grows with them
+  ---
+  duration_ms: 81.35854
+  type: 'test'
+  ...
+# Subtest: the Iron Bank lends by what it thinks of you, and will have its due: a loan unpaid is a default the realm hears of
+ok 102 - the Iron Bank lends by what it thinks of you, and will have its due: a loan unpaid is a default the realm hears of
+  ---
+  duration_ms: 90.323605
+  type: 'test'
+  ...
+# Subtest: Tywin calls in the Crown's debt: three million within three moons, or the Crown defaults on House Lannister
+ok 103 - Tywin calls in the Crown's debt: three million within three moons, or the Crown defaults on House Lannister
+  ---
+  duration_ms: 51.412984
+  type: 'test'
+  ...
+# Subtest: grain costs what the season and the war make it; a bribe is taken or refused; an embargo is both ways and can be lifted
+ok 104 - grain costs what the season and the war make it; a bribe is taken or refused; an embargo is both ways and can be lifted
+  ---
+  duration_ms: 65.995297
+  type: 'test'
+  ...
+# Subtest: written orders about money are read by the rules
+ok 105 - written orders about money are read by the rules
+  ---
+  duration_ms: 129.849458
+  type: 'test'
+  ...
+# Subtest: reasoning leaked before the answer: the answer object is found
+ok 106 - reasoning leaked before the answer: the answer object is found
+  ---
+  duration_ms: 8.062699
+  type: 'test'
+  ...
+# Subtest: an event object left open before the array closes is rebalanced
+ok 107 - an event object left open before the array closes is rebalanced
+  ---
+  duration_ms: 1.469704
+  type: 'test'
+  ...
+# Subtest: a reply cut off after a key is closed with null
+ok 108 - a reply cut off after a key is closed with null
+  ---
+  duration_ms: 0.823708
+  type: 'test'
+  ...
+# Subtest: a continuation that started the object over keeps the new object
+ok 109 - a continuation that started the object over keeps the new object
+  ---
+  duration_ms: 0.285157
+  type: 'test'
+  ...
+# Subtest: raw quotes and thousands separators are repaired
+ok 110 - raw quotes and thousands separators are repaired
+  ---
+  duration_ms: 0.392933
+  type: 'test'
+  ...
+# Subtest: the library has unique ids and valid regions
+ok 111 - the library has unique ids and valid regions
+  ---
+  duration_ms: 0.592721
+  type: 'test'
+  ...
+# Subtest: a period brings happenings in proportion to its length, every slot filled
+ok 112 - a period brings happenings in proportion to its length, every slot filled
+  ---
+  duration_ms: 434.054687
+  type: 'test'
+  ...
+# Subtest: a happening does not come again before its cooldown
+ok 113 - a happening does not come again before its cooldown
+  ---
+  duration_ms: 167.998901
+  type: 'test'
+  ...
+# Subtest: happenings never touch the Wall or Essos under "any"
+ok 114 - happenings never touch the Wall or Essos under "any"
+  ---
+  duration_ms: 1862.864856
+  type: 'test'
+  ...
+# Subtest: pins show pending decisions and unread news, and acknowledged news goes
+ok 115 - pins show pending decisions and unread news, and acknowledged news goes
+  ---
+  duration_ms: 152.359914
+  type: 'test'
+  ...
+# Subtest: news older than two turns loses its pin
+ok 116 - news older than two turns loses its pin
+  ---
+  duration_ms: 58.046525
+  type: 'test'
+  ...
+# Subtest: the recent-turn log is one line per event, background life only when it matters
+ok 117 - the recent-turn log is one line per event, background life only when it matters
+  ---
+  duration_ms: 55.739805
+  type: 'test'
+  ...
+# Subtest: a bribe buys Janos Slynt but not Tywin Lannister
+ok 118 - a bribe buys Janos Slynt but not Tywin Lannister
+  ---
+  duration_ms: 150.840094
+  type: 'test'
+  ...
+# Subtest: Tywin will not be threatened; Walder Frey is frightened
+ok 119 - Tywin will not be threatened; Walder Frey is frightened
+  ---
+  duration_ms: 142.589913
+  type: 'test'
+  ...
+# Subtest: insults run out a proud man's patience and close the audience
+ok 120 - insults run out a proud man's patience and close the audience
+  ---
+  duration_ms: 56.535248
+  type: 'test'
+  ...
+# Subtest: a refusal signs no pact; an agreement is recorded even if the model forgets
+ok 121 - a refusal signs no pact; an agreement is recorded even if the model forgets
+  ---
+  duration_ms: 104.900276
+  type: 'test'
+  ...
+# Subtest: hosts at war in contact fight: losses, a rout, a battlefield on the map
+ok 122 - hosts at war in contact fight: losses, a rout, a battlefield on the map
+  ---
+  duration_ms: 376.2356
+  type: 'test'
+  ...
+# Subtest: a great castle is not stormed in a moon; a siege starves it in time
+ok 123 - a great castle is not stormed in a moon; a siege starves it in time
+  ---
+  duration_ms: 116.946363
+  type: 'test'
+  ...
+# Subtest: dictated numbers are read: "ten men", "a hundred riders", "two hundred and fifty men"
+ok 124 - dictated numbers are read: "ten men", "a hundred riders", "two hundred and fifty men"
+  ---
+  duration_ms: 1.416855
+  type: 'test'
+  ...
+# Subtest: the player sees hosts near their lands; distant ones by word of mouth, which can be stale or feinted
+ok 125 - the player sees hosts near their lands; distant ones by word of mouth, which can be stale or feinted
+  ---
+  duration_ms: 62.054357
+  type: 'test'
+  ...
+# Subtest: a planted report shows a host that does not exist
+ok 126 - a planted report shows a host that does not exist
+  ---
+  duration_ms: 54.743751
+  type: 'test'
+  ...
+# Subtest: the Watch chooses a brother, not the Lord Commander's exiled son; Braavos elects
+ok 127 - the Watch chooses a brother, not the Lord Commander's exiled son; Braavos elects
+  ---
+  duration_ms: 55.445957
+  type: 'test'
+  ...
+# Subtest: a losing war tempts the schemers first: the Boltons treat with the enemy long before the Manderlys waver
+ok 128 - a losing war tempts the schemers first: the Boltons treat with the enemy long before the Manderlys waver
+  ---
+  duration_ms: 165.98708
+  type: 'test'
+  ...
+# Subtest: "march the whole host to Moat Cailin" sends the sworn hosts on the road there too
+ok 129 - "march the whole host to Moat Cailin" sends the sworn hosts on the road there too
+  ---
+  duration_ms: 73.154315
+  type: 'test'
+  ...
+# Subtest: an order against a house marches on its seat
+ok 130 - an order against a house marches on its seat
+  ---
+  duration_ms: 118.94267
+  type: 'test'
+  ...
+# Subtest: the story model cannot send the player's people or move the player's hosts
+ok 131 - the story model cannot send the player's people or move the player's hosts
+  ---
+  duration_ms: 48.811948
+  type: 'test'
+  ...
+# Subtest: a journey is not begun twice, and a rider turned back starts from the road
+ok 132 - a journey is not begun twice, and a rider turned back starts from the road
+  ---
+  duration_ms: 902.227373
+  type: 'test'
+  ...
+# Subtest: someone the story moves far away rides there instead of appearing
+ok 133 - someone the story moves far away rides there instead of appearing
+  ---
+  duration_ms: 399.977032
+  type: 'test'
+  ...
+# Subtest: an order sends only the one it names, and only with men if it asks for them
+ok 134 - an order sends only the one it names, and only with men if it asks for them
+  ---
+  duration_ms: 243.327706
+  type: 'test'
+  ...
+# Subtest: a lord leading a small company turns the company
+ok 135 - a lord leading a small company turns the company
+  ---
+  duration_ms: 46.79057
+  type: 'test'
+  ...
+# Subtest: council: fenced JSON is read, not shown
+ok 136 - council: fenced JSON is read, not shown
+  ---
+  duration_ms: 0.939141
+  type: 'test'
+  ...
+# Subtest: council: broken JSON gives up its answers
+ok 137 - council: broken JSON gives up its answers
+  ---
+  duration_ms: 1.398646
+  type: 'test'
+  ...
+# Subtest: council: prose by name, and fragments of one speaker joined
+ok 138 - council: prose by name, and fragments of one speaker joined
+  ---
+  duration_ms: 0.664814
+  type: 'test'
+  ...
+# Subtest: council: only gestures is not an answer
+ok 139 - council: only gestures is not an answer
+  ---
+  duration_ms: 0.162991
+  type: 'test'
+  ...
+# Subtest: chronicle facts are the engine's record, dated, only those of note
+ok 140 - chronicle facts are the engine's record, dated, only those of note
+  ---
+  duration_ms: 0.584296
+  type: 'test'
+  ...
+# Subtest: an order to garrison and drill hires no one
+ok 141 - an order to garrison and drill hires no one
+  ---
+  duration_ms: 70.923803
+  type: 'test'
+  ...
+# Subtest: council: each answer is bound to the advisor who gave it
+ok 142 - council: each answer is bound to the advisor who gave it
+  ---
+  duration_ms: 1.074595
+  type: 'test'
+  ...
+# Subtest: a raven order sends a letter, not a rider
+ok 143 - a raven order sends a letter, not a rider
+  ---
+  duration_ms: 55.779628
+  type: 'test'
+  ...
+# Subtest: a letter is tracked: in flight, delivered, answered
+ok 144 - a letter is tracked: in flight, delivered, answered
+  ---
+  duration_ms: 59.47191
+  type: 'test'
+  ...
+# Subtest: an order's receipt changes nothing, and the turn does what it said
+ok 145 - an order's receipt changes nothing, and the turn does what it said
+  ---
+  duration_ms: 61.374696
+  type: 'test'
+  ...
+# Subtest: each receipt is tried after the orders above it: the second march of one host is told where it will be
+ok 146 - each receipt is tried after the orders above it: the second march of one host is told where it will be
+  ---
+  duration_ms: 83.256567
+  type: 'test'
+  ...
+# Subtest: a question the rules must ask is answered with a chip, and the answer is done
+ok 147 - a question the rules must ask is answered with a chip, and the answer is done
+  ---
+  duration_ms: 116.12239
+  type: 'test'
+  ...
+# Subtest: the story cannot empty the player's treasury
+ok 148 - the story cannot empty the player's treasury
+  ---
+  duration_ms: 24.785925
+  type: 'test'
+  ...
+# Subtest: raising levies where a host stands joins it; banners and merge from plain orders
+ok 149 - raising levies where a host stands joins it; banners and merge from plain orders
+  ---
+  duration_ms: 79.101674
+  type: 'test'
+  ...
+# Subtest: every order has its event, first, even when the story forgot it
+ok 150 - every order has its event, first, even when the story forgot it
+  ---
+  duration_ms: 25.493663
+  type: 'test'
+  ...
+# Subtest: the Pax order, in lower case and misspelt: banners called and the Northern Host raised at Winterfell
+ok 151 - the Pax order, in lower case and misspelt: banners called and the Northern Host raised at Winterfell
+  ---
+  duration_ms: 45.697299
+  type: 'test'
+  ...
+# Subtest: gold an order cannot pay is refused before anything is done
+ok 152 - gold an order cannot pay is refused before anything is done
+  ---
+  duration_ms: 20.450824
+  type: 'test'
+  ...
+# Subtest: an untagged story event that tells an order becomes its event (no duplicate)
+ok 153 - an untagged story event that tells an order becomes its event (no duplicate)
+  ---
+  duration_ms: 21.811259
+  type: 'test'
+  ...
+# Subtest: a letter to "Lord Commander Mormont" is addressed to Jeor
+ok 154 - a letter to "Lord Commander Mormont" is addressed to Jeor
+  ---
+  duration_ms: 34.620646
+  type: 'test'
+  ...
+# Subtest: banners arriving after the host has marched follow it and join it — no second army
+ok 155 - banners arriving after the host has marched follow it and join it — no second army
+  ---
+  duration_ms: 30.455362
+  type: 'test'
+  ...
+# Subtest: works ordered in words are begun — and a second time refused with the reason
+ok 156 - works ordered in words are begun — and a second time refused with the reason
+  ---
+  duration_ms: 68.401095
+  type: 'test'
+  ...
+# Subtest: every kind of order is read by the rules and carried out by the engine
+ok 157 - every kind of order is read by the rules and carried out by the engine
+  ---
+  duration_ms: 223.002961
+  type: 'test'
+  ...
+# Subtest: a refused order is told once, and nothing of it happens elsewhere
+ok 158 - a refused order is told once, and nothing of it happens elsewhere
+  ---
+  duration_ms: 24.927157
+  type: 'test'
+  ...
+# Subtest: an order that names a leader puts them at the head of the host
+ok 159 - an order that names a leader puts them at the head of the host
+  ---
+  duration_ms: 43.191294
+  type: 'test'
+  ...
+# Subtest: an engine-written order headline is one short sentence
+ok 160 - an engine-written order headline is one short sentence
+  ---
+  duration_ms: 23.748112
+  type: 'test'
+  ...
+# Subtest: a host knows its knights, riders, foot and archers — through merges and losses
+ok 161 - a host knows its knights, riders, foot and archers — through merges and losses
+  ---
+  duration_ms: 23.816823
+  type: 'test'
+  ...
+# Subtest: a mounted company rides at horse pace; a levy walks
+ok 162 - a mounted company rides at horse pace; a levy walks
+  ---
+  duration_ms: 26.613313
+  type: 'test'
+  ...
+# Subtest: lords ride out with their households, stay, ride home — and the realm sees them
+ok 163 - lords ride out with their households, stay, ride home — and the realm sees them
+  ---
+  duration_ms: 3005.488969
+  type: 'test'
+  ...
+# Subtest: a turn runs until the next thing that matters
+ok 164 - a turn runs until the next thing that matters
+  ---
+  duration_ms: 37.730413
+  type: 'test'
+  ...
+# Subtest: the story can march any host but the player's, and the engine walks it
+ok 165 - the story can march any host but the player's, and the engine walks it
+  ---
+  duration_ms: 36.299085
+  type: 'test'
+  ...
+# Subtest: a child lord is ruled for: the mother takes the regency, and gives it up at sixteen
+ok 166 - a child lord is ruled for: the mother takes the regency, and gives it up at sixteen
+  ---
+  duration_ms: 39.3249
+  type: 'test'
+  ...
+# Subtest: a captive lord is ruled for too, and the vassals like it less each moon
+ok 167 - a captive lord is ruled for too, and the vassals like it less each moon
+  ---
+  duration_ms: 49.334328
+  type: 'test'
+  ...
+# Subtest: the standing of a house is measured, and a great house outranks a small one
+ok 168 - the standing of a house is measured, and a great house outranks a small one
+  ---
+  duration_ms: 23.076644
+  type: 'test'
+  ...
+# Subtest: a house stripped of everything is broken — but not on the first bad turn
+ok 169 - a house stripped of everything is broken — but not on the first bad turn
+  ---
+  duration_ms: 25.066004
+  type: 'test'
+  ...
+# Subtest: the line ending is the end of the story
+ok 170 - the line ending is the end of the story
+  ---
+  duration_ms: 25.467283
+  type: 'test'
+  ...
+# Subtest: taking King's Landing and making peace wins the game
+ok 171 - taking King's Landing and making peace wins the game
+  ---
+  duration_ms: 28.606515
+  type: 'test'
+  ...
+# Subtest: the story may not march the player into a war, by war_join or otherwise
+ok 172 - the story may not march the player into a war, by war_join or otherwise
+  ---
+  duration_ms: 36.042589
+  type: 'test'
+  ...
+# Subtest: a host is never given to a commander the world does not know
+ok 173 - a host is never given to a commander the world does not know
+  ---
+  duration_ms: 45.630105
+  type: 'test'
+  ...
+# Subtest: a siege costs the besieger: the camp sickens, and the castle eats its stores
+ok 174 - a siege costs the besieger: the camp sickens, and the castle eats its stores
+  ---
+  duration_ms: 95.903483
+  type: 'test'
+  ...
+# Subtest: a formula is arithmetic, and arithmetic works
+ok 175 - a formula is arithmetic, and arithmetic works
+  ---
+  duration_ms: 32.988728
+  type: 'test'
+  ...
+# Subtest: a formula cannot reach out of its sandbox
+ok 176 - a formula cannot reach out of its sandbox
+  ---
+  duration_ms: 43.240682
+  type: 'test'
+  ...
+# Subtest: an unknown name is refused at injection time, not silently zeroed
+ok 177 - an unknown name is refused at injection time, not silently zeroed
+  ---
+  duration_ms: 55.129906
+  type: 'test'
+  ...
+# Subtest: an injected rule becomes a line in the steward's ledger, moon after moon
+ok 178 - an injected rule becomes a line in the steward's ledger, moon after moon
+  ---
+  duration_ms: 67.35189
+  type: 'test'
+  ...
+# Subtest: a rule cannot mint gold: every kind is capped per moon
+ok 179 - a rule cannot mint gold: every kind is capped per moon
+  ---
+  duration_ms: 57.516436
+  type: 'test'
+  ...
+# Subtest: a rule whose condition is false costs nothing
+ok 180 - a rule whose condition is false costs nothing
+  ---
+  duration_ms: 48.541487
+  type: 'test'
+  ...
+# Subtest: a rule can be ended by the story that raised it
+ok 181 - a rule can be ended by the story that raised it
+  ---
+  duration_ms: 33.902345
+  type: 'test'
+  ...
+# Subtest: an injected rule survives a save round-trip (it is data, not code)
+ok 182 - an injected rule survives a save round-trip (it is data, not code)
+  ---
+  duration_ms: 66.285178
+  type: 'test'
+  ...
+# Subtest: a rule that runs away is stopped, not allowed to hang the turn
+ok 183 - a rule that runs away is stopped, not allowed to hang the turn
+  ---
+  duration_ms: 27.163068
+  type: 'test'
+  ...
+# Subtest: the roads of Westeros cross the places they should, and no others
+ok 184 - the roads of Westeros cross the places they should, and no others
+  ---
+  duration_ms: 59.218434
+  type: 'test'
+  ...
+# Subtest: the Neck is kind to Starks and cruel to everyone else
+ok 185 - the Neck is kind to Starks and cruel to everyone else
+  ---
+  duration_ms: 49.999495
+  type: 'test'
+  ...
+# Subtest: the crannogmen will guide a friend through the bogs
+ok 186 - the crannogmen will guide a friend through the bogs
+  ---
+  duration_ms: 44.871493
+  type: 'test'
+  ...
+# Subtest: the Freys charge for their bridge, and the gold changes hands
+ok 187 - the Freys charge for their bridge, and the gold changes hands
+  ---
+  duration_ms: 44.953164
+  type: 'test'
+  ...
+# Subtest: winter doubles what a mountain costs
+ok 188 - winter doubles what a mountain costs
+  ---
+  duration_ms: 54.798109
+  type: 'test'
+  ...
+# Subtest: a fleet does not care about mountain passes
+ok 189 - a fleet does not care about mountain passes
+  ---
+  duration_ms: 70.631803
+  type: 'test'
+  ...
+# Subtest: a lord is told what the road will cost before he takes it
+ok 190 - a lord is told what the road will cost before he takes it
+  ---
+  duration_ms: 49.63794
+  type: 'test'
+  ...
+# Subtest: peace and home leave a man steady
+ok 191 - peace and home leave a man steady
+  ---
+  duration_ms: 202.400045
+  type: 'test'
+  ...
+# Subtest: captivity, war and a dead child wear a man down
+ok 192 - captivity, war and a dead child wear a man down
+  ---
+  duration_ms: 300.089507
+  type: 'test'
+  ...
+# Subtest: the numbers never reach the player: the model is given behaviour, not figures
+ok 193 - the numbers never reach the player: the model is given behaviour, not figures
+  ---
+  duration_ms: 59.562138
+  type: 'test'
+  ...
+# Subtest: a mind that is breaking is felt by the house, not reported as a stat
+ok 194 - a mind that is breaking is felt by the house, not reported as a stat
+  ---
+  duration_ms: 109.891475
+  type: 'test'
+  ...
+# Subtest: a countryside on the move slows the host that marches through it
+ok 195 - a countryside on the move slows the host that marches through it
+  ---
+  duration_ms: 48.816599
+  type: 'test'
+  ...
+# Subtest: the shelves hold the lore the game ships with
+ok 196 - the shelves hold the lore the game ships with
+  ---
+  duration_ms: 12.144338
+  type: 'test'
+  ...
+# Subtest: a question about the bogs finds the crannogmen, not a Lannister
+ok 197 - a question about the bogs finds the crannogmen, not a Lannister
+  ---
+  duration_ms: 1.904426
+  type: 'test'
+  ...
+# Subtest: what the maester has open on the table follows the game in progress
+ok 198 - what the maester has open on the table follows the game in progress
+  ---
+  duration_ms: 51.495893
+  type: 'test'
+  ...
+# Subtest: an empty question returns nothing rather than noise
+ok 199 - an empty question returns nothing rather than noise
+  ---
+  duration_ms: 0.335696
+  type: 'test'
+  ...
+# Subtest: north of the Wall resolves beyond the Wall, never Winterfell or Casterly Rock
+ok 200 - north of the Wall resolves beyond the Wall, never Winterfell or Casterly Rock
+  ---
+  duration_ms: 58.820131
+  type: 'test'
+  ...
+# Subtest: a large levy call starts a camp and the men arrive over days
+ok 201 - a large levy call starts a camp and the men arrive over days
+  ---
+  duration_ms: 43.372189
+  type: 'test'
+  ...
+# Subtest: the catalogue: every kind has an importance, a card type and a scope; the GDD kinds are all there
+ok 202 - the catalogue: every kind has an importance, a card type and a scope; the GDD kinds are all there
+  ---
+  duration_ms: 1.702417
+  type: 'test'
+  ...
+# Subtest: templates speak with the right pronouns, and never say "undefined"
+ok 203 - templates speak with the right pronouns, and never say "undefined"
+  ---
+  duration_ms: 149.411782
+  type: 'test'
+  ...
+# Subtest: emit: ids by turn, days by the turn's clock, importance weighed for the player and great lords
+ok 204 - emit: ids by turn, days by the turn's clock, importance weighed for the player and great lords
+  ---
+  duration_ms: 65.78776
+  type: 'test'
+  ...
+# Subtest: cards and facts: an undated card carries its fact to the day the turn gives it; a dated one stays put
+ok 205 - cards and facts: an undated card carries its fact to the day the turn gives it; a dated one stays put
+  ---
+  duration_ms: 66.49328
+  type: 'test'
+  ...
+# Subtest: changes record their facts, once: an op the caller has told itself is not told again
+ok 206 - changes record their facts, once: an op the caller has told itself is not told again
+  ---
+  duration_ms: 67.486907
+  type: 'test'
+  ...
+# Subtest: a turn: every engine card is backed by a fact; the facts go to facts.jsonl, the record to turns/
+ok 207 - a turn: every engine card is backed by a fact; the facts go to facts.jsonl, the record to turns/
+  ---
+  duration_ms: 9392.191832
+  type: 'test'
+  ...
+# Subtest: undo three turns: the world, the chronicle and the logs are as they were; the same turns come out the same
+ok 208 - undo three turns: the world, the chronicle and the logs are as they were; the same turns come out the same
+  ---
+  duration_ms: 8859.390138
+  type: 'test'
+  ...
+# Subtest: snapshots: only the last ten are kept
+ok 209 - snapshots: only the last ten are kept
+  ---
+  duration_ms: 3940.087961
+  type: 'test'
+  ...
+# Subtest: ironman: no snapshots, no undo
+ok 210 - ironman: no snapshots, no undo
+  ---
+  duration_ms: 554.792935
+  type: 'test'
+  ...
+# Subtest: a save from before snapshots: its one undo point still works, and its history goes to turns/
+ok 211 - a save from before snapshots: its one undo point still works, and its history goes to turns/
+  ---
+  duration_ms: 1324.952046
+  type: 'test'
+  ...
+# Subtest: the calendar: day numbers and dates are one reckoning
+ok 212 - the calendar: day numbers and dates are one reckoning
+  ---
+  duration_ms: 2.816795
+  type: 'test'
+  ...
+# Subtest: new ids come from the save's counter, not the clock
+ok 213 - new ids come from the save's counter, not the clock
+  ---
+  duration_ms: 0.335368
+  type: 'test'
+  ...
+# Subtest: every name people use for a place, a person or a house leads to its id
+ok 214 - every name people use for a place, a person or a house leads to its id
+  ---
+  duration_ms: 144.011417
+  type: 'test'
+  ...
+# Subtest: difficulty is one table, and normal changes nothing
+ok 215 - difficulty is one table, and normal changes nothing
+  ---
+  duration_ms: 0.604447
+  type: 'test'
+  ...
+# Subtest: some ninety goals, each a known person's, each step a verb the engine knows
+ok 216 - some ninety goals, each a known person's, each step a verb the engine knows
+  ---
+  duration_ms: 99.96633
+  type: 'test'
+  ...
+# Subtest: every actor the minds may choose has a goal
+ok 217 - every actor the minds may choose has a goal
+  ---
+  duration_ms: 636.512083
+  type: 'test'
+  ...
+# Subtest: every great and major house has ways of its own
+ok 218 - every great and major house has ways of its own
+  ---
+  duration_ms: 0.394021
+  type: 'test'
+  ...
+# Subtest: a lord with nothing pressing works at what they want
+ok 219 - a lord with nothing pressing works at what they want
+  ---
+  duration_ms: 193.875413
+  type: 'test'
+  ...
+# headline scorer — faults by rule (bad.json)
+#   len         8 strings    8 caught  ok
+#   who         3 strings    3 caught  ok
+#   invented    3 strings    3 caught  ok
+#   verb        4 strings    4 caught  ok
+#   numbers     8 strings    8 caught  ok
+#   punct      17 strings   17 caught  ok
+#   boiler     14 strings   14 caught  ok
+#   roles       5 strings    5 caught  ok
+#   dup         2 strings    2 caught  ok
+#   outcome     5 strings    5 caught  ok
+#   golden references passing: 71/71
+# the mock's telling today: 7/71 pass (10 %); faults dup 36, numbers 25, punct 17, boiler 15, verb 13, len 5, who 2
+# Subtest: the golden set: well-formed bundles of real facts, real ids, a reference that keeps its own rules
+ok 220 - the golden set: well-formed bundles of real facts, real ids, a reference that keeps its own rules
+  ---
+  duration_ms: 7.042107
+  type: 'test'
+  ...
+# Subtest: the golden set: every archetype of 18 §2.4 C1 at least three times, and the hard cases of 18 §1.2
+ok 221 - the golden set: every archetype of 18 §2.4 C1 at least three times, and the hard cases of 18 §1.2
+  ---
+  duration_ms: 1.604001
+  type: 'test'
+  ...
+# Subtest: the bad set: the strings of 18 §1.3 and 20 §5.2 are all there, each with a rule and a story
+ok 222 - the bad set: the strings of 18 §1.3 and 20 §5.2 are all there, each with a rule and a story
+  ---
+  duration_ms: 1.189064
+  type: 'test'
+  ...
+# Subtest: style.js: the boilerplate, the jargon, the headline length and the verbs are data
+ok 223 - style.js: the boilerplate, the jargon, the headline length and the verbs are data
+  ---
+  duration_ms: 5.00663
+  type: 'test'
+  ...
+# Subtest: scoreCard: a verdict of { pass, faults } that names known rules once each, and touches nothing
+ok 224 - scoreCard: a verdict of { pass, faults } that names known rules once each, and touches nothing
+  ---
+  duration_ms: 59.849059
+  type: 'test'
+  ...
+# Subtest: every reference headline of the golden set passes, alone and with its summary
+ok 225 - every reference headline of the golden set passes, alone and with its summary
+  ---
+  duration_ms: 356.812302
+  type: 'test'
+  ...
+# Subtest: every string of bad.json fails on the rule it is named for
+ok 226 - every string of bad.json fails on the rule it is named for
+  ---
+  duration_ms: 177.285168
+  type: 'test'
+  ...
+# Subtest: the scorer's report: a table of faults by rule, so a regression is legible
+ok 227 - the scorer's report: a table of faults by rule, so a regression is legible
+  ---
+  duration_ms: 284.95236
+  type: 'test'
+  ...
+# Subtest: H1: at most twelve words — twelve pass, thirteen fail `len`; two words fail it too
+ok 228 - H1: at most twelve words — twelve pass, thirteen fail `len`; two words fail it too
+  ---
+  duration_ms: 5.203217
+  type: 'test'
+  ...
+# Subtest: H5: numbers as words, never digits — "1,796" fails, "(~48 days)" fails twice
+ok 229 - H5: numbers as words, never digits — "1,796" fails, "(~48 days)" fails twice
+  ---
+  duration_ms: 24.322188
+  type: 'test'
+  ...
+# Subtest: H6: no parentheses, colon, semicolon, em dash, ellipsis; no full stop at the end of a headline
+ok 230 - H6: no parentheses, colon, semicolon, em dash, ellipsis; no full stop at the end of a headline
+  ---
+  duration_ms: 6.655355
+  type: 'test'
+  ...
+# Subtest: H7: "House The Free Folk" and the other boilerplate of the ledger fail `boiler`
+ok 231 - H7: "House The Free Folk" and the other boilerplate of the ledger fail `boiler`
+  ---
+  duration_ms: 11.65705
+  type: 'test'
+  ...
+# Subtest: H8: the outcome is never reversed — slain and slayer, captive and captor, victor and vanquished
+ok 232 - H8: the outcome is never reversed — slain and slayer, captive and captor, victor and vanquished
+  ---
+  duration_ms: 15.371683
+  type: 'test'
+  ...
+# Subtest: H4: nothing the story does not name — "Ser Barristan" in a Stark muster story fails `invented`
+ok 233 - H4: nothing the story does not name — "Ser Barristan" in a Stark muster story fails `invented`
+  ---
+  duration_ms: 6.480312
+  type: 'test'
+  ...
+# Subtest: S2: an ellipsis in a summary fails `punct`, and so does a summary cut short without its full stop
+ok 234 - S2: an ellipsis in a summary fails `punct`, and so does a summary cut short without its full stop
+  ---
+  duration_ms: 5.582962
+  type: 'test'
+  ...
+# Subtest: S2: a summary that is the headline again fails `dup`
+ok 235 - S2: a summary that is the headline again fails `dup`
+  ---
+  duration_ms: 3.636967
+  type: 'test'
+  ...
+# Subtest: S1: a summary is one to three sentences and at most 340 characters
+ok 236 - S1: a summary is one to three sentences and at most 340 characters
+  ---
+  duration_ms: 3.510557
+  type: 'test'
+  ...
+# Subtest: outcome: "slain" with no death fact in the story fails `outcome`; with one it passes
+ok 237 - outcome: "slain" with no death fact in the story fails `outcome`; with one it passes
+  ---
+  duration_ms: 5.904168
+  type: 'test'
+  ...
+# Subtest: D-058: news headlines — present tense and a bare passive participle pass `verb`, past passes, a noun phrase fails
+ok 238 - D-058: news headlines — present tense and a bare passive participle pass `verb`, past passes, a noun phrase fails
+  ---
+  duration_ms: 20.432886
+  type: 'test'
+  ...
+# Subtest: H3: a headline names who — a story with no one in it is named by its place or party, and a nameless one fails `who`
+ok 239 - H3: a headline names who — a story with no one in it is named by its place or party, and a nameless one fails `who`
+  ---
+  duration_ms: 5.855438
+  type: 'test'
+  ...
+# Subtest: regression evidence: the current mock's telling (plainEvent) scores under half on the golden set
+ok 240 - regression evidence: the current mock's telling (plainEvent) scores under half on the golden set
+  ---
+  duration_ms: 125.787086
+  type: 'test'
+  ...
+# Subtest: numbers: the writer's own roughly() words are the story's numbers ("nearly two thousand" for 1,796), other roundings are not
+ok 241 - numbers: the writer's own roughly() words are the story's numbers ("nearly two thousand" for 1,796), other roundings are not
+  ---
+  duration_ms: 9.749584
+  type: 'test'
+  ...
+# Subtest: dup: a summary that names the same people is not a restatement; one that says the headline again is, at 0.8 and no lower
+ok 242 - dup: a summary that names the same people is not a restatement; one that says the headline again is, at 0.8 and no lower
+  ---
+  duration_ms: 8.938059
+  type: 'test'
+  ...
+# Subtest: verb: the news present has a fallback — a word after the subject's name, and a wide lexicon; nouns after a name still fail
+ok 243 - verb: the news present has a fallback — a word after the subject's name, and a wide lexicon; nouns after a name still fail
+  ---
+  duration_ms: 14.982967
+  type: 'test'
+  ...
+# Subtest: roles: "X wins/loses at P" is checked against the winner and the loser, and a draw has neither
+ok 244 - roles: "X wins/loses at P" is checked against the winner and the loser, and a draw has neither
+  ---
+  duration_ms: 13.746148
+  type: 'test'
+  ...
+# Subtest: roles: "cut down", "takes X prisoner", "seizes" and a siege are read like slain, captured and besieged — and not reversed
+ok 245 - roles: "cut down", "takes X prisoner", "seizes" and a siege are read like slain, captured and besieged — and not reversed
+  ---
+  duration_ms: 22.169033
+  type: 'test'
+  ...
+# Subtest: roles: a story's battle (world.js note) names its winner as a house and no winnerHouse — the scorer reads it
+ok 246 - roles: a story's battle (world.js note) names its winner as a house and no winnerHouse — the scorer reads it
+  ---
+  duration_ms: 4.736042
+  type: 'test'
+  ...
+# Subtest: outcome: "takes" or "storms" a holding needs a fall, a storming or a grant in the story — a siege only begun is not one
+ok 247 - outcome: "takes" or "storms" a holding needs a fall, a storming or a grant in the story — a siege only begun is not one
+  ---
+  duration_ms: 10.417278
+  type: 'test'
+  ...
+# Subtest: invented: a house's plural opening the headline is not that house; a name the game does not know, given away by an honorific or a castle, is invented
+ok 248 - invented: a house's plural opening the headline is not that house; a name the game does not know, given away by an honorific or a castle, is invented
+  ---
+  duration_ms: 11.786672
+  type: 'test'
+  ...
+# Subtest: punct: mark-up, a spaced hyphen and an emoji fail, in the headline and in the summary
+ok 249 - punct: mark-up, a spaced hyphen and an emoji fail, in the headline and in the summary
+  ---
+  duration_ms: 16.881539
+  type: 'test'
+  ...
+# Subtest: boiler: the jargon is the engine's, not English — "levies", "stories" and "in fact" are fine; ids, counts and importance are not
+ok 250 - boiler: the jargon is the engine's, not English — "levies", "stories" and "in fact" are fine; ids, counts and importance are not
+  ---
+  duration_ms: 3.877405
+  type: 'test'
+  ...
+# Subtest: the checks that reuse the narration validator each fail a crafted card: script, anachronism, maturity, mustNot
+ok 251 - the checks that reuse the narration validator each fail a crafted card: script, anachronism, maturity, mustNot
+  ---
+  duration_ms: 18.809503
+  type: 'test'
+  ...
+# Subtest: places with an apostrophe are read, straight or curly: a story of a place only can pass `who` at "Storm's End", "Widow's Watch", "King's Landing"
+ok 252 - places with an apostrophe are read, straight or curly: a story of a place only can pass `who` at "Storm's End", "Widow's Watch", "King's Landing"
+  ---
+  duration_ms: 11.945183
+  type: 'test'
+  ...
+# Subtest: offices: "the Queen", "the King", "the Hand" mean the story's own holder of the office — not the crown's, and not invented
+ok 253 - offices: "the Queen", "the King", "the Hand" mean the story's own holder of the office — not the crown's, and not invented
+  ---
+  duration_ms: 11.868859
+  type: 'test'
+  ...
+# Subtest: a free city is house and holding at once: "Pentos" and "Braavos" are the story's when its place or its house is
+ok 254 - a free city is house and holding at once: "Pentos" and "Braavos" are the story's when its place or its house is
+  ---
+  duration_ms: 16.719632
+  type: 'test'
+  ...
+# Subtest: orders: receipt, then the turn does it; halt and call back work over the wire
+ok 255 - orders: receipt, then the turn does it; halt and call back work over the wire
+  ---
+  duration_ms: 2430.369524
+  type: 'test'
+  ...
+# Subtest: an order the steward must ask about: the question, a chip, and the answered order done
+ok 256 - an order the steward must ask about: the question, a chip, and the answered order done
+  ---
+  duration_ms: 830.019222
+  type: 'test'
+  ...
+# Subtest: works: one path, and a duplicate is refused with its reason
+ok 257 - works: one path, and a duplicate is refused with its reason
+  ---
+  duration_ms: 150.029969
+  type: 'test'
+  ...
+# Subtest: a distant audience is a letter: the answer lands days later, in Letters and in the chronicle
+ok 258 - a distant audience is a letter: the answer lands days later, in Letters and in the chronicle
+  ---
+  duration_ms: 3509.812086
+  type: 'test'
+  ...
+# Subtest: council: a question, then "let them talk" — they go on without the lord speaking
+ok 259 - council: a question, then "let them talk" — they go on without the lord speaking
+  ---
+  duration_ms: 186.446809
+  type: 'test'
+  ...
+# Subtest: undo over the wire: how far back, several turns at once; ironman refuses; the facts and turns are served
+ok 260 - undo over the wire: how far back, several turns at once; ironman refuses; the facts and turns are served
+  ---
+  duration_ms: 3009.908477
+  type: 'test'
+  ...
+# Subtest: the player's view over the wire: an unseen host is not sent where it stands, and no one else's secret is
+ok 261 - the player's view over the wire: an unseen host is not sent where it stands, and no one else's secret is
+  ---
+  duration_ms: 691.401527
+  type: 'test'
+  ...
+# Subtest: the jump streams its weeks over the wire, and the lord can stop it
+ok 262 - the jump streams its weeks over the wire, and the lord can stop it
+  ---
+  duration_ms: 2301.157821
+  type: 'test'
+  ...
+# Subtest: numbers and spans a lord dictates
+ok 263 - numbers and spans a lord dictates
+  ---
+  duration_ms: 6.259536
+  type: 'test'
+  ...
+# Subtest: an order is split where a second command begins, not where one command goes on
+ok 264 - an order is split where a second command begins, not where one command goes on
+  ---
+  duration_ms: 1.823035
+  type: 'test'
+  ...
+# Subtest: who an order means: names, bynames, kinship, office — and not the one met or fetched
+ok 265 - who an order means: names, bynames, kinship, office — and not the one met or fetched
+  ---
+  duration_ms: 434.317035
+  type: 'test'
+  ...
+# Subtest: letters go to the one written to; offers and "tell" are ravens; prayers are the story's
+ok 266 - letters go to the one written to; offers and "tell" are ravens; prayers are the story's
+  ---
+  duration_ms: 366.641074
+  type: 'test'
+  ...
+# Subtest: the banners: all of them, some of them by name, or their lords
+ok 267 - the banners: all of them, some of them by name, or their lords
+  ---
+  duration_ms: 199.642207
+  type: 'test'
+  ...
+# Subtest: an order the rules cannot finish asks one question, and its answers patch the action left open
+ok 268 - an order the rules cannot finish asks one question, and its answers patch the action left open
+  ---
+  duration_ms: 116.312341
+  type: 'test'
+  ...
+# Subtest: a march with no host in the field is read, and refused with the reason — never dropped
+ok 269 - a march with no host in the field is read, and refused with the reason — never dropped
+  ---
+  duration_ms: 164.15351
+  type: 'test'
+  ...
+# Subtest: the model is asked only for what the rules cannot read completely and lawfully
+ok 270 - the model is asked only for what the rules cannot read completely and lawfully
+  ---
+  duration_ms: 328.231794
+  type: 'test'
+  ...
+# Subtest: ruleReading says when the model may be skipped
+ok 271 - ruleReading says when the model may be skipped
+  ---
+  duration_ms: 107.694055
+  type: 'test'
+  ...
+# Subtest: compare: exact reading, param accuracy and questions are scored as 04 §13 says
+ok 272 - compare: exact reading, param accuracy and questions are scored as 04 §13 says
+  ---
+  duration_ms: 1.022991
+  type: 'test'
+  ...
+# Subtest: the interpret suite: the pre-parser reads right, and every action it reads gets its receipt
+ok 273 - the interpret suite: the pre-parser reads right, and every action it reads gets its receipt
+  ---
+  duration_ms: 12977.617716
+  type: 'test'
+  ...
+# Subtest: the hold-out: orders written apart from the pre-parser stay mostly right
+ok 274 - the hold-out: orders written apart from the pre-parser stay mostly right
+  ---
+  duration_ms: 811.771735
+  type: 'test'
+  ...
+# Subtest: the interpret call on the mock reads the suite as the rules do: the schema carries every reading whole
+ok 275 - the interpret call on the mock reads the suite as the rules do: the schema carries every reading whole
+  ---
+  duration_ms: 18166.121209
+  type: 'test'
+  ...
+# Subtest: a fortnight is lived in weeks: each is told as it ends, and the turn records its weeks and its timings
+ok 276 - a fortnight is lived in weeks: each is told as it ends, and the turn records its weeks and its timings
+  ---
+  duration_ms: 2826.19735
+  type: 'test'
+  ...
+# Subtest: the lord stops the days while they pass: the turn ends on his day
+ok 277 - the lord stops the days while they pass: the turn ends on his day
+  ---
+  duration_ms: 629.873268
+  type: 'test'
+  ...
+# Subtest: stop here: the turn played again to day 9 has the same days 1–9, fact for fact
+ok 278 - stop here: the turn played again to day 9 has the same days 1–9, fact for fact
+  ---
+  duration_ms: 5513.23867
+  type: 'test'
+  ...
+# Subtest: an ironman chronicle cannot be stopped after the fact
+ok 279 - an ironman chronicle cannot be stopped after the fact
+  ---
+  duration_ms: 657.531429
+  type: 'test'
+  ...
+# Subtest: news: one's own at once, what is seen at once, great news by raven, small news by rumour and not far, secrets never
+ok 280 - news: one's own at once, what is seen at once, great news by raven, small news by rumour and not far, secrets never
+  ---
+  duration_ms: 130.654426
+  type: 'test'
+  ...
+# Subtest: the chronicle hears late: a card is told the day its word arrives, or waits for the turn it does
+ok 281 - the chronicle hears late: a card is told the day its word arrives, or waits for the turn it does
+  ---
+  duration_ms: 73.059081
+  type: 'test'
+  ...
+# Subtest: minds reason from their house's knowledge: an enemy host they have no word of is not among their foes' hosts
+ok 282 - minds reason from their house's knowledge: an enemy host they have no word of is not among their foes' hosts
+  ---
+  duration_ms: 95.92385
+  type: 'test'
+  ...
+# Subtest: the player's view: an unseen host is not sent where it stands; secrets, minds and unread answers stay on the server
+ok 283 - the player's view: an unseen host is not sent where it stands; secrets, minds and unread answers stay on the server
+  ---
+  duration_ms: 97.399091
+  type: 'test'
+  ...
+# Subtest: over the turns: the view never leaks and every house learned in time (Stark, six weeks)
+ok 284 - over the turns: the view never leaks and every house learned in time (Stark, six weeks)
+  ---
+  duration_ms: 10100.629732
+  type: 'test'
+  ...
+# Subtest: houseLabel: every house of the scenario reads as a name — never "House The …", never a suffix of place, never empty
+ok 285 - houseLabel: every house of the scenario reads as a name — never "House The …", never a suffix of place, never empty
+  ---
+  duration_ms: 4.885217
+  type: 'test'
+  ...
+# Subtest: houseLabel: the names the GDD gives — House Stark, the Free Folk, the Night's Watch — and the suffixes dropped
+ok 286 - houseLabel: the names the GDD gives — House Stark, the Free Folk, the Night's Watch — and the suffixes dropped
+  ---
+  duration_ms: 0.787588
+  type: 'test'
+  ...
+# Subtest: who: the name as it is; a byname without its quotes — "Lord Umber" for the Greatjon, "Smalljon Umber" for his son
+ok 287 - who: the name as it is; a byname without its quotes — "Lord Umber" for the Greatjon, "Smalljon Umber" for his son
+  ---
+  duration_ms: 1.233933
+  type: 'test'
+  ...
+# Subtest: who: a single-quoted byname goes as a double-quoted one does, straight or curly; an apostrophe inside a word is no byname
+ok 288 - who: a single-quoted byname goes as a double-quoted one does, straight or curly; an apostrophe inside a word is no byname
+  ---
+  duration_ms: 8.896974
+  type: 'test'
+  ...
+# Subtest: partyLabel: "the Stark host", never "The Banners of Stark" nor "Host of House Umber"
+ok 289 - partyLabel: "the Stark host", never "The Banners of Stark" nor "Host of House Umber"
+  ---
+  duration_ms: 2.618896
+  type: 'test'
+  ...
+# Subtest: partyLabel: host and fleet are never capitalised, and a free city's host is "the Braavos host" — never "Braavos host", never "Free Cities host"
+ok 290 - partyLabel: host and fleet are never capitalised, and a free city's host is "the Braavos host" — never "Braavos host", never "Free Cities host"
+  ---
+  duration_ms: 44.67423
+  type: 'test'
+  ...
+# Subtest: roughly: a number in words — under twenty the word, then tens, hundreds, thousands, ten thousands; never a digit
+ok 291 - roughly: a number in words — under twenty the word, then tens, hundreds, thousands, ten thousands; never a digit
+  ---
+  duration_ms: 1.10815
+  type: 'test'
+  ...
+# Subtest: roughly: none for nothing, nothing for what is no number; words only, whatever the number
+ok 292 - roughly: none for nothing, nothing for what is no number; words only, whatever the number
+  ---
+  duration_ms: 8.301043
+  type: 'test'
+  ...
+# Subtest: list: one, two, three or four names in a line; five or more as a count
+ok 293 - list: one, two, three or four names in a line; five or more as a count
+  ---
+  duration_ms: 1.042393
+  type: 'test'
+  ...
+# Subtest: battle: winnerHouse, loserHouse and how join the party ids the fact already has
+ok 294 - battle: winnerHouse, loserHouse and how join the party ids the fact already has
+  ---
+  duration_ms: 351.280527
+  type: 'test'
+  ...
+# Subtest: battle: how is what decided THAT battle — a different decisive factor gives a different how
+ok 295 - battle: how is what decided THAT battle — a different decisive factor gives a different how
+  ---
+  duration_ms: 251.744549
+  type: 'test'
+  ...
+# Subtest: a draw has no winner: winnerHouse and loserHouse are null and there is no how
+ok 296 - a draw has no winner: winnerHouse and loserHouse are null and there is no how
+  ---
+  duration_ms: 174.909207
+  type: 'test'
+  ...
+# Subtest: slain_in_battle: by is the enemy COMMANDER who stood, how a plain word, battle the id of the battle fact
+ok 297 - slain_in_battle: by is the enemy COMMANDER who stood, how a plain word, battle the id of the battle fact
+  ---
+  duration_ms: 319.518524
+  type: 'test'
+  ...
+# Subtest: captured_in_battle: by is the captor — the commander of the host that won — and battle links to the battle fact
+ok 298 - captured_in_battle: by is the captor — the commander of the host that won — and battle links to the battle fact
+  ---
+  duration_ms: 45.828516
+  type: 'test'
+  ...
+# Subtest: the enemy commander who himself fell is named no slayer, and no captor: the slain has no by, the captured has the house
+ok 299 - the enemy commander who himself fell is named no slayer, and no captor: the slain has no by, the captured has the house
+  ---
+  duration_ms: 62.556656
+  type: 'test'
+  ...
+# Subtest: the enemy commander who fell: a man slain beside him is put to no one
+ok 300 - the enemy commander who fell: a man slain beside him is put to no one
+  ---
+  duration_ms: 70.253938
+  type: 'test'
+  ...
+# Subtest: captured_in_battle carries the field it was taken on, so its news comes from that field: a raven, not a rumour (a decision: a capture on a known field is news from that field)
+ok 301 - captured_in_battle carries the field it was taken on, so its news comes from that field: a raven, not a rumour (a decision: a capture on a known field is news from that field)
+  ---
+  duration_ms: 400.363445
+  type: 'test'
+  ...
+# Subtest: a story battle (the op the canon beats use): winnerHouse and loserHouse are houses; how only if the op says it in plain words
+ok 302 - a story battle (the op the canon beats use): winnerHouse and loserHouse are houses; how only if the op says it in plain words
+  ---
+  duration_ms: 479.542682
+  type: 'test'
+  ...
+# Subtest: N2 adds slots and nothing else: every field of every fact of the battle, but the new slots, is what it was before N2
+ok 303 - N2 adds slots and nothing else: every field of every fact of the battle, but the new slots, is what it was before N2
+  ---
+  duration_ms: 34.874638
+  type: 'test'
+  ...
+# Subtest: executed: by is the lord who gave the order (through the court's own verb); a knight killed in the lists says how — a wound
+ok 304 - executed: by is the lord who gave the order (through the court's own verb); a knight killed in the lists says how — a wound
+  ---
+  duration_ms: 114.773266
+  type: 'test'
+  ...
+# Subtest: a death of the years: how is "age" or "illness", and the words of the card say the same as the slot
+ok 305 - a death of the years: how is "age" or "illness", and the words of the card say the same as the slot
+  ---
+  duration_ms: 781.645504
+  type: 'test'
+  ...
+# Subtest: a death of the days (life.js): fever, winter chill and festering wound each say how
+ok 306 - a death of the days (life.js): fever, winter chill and festering wound each say how
+  ---
+  duration_ms: 151.366682
+  type: 'test'
+  ...
+# Subtest: call_refused: why, in words, beside the lord and the house it already names
+ok 307 - call_refused: why, in words, beside the lord and the house it already names
+  ---
+  duration_ms: 77.167058
+  type: 'test'
+  ...
+# Subtest: whyRefused: a reason for each thing that weighs on a lord — and none for a dutiful lord who simply refused
+ok 308 - whyRefused: a reason for each thing that weighs on a lord — and none for a dutiful lord who simply refused
+  ---
+  duration_ms: 888.705562
+  type: 'test'
+  ...
+# Subtest: whyRefused: an empty granary is hunger, not plenty (0 is not "no figure"); a granary nobody has counted is not hunger
+ok 309 - whyRefused: an empty granary is hunger, not plenty (0 is not "no figure"); a granary nobody has counted is not hunger
+  ---
+  duration_ms: 130.290865
+  type: 'test'
+  ...
+# Subtest: whyRefused: the reasons come in the order of their weight — bad blood before loyalty, loyalty before the tax, hunger, a second asking
+ok 310 - whyRefused: the reasons come in the order of their weight — bad blood before loyalty, loyalty before the tax, hunger, a second asking
+  ---
+  duration_ms: 240.190732
+  type: 'test'
+  ...
+# Subtest: call_refused, through the muster: a starving vassal who refuses says why — hunger
+ok 311 - call_refused, through the muster: a starving vassal who refuses says why — hunger
+  ---
+  duration_ms: 48.094457
+  type: 'test'
+  ...
+# Subtest: a wound heals in one to three moons, and the healed are told of
+ok 312 - a wound heals in one to three moons, and the healed are told of
+  ---
+  duration_ms: 216.222925
+  type: 'test'
+  ...
+# Subtest: a festering wound kills — unless the story keeps the wounded for later
+ok 313 - a festering wound kills — unless the story keeps the wounded for later
+  ---
+  duration_ms: 147.28921
+  type: 'test'
+  ...
+# Subtest: winter and great age kill the old — never the story's own, under Canon; anyone under Sandbox
+ok 314 - winter and great age kill the old — never the story's own, under Canon; anyone under Sandbox
+  ---
+  duration_ms: 742.703781
+  type: 'test'
+  ...
+# Subtest: invariant 11: no one the story keeps died of chance before their time; a beat or an order may kill anyone
+ok 315 - invariant 11: no one the story keeps died of chance before their time; a beat or an order may kill anyone
+  ---
+  duration_ms: 166.490877
+  type: 'test'
+  ...
+# Subtest: regents: the ones the books name, the widow of whatever house, and never another branch's man (B-23)
+ok 316 - regents: the ones the books name, the widow of whatever house, and never another branch's man (B-23)
+  ---
+  duration_ms: 180.970878
+  type: 'test'
+  ...
+# Subtest: the order of importance: your seat, the realms far out, the great seats, cities, hosts, castles
+ok 317 - the order of importance: your seat, the realms far out, the great seats, cities, hosts, castles
+  ---
+  duration_ms: 1.336778
+  type: 'test'
+  ...
+# Subtest: "KING'S LANDING", a host of ~2,400 and a fleet of 50 on the same spot: never drawn over one another
+ok 318 - "KING'S LANDING", a host of ~2,400 and a fleet of 50 on the same spot: never drawn over one another
+  ---
+  duration_ms: 0.938646
+  type: 'test'
+  ...
+# Subtest: a thousand random labels: no two shown overlap, the budget holds, and the important win
+ok 319 - a thousand random labels: no two shown overlap, the budget holds, and the important win
+  ---
+  duration_ms: 17.045901
+  type: 'test'
+  ...
+# Subtest: the whole realm's holding names at L0 spacing: none overlaps once placed
+ok 320 - the whole realm's holding names at L0 spacing: none overlaps once placed
+  ---
+  duration_ms: 109.533365
+  type: 'test'
+  ...
+# Subtest: four levels, farthest to closest; the level is continuous and clamped
+ok 321 - four levels, farthest to closest; the level is continuous and clamped
+  ---
+  duration_ms: 1.235656
+  type: 'test'
+  ...
+# Subtest: a layer fades in and out over ±0.15 of a level — never pops
+ok 322 - a layer fades in and out over ±0.15 of a level — never pops
+  ---
+  duration_ms: 0.654548
+  type: 'test'
+  ...
+# Subtest: L0 is framed on Westeros (B-29): the centre lies on the realm, and the pan bounds keep it there
+ok 323 - L0 is framed on Westeros (B-29): the centre lies on the realm, and the pan bounds keep it there
+  ---
+  duration_ms: 99.618167
+  type: 'test'
+  ...
+# Subtest: every mode is visibly different from Realms across the whole map
+ok 324 - every mode is visibly different from Realms across the whole map
+  ---
+  duration_ms: 157.898626
+  type: 'test'
+  ...
+# Subtest: each mode draws what it says
+ok 325 - each mode draws what it says
+  ---
+  duration_ms: 85.159961
+  type: 'test'
+  ...
+# Subtest: summer keeps the snow beyond the Wall; autumn creeps toward the Neck; winter reaches the Riverlands
+ok 326 - summer keeps the snow beyond the Wall; autumn creeps toward the Neck; winter reaches the Riverlands
+  ---
+  duration_ms: 2.00777
+  type: 'test'
+  ...
+# Subtest: the rivers freeze only in deep winter
+ok 327 - the rivers freeze only in deep winter
+  ---
+  duration_ms: 0.259015
+  type: 'test'
+  ...
+# Subtest: a season ages under Canon gravity too, so the autumn snow can creep
+ok 328 - a season ages under Canon gravity too, so the autumn snow can creep
+  ---
+  duration_ms: 120.190895
+  type: 'test'
+  ...
+# Subtest: the painted palette: ochre western hills, blue-grey Vale peaks, slate isles — and nothing in the open North
+ok 329 - the painted palette: ochre western hills, blue-grey Vale peaks, slate isles — and nothing in the open North
+  ---
+  duration_ms: 0.664065
+  type: 'test'
+  ...
+# Subtest: the tree atlas: four painted tiles, each a silhouette with a clear edge, the weirwood red-crowned and white-barked
+ok 330 - the tree atlas: four painted tiles, each a silhouette with a clear edge, the weirwood red-crowned and white-barked
+  ---
+  duration_ms: 68.767153
+  type: 'test'
+  ...
+# Subtest: a host: its count far out, and who leads it from L1 in; your own count is exact, others' are "~"
+ok 331 - a host: its count far out, and who leads it from L1 in; your own count is exact, others' are "~"
+  ---
+  duration_ms: 20.427311
+  type: 'test'
+  ...
+# Subtest: a host known only by report: grey, "?", and how old the word is; one the player has no word of is not shown
+ok 332 - a host known only by report: grey, "?", and how old the word is; one the player has no word of is not shown
+  ---
+  duration_ms: 0.49965
+  type: 'test'
+  ...
+# Subtest: fleets, outlaws, garrisons, retinues and the King's progress
+ok 333 - fleets, outlaws, garrisons, retinues and the King's progress
+  ---
+  duration_ms: 0.628854
+  type: 'test'
+  ...
+# Subtest: plates on one spot merge into a stack; plates apart stay apart
+ok 334 - plates on one spot merge into a stack; plates apart stay apart
+  ---
+  duration_ms: 3.257381
+  type: 'test'
+  ...
+# Subtest: the catalogue: some seventy templates, each with a group and a gist; with the Director's hooks, more
+ok 335 - the catalogue: some seventy templates, each with a group and a gist; with the Director's hooks, more
+  ---
+  duration_ms: 1.558414
+  type: 'test'
+  ...
+# Subtest: no matter without a template: the decision op refuses an invented one (B-28)
+ok 336 - no matter without a template: the decision op refuses an invented one (B-28)
+  ---
+  duration_ms: 83.476142
+  type: 'test'
+  ...
+# Subtest: every drawn template renders somewhere, and every answer and every silence resolves
+ok 337 - every drawn template renders somewhere, and every answer and every silence resolves
+  ---
+  duration_ms: 67513.191131
+  type: 'test'
+  ...
+# Subtest: the realm brings a matter from the catalogue, and not the same one twice in six turns
+ok 338 - the realm brings a matter from the catalogue, and not the same one twice in six turns
+  ---
+  duration_ms: 7.846239
+  type: 'test'
+  ...
+# Subtest: the matters raised where they happen are raised there, by their template ids
+ok 339 - the matters raised where they happen are raised there, by their template ids
+  ---
+  duration_ms: 2.386488
+  type: 'test'
+  ...
+# Subtest: relevant memory: what touches the matter first, older facts by relevance, only what the house knows, within budget
+ok 340 - relevant memory: what touches the matter first, older facts by relevance, only what the house knows, within budget
+  ---
+  duration_ms: 148.896016
+  type: 'test'
+  ...
+# Subtest: the consolidator: the engine writes what happened; an open thread that names nothing of the dossier is refused
+ok 341 - the consolidator: the engine writes what happened; an open thread that names nothing of the dossier is refused
+  ---
+  duration_ms: 73.960125
+  type: 'test'
+  ...
+# Subtest: a game's chronicle is consolidated from its facts: what happened, dated, and what is still open, as of its end
+ok 342 - a game's chronicle is consolidated from its facts: what happened, dated, and what is still open, as of its end
+  ---
+  duration_ms: 12786.956745
+  type: 'test'
+  ...
+# Subtest: the memory the realm's lords are given with a live model: built from the save's log and chronicle, their house's view
+ok 343 - the memory the realm's lords are given with a live model: built from the save's log and chronicle, their house's view
+  ---
+  duration_ms: 2470.705078
+  type: 'test'
+  ...
+# Subtest: every great house, and the houses the story leans on, has ways of its own
+ok 344 - every great house, and the houses the story leans on, has ways of its own
+  ---
+  duration_ms: 102.563308
+  type: 'test'
+  ...
+# Subtest: a mind may only choose among lawful options, and never what only the player or a later package may do
+ok 345 - a mind may only choose among lawful options, and never what only the player or a later package may do
+  ---
+  duration_ms: 148.41747
+  type: 'test'
+  ...
+# Subtest: a commander moves only the host he leads; the house's affairs are its lord's
+ok 346 - a commander moves only the host he leads; the house's affairs are its lord's
+  ---
+  duration_ms: 108.202629
+  type: 'test'
+  ...
+# Subtest: salience: rank, what has just happened, nearness to the player; never the player's own house
+ok 347 - salience: rank, what has just happened, nearness to the player; never the player's own house
+  ---
+  duration_ms: 543.254446
+  type: 'test'
+  ...
+# Subtest: the house ways: kin taken, a siege, a summons, a prisoner, winter — each answered in character
+ok 348 - the house ways: kin taken, a siege, a summons, a prisoner, winter — each answered in character
+  ---
+  duration_ms: 413.463914
+  type: 'test'
+  ...
+# Subtest: a vassal answering his liege's call gathers his men at his seat, then marches them to the muster
+ok 349 - a vassal answering his liege's call gathers his men at his seat, then marches them to the muster
+  ---
+  duration_ms: 285.577568
+  type: 'test'
+  ...
+# Subtest: a week of minds on the mock: lords decide through the verbs, at least three act, one far away (Q4)
+ok 350 - a week of minds on the mock: lords decide through the verbs, at least three act, one far away (Q4)
+  ---
+  duration_ms: 169.892386
+  type: 'test'
+  ...
+# Subtest: a model's mind is held to its options: a recorded answer is done, a bad one falls to the house's ways
+ok 351 - a model's mind is held to its options: a recorded answer is done, a bad one falls to the house's ways
+  ---
+  duration_ms: 330.32849
+  type: 'test'
+  ...
+# Subtest: houses rest between feasts and tourneys
+ok 352 - houses rest between feasts and tourneys
+  ---
+  duration_ms: 53.807185
+  type: 'test'
+  ...
+# Subtest: a turn with minds: recorded in the turn record, the Hand not asked, the save replays
+ok 353 - a turn with minds: recorded in the turn record, the Hand not asked, the save replays
+  ---
+  duration_ms: 1244.403099
+  type: 'test'
+  ...
+# Subtest: a host that fought this turn still has its banners add up; no one follows a party that is gone
+ok 354 - a host that fought this turn still has its banners add up; no one follows a party that is gone
+  ---
+  duration_ms: 51.962654
+  type: 'test'
+  ...
+# Subtest: the mind suite: the house ways are in character and always lawful
+ok 355 - the mind suite: the house ways are in character and always lawful
+  ---
+  duration_ms: 5795.148377
+  type: 'test'
+  ...
+# Subtest: the banners join the host wherever it has gone: one host, no camp left at the muster
+ok 356 - the banners join the host wherever it has gone: one host, no camp left at the muster
+  ---
+  duration_ms: 13484.951335
+  type: 'test'
+  ...
+# Subtest: the answer is the lord's nature: the devoted answer, the resentful refuse; a full call and the harvest weigh on it
+ok 357 - the answer is the lord's nature: the devoted answer, the resentful refuse; a full call and the harvest weigh on it
+  ---
+  duration_ms: 66.902783
+  type: 'test'
+  ...
+# Subtest: muster-one-host: called quick to Winterfell, the host sent to Moat Cailin a week later — one host, the banners joining it or on its road
+ok 358 - muster-one-host: called quick to Winterfell, the host sent to Moat Cailin a week later — one host, the banners joining it or on its road
+  ---
+  duration_ms: 8794.581718
+  type: 'test'
+  ...
+# Subtest: the days the muster promises are the days it keeps: every lord who marched by land joined within two days of his reckoning
+ok 359 - the days the muster promises are the days it keeps: every lord who marched by land joined within two days of his reckoning
+  ---
+  duration_ms: 15986.285053
+  type: 'test'
+  ...
+# Subtest: the host card's muster: present, on the road, expected with a day, refused — and Wait for the banners holds the host until they are in
+ok 360 - the host card's muster: present, on the road, expected with a day, refused — and Wait for the banners holds the host until they are in
+  ---
+  duration_ms: 8720.557758
+  type: 'test'
+  ...
+# Subtest: stories: facts that share a party, a cause, or the same day, place and people are one; the small change is the Meanwhile
+ok 361 - stories: facts that share a party, a cause, or the same day, place and people are one; the small change is the Meanwhile
+  ---
+  duration_ms: 147.427624
+  type: 'test'
+  ...
+# Subtest: the matchers: numbers in digits and words, names with bynames, a later chapter only once it has come
+ok 362 - the matchers: numbers in digits and words, names with bynames, a later chapter only once it has come
+  ---
+  duration_ms: 83.102593
+  type: 'test'
+  ...
+# Subtest: a telling with one false story keeps the true ones; the false one is told again alone, with what was wrong
+ok 363 - a telling with one false story keeps the true ones; the false one is told again alone, with what was wrong
+  ---
+  duration_ms: 127.368426
+  type: 'test'
+  ...
+# Subtest: told wrongly twice: the story is left to the engine's own plain words
+ok 364 - told wrongly twice: the story is left to the engine's own plain words
+  ---
+  duration_ms: 75.117509
+  type: 'test'
+  ...
+# Subtest: a dead server: every story stays in the engine's words, and the turn goes on
+ok 365 - a dead server: every story stays in the engine's words, and the turn goes on
+  ---
+  duration_ms: 77.573545
+  type: 'test'
+  ...
+# Subtest: replay: a recorded telling with an invented number keeps its true stories and drops the false one
+ok 366 - replay: a recorded telling with an invented number keeps its true stories and drops the false one
+  ---
+  duration_ms: 56.860942
+  type: 'test'
+  ...
+# Subtest: story-matches-map on mock: every telling is true to the map and the facts
+ok 367 - story-matches-map on mock: every telling is true to the map and the facts
+  ---
+  duration_ms: 10805.482393
+  type: 'test'
+  ...
+# Subtest: story-matches-map on replay: every telling is true to the map and the facts
+ok 368 - story-matches-map on replay: every telling is true to the map and the facts
+  ---
+  duration_ms: 6581.339239
+  type: 'test'
+  ...
+# Subtest: the narrate suite: sixty weeks of twelve games; the mock tells them through the call and the validator
+ok 369 - the narrate suite: sixty weeks of twelve games; the mock tells them through the call and the validator
+  ---
+  duration_ms: 13864.728843
+  type: 'test'
+  ...
+# Subtest: ships by kind: longships for the ironborn, galleys and cogs for the Crown, carracks for Braavos
+ok 370 - ships by kind: longships for the ironborn, galleys and cogs for the Crown, carracks for Braavos
+  ---
+  duration_ms: 101.433585
+  type: 'test'
+  ...
+# Subtest: Stannis's fleet carries a host: aboard at Dragonstone, across Blackwater Bay, ashore at Storm's End
+ok 371 - Stannis's fleet carries a host: aboard at Dragonstone, across Blackwater Bay, ashore at Storm's End
+  ---
+  duration_ms: 529.127986
+  type: 'test'
+  ...
+# Subtest: the ironborn raid the Stony Shore by sea: villages burned, plunder home, the land laid waste
+ok 372 - the ironborn raid the Stony Shore by sea: villages burned, plunder home, the land laid waste
+  ---
+  duration_ms: 588.111813
+  type: 'test'
+  ...
+# Subtest: the Greyjoys, at war, send the longships reaving
+ok 373 - the Greyjoys, at war, send the longships reaving
+  ---
+  duration_ms: 61.11424
+  type: 'test'
+  ...
+# Subtest: a blockade halves a port's trade and starves a besieged castle
+ok 374 - a blockade halves a port's trade and starves a besieged castle
+  ---
+  duration_ms: 50.864172
+  type: 'test'
+  ...
+# Subtest: a sea fight: the stronger fleet wins, boarders take prizes, the loser runs for home
+ok 375 - a sea fight: the stronger fleet wins, boarders take prizes, the loser runs for home
+  ---
+  duration_ms: 51.695684
+  type: 'test'
+  ...
+# Subtest: autumn storms take ships at sea
+ok 376 - autumn storms take ships at sea
+  ---
+  duration_ms: 92.520741
+  type: 'test'
+  ...
+# Subtest: B-15: the officers' dossier holds the muster in progress and the hosts' real sizes
+ok 377 - B-15: the officers' dossier holds the muster in progress and the hosts' real sizes
+  ---
+  duration_ms: 5217.677568
+  type: 'test'
+  ...
+# Subtest: B-25: no arrival reason from a stale march.to; a host truly marching still gives one
+ok 378 - B-25: no arrival reason from a stale march.to; a host truly marching still gives one
+  ---
+  duration_ms: 74.827064
+  type: 'test'
+  ...
+# Subtest: a person is in one place; a party lists exactly the people in it
+ok 379 - a person is in one place; a party lists exactly the people in it
+  ---
+  duration_ms: 126.597795
+  type: 'test'
+  ...
+# Subtest: a lone rider is a party on a road: it walks day by day, and gets down at the journey's end
+ok 380 - a lone rider is a party on a road: it walks day by day, and gets down at the journey's end
+  ---
+  duration_ms: 905.720281
+  type: 'test'
+  ...
+# Subtest: a march keeps to dry land, and to the kingsroad where there is one
+ok 381 - a march keeps to dry land, and to the kingsroad where there is one
+  ---
+  duration_ms: 100.052046
+  type: 'test'
+  ...
+# Subtest: the Wall is crossed only at its gates
+ok 382 - the Wall is crossed only at its gates
+  ---
+  duration_ms: 59.871966
+  type: 'test'
+  ...
+# Subtest: a rider bound for an island takes ship, and is aboard while at sea
+ok 383 - a rider bound for an island takes ship, and is aboard while at sea
+  ---
+  duration_ms: 515.171738
+  type: 'test'
+  ...
+# Subtest: a rider at sea is not turned about mid-voyage, and a road that cannot be found leaves the old one standing
+ok 384 - a rider at sea is not turned about mid-voyage, and a road that cannot be found leaves the old one standing
+  ---
+  duration_ms: 53.399242
+  type: 'test'
+  ...
+# Subtest: a long journey by land may go by sea when a ship is clearly quicker — for a traveller, never a host
+ok 385 - a long journey by land may go by sea when a ship is clearly quicker — for a traveller, never a host
+  ---
+  duration_ms: 401.49689
+  type: 'test'
+  ...
+# Subtest: the pace of a party: riders, households, the King's progress, levies and horse
+ok 386 - the pace of a party: riders, households, the King's progress, levies and horse
+  ---
+  duration_ms: 51.621815
+  type: 'test'
+  ...
+# Subtest: advancing a route moves exactly by days, and the position is always on the road
+ok 387 - advancing a route moves exactly by days, and the position is always on the road
+  ---
+  duration_ms: 51.061309
+  type: 'test'
+  ...
+# Subtest: what a host is doing is the engine's word: the story's status is not kept (B-20)
+ok 388 - what a host is doing is the engine's word: the story's status is not kept (B-20)
+  ---
+  duration_ms: 54.817298
+  type: 'test'
+  ...
+# Subtest: the story may move a host a short step at once; anything farther is a march the engine walks
+ok 389 - the story may move a host a short step at once; anything farther is a march the engine walks
+  ---
+  duration_ms: 45.026863
+  type: 'test'
+  ...
+# Subtest: everyone does one thing: lords rule, commanders command, riders ride, prisoners are captive
+ok 390 - everyone does one thing: lords rule, commanders command, riders ride, prisoners are captive
+  ---
+  duration_ms: 71.868293
+  type: 'test'
+  ...
+# Subtest: a claim is refused when something that matters more holds them — unless their liege commands it
+ok 391 - a claim is refused when something that matters more holds them — unless their liege commands it
+  ---
+  duration_ms: 49.991855
+  type: 'test'
+  ...
+# Subtest: no-feasts-at-war: a lord called to the banners rides to no feast while the call stands (B-10)
+ok 392 - no-feasts-at-war: a lord called to the banners rides to no feast while the call stands (B-10)
+  ---
+  duration_ms: 2099.555791
+  type: 'test'
+  ...
+# Subtest: kings-progress: the court rides in the progress along the kingsroad, and is at Winterfell only when it arrives
+ok 393 - kings-progress: the court rides in the progress along the kingsroad, and is at Winterfell only when it arrives
+  ---
+  duration_ms: 7062.527005
+  type: 'test'
+  ...
+# Subtest: the v2 fixture save loads: armies become parties, riders become parties, and the world holds together
+ok 394 - the v2 fixture save loads: armies become parties, riders become parties, and the world holds together
+  ---
+  duration_ms: 1534.895186
+  type: 'test'
+  ...
+# Subtest: natures: Eddard Stark is honest and dutiful, never cunning or cold-blooded
+ok 395 - natures: Eddard Stark is honest and dutiful, never cunning or cold-blooded
+  ---
+  duration_ms: 102.847978
+  type: 'test'
+  ...
+# Subtest: natures: every persona is played by written numbers; everyone else by an archetype, never by prose
+ok 396 - natures: every persona is played by written numbers; everyone else by an archetype, never by prose
+  ---
+  duration_ms: 60.141933
+  type: 'test'
+  ...
+# Subtest: pronouns: every character has a sex, and the women of the books are women
+ok 397 - pronouns: every character has a sex, and the women of the books are women
+  ---
+  duration_ms: 82.783119
+  type: 'test'
+  ...
+# Subtest: pronouns: a lady answers the banners — every line of the engine says she and her
+ok 398 - pronouns: a lady answers the banners — every line of the engine says she and her
+  ---
+  duration_ms: 523.97666
+  type: 'test'
+  ...
+# Subtest: Q9: 24 moons of Canon as House Hightower — the books' beats fire, in order
+ok 399 - Q9: 24 moons of Canon as House Hightower — the books' beats fire, in order
+  ---
+  duration_ms: 258963.209375
+  type: 'test'
+  ...
+# Subtest: the dice: a seed always gives the same stream, and different seeds differ
+ok 400 - the dice: a seed always gives the same stream, and different seeds differ
+  ---
+  duration_ms: 6.773872
+  type: 'test'
+  ...
+# Subtest: a seed makes the same world
+ok 401 - a seed makes the same world
+  ---
+  duration_ms: 179.437833
+  type: 'test'
+  ...
+# Subtest: a turn replayed from the same save is byte-identical (mock provider)
+ok 402 - a turn replayed from the same save is byte-identical (mock provider)
+  ---
+  duration_ms: 10542.340828
+  type: 'test'
+  ...
+# Subtest: every island is its own landmass; the mainland is one
+ok 403 - every island is its own landmass; the mainland is one
+  ---
+  duration_ms: 322.374717
+  type: 'test'
+  ...
+# Subtest: a sea lane stays on the water, and a landing is chosen to reach the goal soonest
+ok 404 - a sea lane stays on the water, and a landing is chosen to reach the goal soonest
+  ---
+  duration_ms: 476.460248
+  type: 'test'
+  ...
+# Subtest: who carries them: own ships, a few boats making trips, the realm's ships — or none
+ok 405 - who carries them: own ships, a few boats making trips, the realm's ships — or none
+  ---
+  duration_ms: 651.895775
+  type: 'test'
+  ...
+# Subtest: islands-need-ships: Crowl and Mormont answer the call — they wait, sail and land; they never walk the sea or pay the Wall
+ok 406 - islands-need-ships: Crowl and Mormont answer the call — they wait, sail and land; they never walk the sea or pay the Wall
+  ---
+  duration_ms: 15167.521464
+  type: 'test'
+  ...
+# Subtest: natives-pass-free: crannogmen cross the Neck and northmen the North without toll
+ok 407 - natives-pass-free: crannogmen cross the Neck and northmen the North without toll
+  ---
+  duration_ms: 64.32301
+  type: 'test'
+  ...
+# Subtest: the fortress table: the great castles' walls and rules
+ok 408 - the fortress table: the great castles' walls and rules
+  ---
+  duration_ms: 104.999497
+  type: 'test'
+  ...
+# Subtest: Storm's End cannot be starved without a fleet, nor stormed; with ships before it, it starves
+ok 409 - Storm's End cannot be starved without a fleet, nor stormed; with ships before it, it starves
+  ---
+  duration_ms: 371.873813
+  type: 'test'
+  ...
+# Subtest: the Eyrie is fed by the high road until winter
+ok 410 - the Eyrie is fed by the high road until winter
+  ---
+  duration_ms: 76.084051
+  type: 'test'
+  ...
+# Subtest: a craven castellan takes terms; a brave one holds
+ok 411 - a craven castellan takes terms; a brave one holds
+  ---
+  duration_ms: 212.163682
+  type: 'test'
+  ...
+# Subtest: the terms, kept: march out, swear and keep the castle, hostages, or yield unconditionally
+ok 412 - the terms, kept: march out, swear and keep the castle, hostages, or yield unconditionally
+  ---
+  duration_ms: 195.880277
+  type: 'test'
+  ...
+# Subtest: offer terms and storm, as the lord orders them
+ok 413 - offer terms and storm, as the lord orders them
+  ---
+  duration_ms: 55.492499
+  type: 'test'
+  ...
+# Subtest: a storm fails often and costs dear; a small castle before a great host is carried
+ok 414 - a storm fails often and costs dear; a small castle before a great host is carried
+  ---
+  duration_ms: 110.574227
+  type: 'test'
+  ...
+# Subtest: treachery: a castellan who took the besiegers' gold opens a postern
+ok 415 - treachery: a castellan who took the besiegers' gold opens a postern
+  ---
+  duration_ms: 66.396801
+  type: 'test'
+  ...
+# Subtest: relief: the besiegers hear of it, and a weak siege is raised before it comes
+ok 416 - relief: the besiegers hear of it, and a weak siege is raised before it comes
+  ---
+  duration_ms: 354.34193
+  type: 'test'
+  ...
+# Subtest: before Riverrun the besiegers lie divided in their camps: a relieving host meets them at ×0.75
+ok 417 - before Riverrun the besiegers lie divided in their camps: a relieving host meets them at ×0.75
+  ---
+  duration_ms: 58.305888
+  type: 'test'
+  ...
+# Subtest: soak: invariants 1–4 and 8 hold every turn (2 houses × 8 turns, mock provider)
+ok 418 - soak: invariants 1–4 and 8 hold every turn (2 houses × 8 turns, mock provider)
+  ---
+  duration_ms: 22712.063109
+  type: 'test'
+  ...
+# Subtest: at least five journeys a moon realm-wide, with kin, guests at the seats, and lords home again
+ok 419 - at least five journeys a moon realm-wide, with kin, guests at the seats, and lords home again
+  ---
+  duration_ms: 2774.450732
+  type: 'test'
+  ...
+# Subtest: a tourney draws the lords of its region, and the cap rises for its moon
+ok 420 - a tourney draws the lords of its region, and the cap rises for its moon
+  ---
+  duration_ms: 921.211545
+  type: 'test'
+  ...
+# Subtest: the few-shot example is always of another house than the player's
+ok 421 - the few-shot example is always of another house than the player's
+  ---
+  duration_ms: 1.161812
+  type: 'test'
+  ...
+# Subtest: every forbidden word of the style bible is caught by the validators
+ok 422 - every forbidden word of the style bible is caught by the validators
+  ---
+  duration_ms: 2.136093
+  type: 'test'
+  ...
+# Subtest: the chosen maturity rides the narrator's and every speaker's prompt
+ok 423 - the chosen maturity rides the narrator's and every speaker's prompt
+  ---
+  duration_ms: 97.779291
+  type: 'test'
+  ...
+# Subtest: the later chapters stay unsaid until this game reaches them — by the beats' own ids
+ok 424 - the later chapters stay unsaid until this game reaches them — by the beats' own ids
+  ---
+  duration_ms: 59.777855
+  type: 'test'
+  ...
+# Subtest: a host carries its bread: seven days on the men's backs, the rest in a wagon to every forty men
+ok 425 - a host carries its bread: seven days on the men's backs, the rest in a wagon to every forty men
+  ---
+  duration_ms: 158.350275
+  type: 'test'
+  ...
+# Subtest: at home a host is fed from its lord's granaries and its wagons filled; the stores fall
+ok 426 - at home a host is fed from its lord's granaries and its wagons filled; the stores fall
+  ---
+  duration_ms: 66.196598
+  type: 'test'
+  ...
+# Subtest: in an enemy's country the wagons empty a day at a time
+ok 427 - in an enemy's country the wagons empty a day at a time
+  ---
+  duration_ms: 76.875523
+  type: 'test'
+  ...
+# Subtest: the second passage: a host that strips a province and marches back through it starves
+ok 428 - the second passage: a host that strips a province and marches back through it starves
+  ---
+  duration_ms: 308.957425
+  type: 'test'
+  ...
+# Subtest: the land heals when the foragers are gone — slowly, and not at all in winter
+ok 429 - the land heals when the foragers are gone — slowly, and not at all in winter
+  ---
+  duration_ms: 69.260894
+  type: 'test'
+  ...
+# Subtest: a camp that sits still sickens: the flux, told once a week
+ok 430 - a camp that sits still sickens: the flux, told once a week
+  ---
+  duration_ms: 119.357083
+  type: 'test'
+  ...
+# Subtest: winter slows a host, and the North's winter most of all
+ok 431 - winter slows a host, and the North's winter most of all
+  ---
+  duration_ms: 56.94981
+  type: 'test'
+  ...
+# Subtest: the wagons travel with the men: two hosts made one carry both trains
+ok 432 - the wagons travel with the men: two hosts made one carry both trains
+  ---
+  duration_ms: 67.572638
+  type: 'test'
+  ...
+# Subtest: the free folk, the khalasar and the sellswords live off the land: untouched
+ok 433 - the free folk, the khalasar and the sellswords live off the land: untouched
+  ---
+  duration_ms: 72.40663
+  type: 'test'
+  ...
+# Subtest: a lord feeds his liege's host gladly; another lord's host he counts against it
+ok 434 - a lord feeds his liege's host gladly; another lord's host he counts against it
+  ---
+  duration_ms: 110.880062
+  type: 'test'
+  ...
+# Subtest: a lord leads a hungry host home to his granaries
+ok 435 - a lord leads a hungry host home to his granaries
+  ---
+  duration_ms: 78.772338
+  type: 'test'
+  ...
+# Subtest: the tokens of GDD 21 §3 are declared on :root
+ok 436 - the tokens of GDD 21 §3 are declared on :root
+  ---
+  duration_ms: 1.291027
+  type: 'test'
+  ...
+# Subtest: the text/surface pairs theme.css declares hold 4.5:1 (WCAG)
+ok 437 - the text/surface pairs theme.css declares hold 4.5:1 (WCAG)
+  ---
+  duration_ms: 2.369585
+  type: 'test'
+  ...
+# Subtest: theme.css only adds: every selector is a wc- class, every animation a wc- one, and no token of style.css is redefined
+ok 438 - theme.css only adds: every selector is a wc- class, every animation a wc- one, and no token of style.css is redefined
+  ---
+  duration_ms: 6.590843
+  type: 'test'
+  ...
+# Subtest: the textures are small, exist, and every file theme.css names is there
+ok 439 - the textures are small, exist, and every file theme.css names is there
+  ---
+  duration_ms: 1.73557
+  type: 'test'
+  ...
+# Subtest: no emoji in theme.css or the style tile (the icons are the game's own)
+ok 440 - no emoji in theme.css or the style tile (the icons are the game's own)
+  ---
+  duration_ms: 1.953373
+  type: 'test'
+  ...
+# Subtest: the new icons of GDD 21 §5 are in the set and draw
+ok 441 - the new icons of GDD 21 §5 are in the set and draw
+  ---
+  duration_ms: 2.277118
+  type: 'test'
+  ...
+# Subtest: index.html loads theme.css after style.css, and applyHouseTheme gives the wax its two colours
+ok 442 - index.html loads theme.css after style.css, and applyHouseTheme gives the wax its two colours
+  ---
+  duration_ms: 0.479945
+  type: 'test'
+  ...
+# Subtest: the wax is the richest of the arms' colours, and oxblood when the arms are only white, grey and black
+ok 443 - the wax is the richest of the arms' colours, and oxblood when the arms are only white, grey and black
+  ---
+  duration_ms: 3.631316
+  type: 'test'
+  ...
+# Subtest: every verb is whole: a family, a label, typed params, checks, a doing, a receipt, its facts, and whether minds may use it
+ok 444 - every verb is whole: a family, a label, typed params, checks, a doing, a receipt, its facts, and whether minds may use it
+  ---
+  duration_ms: 2.026456
+  type: 'test'
+  ...
+# Subtest: every card action of earlier versions and every kind of written order is a verb
+ok 445 - every card action of earlier versions and every kind of written order is a verb
+  ---
+  duration_ms: 0.512262
+  type: 'test'
+  ...
+# Subtest: every verb has a case here
+ok 446 - every verb has a case here
+  ---
+  duration_ms: 1.523944
+  type: 'test'
+  ...
+# Subtest: call_banners: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 447 - call_banners: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 598.658058
+  type: 'test'
+  ...
+# Subtest: answer_call: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 448 - answer_call: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 134.783401
+  type: 'test'
+  ...
+# Subtest: raise_levies: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 449 - raise_levies: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 121.641176
+  type: 'test'
+  ...
+# Subtest: march_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 450 - march_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 106.128561
+  type: 'test'
+  ...
+# Subtest: attack_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 451 - attack_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 125.28659
+  type: 'test'
+  ...
+# Subtest: halt_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 452 - halt_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 108.001
+  type: 'test'
+  ...
+# Subtest: wait_banners: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 453 - wait_banners: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 169.512202
+  type: 'test'
+  ...
+# Subtest: set_standing_orders: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 454 - set_standing_orders: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 119.675415
+  type: 'test'
+  ...
+# Subtest: offer_terms: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 455 - offer_terms: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 116.497345
+  type: 'test'
+  ...
+# Subtest: storm: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 456 - storm: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 138.694735
+  type: 'test'
+  ...
+# Subtest: embark_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 457 - embark_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 99.380015
+  type: 'test'
+  ...
+# Subtest: land_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 458 - land_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 100.876612
+  type: 'test'
+  ...
+# Subtest: blockade: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 459 - blockade: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 284.560028
+  type: 'test'
+  ...
+# Subtest: raid_coast: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 460 - raid_coast: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 102.802722
+  type: 'test'
+  ...
+# Subtest: hire_company: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 461 - hire_company: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 549.097695
+  type: 'test'
+  ...
+# Subtest: dismiss_company: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 462 - dismiss_company: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 102.749835
+  type: 'test'
+  ...
+# Subtest: sue_for_peace: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 463 - sue_for_peace: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 91.78407
+  type: 'test'
+  ...
+# Subtest: merge_hosts: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 464 - merge_hosts: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 94.021249
+  type: 'test'
+  ...
+# Subtest: disband_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 465 - disband_host: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 96.111941
+  type: 'test'
+  ...
+# Subtest: set_secrecy: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 466 - set_secrecy: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 92.693311
+  type: 'test'
+  ...
+# Subtest: send_person: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 467 - send_person: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 398.764425
+  type: 'test'
+  ...
+# Subtest: recall_rider: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 468 - recall_rider: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 91.821538
+  type: 'test'
+  ...
+# Subtest: set_tax: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 469 - set_tax: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 94.548185
+  type: 'test'
+  ...
+# Subtest: set_dues: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 470 - set_dues: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 90.479081
+  type: 'test'
+  ...
+# Subtest: fund_works: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 471 - fund_works: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 100.856608
+  type: 'test'
+  ...
+# Subtest: cancel_works: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 472 - cancel_works: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 95.526584
+  type: 'test'
+  ...
+# Subtest: hire_men: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 473 - hire_men: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 92.86806
+  type: 'test'
+  ...
+# Subtest: hire_officer: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 474 - hire_officer: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 129.797817
+  type: 'test'
+  ...
+# Subtest: send_gift: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 475 - send_gift: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 117.477885
+  type: 'test'
+  ...
+# Subtest: appoint_office: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 476 - appoint_office: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 110.856488
+  type: 'test'
+  ...
+# Subtest: grant_holding: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 477 - grant_holding: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 183.439755
+  type: 'test'
+  ...
+# Subtest: hold_feast: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 478 - hold_feast: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 145.189447
+  type: 'test'
+  ...
+# Subtest: hold_tourney: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 479 - hold_tourney: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 151.515043
+  type: 'test'
+  ...
+# Subtest: judge_prisoner: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 480 - judge_prisoner: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 119.863054
+  type: 'test'
+  ...
+# Subtest: answer_matter: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 481 - answer_matter: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 104.182496
+  type: 'test'
+  ...
+# Subtest: declare_war: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 482 - declare_war: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 108.388788
+  type: 'test'
+  ...
+# Subtest: plant_spy: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 483 - plant_spy: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 105.186705
+  type: 'test'
+  ...
+# Subtest: gather_secrets: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 484 - gather_secrets: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 102.704485
+  type: 'test'
+  ...
+# Subtest: borrow: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 485 - borrow: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 95.761358
+  type: 'test'
+  ...
+# Subtest: repay: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 486 - repay: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 136.247416
+  type: 'test'
+  ...
+# Subtest: call_debt: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 487 - call_debt: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 146.653192
+  type: 'test'
+  ...
+# Subtest: buy_grain: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 488 - buy_grain: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 88.667952
+  type: 'test'
+  ...
+# Subtest: bribe: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 489 - bribe: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 90.262259
+  type: 'test'
+  ...
+# Subtest: embargo: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 490 - embargo: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 88.102679
+  type: 'test'
+  ...
+# Subtest: pay_ransom: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 491 - pay_ransom: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 707.467218
+  type: 'test'
+  ...
+# Subtest: send_letter: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+ok 492 - send_letter: done, it tells a receipt and records its facts; refused, it says why and changes nothing
+  ---
+  duration_ms: 89.406356
+  type: 'test'
+  ...
+# Subtest: the intent names who acts: the lord of the house, unless another is named
+ok 493 - the intent names who acts: the lord of the house, unless another is named
+  ---
+  duration_ms: 42.431276
+  type: 'test'
+  ...
+# Subtest: over the wire: { verb, params } is done and its receipt told; a refusal is a 409 with its reason
+ok 494 - over the wire: { verb, params } is done and its receipt told; a refusal is a 409 with its reason
+  ---
+  duration_ms: 103.780493
+  type: 'test'
+  ...
+# Subtest: a war has a goal: the words it was declared with
+ok 495 - a war has a goal: the words it was declared with
+  ---
+  duration_ms: 104.741664
+  type: 'test'
+  ...
+# Subtest: the score: battles won, castles taken, lords captured and slain
+ok 496 - the score: battles won, castles taken, lords captured and slain
+  ---
+  duration_ms: 81.312913
+  type: 'test'
+  ...
+# Subtest: six moons without a blow, and the war goes cold
+ok 497 - six moons without a blow, and the war goes cold
+  ---
+  duration_ms: 74.038203
+  type: 'test'
+  ...
+# Subtest: sue for peace: a white peace taken by an enemy not winning; a demand only of one beaten
+ok 498 - sue for peace: a white peace taken by an enemy not winning; a demand only of one beaten
+  ---
+  duration_ms: 70.567367
+  type: 'test'
+  ...
+# Subtest: the peace kept: the conceder pays and frees its captives; the war ends
+ok 499 - the peace kept: the conceder pays and frees its captives; the war ends
+  ---
+  duration_ms: 953.930815
+  type: 'test'
+  ...
+# Subtest: a lopsided war: the beaten side sues for peace; when the lord is the victor, it is his to accept
+ok 500 - a lopsided war: the beaten side sues for peace; when the lord is the victor, it is his to accept
+  ---
+  duration_ms: 112.935061
+  type: 'test'
+  ...
+# the writer, every kind: 142/142 synthetic facts pass the scorer under 12 ids each
+# the writer on the golden set: 71/71 pass (100 %)
+# must names no slot can say (not the writer's to say): g-rumour-03: "Gregor Clegane"; g-meanwhile-02: "wolfswood"; g-unknown-02: "Kingsroad"
+# the writer's variety: 56 distinct main verbs in 71 headlines (79 %); the most used: dies 5, raises 3, wins 2, slain 2, beheads 2, besieged 2
+# the writer on the audit's stories: 41/41 pass
+# Subtest: heads.js: HEAD, SUM, ROLES, LEDE and ARCHETYPE — a head and a summary for every kind of importance 3 or more
+ok 501 - heads.js: HEAD, SUM, ROLES, LEDE and ARCHETYPE — a head and a summary for every kind of importance 3 or more
+  ---
+  duration_ms: 4.497436
+  type: 'test'
+  ...
+# Subtest: browser-safety: heads.js, headline.js and label.js hold no node: import, no server code, no dice and no clock
+ok 502 - browser-safety: heads.js, headline.js and label.js hold no node: import, no server code, no dice and no clock
+  ---
+  duration_ms: 12.026024
+  type: 'test'
+  ...
+# Subtest: every kind of fact: a synthetic fact with its slots becomes a card the scorer passes (headline and summary)
+ok 503 - every kind of fact: a synthetic fact with its slots becomes a card the scorer passes (headline and summary)
+  ---
+  duration_ms: 2632.463584
+  type: 'test'
+  ...
+# Subtest: every kind of fact, its slots stripped to who and where: still a card the scorer passes (nothing padded, nothing broken)
+ok 504 - every kind of fact, its slots stripped to who and where: still a card the scorer passes (nothing padded, nothing broken)
+  ---
+  duration_ms: 1699.43366
+  type: 'test'
+  ...
+# Subtest: the card: its shape, its kind, archetype, who and where, and details that are plain strings
+ok 505 - the card: its shape, its kind, archetype, who and where, and details that are plain strings
+  ---
+  duration_ms: 35.084532
+  type: 'test'
+  ...
+# Subtest: the story's own N4 fields change nothing: archetype and lead given, or derived from the facts, the same card
+ok 506 - the story's own N4 fields change nothing: archetype and lead given, or derived from the facts, the same card
+  ---
+  duration_ms: 53.05483
+  type: 'test'
+  ...
+# Subtest: the writer builds from slots only: poisoned engine text and titles change nothing and never show
+ok 507 - the writer builds from slots only: poisoned engine text and titles change nothing and never show
+  ---
+  duration_ms: 74.10955
+  type: 'test'
+  ...
+# Subtest: numbers are for details: no digit in a headline or summary, and a fact's men and ships are there
+ok 508 - numbers are for details: no digit in a headline or summary, and a fact's men and ships are there
+  ---
+  duration_ms: 31.216925
+  type: 'test'
+  ...
+# Subtest: B-32(c): the numbers of a house that is not yours, a vassal's or an ally's are told to two figures; your own stay exact
+ok 509 - B-32(c): the numbers of a house that is not yours, a vassal's or an ally's are told to two figures; your own stay exact
+  ---
+  duration_ms: 37.260963
+  type: 'test'
+  ...
+# Subtest: the writer is a pure function of the facts: same input, same card; nothing changed; no dice, no clock
+ok 510 - the writer is a pure function of the facts: same input, same card; nothing changed; no dice, no clock
+  ---
+  duration_ms: 186.634719
+  type: 'test'
+  ...
+# Subtest: the golden set: cardOf on every bundle passes the scorer for at least 98 % (the failures are printed)
+ok 511 - the golden set: cardOf on every bundle passes the scorer for at least 98 % (the failures are printed)
+  ---
+  duration_ms: 246.616489
+  type: 'test'
+  ...
+# Subtest: the golden set: the names each bundle must carry are in the writer's headline or summary
+ok 512 - the golden set: the names each bundle must carry are in the writer's headline or summary
+  ---
+  duration_ms: 15.729575
+  type: 'test'
+  ...
+# Subtest: the golden set: no name the bundle must not say, and a headline that does not repeat its summary
+ok 513 - the golden set: no name the bundle must not say, and a headline that does not repeat its summary
+  ---
+  duration_ms: 11.567532
+  type: 'test'
+  ...
+# Subtest: variety: over the golden set at least 70 % of the headlines have a main verb of their own
+ok 514 - variety: over the golden set at least 70 % of the headlines have a main verb of their own
+  ---
+  duration_ms: 11.078345
+  type: 'test'
+  ...
+# Subtest: variety: 2 to 4 verb forms for the kinds that fill a turn, chosen by the fact id — the same id always the same form (a death is always "dies")
+ok 515 - variety: 2 to 4 verb forms for the kinds that fill a turn, chosen by the fact id — the same id always the same form (a death is always "dies")
+  ---
+  duration_ms: 9682.895698
+  type: 'test'
+  ...
+# Subtest: B1–B13, told: the audit's real facts name who and where (18 §4), and every one passes the scorer
+ok 516 - B1–B13, told: the audit's real facts name who and where (18 §4), and every one passes the scorer
+  ---
+  duration_ms: 281.642761
+  type: 'test'
+  ...
+# Subtest: a natural death reads "<name> dies at <place>" under every id, the age kept for the details
+ok 517 - a natural death reads "<name> dies at <place>" under every id, the age kept for the details
+  ---
+  duration_ms: 3.804695
+  type: 'test'
+  ...
+# Subtest: a battle, its dead and its captives: the headline says who beat whom and where, and never the reverse (18 §4 A10, A12)
+ok 518 - a battle, its dead and its captives: the headline says who beat whom and where, and never the reverse (18 §4 A10, A12)
+  ---
+  duration_ms: 3.805907
+  type: 'test'
+  ...
+# Subtest: a roll-up: five hosts on one road are one card, the count in the headline, the houses and men in details
+ok 519 - a roll-up: five hosts on one road are one card, the count in the headline, the houses and men in details
+  ---
+  duration_ms: 19.519717
+  type: 'test'
+  ...
+# Subtest: meanwhileOf: one sentence of at most 200 characters, a full stop, three clauses at most, no boilerplate — for every turn of the audit
+ok 520 - meanwhileOf: one sentence of at most 200 characters, a full stop, three clauses at most, no boilerplate — for every turn of the audit
+  ---
+  duration_ms: 258.366821
+  type: 'test'
+  ...
+# Subtest: meanwhileOf: eight riders to feasts (B11) are one clause of the herald, not eight clipped journeys; no facts, no sentence
+ok 521 - meanwhileOf: eight riders to feasts (B11) are one clause of the herald, not eight clipped journeys; no facts, no sentence
+  ---
+  duration_ms: 9.419311
+  type: 'test'
+  ...
+# Subtest: ids the world does not know (a host raised in play, a lord born since) never crash the writer or leak into the words
+ok 522 - ids the world does not know (a host raised in play, a lord born since) never crash the writer or leak into the words
+  ---
+  duration_ms: 2.006508
+  type: 'test'
+  ...
+# Subtest: every story of the six recorded turns (as the clusterer makes them) is told by the writer, and the scorer passes them all
+ok 523 - every story of the six recorded turns (as the clusterer makes them) is told by the writer, and the scorer passes them all
+  ---
+  duration_ms: 591.392513
+  type: 'test'
+  ...
+1..523
+# tests 523
+# suites 0
+# pass 523
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 382674.554951

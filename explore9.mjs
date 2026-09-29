@@ -1,0 +1,14 @@
+process.env.WC_PROVIDER = 'mock';
+const R = '/home/user/wc-s2/public/js/';
+const { createInitialState } = await import(R + 'shared/world.js');
+const { playerView } = await import('/home/user/wc-s2/server/view.js');
+const s = createInitialState('agot_298', 'stark', { seed: 298 });
+const pv = playerView(s);
+console.log('economy keys', Object.keys(pv.economy||{}));
+console.log('loans', JSON.stringify(pv.economy.loans));
+console.log('wars', JSON.stringify(pv.wars).slice(0,300));
+console.log('lannister figures', JSON.stringify(Object.fromEntries(Object.entries(pv.houses.lannister.figures).map(([k,v])=>[k,v.v]))));
+console.log('truth  lannister', JSON.stringify(Object.fromEntries(Object.entries(s.houses.lannister.figures).map(([k,v])=>[k,v.v]))));
+console.log('houses.lannister keys', Object.keys(pv.houses.lannister));
+console.log('holding sample', JSON.stringify(Object.values(pv.holdings).find(h=>h.owner==='lannister')));
+console.log('pv keys', Object.keys(pv).join(','));

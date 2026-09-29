@@ -1,0 +1,178 @@
+TAP version 13
+# the writer, every kind: 142/142 synthetic facts pass the scorer under 12 ids each
+# the writer on the golden set: 71/71 pass (100 %)
+# must names no slot can say (not the writer's to say): g-rumour-03: "Gregor Clegane"; g-meanwhile-02: "wolfswood"; g-unknown-02: "Kingsroad"
+# the writer's variety: 56 distinct main verbs in 71 headlines (79 %); the most used: dies 5, raises 3, wins 2, slain 2, beheads 2, besieged 2
+# the writer on the audit's stories: 41/41 pass
+# Subtest: heads.js: HEAD, SUM, ROLES, LEDE and ARCHETYPE — a head and a summary for every kind of importance 3 or more
+ok 1 - heads.js: HEAD, SUM, ROLES, LEDE and ARCHETYPE — a head and a summary for every kind of importance 3 or more
+  ---
+  duration_ms: 6.181722
+  type: 'test'
+  ...
+# Subtest: browser-safety: heads.js, headline.js and label.js hold no node: import, no server code, no dice and no clock
+ok 2 - browser-safety: heads.js, headline.js and label.js hold no node: import, no server code, no dice and no clock
+  ---
+  duration_ms: 12.844061
+  type: 'test'
+  ...
+# Subtest: every kind of fact: a synthetic fact with its slots becomes a card the scorer passes (headline and summary)
+ok 3 - every kind of fact: a synthetic fact with its slots becomes a card the scorer passes (headline and summary)
+  ---
+  duration_ms: 2065.941144
+  type: 'test'
+  ...
+# Subtest: every kind of fact, its slots stripped to who and where: still a card the scorer passes (nothing padded, nothing broken)
+not ok 4 - every kind of fact, its slots stripped to who and where: still a card the scorer passes (nothing padded, nothing broken)
+  ---
+  duration_ms: 1624.429292
+  type: 'test'
+  location: '/home/user/wc-s4/tests/writer.test.js:312:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'sellswords_turned f1.1: [who] "Sellswords switch their master" / "They go to the higher bidder."'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'sellswords_turned f1.1: [who] "Sellswords switch their master" / "They go to the higher bidder."'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/wc-s4/tests/writer.test.js:322:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: the card: its shape, its kind, archetype, who and where, and details that are plain strings
+ok 5 - the card: its shape, its kind, archetype, who and where, and details that are plain strings
+  ---
+  duration_ms: 21.188356
+  type: 'test'
+  ...
+# Subtest: the story's own N4 fields change nothing: archetype and lead given, or derived from the facts, the same card
+ok 6 - the story's own N4 fields change nothing: archetype and lead given, or derived from the facts, the same card
+  ---
+  duration_ms: 37.195818
+  type: 'test'
+  ...
+# Subtest: the writer builds from slots only: poisoned engine text and titles change nothing and never show
+ok 7 - the writer builds from slots only: poisoned engine text and titles change nothing and never show
+  ---
+  duration_ms: 77.663852
+  type: 'test'
+  ...
+# Subtest: numbers are for details: no digit in a headline or summary, and a fact's men and ships are there
+ok 8 - numbers are for details: no digit in a headline or summary, and a fact's men and ships are there
+  ---
+  duration_ms: 18.178668
+  type: 'test'
+  ...
+# Subtest: B-32(c): the numbers of a house that is not yours, a vassal's or an ally's are told to two figures; your own stay exact
+ok 9 - B-32(c): the numbers of a house that is not yours, a vassal's or an ally's are told to two figures; your own stay exact
+  ---
+  duration_ms: 23.192139
+  type: 'test'
+  ...
+# Subtest: the writer is a pure function of the facts: same input, same card; nothing changed; no dice, no clock
+ok 10 - the writer is a pure function of the facts: same input, same card; nothing changed; no dice, no clock
+  ---
+  duration_ms: 109.321626
+  type: 'test'
+  ...
+# Subtest: the golden set: cardOf on every bundle passes the scorer for at least 98 % (the failures are printed)
+ok 11 - the golden set: cardOf on every bundle passes the scorer for at least 98 % (the failures are printed)
+  ---
+  duration_ms: 190.027571
+  type: 'test'
+  ...
+# Subtest: the golden set: the names each bundle must carry are in the writer's headline or summary
+ok 12 - the golden set: the names each bundle must carry are in the writer's headline or summary
+  ---
+  duration_ms: 17.158556
+  type: 'test'
+  ...
+# Subtest: the golden set: no name the bundle must not say, and a headline that does not repeat its summary
+ok 13 - the golden set: no name the bundle must not say, and a headline that does not repeat its summary
+  ---
+  duration_ms: 11.131393
+  type: 'test'
+  ...
+# Subtest: variety: over the golden set at least 70 % of the headlines have a main verb of their own
+ok 14 - variety: over the golden set at least 70 % of the headlines have a main verb of their own
+  ---
+  duration_ms: 10.718782
+  type: 'test'
+  ...
+# Subtest: variety: 2 to 4 verb forms for the kinds that fill a turn, chosen by the fact id — the same id always the same form (a death is always "dies")
+ok 15 - variety: 2 to 4 verb forms for the kinds that fill a turn, chosen by the fact id — the same id always the same form (a death is always "dies")
+  ---
+  duration_ms: 8674.126402
+  type: 'test'
+  ...
+# Subtest: B1–B13, told: the audit's real facts name who and where (18 §4), and every one passes the scorer
+ok 16 - B1–B13, told: the audit's real facts name who and where (18 §4), and every one passes the scorer
+  ---
+  duration_ms: 273.913978
+  type: 'test'
+  ...
+# Subtest: a natural death reads "<name> dies at <place>" under every id, the age kept for the details
+ok 17 - a natural death reads "<name> dies at <place>" under every id, the age kept for the details
+  ---
+  duration_ms: 3.988984
+  type: 'test'
+  ...
+# Subtest: a battle, its dead and its captives: the headline says who beat whom and where, and never the reverse (18 §4 A10, A12)
+ok 18 - a battle, its dead and its captives: the headline says who beat whom and where, and never the reverse (18 §4 A10, A12)
+  ---
+  duration_ms: 3.496376
+  type: 'test'
+  ...
+# Subtest: a roll-up: five hosts on one road are one card, the count in the headline, the houses and men in details
+ok 19 - a roll-up: five hosts on one road are one card, the count in the headline, the houses and men in details
+  ---
+  duration_ms: 19.741611
+  type: 'test'
+  ...
+# Subtest: meanwhileOf: one sentence of at most 200 characters, a full stop, three clauses at most, no boilerplate — for every turn of the audit
+ok 20 - meanwhileOf: one sentence of at most 200 characters, a full stop, three clauses at most, no boilerplate — for every turn of the audit
+  ---
+  duration_ms: 267.85944
+  type: 'test'
+  ...
+# Subtest: meanwhileOf: eight riders to feasts (B11) are one clause of the herald, not eight clipped journeys; no facts, no sentence
+ok 21 - meanwhileOf: eight riders to feasts (B11) are one clause of the herald, not eight clipped journeys; no facts, no sentence
+  ---
+  duration_ms: 9.086645
+  type: 'test'
+  ...
+# Subtest: ids the world does not know (a host raised in play, a lord born since) never crash the writer or leak into the words
+ok 22 - ids the world does not know (a host raised in play, a lord born since) never crash the writer or leak into the words
+  ---
+  duration_ms: 2.037271
+  type: 'test'
+  ...
+# Subtest: every story of the six recorded turns (as the clusterer makes them) is told by the writer, and the scorer passes them all
+ok 23 - every story of the six recorded turns (as the clusterer makes them) is told by the writer, and the scorer passes them all
+  ---
+  duration_ms: 411.152386
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 22
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14237.412439

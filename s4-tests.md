@@ -1,0 +1,34 @@
+First read and obey the COMMON RULES block in docs/AGENT-PLAYBOOK.md §1 (lines 20–53) — absolute. Then CLAUDE.md.
+
+ROLE: TEST-WRITER for Slice 4 = N3 (the deterministic headline writer) and N4 (clustering v2: archetypes, roll-ups, splits, lead rank, merges, no cap, Meanwhile) — docs/gdd/18-headlines.md.
+Working directory: /home/user/wc-s4 (git worktree, branch wp/n3-n4-writer-clusters, stacked on the N1+N2 branch: the scorer `scoreCard` (server/ai/validate/headline.js), the label helpers (public/js/engine/facts/label.js) and the new fact slots already exist). Do not switch branches, do not commit.
+
+Read: docs/gdd/18-headlines.md §1.2–§1.3, §2.1–§2.5, §3.1, §3.3, §4 (the target texts), §5 rows N3 and N4; docs/gdd/20-pax-reference.md §5–§6; tests/headlines.test.js (the scorer tests and its header contract), tests/labels.test.js, tests/fixtures/headlines/golden.json; public/js/engine/facts/{kinds,log,cluster,label}.js; server/narrator.js (the cluster call site); tests/narrator.test.js (existing cluster tests you must not contradict — if N4 changes a behaviour they assert, say so in the report); the "before" dump /tmp/claude-0/-home-user-A-game-of-thrones-local-game/1a59ec30-8b4e-5558-8c33-823b20aa5156/scratchpad/before-stark-6.md (real turns: what the writer and clusterer must fix).
+
+LEAD'S DECISIONS (binding):
+- Tense D-058 (news-headline present or bare participle) — as the scorer already enforces.
+- Module layout exactly as 18 §3.1: public/js/engine/facts/heads.js exports `HEAD` (kind → (f, s, ctx) => string), `SUM` (kind → … → string of 1–2 sentences), `ROLES` (moved here from server/ai/validate/headline.js, which will import it back), `LEDE` (kind → rank for C4), `ARCHETYPE` (kind → one of muster, march, battle, siege, death, capture, court, wedding, letter, plot, omen, works, harvest, feast, other); public/js/engine/facts/headline.js exports `cardOf(state, story) → { headline, summary, details: [strings], kind, archetype, who: [ids], where }` and `meanwhileOf(state, facts) → string` (one sentence, ≤ 200 chars, ends with a full stop, ≤ 3 clauses, no BOILERPLATE).
+- `cardOf` builds ONLY from fact slots (actors, houses, place, data, day), never from f.text/f.title; numbers only in `details`; headline variety: 2–4 verb forms per kind chosen by a hash of the fact id (deterministic, never the rng).
+- N4 changes `clusterFacts(state, facts, opts)` in place (same name, same return shape `{stories, meanwhile, rest}`) and adds to each story `archetype`, `lead` (the lead fact id by C4), `rolled: true` for roll-ups; `rest` is always empty now (C6: every story gets a card). The narrator still tells at most 6; the rest are told by the writer later (N5) — not your concern now.
+- The "every kind of importance ≥ 3 has a HEAD entry" rule is a TEST here (not a lint rule).
+
+FILES YOU MAY TOUCH (nothing else): tests/writer.test.js (new, N3), tests/clusters.test.js (new, N4), tests/fixtures/headlines/turns/** (new: recorded fact lists of real mock turns, if you need them as fixtures — generate them with a scratch script under the scratchpad from server/game.js on WC_PROVIDER=mock, Stark seed 7, 6 turns, and save the facts per turn as JSON; say how you made them).
+
+Write:
+1. tests/writer.test.js (N3): for EVERY kind in KINDS a synthetic fact with plausible slots (real ids from the scenario) → `cardOf` → `scoreCard` passes (headline and summary); every kind of importance ≥ 3 has HEAD and SUM entries; the whole golden set: cardOf on each bundle passes scoreCard for ≥ 98 % (print failures); each bundle's `must` names appear in the writer's headline or summary; B1–B13's underlying facts (from the before dump / your turn fixtures) produce headlines that name who and where (assert a few concrete expectations from 18 §4 loosely: e.g. the muster story's headline names Stark and says the northern houses answer/gather; a natural death reads "<name> dies at <place>"); determinism (same input twice → identical JSON; cardOf does not mutate state or story — deep-freeze the inputs); browser-safety (read heads.js, headline.js and label.js source: no `node:` imports, no Math.random, no Date); headline variety: over the golden set ≥ 70 % distinct main verbs; meanwhileOf rules.
+2. tests/clusters.test.js (N4): on the recorded six Stark turns: turn 2's host set-outs are ONE story (roll-up, `rolled: true`), the turn-1 muster with a refusal in it becomes ≥ 2 stories (the refusal separate), no story > 8 facts unless it has one archetype and one place, cards (stories) per turn ≤ 10, mean facts per story ≥ 1.5 over the six turns, a fact never appears in two stories nor in both a story and meanwhile, every non-meanwhile input fact is in exactly one story (nothing dropped: `rest` empty), the `together` hint still joins its facts, the lead is chosen by importance then LEDE (a death beats an arrival; a refusal beats an answer), same-day same-place same-people facts merge (a battle with its captives and dead is one story), importance-1 facts and rolled-up minor journeys go to meanwhile; determinism (same input → same stories, ids stable).
+
+Run both files: they must FAIL because heads.js/headline.js do not exist and clusterFacts lacks the new behaviour — not because of typos. Paste the first failing lines.
+
+REPORT FORMAT (max 25 lines):
+TESTS WRITTEN: <file: N tests> — names
+FIXTURES: what you recorded and how
+EXPECTED FAILURE REASON: pasted
+CONFLICTS with existing tests (tests/narrator.test.js cluster asserts that N4 must change): list
+MODULE PATHS/EXPORTS THE BUILDERS MUST CREATE
+
+ADDENDUM FROM THE LEAD (bugs found by the baseline playtest that this slice must also fix — write tests for them):
+- B-32(a) late news: server/narrator.js:59-66 stamps a story card with s.days[0] (the day the fact happened) and drops the card's `heard`/`late` (set by knowledge.js holdNews, which delays far-off news correctly). In N4, clusterFacts must never join facts with a different arrival (heard day / witnessed vs by raven) into one story: test that two facts at the same place, one witnessed and one heard late, form two stories; and that a story carries `heard` (the earliest heard of its facts) and `late` when any is late. (The narrator's card-day fix is N5/N6's, not yours.)
+- B-32(c) foreign numbers: the writer's `details` for a fact about a house that is not the viewer's own, a vassal or an ally give numbers rounded to two significant figures ("about 10,000", never "9,977"); own-house numbers stay exact. Test both. cardOf takes the viewer from state.meta.player.
+- The same Stark "The Northern Host grows in the fields" card was repeated every turn; a separate bug-sweep branch fixes its emitter — do not test that here.
+- The scorer's BOILERPLATE was changed by the lead: "rides for" is allowed (20 §5.2 row 16 "King Robert rides for Winterfell"); "banners of" fails only when not followed by "the".

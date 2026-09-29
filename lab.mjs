@@ -1,0 +1,17 @@
+const L = await import('/home/user/wc-s1/public/js/engine/facts/label.js');
+const state = { houses: {
+  a: { id: 'a', name: 'House', rank: 'minor' }, b: { id: 'b', name: '', rank: 'minor' }, c: { id: 'c', name: 'The', rank: 'order' }, d: { id: 'd', name: 'Blackfyre of the Stormlands' },
+  e: { id: 'e', name: 'of Dorne', rank: 'minor' }, f: { id: 'f', name: 'Lord Commander of the Wall', rank: 'order' }, g: { id: 'g', name: 'Free Cities', rank: 'city_state' }, h: { id: 'h', name: 'The Free Cities', rank: 'city_state' },
+  i: { id: 'i', name: 'Sea Dragon Pirates', rank: 'company' }, j: { id: 'j', name: 'Stark of Winterfell Heirs of the North', rank: 'major' }, k: { id: 'k', name: 'Martell', rank: 'weird' }, l: { id: 'l', name: 'House House House', rank: 'minor' },
+  m: { id: 'm', name: 'Baratheon of Dragonstone', rank: 'major' }, n: { id: 'n', name: 'Baratheon of Storm\'s End', rank: 'major' }, crown: { id: 'crown', name: 'Baratheon of King\'s Landing', rank: 'crown' },
+  o: { id: 'o', name: 'The Crown', rank: 'crown' }, p: { id: 'p', name: 'House Frey of the Crossing', rank: 'minor' } },
+  characters: { x: { id: 'x', name: '"Greatjon"', house: 'a' }, y: { id: 'y', name: 'Jon "Greatjon"', house: 'a' }, z: { id: 'z', name: "Brynden 'Blackfish' Tully" }, w: { id: 'w', name: '""', house: 'a' }, v: { id: 'v', name: 'Arya "No One"', house: 'zzz' }, u: { id: 'u', name: 'Ser Barristan "the Bold" Selmy', house: 'a', sex: 'f' }, t: { id: 't', name: 'Jon "Greatjon" Umber', house: 'a' }, s: {id:'s', name: undefined}, r: {id:'r', name: 12} },
+  parties: {} };
+state.houses.a.lord = 'u';
+for (const id of Object.keys(state.houses)) console.log('houseLabel', id, JSON.stringify(state.houses[id].name), '→', JSON.stringify(L.houseLabel(state, id)), '| short:', JSON.stringify(L.houseShort(state, id)));
+for (const id of [undefined, null, '', 'nope', 'Free_folk']) console.log('houseLabel(', id, ') =', JSON.stringify(L.houseLabel(state, id)));
+for (const id of Object.keys(state.characters)) console.log('who', id, JSON.stringify(state.characters[id].name), '→', JSON.stringify(L.who(state, id)));
+console.log('who(null state)', L.who(null, 'x'), L.who(undefined, undefined), L.who(state, {}), L.who(state, { name: 'Ser "X" Y' }));
+for (const p of [{ name: 'Host of House House', owner: 'a' }, { name: 'The Banners of Nobody', owner: 'zzz' }, { name: null, owner: 'j', kind: 'fleet' }, { name: 'Silence', kind: 'fleet' }, { name: 'The Stark Host', owner: 'j' }, {name: 'Banners of Stark', owner: 'a'}, {name:'The Banners of Baratheon', owner:'m'}, {name:'The Banners of Baratheon', owner:'n'}, {name: 'Host of Baratheon of Dragonstone', owner: 'm'}, {name:'The Banners of the Free Cities', owner:'g'}, {name: 'Iron Fleet', kind:'fleet', owner:'i'}, {name:'Host of House', owner:'a'}, {name: 'Army of the North'}, {}, {name:'The Banners of The Crown', owner:'crown'}]) console.log('party', JSON.stringify(p), '→', JSON.stringify(L.partyLabel(state, p)));
+for (const n of [0.4, 0.5, 19.5, 94.9, 95, 99.5, 949, 950, 999, 999.5, 1000, 1499, 1500, 19999, 20000, 24999, 999999, 1e6, 1.5e6, 2e7, 5e9, 1e21, '5', true]) console.log('roughly', n, JSON.stringify(L.roughly(n)));
+console.log(JSON.stringify(L.list(['A'.repeat(70), 'B', 'C', 'D', 'E'])), JSON.stringify(L.list('Umber')), JSON.stringify(L.list(['  ', ' Umber '])), JSON.stringify(L.list(['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U'])));

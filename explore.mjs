@@ -1,0 +1,10 @@
+process.env.WC_PROVIDER='mock';
+const { createInitialState } = await import('/home/user/wc-s1/public/js/shared/world.js');
+const state = createInitialState('agot_298', 'stark', { seed: 298 });
+const H = state.houses;
+const names = Object.values(H).map(h=>h.id+':'+h.name);
+console.log(names.filter(n=>/ of |The /.test(n)).join(' | '));
+console.log(Object.values(state.holdings).slice(0,400).map(h=>h.id+':'+h.name).filter(n=>/frey|tully|stark|arryn|whent|bolton|florent|greyjoy|baratheon|umber|karstark|westerling|goodbrook|flint|redwyne|butterwell|darry|tarly/.test(n)).join(' | '));
+console.log(Object.values(state.parties).map(p=>p.id+':'+p.name).join(' | '));
+console.log(Object.keys(state.holdings).length, Object.keys(state.houses).length, Object.keys(state.characters).length);
+for (const id of ['greatjon_umber','robert_baratheon','donella_hornwood','rickard_wull','old_nan','luwin','jonos_bracken','jaime_lannister','stannis_baratheon','gregor_clegane','eddard_stark']) console.log(id, state.characters[id]?.name, '|', state.characters[id]?.title, '|', state.characters[id]?.house, state.characters[id]?.alive);

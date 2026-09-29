@@ -1,0 +1,112 @@
+# Playtest — House greyjoy — mock — 2026-09-29T00:47
+
+
+## Turn 1
+- receipt (mock): assemeble the men of the north at winterfell and create a gr → ✓ The banners are called: 6 sworn houses summoned to muster at Winterfell (Harlaw, Goodbrother, Drumm, Blacktyde, Saltcliffe, Orkwood); each answers in their own time and temper.; ✓ If all answer, about 3,000 men; the last expected in ~8 days.; ✗ Winterfell is not your land.
+- 1 8th moon, 298 AC → 8 8th moon, 298 AC (until a quiet week) · 1s · prompt ? (cached ?) · reply ?
+- carried out: assemeble the men of the north at winterfell and create a great northern host of all able body men and boys → The banners are called: 6 sworn houses summoned to muster at Winterfell (Harlaw, Goodbrother, Drumm, Blacktyde, Saltcliffe, Orkwood); each answers in their own time and temper; If all answer, about 3,000 men; the last expected in ~8 days; could not be done: Winterfell is not your land
+- summary: House Greyjoy calls its banners: 6 sworn houses are summoned to Winterfell. House Baratheon of King's Landing holds a tourney at King's Landing; 21 houses send knights. King Robert's progress has crossed the Green Fork at the Twins — the Queen, her brothers, the royal children and three hundred knights, a mile of wagons — bound for Winterfell. Men say he means to… Host of House Harlaw (250 men) is raised at Ten Towers. Elsewhere: A Summer Islander swan ship has come in with Lyseni perfume, green parrots and a feathered cloak for the lord; Bryce Caron leaves Nightsong with 60 knights and riders under the Caron banner, to pay his respects to Renly Baratheon at Storm's End; Guncer Brune leaves The Dyre Den with 40…
+- [5] ORDER 2 8th moon, 298 AC **House Greyjoy calls its banners** — House Greyjoy calls its banners: 6 sworn houses are summoned to Winterfell. House Greyjoy calls its banners: 6 sworn houses are summoned to Winterfell. (stark)
+- [5] 2 8th moon, 298 AC **House Baratheon of King's Landing holds a tourney at King's Landing** — House Baratheon of King's Landing holds a tourney at King's Landing; 21 houses send knights. House Baratheon of King's Landing holds a tourney at King's Landing; 21 houses send knights. Ser Brynden Tully is champion of the tourney at King's Landing. (baratheon)
+- [4] 2 8th moon, 298 AC **The King rides north** — King Robert's progress has crossed the Green Fork at the Twins — the Queen, her brothers, the royal children and three hundred knights, a mile of wagons — bound for Winterfell. Men say he means to… King Robert's progress has crossed the Green Fork at the Twins — the Queen, her brothers, the royal children and three hundred knights, a mile of wagons — bound for Winterfell. Men say he means to make Lord Eddard Stark his Hand, now that Jon Arryn is dead. (frey)
+- [3] 2 8th moon, 298 AC **Host of House Harlaw (250 men) is raised at Ten Towers** — Host of House Harlaw (250 men) is raised at Ten Towers. Host of House Harlaw (250 men) is raised at Ten Towers. Rodrik Harlaw answers the call with 1,250 men; they gather at Ten Towers and march for Winterfell in about 5 days. Alyn Goodbrother answers the call with 400 men; they gather at Hammerhorn and march for Winterfell in about 5 days. Torwold Orkwood answers the call with 400 men; they gather at Orkmont and march for Winterfell in about 5 days. Alyn Drumm answers the call with 350 men; they gather at Old Wyk and march for Winterfell in about 5 days. Gysella Blacktyde answers the call with 350 men; they gather at Blacktyde and march for Winterfell in about 5 days. Tristifer Saltcliffe answers the call with 450 men; they gather at Saltcliffe and march for Winterfell in about 5 days. Host of House Harlaw, 1,250 strong, sets out from Ten Towers for Winterfell — by sea. Host of House Harlaw (1,250 men) sails from Ten Towers for the coast… (harlaw)
+- [2] 2 8th moon, 298 AC **An insult at the high table of Rook's Rest** — At a feast at Rook's Rest a son of House Velaryon mocked the lord of House Staunton; blades were half drawn before the maester intervened. At a feast at Rook's Rest a son of House Velaryon mocked the lord of House Staunton; blades were half drawn before the maester intervened. (staunton)
+- meanwhile: Swan ships from the Summer Isles; Bryce Caron rides for Storm's End; Guncer Brune rides for Claw Isle; From the steward's accounts
+- whereabouts: robb Winterfell · sansa Winterfell · arya Winterfell · jon Winterfell · jory Winterfell · rodrik Winterfell · guard 1500
+- hosts: The Iron Fleet 6000, The Silence 60
+- order statuses: assemeble the men of the north at winterfell and c → delayed
+- state: treasury 39971 · food 8 · levies 9986 · hosts The Iron Fleet 6000, The Silence 60 · pending decisions none
+
+## Turn 2
+- **audience lysa_arryn** (0s, engine: —, composed) ← "Sister, what did Jon say in his last days? Robert may foster with us at Winterfell if you wish it."
+  > null
+- receipt (fallback): Send Jory Cassel to Moat Cailin with fifty riders to hold th → ✗ No one of yours by that name.
+- 8 8th moon, 298 AC → 14 8th moon, 298 AC (until Lysa Arryn answers Balon Greyjoy) · 2s · prompt ? (cached ?) · reply ?
+- carried out: Send Jory Cassel to Moat Cailin with fifty riders to hold the Neck. → could not be done: No one of yours by that name
+- summary: House The Free Folk calls up 45,000 levies at Mance Rayder's host. A raven from The Eyrie: “I hear you, my lord.” Host of House Drumm (350 men) sails from Old Wyk for the coast near Deepwood Motte (~21 days at sea). Host of House Blacktyde (350 men) sails from Blacktyde for the coast near Deepwood Motte (~21 days at sea). Elsewhere: Ser Raymun Darry leaves Darry with 60 knights and riders under the Darry banner, for a wedding at Stone Hedge; Leonette Grimm leaves Greyshield with 50 knights and riders under the Grimm banner, to settle a border quarrel with Arwyn Oakheart; Ronnet Connington leaves Griffin's Roost…
+- [3] ORDER 9 8th moon, 298 AC **Balon Greyjoy's command comes to nothing** — Balon Greyjoy commanded: “Send Jory Cassel to Moat Cailin with fifty riders to hold the Neck.” No one of yours by that name. (greyjoy)
+- [3] 9 8th moon, 298 AC **House The Free Folk calls up 45,000 levies at Mance Rayder's host** — House The Free Folk calls up 45,000 levies at Mance Rayder's host. House The Free Folk calls up 45,000 levies at Mance Rayder's host. (free_folk)
+- [2] 9 8th moon, 298 AC **House Drumm's men take ship** — Host of House Drumm (350 men) sails from Old Wyk for the coast near Deepwood Motte (~21 days at sea). Host of House Drumm (350 men) sails from Old Wyk for the coast near Deepwood Motte (~21 days at sea). Host of House Drumm, 350 strong, sets out from Old Wyk for Winterfell — by sea. (drumm)
+- [2] 9 8th moon, 298 AC **House Blacktyde's men take ship** — Host of House Blacktyde (350 men) sails from Blacktyde for the coast near Deepwood Motte (~21 days at sea). Host of House Blacktyde (350 men) sails from Blacktyde for the coast near Deepwood Motte (~21 days at sea). Host of House Blacktyde, 350 strong, sets out from Blacktyde for Winterfell — by sea. (blacktyde)
+- [2] 10 8th moon, 298 AC **Host of House Saltcliffe sets out** — Host of House Saltcliffe, 450 strong, sets out from Saltcliffe for Winterfell — by sea. Host of House Saltcliffe, 450 strong, sets out from Saltcliffe for Winterfell — by sea. Host of House Saltcliffe (450 men) sails from Saltcliffe for the coast near Deepwood Motte (~22 days at sea). (saltcliffe)
+- [2] 11 8th moon, 298 AC **House Lannister begins works at Casterly Rock: charter a market & fair.** — House Lannister begins works at Casterly Rock: charter a market & fair. (lannister)
+- [3] 14 8th moon, 298 AC **Lysa Arryn answers Balon Greyjoy** — A raven from The Eyrie: “I hear you, my lord.” A raven from The Eyrie: “I hear you, my lord.” (greyjoy)
+- meanwhile: Ser Raymun Darry rides for Stone Hedge; Leonette Grimm rides for Old Oak; Ronnet Connington rides for Haystack Hall; Gyles Rykker rides for Stonedance; Karyl Vance rides for Pinkmaiden; Littlefinger's house; Tywin Lannister rides for King's Landing; Harwood Errol rides for Storm's End; The bells of Norvos; Tristan Mooton rides for Saltpans
+- whereabouts: robb Winterfell · sansa Winterfell · arya Winterfell · jon Winterfell · jory Winterfell · rodrik Winterfell · guard 1500
+- post: Balon Greyjoy delivered, Lysa Arryn answered
+- hosts: The Iron Fleet 6000, The Silence 60
+- raven from Lysa Arryn: I hear you, my lord. — Lysa Arryn
+- order statuses: Send Jory Cassel to Moat Cailin with fifty riders  → failed
+- state: treasury 39941 · food 8 · levies 9974 · hosts The Iron Fleet 6000, The Silence 60 · pending decisions none
+
+## Turn 3
+- **council** (0s) ← "The King asks me to be his Hand. What say you?"
+  > luwin: As to the season, my lord: summer; letters: to Lysa Arryn (answered).
+  > rodrik_cassel: As to the hosts, my lord: Winterfell Household 400 at Winterfell; men-at-arms 1,200.
+  > catelyn_stark: As to the ledger, my lord: coin 124,152 dragons, +7,248 a moon; debt 0; food 30 moons; levies not called 15,949.
+- 14 8th moon, 298 AC → 21 8th moon, 298 AC (until a quiet week) · 1s · prompt ? (cached ?) · reply ?
+- summary: Robert Baratheon feasts 17 sworn lords at King's Landing. At the high table, Stannis Baratheon and Bartimos Hayford came to blows over precedence at table. Miners near Harvest Hall have struck a seam of silver; men are coming from three valleys to dig. Old Nan, Nursemaid, has died of a fever, aged 94. Elsewhere: Harwood Mertyns leaves Mistwood with 70 knights and riders under the Mertyns banner, for the tourney at Storm's End; Rhonda Mullendore leaves Uplands with 20 knights and riders under the Mullendore banner, to the market at The Hightower, for horses and iron; Cerenna Lydden leaves Deep…
+- [4] 15 8th moon, 298 AC **House Baratheon of Storm's End holds a tourney at Storm's End; 17 houses send knights.** — House Baratheon of Storm's End holds a tourney at Storm's End; 17 houses send knights. (baratheon_se)
+- [3] 15 8th moon, 298 AC **Ser Loras Tyrell is champion of the tourney at Storm's End.** — Ser Loras Tyrell is champion of the tourney at Storm's End. (baratheon_se)
+- [4] 15 8th moon, 298 AC **Robert Baratheon feasts 17 sworn lords at King's Landing** — Robert Baratheon feasts 17 sworn lords at King's Landing. At the high table, Stannis Baratheon and Bartimos Hayford came to blows over precedence at table. Robert Baratheon feasts 17 sworn lords at King's Landing. At the high table, Stannis Baratheon and Bartimos Hayford came to blows over precedence at table. (baratheon)
+- [2] 15 8th moon, 298 AC **A seam of silver near Harvest Hall** — Miners near Harvest Hall have struck a seam of silver; men are coming from three valleys to dig. Miners near Harvest Hall have struck a seam of silver; men are coming from three valleys to dig. (selmy)
+- [2] 17 8th moon, 298 AC **Old Nan is dead** — Old Nan, Nursemaid, has died of a fever, aged 94. Old Nan, Nursemaid, has died of a fever, aged 94. (stark)
+- meanwhile: Harwood Mertyns rides for Storm's End; Rhonda Mullendore rides for The Hightower; Cerenna Lydden rides for Hornvale; Walder Frey rides for Seagard; Leyton Hightower feasts Orton Fossoway; Alekyne Serry rides for Red Lake; The Hightower's beacon; Orton Fossoway rides for Longtable; Snow in summer at Castle Cerwyn; Lyonel Corbray rides for Coldwater Burn; Medger Cerwyn rides for Ironrath; Fog on the roads near Wull Mountains; Donella Hornwood rides for White Harbor; Beric Dondarrion rides for Storm's End
+- whereabouts: robb Winterfell · sansa Winterfell · arya Winterfell · jon Winterfell · jory Winterfell · rodrik Winterfell · guard 1500
+- post: Balon Greyjoy delivered, Lysa Arryn answered
+- hosts: The Iron Fleet 6000, The Silence 60
+- state: treasury 39918 · food 8.1 · levies 9963 · hosts The Iron Fleet 6000, The Silence 60 · pending decisions none
+
+## Turn 4
+- receipt (rules): Robb is to march the Northern Host to Moat Cailin. → ✓ Host of House Harlaw (1,250 men under Rodrik Harlaw) marches for Moat Cailin — ~983 miles, ~66 days.
+- 21 8th moon, 298 AC → 1 9th moon, 298 AC (until word from across the realm) · 2s · prompt ? (cached ?) · reply ?
+- carried out: Robb is to march the Northern Host to Moat Cailin. → Host of House Harlaw (1,250 men under Rodrik Harlaw) marches for Moat Cailin — ~983 miles, ~66 days
+- summary: House Nymeros Martell calls up 5,940 levies at Sunspear. House Stark holds a tourney at Winterfell; 23 houses send knights. Host of House Harlaw sets out for Moat Cailin (~66 days). Leo Lefford holds a feast for the household at The Golden Tooth. Elsewhere: Falyse Brune leaves Brownhollow with 20 knights and riders under the Brune banner, for the tourney at King's Landing; Sharna Grandison leaves Grandview with 60 knights and riders under the Grandison banner, to settle a border quarrel with Ronnet Connington; Jonnel Locke leaves Oldcastle…
+- [3] ORDER 22 8th moon, 298 AC **Host of House Harlaw sets out for Moat Cailin (~66 days)** — Host of House Harlaw sets out for Moat Cailin (~66 days). Host of House Harlaw sets out for Moat Cailin (~66 days). Host of House Harlaw (1,250 men) comes ashore on the coast near Deepwood Motte and marches on. Host of House Goodbrother (400 men) comes ashore on the coast near Deepwood Motte and marches on. (glover)
+- [1] 22 8th moon, 298 AC **House Harlaw begins works at Ten Towers: charter a market & fair.** — House Harlaw begins works at Ten Towers: charter a market & fair. (harlaw)
+- [4] 22 8th moon, 298 AC **House Nymeros Martell calls up 5,940 levies at Sunspear** — House Nymeros Martell calls up 5,940 levies at Sunspear. House Nymeros Martell calls up 5,940 levies at Sunspear. (martell)
+- [4] 22 8th moon, 298 AC **House Stark holds a tourney at Winterfell; 23 houses send knights** — House Stark holds a tourney at Winterfell; 23 houses send knights. House Stark holds a tourney at Winterfell; 23 houses send knights. Ser Dontos Hollard is champion of the tourney at Winterfell. (stark)
+- [2] 24 8th moon, 298 AC **Kevan Lannister's company sets out for King's Landing (~34 days).** — Kevan Lannister's company sets out for King's Landing (~34 days).
+- [2] 29 8th moon, 298 AC **Leo Lefford holds a feast for the household at The Golden Tooth** — Leo Lefford holds a feast for the household at The Golden Tooth. Leo Lefford holds a feast for the household at The Golden Tooth. (lefford)
+- [1] 29 8th moon, 298 AC **A spice ship reaches Dragonstone** — A ship from the Summer Isles with spices and green parrots has put into Dragonstone. (baratheon_ds)
+- [2] 29 8th moon, 298 AC **House Orkwood's men land on the coast near Deepwood Motte** — Host of House Orkwood (400 men) comes ashore on the coast near Deepwood Motte and marches on. Host of House Orkwood (400 men) comes ashore on the coast near Deepwood Motte and marches on. Host of House Drumm (350 men) comes ashore on the coast near Deepwood Motte and marches on. Host of House Blacktyde (350 men) comes ashore on the coast near Deepwood Motte and marches on. Host of House Saltcliffe (450 men) comes ashore on the coast near Deepwood Motte and marches on. (glover)
+- meanwhile: Falyse Brune rides for King's Landing; Sharna Grandison rides for Griffin's Roost; Jonnel Locke rides for Winterfell; The Smoking Sea; Edric Dayne rides for Sunspear; Nymella Dayne rides for Sandstone; Jason Mallister rides for Riverrun; Lyonel Bulwer rides for Highgarden; Dagos Fowler rides for Yronwood; Tytos Blackwood rides for Whitewalls; Lyman Farman rides for Lannisport; Tanda Staunton rides for King's Landing; The small council sits
+- whereabouts: robb Winterfell · sansa Winterfell · arya Winterfell · jon Winterfell · jory Winterfell · rodrik Winterfell · guard 1500
+- post: Balon Greyjoy delivered, Lysa Arryn answered
+- hosts: The Iron Fleet 6000, The Silence 60
+- order statuses: Robb is to march the Northern Host to Moat Cailin. → underway
+- state: treasury 39981 · food 8.1 · levies 9948 · hosts The Iron Fleet 6000, The Silence 60 · pending decisions none
+
+## Turn 5
+- 1 9th moon, 298 AC → 8 9th moon, 298 AC (until a quiet week) · 1s · prompt ? (cached ?) · reply ?
+- summary: King Robert rides through the gates of Winterfell with the Queen, her brothers, the royal children and three hundred knights. He has come, he roars, to make his oldest friend the Hand of the King. Elsewhere: At Doran Martell's tourney for a name-day, Ser Davos Seaworth unhorses all comers and crowns a blushing girl queen of love and beauty; Lanna Lannister leaves Lannisport with 30 knights and riders under the Lannister of Lannisport banner, to the market at Kayce, for horses and iron…
+- [1] 6 9th moon, 298 AC **House Mallister begins works at Seagard: build warships.** — House Mallister begins works at Seagard: build warships. (mallister)
+- [3] 6 9th moon, 298 AC **House Baratheon of Dragonstone holds a tourney at Dragonstone; 13 houses send knights.** — House Baratheon of Dragonstone holds a tourney at Dragonstone; 13 houses send knights. (baratheon_ds)
+- [3] 6 9th moon, 298 AC **Ser Axell Florent is champion of the tourney at Dragonstone.** — Ser Axell Florent is champion of the tourney at Dragonstone. (baratheon_ds)
+- [3] 7 9th moon, 298 AC **A Dothraki wedding** — Outside Pentos, Khal Drogo weds Daenerys Targaryen before forty thousand screamers. There are three deaths at the feast, which the Dothraki count a dull wedding. Among her gifts are three dragon eggs, turned to stone by the ages. (pentos)
+- [4] 7 9th moon, 298 AC **The King comes to Winterfell** — King Robert rides through the gates of Winterfell with the Queen, her brothers, the royal children and three hundred knights. He has come, he roars, to make his oldest friend the Hand of the King. King Robert rides through the gates of Winterfell with the Queen, her brothers, the royal children and three hundred knights. He has come, he roars, to make his oldest friend the Hand of the King. (stark)
+- meanwhile: Ser Davos Seaworth champion at Sunspear; Lanna Lannister rides for Kayce; Dagos Dalt rides for Sunspear; Lyonel Ashford rides for Grassy Vale; Belore Coldwater rides for Snakewood; Rickard Wull rides for Winterfell; Renfred Stokeworth rides for King's Landing; Wyman Manderly rides for Winterfell
+- whereabouts: robb Winterfell · sansa Winterfell · arya Winterfell · jon Winterfell · jory Winterfell · rodrik Winterfell · guard 1500
+- post: Balon Greyjoy delivered, Lysa Arryn answered
+- hosts: The Iron Fleet 6000, The Silence 60
+- state: treasury 40033 · food 8.1 · levies 9938 · hosts The Iron Fleet 6000, The Silence 60 · pending decisions none
+
+## Turn 6
+- receipt (fallback): Send Jon Snow to Castle Black to see the Wall for himself. → ✗ No one of yours by that name.
+- 8 9th moon, 298 AC → 15 9th moon, 298 AC (until a quiet week) · 2s · prompt ? (cached ?) · reply ?
+- carried out: Send Jon Snow to Castle Black to see the Wall for himself. → could not be done: No one of yours by that name
+- summary: House Nymeros Martell calls up 2,924 levies at Sunspear. House The Free Folk calls up 22,500 levies at Mance Rayder's host. Bran Stark, who climbed every wall of Winterfell and never fell, is found broken at the foot of the old tower. He lives, but sleeps and does not wake. The Lannisters are very kind. Tommen Baratheon has the look of a man who has not slept well in some time. Elsewhere: Umber men have hanged wildlings who came over the Wall and then sent their heads to the Night's Watch with compliments; Torrhen Norrey leaves The Norrey with 40 knights and riders under the Norrey banner, to settle a border quarrel with Jon "Greatjon" Umber; Duram Massey leaves…
+- [3] ORDER 9 9th moon, 298 AC **Balon Greyjoy's command comes to nothing** — Balon Greyjoy commanded: “Send Jon Snow to Castle Black to see the Wall for himself.” No one of yours by that name. (greyjoy)
+- [4] 9 9th moon, 298 AC **House Nymeros Martell calls up 2,924 levies at Sunspear** — House Nymeros Martell calls up 2,924 levies at Sunspear. House Nymeros Martell calls up 2,924 levies at Sunspear. (martell)
+- [3] 9 9th moon, 298 AC **House The Free Folk calls up 22,500 levies at Mance Rayder's host** — House The Free Folk calls up 22,500 levies at Mance Rayder's host. House The Free Folk calls up 22,500 levies at Mance Rayder's host. (free_folk)
+- [3] 11 9th moon, 298 AC **The boy who fell** — Bran Stark, who climbed every wall of Winterfell and never fell, is found broken at the foot of the old tower. He lives, but sleeps and does not wake. The Lannisters are very kind. Bran Stark, who climbed every wall of Winterfell and never fell, is found broken at the foot of the old tower. He lives, but sleeps and does not wake. The Lannisters are very kind. (stark)
+- [1] 13 9th moon, 298 AC **House Marbrand begins works at Ashemark: charter a market & fair.** — House Marbrand begins works at Ashemark: charter a market & fair. (marbrand)
+- [2] 15 9th moon, 298 AC **Tommen Baratheon is not himself** — Tommen Baratheon has the look of a man who has not slept well in some time. Tommen Baratheon has the look of a man who has not slept well in some time.
+- meanwhile: The Greatjon's table; Torrhen Norrey rides for Last Hearth; Duram Massey rides for Dragonstone; The name of Balon Greyjoy in the market of Orkmont; Gerold Redfort rides for Gulltown; Mace Tyrell rides for Starpike; Damon Marbrand rides for The Crag; Talk of the old way; Arwyn Oakheart rides for Oakenshield
+- whereabouts: robb Winterfell · sansa Winterfell · arya Winterfell · jon Winterfell · jory Winterfell · rodrik Winterfell · guard 1500
+- post: Balon Greyjoy delivered, Lysa Arryn answered
+- hosts: The Iron Fleet 6000, The Silence 60
+- order statuses: Send Jon Snow to Castle Black to see the Wall for  → failed
+- state: treasury 40127 · food 8.1 · levies 9927 · hosts The Iron Fleet 6000, The Silence 60 · pending decisions none
+
+Report: playtest/greyjoy-2026-09-29-00-47.md

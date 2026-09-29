@@ -1,0 +1,96 @@
+# Playtest — House stark — mock — 2026-09-29T00:46
+
+
+## Turn 1
+- receipt (rules): assemeble the men of the north at winterfell and create a gr → ✓ The banners are called: 19 sworn houses summoned to muster at Winterfell (Bolton, Karstark, Umber, Mormont, Glover, Manderly, Reed, Tallhart…); each answers in their own time and temper.; ✓ If all answer, about 16,000 men; the last expected in ~71 days.; ✓ 1,143 levies muster at Winterfell as The Northern Host; 14,857 more are mustering from the fields (23 knights, 137 riders, 823 foot, 160 archers).
+- 1 8th moon, 298 AC → 2 8th moon, 298 AC (until the levy camp grows) · 0s · prompt ? (cached ?) · reply ?
+- carried out: assemeble the men of the north at winterfell and create a great northern host of all able body men and boys → The banners are called: 19 sworn houses summoned to muster at Winterfell (Bolton, Karstark, Umber, Mormont, Glover, Manderly, Reed, Tallhart…); each answers in their own time and temper; If all answer, about 16,000 men; the last expected in ~71 days; 1,143 levies muster at Winterfell as The Northern Host; 14,857 more are mustering from the fields (23 knights, 137 riders, 823 foot, 160 archers)
+- summary: House Stark calls its banners: 19 sworn houses are summoned to Winterfell. House Baratheon of King's Landing holds a tourney at King's Landing; 21 houses send knights. King Robert's progress has crossed the Green Fork at the Twins — the Queen, her brothers, the royal children and three hundred knights, a mile of wagons — bound for Winterfell. Men say he means to… Host of House Manderly (300 men) is raised at White Harbor. Elsewhere: Sansa Stark sings a song of Florian and Jonquil in the solar and dreams of the south.
+- [5] ORDER 2 8th moon, 298 AC **House Stark calls its banners** — House Stark calls its banners: 19 sworn houses are summoned to Winterfell. House Stark calls its banners: 19 sworn houses are summoned to Winterfell. 1,143 more men have reached the camp. The host now numbers 2,286. House Stark calls up 16,000 levies at Winterfell; 14,857 of them are still coming in from the fields. (stark)
+- [2] 2 8th moon, 298 AC **A quarrel over a mill near Bear Island** — House Mormont and House Bolton both claim a mill and its weir on the stream below Bear Island; their men have come to blows. (mormont)
+- [5] 2 8th moon, 298 AC **House Baratheon of King's Landing holds a tourney at King's Landing** — House Baratheon of King's Landing holds a tourney at King's Landing; 21 houses send knights. House Baratheon of King's Landing holds a tourney at King's Landing; 21 houses send knights. (baratheon)
+- [4] 2 8th moon, 298 AC **The King rides north** — King Robert's progress has crossed the Green Fork at the Twins — the Queen, her brothers, the royal children and three hundred knights, a mile of wagons — bound for Winterfell. Men say he means to… King Robert's progress has crossed the Green Fork at the Twins — the Queen, her brothers, the royal children and three hundred knights, a mile of wagons — bound for Winterfell. Men say he means to make Lord Eddard Stark his Hand, now that Jon Arryn is dead. (frey)
+- [3] 2 8th moon, 298 AC **Host of House Manderly (300 men) is raised at White Harbor** — Host of House Manderly (300 men) is raised at White Harbor. Host of House Manderly (300 men) is raised at White Harbor. Wyman Manderly answers the call with 3,300 men, Ser Wylis Manderly riding with him; they gather at White Harbor and march for Winterfell in about 12 days. Host of House Umber (150 men) is raised at Last Hearth. Jon "Greatjon" Umber answers the call with 2,000 men; they gather at Last Hearth and march for Winterfell in about 12 days. Host of House Karstark (150 men) is raised at Karhold. Rickard Karstark answers the call with 1,800 men; they gather at Karhold and march for Winterfell in about 12 days. (manderly)
+- meanwhile: Sansa's stitches
+- whereabouts: robb Winterfell · sansa Winterfell · arya Winterfell · jon Winterfell · jory Winterfell · rodrik Winterfell · guard 1200
+- hosts: Winterfell Household 400, The Northern Host 2286
+- order statuses: assemeble the men of the north at winterfell and c → done
+- state: treasury 120236 · food 30 · levies 51 · hosts Winterfell Household 400, The Northern Host 2286 · pending decisions A quarrel over a mill
+
+## Turn 2
+- **audience lysa_arryn** (0s, engine: —, composed) ← "Sister, what did Jon say in his last days? Robert may foster with us at Winterfell if you wish it."
+  > null
+- decided "A quarrel over a mill": Judge for House Mormont — Stark–Mormont +8, Stark–Bolton -8
+- receipt (rules): Send Jory Cassel to Moat Cailin with fifty riders to hold th → ✓ Jory Cassel rides for Moat Cailin with 50 men (detached from Winterfell Household).
+- 2 8th moon, 298 AC → 3 8th moon, 298 AC (until the levy camp grows) · 0s · prompt ? (cached ?) · reply ?
+- carried out: Send Jory Cassel to Moat Cailin with fifty riders to hold the Neck. → Jory Cassel rides for Moat Cailin with 50 men (detached from Winterfell Household)
+- summary: Helman Tallhart answers the call with 500 men; they gather at Torrhen's Square and march for Winterfell in about 12 days. Jory Cassel's company sets out for Moat Cailin (~17 days). Donella Hornwood writes that fever in the villages. She will come — later. 1,143 more men have reached the camp. The host now numbers 3,429. Elsewhere: Anya Waynwood leaves Ironoaks with 100 knights and riders under the Waynwood banner, for a wedding at Ninestars.
+- [3] ORDER 3 8th moon, 298 AC **A quarrel over a mill: Judge for House Mormont** — Eddard Stark commanded: “DECISION — A quarrel over a mill: I choose "Judge for House Mormont".” A quarrel over a mill: Judge for House Mormont. Stark–Mormont +8. Stark–Bolton -8. (stark)
+- [3] ORDER 3 8th moon, 298 AC **Jory Cassel's company sets out for Moat Cailin (~17 days)** — Jory Cassel's company sets out for Moat Cailin (~17 days). Jory Cassel's company sets out for Moat Cailin (~17 days).
+- [3] 3 8th moon, 298 AC **House Tallhart answers the call** — Helman Tallhart answers the call with 500 men; they gather at Torrhen's Square and march for Winterfell in about 12 days. Helman Tallhart answers the call with 500 men; they gather at Torrhen's Square and march for Winterfell in about 12 days. Medger Cerwyn answers the call with 400 men; they gather at Castle Cerwyn and march for Winterfell in about 12 days. Torrhen Norrey answers the call with 400 men; they gather at The Norrey and march for Winterfell in about 12 days. Roose Bolton answers the call with 2,300 men; they gather at The Dreadfort and march for Winterfell in about 12 days. (tallhart)
+- [2] 3 8th moon, 298 AC **House Hornwood delays** — Donella Hornwood writes that fever in the villages. She will come — later. Donella Hornwood writes that fever in the villages. She will come — later. (hornwood)
+- [2] 3 8th moon, 298 AC **The Northern Host grows in the fields** — 1,143 more men have reached the camp. The host now numbers 3,429. 1,143 more men have reached the camp. The host now numbers 3,429. (stark)
+- meanwhile: Anya Waynwood rides for Ninestars
+- whereabouts: robb Winterfell · sansa Winterfell · arya Winterfell · jon Winterfell · jory with Jory Cassel's company (50 men) · marching to Moat Cailin, ~15 days · rodrik Winterfell · guard 1200
+- post: Lysa Arryn in flight
+- hosts: Winterfell Household 350, The Northern Host 3429, Jory Cassel's company 50 →moat_cailin
+- order statuses: DECISION — A quarrel over a mill: I choose "Judge  → done | Send Jory Cassel to Moat Cailin with fifty riders  → underway
+- state: treasury 120428 · food 30 · levies 96 · hosts Winterfell Household 350, The Northern Host 3429, Jory Cassel's company 50 · pending decisions none
+
+## Turn 3
+- **council** (0s) ← "The King asks me to be his Hand. What say you?"
+  > luwin: As to the season, my lord: summer; letters: to Lysa Arryn (in flight).
+  > rodrik_cassel: As to the hosts, my lord: Winterfell Household 350 at Winterfell; The Northern Host 3,429 at Winterfell; Jory Cassel's company 50 in the field; men-at-arms 1,200.
+  > catelyn_stark: As to the ledger, my lord: coin 120,428 dragons, +768 a moon; debt 0; food 30 moons; levies not called 96.
+- 3 8th moon, 298 AC → 4 8th moon, 298 AC (until the levy camp grows) · 0s · prompt ? (cached ?) · reply ?
+- summary: Galbart Glover answers the call with 500 men, Robett Glover riding with him; they gather at Deepwood Motte and march for Winterfell in about 12 days. 1,143 more men have reached the camp. The host now numbers 4,572. Elsewhere: Roland Crakehall leaves Crakehall with 80 knights and riders under the Crakehall banner, to the market at Lannisport, for horses and iron.
+- [3] 4 8th moon, 298 AC **House Glover answers the call** — Galbart Glover answers the call with 500 men, Robett Glover riding with him; they gather at Deepwood Motte and march for Winterfell in about 12 days. Galbart Glover answers the call with 500 men, Robett Glover riding with him; they gather at Deepwood Motte and march for Winterfell in about 12 days. Rodrik Ryswell answers the call with 350 men; they gather at The Rills and march for Winterfell in about 12 days. Host of House Liddle (50 men) is raised at Liddle Hills. Edwyle Liddle answers the call with 350 men; they gather at Liddle Hills and march for Winterfell in about 12 days. Host of House Reed (50 men) is raised at Greywater Watch. Howland Reed answers the call with 400 men; they gather at Greywater Watch and march for Winterfell in about 12 days. Host of House Forrester (50 men) is raised at Ironrath. Donnor Forrester answers the call with 350 men; they gather at Ironrath and march for Winterfell in about 12 days. (glover)
+- [2] 4 8th moon, 298 AC **The Northern Host grows in the fields** — 1,143 more men have reached the camp. The host now numbers 4,572. 1,143 more men have reached the camp. The host now numbers 4,572. (stark)
+- meanwhile: Roland Crakehall rides for Lannisport
+- whereabouts: robb Winterfell · sansa Winterfell · arya Winterfell · jon Winterfell · jory with Jory Cassel's company (50 men) · marching to Moat Cailin, ~14 days · rodrik Winterfell · guard 1200
+- post: Lysa Arryn in flight
+- hosts: Winterfell Household 350, The Northern Host 4572, Jory Cassel's company 50 →moat_cailin
+- state: treasury 120596 · food 30 · levies 136 · hosts Winterfell Household 350, The Northern Host 4572, Jory Cassel's company 50 · pending decisions none
+
+## Turn 4
+- receipt (rules): Robb is to march the Northern Host to Moat Cailin. → ✓ The Northern Host (4,572 men under Robb Stark) marches for Moat Cailin — ~487 miles, ~27 days.
+- 4 8th moon, 298 AC → 5 8th moon, 298 AC (until the levy camp grows) · 0s · prompt ? (cached ?) · reply ?
+- carried out: Robb is to march the Northern Host to Moat Cailin. → The Northern Host (4,572 men under Robb Stark) marches for Moat Cailin — ~487 miles, ~27 days
+- summary: The Northern Host sets out for Moat Cailin (~27 days). Barbrey Dustin answers the call with 450 men; they gather at Barrowton and march for Winterfell in about 12 days. Elsewhere: Lomas Estermont leaves Greenstone with 60 knights and riders under the Estermont banner, for a wedding at Mistwood; Gerold Redfort leaves Redfort with 40 knights and riders under the Redfort banner, to hunt in the country near Gates of the Moon; House Bolton begins works at The…
+- [3] ORDER 5 8th moon, 298 AC **The Northern Host sets out for Moat Cailin (~27 days)** — The Northern Host sets out for Moat Cailin (~27 days). The Northern Host sets out for Moat Cailin (~27 days). 1,143 more men have reached the camp. The host now numbers 5,715. (stark)
+- [1] 5 8th moon, 298 AC **House Bolton begins works at The Dreadfort: charter a market & fair.** — House Bolton begins works at The Dreadfort: charter a market & fair. (bolton)
+- [3] 5 8th moon, 298 AC **House Dustin answers the call** — Barbrey Dustin answers the call with 450 men; they gather at Barrowton and march for Winterfell in about 12 days. Barbrey Dustin answers the call with 450 men; they gather at Barrowton and march for Winterfell in about 12 days. Rickard Wull answers the call with 400 men; they gather at Wull Mountains and march for Winterfell in about 12 days. Jonnel Crowl answers the call with 350 men; they gather at Deepdown and march for Winterfell in about 12 days. Host of House Mormont (50 men) is raised at Bear Island. Maege Mormont answers the call with 500 men, Dacey Mormont riding with her; they gather at Bear Island and march for Winterfell in about 12 days. Host of House Flint (50 men) is raised at Widow's Watch. Rodwell Flint answers the call with 500 men; they gather at Widow's Watch and march for Winterfell in about 12 days. Host of House Locke (50 men) is raised at Oldcastle. Jonnel Locke answers the call with 400 men; they gather at Oldcastle and march for Winterfell in about 12 days. (dustin)
+- meanwhile: Lomas Estermont rides for Mistwood; Gerold Redfort rides for Gates of the Moon
+- whereabouts: robb with The Northern Host (5,715 men) · marching to Moat Cailin, ~26 days · sansa Winterfell · arya Winterfell · jon Winterfell · jory with Jory Cassel's company (50 men) · marching to Moat Cailin, ~13 days · rodrik Winterfell · guard 1200
+- post: Lysa Arryn in flight
+- hosts: Winterfell Household 350, The Northern Host 5715 →moat_cailin, Jory Cassel's company 50 →moat_cailin
+- order statuses: Robb is to march the Northern Host to Moat Cailin. → underway
+- state: treasury 120761 · food 30 · levies 171 · hosts Winterfell Household 350, The Northern Host 5715, Jory Cassel's company 50 · pending decisions none
+
+## Turn 5
+- 5 8th moon, 298 AC → 6 8th moon, 298 AC (until the levy camp grows) · 1s · prompt ? (cached ?) · reply ?
+- summary: 1,143 more men have reached the camp. The host now numbers 6,858. Elsewhere: Gyles Rykker leaves Duskendale with 50 knights and riders under the Rykker banner, for the tourney at King's Landing.
+- [2] 6 8th moon, 298 AC **The Northern Host grows in the fields** — 1,143 more men have reached the camp. The host now numbers 6,858. 1,143 more men have reached the camp. The host now numbers 6,858.
+- meanwhile: Gyles Rykker rides for King's Landing
+- whereabouts: robb with The Northern Host (6,858 men) · marching to Moat Cailin, ~25 days · sansa Winterfell · arya Winterfell · jon Winterfell · jory with Jory Cassel's company (50 men) · marching to Moat Cailin, ~12 days · rodrik Winterfell · guard 1200
+- post: Eddard Stark in flight, Lysa Arryn delivered
+- hosts: Winterfell Household 350, The Northern Host 6858 →moat_cailin, Jory Cassel's company 50 →moat_cailin
+- state: treasury 120899 · food 30 · levies 201 · hosts Winterfell Household 350, The Northern Host 6858, Jory Cassel's company 50 · pending decisions none
+
+## Turn 6
+- receipt (rules): Send Jon Snow to Castle Black to see the Wall for himself. → ✓ Jon Snow sets out for Castle Black (~18 days' ride).
+- 6 8th moon, 298 AC → 7 8th moon, 298 AC (until the levy camp grows) · 0s · prompt ? (cached ?) · reply ?
+- carried out: Send Jon Snow to Castle Black to see the Wall for himself. → Jon Snow sets out for Castle Black (~18 days' ride)
+- summary: Jon Snow sets out for Castle Black (~18 days). Jon "Smalljon" Umber's company sets out for Winterfell (~19 days). 1,143 more men have reached the camp. The host now numbers 8,001. Elsewhere: Mathis Rowan leaves Goldengrove with 80 knights and riders under the Rowan banner, to pay his respects to Mace Tyrell at Highgarden.
+- [3] ORDER 7 8th moon, 298 AC **Jon Snow sets out for Castle Black (~18 days)** — Jon Snow sets out for Castle Black (~18 days). Jon Snow sets out for Castle Black (~18 days).
+- [4] 7 8th moon, 298 AC **House Arryn calls up 9,998 levies at The Eyrie.** — House Arryn calls up 9,998 levies at The Eyrie. (arryn)
+- [2] 7 8th moon, 298 AC **Jon "Smalljon" Umber's company sets out for Winterfell (~19 days)** — Jon "Smalljon" Umber's company sets out for Winterfell (~19 days). Jon "Smalljon" Umber's company sets out for Winterfell (~19 days).
+- [2] 7 8th moon, 298 AC **The Northern Host grows in the fields** — 1,143 more men have reached the camp. The host now numbers 8,001. 1,143 more men have reached the camp. The host now numbers 8,001.
+- meanwhile: Mathis Rowan rides for Highgarden
+- whereabouts: robb with The Northern Host (8,001 men) · marching to Moat Cailin, ~24 days · sansa Winterfell · arya Winterfell · jon on the road to Castle Black · ~17 days · jory with Jory Cassel's company (50 men) · marching to Moat Cailin, ~11 days · rodrik Winterfell · guard 1200
+- post: Eddard Stark in flight, Lysa Arryn delivered
+- hosts: Winterfell Household 350, The Northern Host 8001 →moat_cailin, Jory Cassel's company 50 →moat_cailin, Jon Snow 0 →nights_watch
+- order statuses: Send Jon Snow to Castle Black to see the Wall for  → underway
+- state: treasury 121070 · food 30 · levies 227 · hosts Winterfell Household 350, The Northern Host 8001, Jory Cassel's company 50, Jon Snow 0 · pending decisions none
+
+Report: playtest/stark-2026-09-29-00-46.md

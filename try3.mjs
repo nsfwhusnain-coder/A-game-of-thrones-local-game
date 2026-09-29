@@ -1,0 +1,11 @@
+process.env.WC_PROVIDER='mock'; process.env.WC_SAVES = '/tmp/claude-0/x';
+const { createInitialState, resolveSuccessions } = await import('/home/user/wc-sb/public/js/shared/world.js');
+const s = createInitialState('agot_298', 'stark', { seed: 298 });
+console.log(s.meta.settings, s.meta.turn);
+const gens = Object.values(s.houses).filter(h => s.characters[h.lord]?.generated);
+console.log(gens.length, gens.slice(0,6).map(h => [h.id, h.lord, s.characters[h.lord].name, s.characters[h.lord].age]));
+const h = gens.find(h=>h.id==='celtigar') || gens[0];
+console.log(h.id);
+const old = s.characters[h.lord]; old.alive = false;
+const r = resolveSuccessions(s);
+console.log(r.map(x=>x.text), s.characters[s.houses[h.id].lord]);

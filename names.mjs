@@ -1,0 +1,6 @@
+import { createInitialState } from '/home/user/wc-s1/public/js/shared/world.js';
+import { namesIn } from '/home/user/wc-s1/server/ai/validate/narration.js';
+const s = createInitialState('agot_298','stark',{seed:298});
+const tests = ["Greatjon Umber raises his men at Last Hearth","Lord Umber marches for Winterfell","Robb Stark slain by Tywin Lannister at the Green Fork","Lord Karstark marches south with his host","Ser Rodrik Cassel wins the tourney at the Eyrie","King Robert holds a tourney at King's Landing","Lysa Arryn arms the Vale","Mance Rayder gathers the wildlings beyond the Wall","Roose Bolton opens a market at the Dreadfort","Lady Hornwood refuses Stark's summons","Robb calls the northern banners to Winterfell","Ser Barristan raises the northern banners","Jon Snow reaches Castle Black","Walder Frey opens the Twins to Robb Stark","Eddard Stark calls the banners of the North","Jon Umber rides", "Tallhart men join Robb at Winterfell", "Lord Eddard calls the banners", "Lord Stark", "House Stark", "Mace Tyrell holds a feast at Highgarden", "Lord Tywin", "Tywin", "Lannisters beat Robb Stark's van at the Twins"];
+for (const t of tests) console.log(t, '=>', JSON.stringify(namesIn(s,t).map(n=>n.kind+':'+n.id+':'+n.text)));
+console.log(Object.keys(s.characters).filter(k=>/arryn|lysa|hoster|walder|luwin/.test(k)));

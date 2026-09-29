@@ -1,0 +1,12 @@
+import { createInitialState } from '/home/user/wc-s5/public/js/shared/world.js';
+import { project } from '/home/user/wc-s5/public/js/shared/economy.js';
+import { nextTurnLength } from '/home/user/wc-s5/public/js/shared/turns.js';
+import { realmTotals } from '/home/user/wc-s5/public/js/shared/world.js';
+const s = createInitialState('agot_298','stark',{seed:298});
+const h = s.houses.stark;
+console.log(project(s,'stark'));
+console.log(h.figures.treasury, h.figures.levies, h.figures.menAtArms, h.figures.food, h.figures.guard, h.ledger?.length, s.meta.player);
+console.log(Object.values(s.parties).filter(a=>a.owner==='stark').map(a=>[a.id,a.kind,a.men]));
+console.log(nextTurnLength(s), Object.keys(s), s.decisions, s.ravens, s.history.length);
+console.log(JSON.stringify(s.history.slice(-1)).slice(0,300));
+const before = JSON.stringify(s); project(s,'stark'); console.log('mutates', before !== JSON.stringify(s));
