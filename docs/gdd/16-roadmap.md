@@ -122,7 +122,7 @@ U3 (the HUD and the menu; U3 needs N6's cards for the headline strip) · R1 → 
 N7–N10, U4, R4–R7, U8, U9. **Phase F is re-cut by U:** F2 (layout) and F5 (cards) are done as U1–U4; F1 (partly done as U0), F3, F4, F6,
 F7, F8, F9 remain and follow U. Then E6–E8, G, H.
 
-**Status of Phase N (2026-09-29):** N1 ✅ N2 ✅ (Slice 1: the two shipped together on one branch and one PR, see
+**Status of Phase N (2026-09-29):** N1 ✅ N2 ✅ N3 ✅ N4 ✅ (Slice 4: the writer and one card per story; not wired into the narrator until N5) (Slice 1: the two shipped together on one branch and one PR, see
 `DECISIONS.md#D-059`; each keeps its own acceptance in [18](18-headlines.md) §5).
 **Status:** R1 ✅ R2 ✅ R3 ✅ (Slice 2) — the figures, what a house learns of the others, and `GET /api/games/:id/realm`
 (`public/js/engine/realm/`, `tests/realm-stats.test.js`, `tests/realm-view.test.js`, `tests/realm-http.test.js`;

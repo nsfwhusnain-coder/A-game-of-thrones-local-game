@@ -3,6 +3,24 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-29 — N3 + N4: every story told in a headline and a line, one card per story
+
+- **Not yet in the feed.** The narrator still tells the chronicle its own way; N5 hands it these cards as its drafts and
+  its fallback, and N6 puts them in the turn record. What exists now is the writer and the clustering underneath.
+- **The writer** (N3, `public/js/engine/facts/heads.js`, `headline.js`): `cardOf(state, story)` builds a card — a
+  headline of at most twelve words and one or two plain sentences — for every kind of fact, from the fact's slots alone
+  (never from the engine's log lines): a person as the subject, the outcome as the verb, the place when it is the story,
+  numbers as words; other houses' exact figures only in the details, rounded to two figures. Two to four ways of saying
+  each kind, chosen by the fact, never by the dice. Read on the recorded Stark turns: "Eddard Stark raises the northern
+  banners at Winterfell", "Five northern hosts leave for Winterfell — the Karstarks have the longest road, near two
+  months", "Donella Hornwood refuses to march for Stark", "Old Nan dies of a fever at Winterfell — she was
+  ninety-four", "Doran Martell summons his bannermen at Sunspear — nothing yet says against whom".
+- **One card per story** (N4, `cluster.js`): the hosts leaving for Winterfell are one story, not five cards; a refusal
+  inside a muster is its own story; a battle, its captives and its dead are one; news heard late by raven is never
+  joined to news seen with your own eyes; the small journeys of lords go to one Meanwhile line; no story is dropped past
+  a cap. On the recorded muster game: 65 facts in 24 stories (2.7 a story).
+- Owner to verify: `node --test tests/writer.test.js tests/clusters.test.js`.
+- PR: (PR #45)
 ## 2026-09-29 — R1–R3: the realm's figures, as your house knows them (PR #44)
 
 Nothing on screen yet (the window is R4); what exists is the data under it, and one way to look at it.
