@@ -1092,3 +1092,46 @@ ransoms, `embargo`) and the price index of §6.3.
 
 **Cost.** The pre-parser's sure readings on the order suite go 266 → 263 (three orders now ask); the exact reading on
 the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
+## D-068 · 2026-09-29 · The realm sample covers every house of the scenario, thinned by 28-day buckets (WP R1)
+
+- **Every house of the scenario is sampled** (158 today: the houses of standing and every minor house sworn to one), not
+  the ~30 that 19 §3.1 pictured. Older samples are thinned to the first of each 28-day bucket (by the day's own number, so
+  thinning twice changes nothing); the newest 16 are kept whole, and never more than 48 in all.
+- **Budget: 60 ms and about 0.8 MB at the cap, instead of 10 ms and 110 KB** (≈ 0.5 MB at 40 turns). Why: the tests and the
+  ledger's "all known" scope need the minor houses, and the save stays far under the 5 MB state budget.
+- **`people` is stored in whole souls, holdings are counted from the map's public owners** (19 said hundreds).
+- **Follow-up (R7):** an owner index inside `standing()` and `project()`, which scan every holding per house (a prototype
+  reached 15 ms). `tests/soak.test.js` does not yet assert the sampling budget (19 §9 said it did); R7's soak should.
+
+## D-069 · 2026-09-29 · The truth series never leaves the server (WP R1)
+
+- **`playerView` drops `realmStats`, `viewTurn` drops `record.realm`, and invariant 10 flags both** (`hiddenTruths`).
+- Found by the R builder: before the fix, `GET /api/games/:id` carried every house's true figures (coin, levies, income).
+  The State of the Realm is asked of the server (`GET /realm`), which builds it from the house's knowledge, so the
+  browser has no use for the series and must not have it.
+
+## D-070 · 2026-09-29 · The State of the Realm opens with R, not S (WP R4, decided in R1–R3)
+
+- **The hotkey is `R`**, the Realm button of 17 §2.2, not `S`: 19 §6.1 found `S` free among the dock's letters, but `S`
+  pans the map (`public/js/map3d/MapScene.js`, with `W A D` and the arrows). 19 §6.1, §10 and R4's acceptance, and 17's
+  reconciliation note, are corrected.
+- **One look, no light theme** (GDD 21): R4's screenshots are at the two resolutions only, not "light and dark".
+
+## D-071 · 2026-09-29 · Estimates as built: the tiers, and where they depart from 19 §4.2 (WP R2)
+
+- **The tiers.** Self: exact, live. Sworn house: read live, blurred by ±4.5 % (so 3 significant figures never read
+  further than ±5 % off) — an ally's coin is a band (±25 %). Every other house: the newest observation of each figure,
+  by the way it came — swords and ships `≥` (hosts and fleets seen or reported), people and holdings `~`, income and
+  Power `≈` bands, levies a band from believed people × the rank's muster share, gold a word ("sound", "modest",
+  "pressed") unless a spy has taught it (then `~`, 3 figures, dated).
+- **Power of others is `standing()` run on the displayed inputs**, shown as a band (`≈`, the middle is what ranks), so the
+  viewer's ranking is the one it could make.
+- **Who is listed:** a minor house only once it has been heard of; the greater ranks from turn 0, on a rank-based prior
+  (`rumour`) until an observation replaces it.
+- **A reported series of fewer than two points has no direction** (`—`, not "steady"); a house watched live with one
+  sample says `—` too, until the record has a second.
+- **`observe` runs in `updateKnowledge`, for the player's house only** (as 19 §3.2 allowed), with `hash32` noise and no
+  dice. A spy's figure is a fact with `data.realm = { house, field, value }`, kept by `learn()` beside what was learned
+  (the fact itself leaves the log at the turn's end). Wars are listed when a friend is a side or a
+  `war_declared`/`war_joined` fact is known; flags, facts and focus are empty until R6. Extra scopes: `mine`, `war`.
+

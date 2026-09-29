@@ -124,6 +124,9 @@ F7, F8, F9 remain and follow U. Then E6–E8, G, H.
 
 **Status of Phase N (2026-09-29):** N1 ✅ N2 ✅ (Slice 1: the two shipped together on one branch and one PR, see
 `DECISIONS.md#D-059`; each keeps its own acceptance in [18](18-headlines.md) §5).
+**Status:** R1 ✅ R2 ✅ R3 ✅ (Slice 2) — the figures, what a house learns of the others, and `GET /api/games/:id/realm`
+(`public/js/engine/realm/`, `tests/realm-stats.test.js`, `tests/realm-view.test.js`, `tests/realm-http.test.js`;
+DECISIONS D-068–D-071). Nothing is on screen until R4.
 
 **Further improvements proposed at the handoff (not yet planned in detail):**
 - *A playtest loop*: after each of N, U, R, run `npm run playtest` for three houses on the mock, read the chronicle as a
