@@ -70,6 +70,23 @@ const P = {
   speaker: '<path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
   mute: '<path d="M4 9.5h4l5-4v13l-5-4H4z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/>',
   music: '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
+  // — the maester's desk (GDD 21 §5): same 24-unit grid, same round stroke, same hand —
+  // a maester's chain: three links, each turned a quarter from the last (Settings)
+  chain: '<ellipse cx="7.2" cy="7.2" rx="4.6" ry="2.7" transform="rotate(-45 7.2 7.2)"/><ellipse cx="12" cy="12" rx="4.6" ry="2.7" transform="rotate(45 12 12)"/><ellipse cx="16.8" cy="16.8" rx="4.6" ry="2.7" transform="rotate(-45 16.8 16.8)"/>',
+  // a weirwood: the pale trunk with its carved face under a crown of leaves (People)
+  weirwood: '<path d="M6.2 10.2a3.4 3.4 0 0 1 1.1-6.3 3.7 3.7 0 0 1 6.6-.6 3.5 3.5 0 0 1 4.2 3.4 3.3 3.3 0 0 1-1.6 5.6"/><path d="M9 20.5c.9-1.4.9-3.8.6-6.2-.2-1.6-.7-2.8-1.3-3.6M15 20.5c-.9-1.4-.9-3.8-.6-6.2.2-1.6.7-2.8 1.3-3.6M5.8 20.8h12.4"/><path d="M9.9 13.1l1.5.8M14.1 13.1l-1.5.8"/><ellipse cx="12" cy="17.2" rx=".9" ry="1.5"/>',
+  // a closed book with two clasps (Help)
+  book: '<path d="M6.5 3.5h11a1.5 1.5 0 0 1 1.5 1.5v13.5a2 2 0 0 1-2 2H7a3 3 0 0 1-3-3V6a2.5 2.5 0 0 1 2.5-2.5z"/><path d="M8 3.5v16.8M4 17.5c0-1.4 1.4-2.5 3-2.5h12M11.5 8h4M13.5 6v4"/><path d="M19 8.5h1.7v2.4H19M19 13.5h1.7v2.4H19"/>',
+  // a wax seal with its two ribbon tails (matters, the Inbox)
+  seal: '<path d="M12 2.6l1.7 1.2 2.1-.2.9 1.9 1.9.9-.2 2.1L19.6 10l-1.2 1.7.2 2.1-1.9.9-.9 1.9-2.1-.2L12 17.6l-1.7-1.2-2.1.2-.9-1.9-1.9-.9.2-2.1L4.4 10l1.2-1.7-.2-2.1 1.9-.9.9-1.9 2.1.2z"/><circle cx="12" cy="10" r="3.4"/><path d="M8.6 16.6L7.2 21.4l2.9-1.5 1.5 1.9M15.4 16.6l1.4 4.8-2.9-1.5"/>',
+  // the headline tiers (GDD 18): three diamonds great, two major, one news, a hollow pip minor, three dots for Meanwhile
+  tier3: '<path class="f" d="M4.3 8.4l3.6 3.6-3.6 3.6L.7 12zM12 8.4l3.6 3.6-3.6 3.6L8.4 12zM19.7 8.4l3.6 3.6-3.6 3.6-3.6-3.6z"/>',
+  tier2: '<path class="f" d="M8 7.9l4.1 4.1L8 16.1 3.9 12zM16 7.9l4.1 4.1-4.1 4.1-4.1-4.1z"/>',
+  tier1: '<path class="f" d="M12 7.6l4.4 4.4-4.4 4.4-4.4-4.4z"/>',
+  pip: '<circle cx="12" cy="12" r="3.6"/>',
+  dots: '<circle class="f" cx="5" cy="12" r="1.5"/><circle class="f" cx="12" cy="12" r="1.5"/><circle class="f" cx="19" cy="12" r="1.5"/>',
+  // a quill standing in its inkpot (the command bar)
+  inkpot: '<path d="M8 12.6h8l1.6 2.7V19a2 2 0 0 1-2 2H8.4a2 2 0 0 1-2-2v-3.7z"/><path d="M6.6 15.6h10.8M9.2 12.6V11h5.6v1.6"/><path d="M13.6 11c.6-4.2 3.3-7 7.4-8-.2 3.8-2 6.6-5.3 8.1M15.8 8.4l2.2.6M14.6 10.4h1.6"/>',
 };
 
 // Emoji the game has used, and what to draw instead
