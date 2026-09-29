@@ -1,0 +1,483 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   The maester's desk — the look of Westeros Chronicles (docs/gdd/21-art-direction.md).
+   Loaded after style.css. It only ADDS: `wc-` classes and tokens, so nothing that exists today changes. Every screen
+   built from here on is made of these materials:  vellum (the maester wrote it for you) · oak and leather (the lord's
+   table) · iron and bronze (things you press) · wax (something awaits your word) · gold leaf (read this first) · ink.
+   One warm light from the upper left: bevels catch it on their top-left, shadows fall short to the bottom-right.
+   No backdrop-filter, no glow, no pill buttons, no emoji. Textures are small generated tiles (scripts/paint-ui.js) and
+   every material has a plain base colour behind its texture, so a missing image never leaves an unreadable surface.
+   Sizes are in rem, so the look scales with the window exactly as the rest of the game does.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* Text/surface pairs that must hold ≥ 4.5:1 — tests/theme.test.js reads these lines and computes the WCAG ratio.
+   contrast: --ink-iron on --vellum
+   contrast: --ink-iron on --vellum-shade
+   contrast: --ink-soft on --vellum
+   contrast: --rubric on --vellum
+   contrast: --madder-ink on --vellum
+   contrast: --verdigris-ink on --vellum
+   contrast: --bone on --oak
+   contrast: --bone on --oak-2
+   contrast: --bone on --leather
+   contrast: --bone-dim on --oak
+   contrast: --bone-dim on --oak-2
+   contrast: --bone on --iron
+   contrast: --gold-flat on --iron
+   contrast: --gold-flat on --oak
+   contrast: --gold-flat on --rubric
+   contrast: --bone on --wax
+   contrast: --verdigris on --oak
+   contrast: --madder-lit on --oak
+   contrast: --ochre on --oak
+*/
+:root {
+  /* vellum: the maester's parchment, and the ink written on it */
+  --vellum: #e8dcc0;        --vellum-shade: #cdb98f;   --vellum-deep: #b39c6c;
+  --ink-iron: #2a1d12;      --ink-soft: #55402c;       --rubric: #7b1e17;
+  /* the table: oak for the frame, leather for what is bound and stitched */
+  --oak: #1b140e;           --oak-2: #261b12;          --oak-edge: #3a2a1c;
+  --leather: #2a1d13;
+  --bone: #e9dfc8;          --bone-dim: #b3a78e;
+  /* iron and bronze: what is pressed */
+  --iron: #2b2a28;          --iron-hi: #5a5752;        --iron-lo: #171615;
+  --bronze: #9a7440;        --bronze-hi: #c39a58;      --bronze-lo: #5b4220;
+  /* gold leaf, sparingly; --gold-flat is the same metal as one flat colour for lettering and for the contrast maths */
+  --gold-leaf: linear-gradient(#e9cf7a, #b98a2e 55%, #8a6420);
+  --gold-flat: #d8b45c;
+  /* the house being played: its arms' two colours dress the ribbon and the portrait's rim (applyHouseTheme sets them).
+     Wax is pigment, not metal: applyHouseTheme sets --wax to the richer of the two, and it stays oxblood when the arms are
+     only white, grey and black (a Stark table: oxblood seals, a grey ribbon). */
+  --house-1: #8e1b17;       --house-2: #c9a44a;
+  --wax: #7b1e17;
+  --wax-hi: color-mix(in srgb, var(--wax) 70%, white);
+  /* pigments, not neon: a light one for text on oak, a dark ink one for text on vellum */
+  --madder: #a8453a;        --madder-lit: #d9806f;     --madder-ink: #8c2f25;
+  --verdigris: #6a9a76;     --verdigris-ink: #37634a;
+  --ochre: #c08a2e;
+  --wc-shadow: 0 2px 6px rgba(10, 6, 2, .55);   /* not --shadow: style.css already owns that name */
+  --radius-card: 3px;       --radius-btn: 2px;         --radius-seal: 50%;
+  /* type */
+  --wc-display: 'Cinzel', Georgia, serif;
+  --wc-serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --wc-initial: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  /* the smallest text on any surface: 13 px, whatever the window (the game's root size makes .87rem exactly that at 1366 wide) */
+  --wc-min: max(.87rem, 13px);
+}
+
+/* ───────────────────────────── type ───────────────────────────── */
+/* Cinzel mixed case is small capitals: an inscription. One short line, tracked, never a paragraph. */
+.wc-label { font: 600 var(--wc-min)/1.15 var(--wc-display); letter-spacing: .1em; color: var(--bone-dim); }
+.wc-kicker { font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .12em; color: var(--ink-soft); }
+.wc-kicker .rubric, .wc-vellum .rubric { color: var(--rubric); }
+.wc-num { font-variant-numeric: lining-nums tabular-nums; font-feature-settings: 'lnum', 'tnum'; }
+.wc-prose { font-variant-numeric: oldstyle-nums; font-feature-settings: 'onum'; }
+.wc-caps { font-variant-caps: small-caps; letter-spacing: .04em; }
+.wc-gold { color: var(--gold-flat); }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .wc-gold { background: var(--gold-leaf); -webkit-background-clip: text; background-clip: text; color: transparent; }
+}
+.wc-oak .ico, .wc-leather .ico { color: var(--bone); }
+.wc-oak :is(button, a):hover .ico, .wc-leather :is(button, a):hover .ico { color: var(--gold-flat); }
+.wc-vellum .ico { color: var(--ink-iron); }
+.wc-vellum .wc-btn .ico, .wc-vellum .wc-plate .ico { color: currentColor; }
+
+/* ───────────────────────────── oak: the frame you hold ───────────────────────────── */
+.wc-oak {
+  position: relative; color: var(--bone); font-family: var(--wc-serif);
+  background:
+    linear-gradient(135deg, rgba(255, 214, 150, .09), rgba(255, 214, 150, 0) 42%, rgba(0, 0, 0, .26)),
+    url(../img/ui/oak.jpg) 0 0 / 32rem 16rem,
+    var(--oak);
+  border: 1px solid #070403; border-radius: var(--radius-card);
+  box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .16), inset -1px -1px 0 rgba(0, 0, 0, .55), 0 .1rem .3rem rgba(8, 5, 2, .6), 0 .7rem 1.3rem -.6rem rgba(8, 5, 2, .7);
+}
+/* the blind-tooled line: pressed in, so the shadow is on its upper-left wall and the light on its lower-right */
+.wc-oak::before { content: ''; position: absolute; inset: .28rem; border: 1px solid rgba(0, 0, 0, .55); border-radius: 2px; box-shadow: 1px 1px 0 rgba(255, 226, 170, .11); pointer-events: none; }
+
+/* leather: what is bound — the command bar, the chronicle's cards, tabs, the ledger's binding */
+.wc-leather {
+  position: relative; color: var(--bone); font-family: var(--wc-serif);
+  background:
+    linear-gradient(135deg, rgba(255, 214, 150, .10), rgba(255, 214, 150, 0) 45%, rgba(0, 0, 0, .22)),
+    url(../img/ui/leather.jpg) 0 0 / 11rem,
+    var(--leather);
+  border: 1px solid #0a0704; border-radius: var(--radius-card);
+  box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .13), inset -1px -1px 0 rgba(0, 0, 0, .5), 0 .1rem .3rem rgba(8, 5, 2, .6), 0 .7rem 1.3rem -.6rem rgba(8, 5, 2, .7);
+}
+/* saddle stitching, the one ornament of leather */
+.wc-leather::before { content: ''; position: absolute; inset: .3rem; border: 1px dashed rgba(214, 178, 116, .24); border-radius: 2px; pointer-events: none; }
+
+/* ───────────────────────────── vellum: the maester wrote this for you ───────────────────────────── */
+/* The page is its own deckled edge (border-image) and the texture sits inside it. A drop-shadow filter (not box-shadow)
+   so the shadow follows the torn edge. Pages carry corner pieces OR a fleuron rule, never both. */
+.wc-vellum {
+  --_edge: .75rem;
+  position: relative; color: var(--ink-iron); font-family: var(--wc-serif);
+  padding: 1rem 1.5rem 1.1rem;
+  border: var(--_edge) solid transparent; border-image: url(../img/ui/vellum-edge.png) 28 / var(--_edge) round;
+  background: url(../img/ui/vellum.jpg) 0 0 / 29rem padding-box, var(--vellum) padding-box;
+  filter: drop-shadow(.1rem .18rem .2rem rgba(8, 5, 2, .5)) drop-shadow(0 .7rem 1.1rem rgba(8, 5, 2, .32));
+}
+.wc-vellum { text-shadow: 0 0 .05rem rgba(42, 29, 18, .38); }   /* iron-gall ink bleeds a hair into the skin */
+.wc-vellum .wc-btn, .wc-vellum .wc-btn * { text-shadow: 0 1px 0 rgba(0, 0, 0, .75); }
+.wc-vellum :is(h1, h2, h3, h4) { color: var(--ink-iron); margin: 0; letter-spacing: .04em; }
+.wc-vellum p { margin: 0; }
+.wc-vellum--ruled { background-image: repeating-linear-gradient(transparent 0 calc(1.7em - 1px), rgba(42, 29, 18, .045) calc(1.7em - 1px) 1.7em), url(../img/ui/vellum.jpg); background-size: auto, 29rem; }   /* opt in: ruled lines at a whisper of ink */
+.wc-corners-leaf::before, .wc-corners-leaf::after, .wc-corners-knot::before, .wc-corners-knot::after { content: ''; position: absolute; width: 2.3rem; height: 2.3rem; background-size: 100% 100%; background-repeat: no-repeat; pointer-events: none; }
+.wc-corners-leaf, .wc-corners-knot { padding: 1.3rem 1.8rem 1.2rem; }
+.wc-corners-leaf::before { left: -.15rem; top: -.15rem; background-image: url(../img/ui/ornaments.svg#corner-leaf); }
+.wc-corners-leaf::after { right: -.15rem; bottom: -.15rem; background-image: url(../img/ui/ornaments.svg#corner-leaf); transform: rotate(180deg); }
+.wc-corners-knot::before { left: -.15rem; top: -.15rem; background-image: url(../img/ui/ornaments.svg#corner-knot); }
+.wc-corners-knot::after { right: -.15rem; bottom: -.15rem; background-image: url(../img/ui/ornaments.svg#corner-knot); transform: rotate(180deg); }
+.wc-title { font: 600 1.45rem/1.15 var(--wc-display); letter-spacing: .05em; text-align: center; }
+
+/* a fleuron centred on a thin ink rule */
+.wc-rule { display: flex; align-items: center; justify-content: space-between; gap: 2.4rem; height: 1.25rem; margin: .5rem 0; background: url(../img/ui/ornaments.svg#fleuron) center / 2.3rem 1.4rem no-repeat; }
+.wc-rule::before, .wc-rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(42, 29, 18, .6) 22%, rgba(42, 29, 18, .6)); }
+.wc-rule::after { background: linear-gradient(270deg, transparent, rgba(42, 29, 18, .6) 22%, rgba(42, 29, 18, .6)); }
+.wc-hair { border: 0; height: 1px; margin: .55rem 0; background: linear-gradient(90deg, transparent, rgba(42, 29, 18, .35) 12%, rgba(42, 29, 18, .35) 88%, transparent); }
+
+/* The illuminated initial: gold leaf on a rubric square, a vine growing in from the corner. Manuscript practice, and the rule:
+   an initial opens PROSE (a letter, the welcome's first paragraph) and never a headline, which it would break in two. It is
+   dropped three lines, the text wraps beside it, and the rest of the first line is set in small capitals:
+     <p class="wc-lede"><span class="wc-initial" aria-hidden="true"><b>T</b></span><span class="wc-sr">T</span>he North is …</p> */
+.wc-lede { line-height: 1.38; }
+.wc-lede::first-line { font-variant-caps: small-caps; letter-spacing: .06em; }
+.wc-initial { float: left; display: grid; place-items: center; width: 3.7em; height: 3.7em; margin: .12em .55em .1em 0; background: url(../img/ui/ornaments.svg#initial-frame) center / 100% 100% no-repeat; filter: drop-shadow(.05rem .1rem .1rem rgba(8, 5, 2, .45)); }
+.wc-initial > b { font: 700 2.25em/1 var(--wc-initial); color: var(--gold-flat); text-shadow: 0 1px 0 rgba(0, 0, 0, .55); padding: 0 0 .05em .05em; }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .wc-initial > b { background: var(--gold-leaf); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 1px 0 rgba(20, 6, 3, .7)); }
+}
+
+/* what a screen reader needs and the eye must not see twice (the letter the initial already shows) */
+.wc-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* numbered headlines (the digest): a rubric numeral, and the first one in gold leaf, larger, with a burnished edge */
+.wc-numeral { font: 700 1.45rem/1 var(--wc-serif); font-variant-numeric: lining-nums; color: var(--rubric); }
+.wc-numeral--leaf { font: 700 2.8rem/1 var(--wc-serif); color: var(--gold-flat); -webkit-text-stroke: .045rem #5b3e12; text-shadow: 0 1px 0 rgba(20, 6, 3, .35); }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .wc-numeral--leaf { background: var(--gold-leaf); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 1px 0 rgba(20, 6, 3, .4)); }
+}
+
+/* a rubric lozenge, for lists on vellum */
+.wc-bullets { list-style: none; margin: 0; padding: 0; }
+.wc-bullets > li { position: relative; padding-left: 1.3rem; }
+.wc-bullets > li::before { content: ''; position: absolute; left: 0; top: .42em; width: .7rem; height: .7rem; background: url(../img/ui/ornaments.svg#rubric-bullet) center / 100% 100% no-repeat; }
+
+/* gain and loss in the muted pigments */
+.wc-gain { color: var(--verdigris-ink); } .wc-loss { color: var(--madder-ink); }
+.wc-oak .wc-gain, .wc-leather .wc-gain { color: var(--verdigris); } .wc-oak .wc-loss, .wc-leather .wc-loss { color: var(--madder-lit); }
+.wc-est::before { content: '~'; color: var(--ink-soft); opacity: .8; margin-right: .05em; }
+.wc-none { color: var(--ink-soft); opacity: .55; }
+
+/* ───────────────────────────── iron and bronze: what you press ───────────────────────────── */
+.wc-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: .55em;
+  min-height: 2.35rem; padding: .45rem 1.6rem; margin: 0;
+  font: 600 .93rem/1 var(--wc-display); letter-spacing: .1em; color: var(--bone); text-shadow: 0 1px 0 rgba(0, 0, 0, .75); white-space: nowrap;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, 0) 46%, rgba(0, 0, 0, .28)), url(../img/ui/iron.jpg) 0 0 / 6rem, var(--iron);
+  border: 1px solid #0a0908; border-radius: var(--radius-btn); cursor: pointer;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .17), inset -1px -1px 0 rgba(0, 0, 0, .6), 0 1px 0 rgba(255, 226, 170, .07), 0 .12rem .28rem rgba(8, 5, 2, .65);
+  transition: box-shadow .12s ease-out, color .12s ease-out;
+}
+/* two bronze rivets, one at each end */
+.wc-btn::before, .wc-btn::after { content: ''; position: absolute; top: 50%; width: .34rem; height: .34rem; margin-top: -.17rem; border-radius: 50%; background: radial-gradient(circle at 34% 30%, var(--bronze-hi), var(--bronze) 55%, var(--bronze-lo)); box-shadow: 0 1px 1px rgba(0, 0, 0, .75); pointer-events: none; }
+.wc-btn::before { left: .55rem; } .wc-btn::after { right: .55rem; }
+.wc-btn:hover { color: #fff4d6; box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .2), inset -1px -1px 0 rgba(0, 0, 0, .6), inset 0 0 0 99rem rgba(214, 150, 60, .11), 0 1px 0 rgba(255, 226, 170, .07), 0 .12rem .28rem rgba(8, 5, 2, .65); }
+.wc-btn:active { transform: translateY(1px); box-shadow: inset 1px 2px 4px rgba(0, 0, 0, .7), inset -1px -1px 0 rgba(255, 255, 255, .05), 0 1px 0 rgba(255, 226, 170, .05); }
+.wc-btn.is-on, .wc-btn[aria-expanded='true'] { color: var(--gold-flat); box-shadow: inset 1px 2px 4px rgba(0, 0, 0, .7), inset -1px -1px 0 rgba(255, 255, 255, .06), inset 0 0 0 99rem rgba(214, 150, 60, .08); }
+.wc-btn:focus-visible, .wc-seal:focus-visible, .wc-plate:focus-visible, .wc-tab:focus-visible { outline: .14rem solid var(--ochre); outline-offset: .2rem; }
+.wc-btn:disabled { opacity: .5; cursor: default; }
+.wc-btn--gold { color: var(--gold-flat); }
+.wc-btn--icon { padding: 0; width: 2.45rem; height: 2.45rem; }
+.wc-btn--icon::before, .wc-btn--icon::after { display: none; }
+.wc-btn--icon .ico { width: 1.35rem; height: 1.35rem; }
+.wc-btn--small { min-height: 1.9rem; padding: .3rem 1.2rem; font-size: var(--wc-min); }
+.wc-btn--small::before { left: .4rem; } .wc-btn--small::after { right: .4rem; }
+/* text only, in bone, for the quiet verbs */
+.wc-btn--quiet { background: none; border-color: transparent; box-shadow: none; padding: .3rem .6rem; min-height: 0; font-weight: 500; color: var(--bone-dim); text-shadow: none; }
+.wc-btn--quiet::before, .wc-btn--quiet::after { display: none; }
+.wc-btn--quiet:hover { color: var(--gold-flat); box-shadow: none; }
+
+/* the End-turn plate: a great iron plate, four bronze rivets, gold-leaf lettering; its reason is written beneath in bone */
+.wc-plate {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: .7rem; width: 100%; min-height: 2.7rem; padding: .45rem 1.5rem; margin: 0;
+  font: 700 1.08rem/1 var(--wc-display); letter-spacing: .16em; color: var(--gold-flat); text-transform: uppercase; text-shadow: 0 1px 0 rgba(0, 0, 0, .8);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, 0) 48%, rgba(0, 0, 0, .3)), url(../img/ui/iron.jpg) 0 0 / 6rem, var(--iron);
+  border: 1px solid #0a0908; border-radius: var(--radius-btn); cursor: pointer;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .2), inset -1px -1px 0 rgba(0, 0, 0, .65), 0 1px 0 rgba(255, 226, 170, .07), 0 .15rem .35rem rgba(8, 5, 2, .7);
+  transition: box-shadow .12s ease-out;
+}
+.wc-plate::before { content: ''; position: absolute; inset: .26rem; border: 1px solid rgba(154, 116, 64, .55); border-radius: 1px; box-shadow: inset 1px 1px 0 rgba(0, 0, 0, .35), 1px 1px 0 rgba(255, 226, 170, .06); pointer-events: none; }
+.wc-plate::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 34% 30%, var(--bronze-hi), var(--bronze) 55%, var(--bronze-lo)) .55rem .5rem / .3rem .3rem no-repeat,
+    radial-gradient(circle at 34% 30%, var(--bronze-hi), var(--bronze) 55%, var(--bronze-lo)) calc(100% - .55rem) .5rem / .3rem .3rem no-repeat,
+    radial-gradient(circle at 34% 30%, var(--bronze-hi), var(--bronze) 55%, var(--bronze-lo)) .55rem calc(100% - .5rem) / .3rem .3rem no-repeat,
+    radial-gradient(circle at 34% 30%, var(--bronze-hi), var(--bronze) 55%, var(--bronze-lo)) calc(100% - .55rem) calc(100% - .5rem) / .3rem .3rem no-repeat; }
+.wc-plate .ico { width: 1.1rem; height: 1.1rem; color: var(--gold-flat); }
+.wc-plate > span { color: var(--gold-flat); text-shadow: none; }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .wc-plate > span { background: var(--gold-leaf); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .85)); }
+}
+.wc-plate:hover { box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .22), inset -1px -1px 0 rgba(0, 0, 0, .65), inset 0 0 0 99rem rgba(214, 150, 60, .12), 0 1px 0 rgba(255, 226, 170, .07), 0 .15rem .35rem rgba(8, 5, 2, .7); }
+.wc-plate:active { transform: translateY(1px); box-shadow: inset 1px 2px 5px rgba(0, 0, 0, .75), inset -1px -1px 0 rgba(255, 255, 255, .05); }
+.wc-endturn { display: flex; flex-direction: column; gap: .3rem; padding: .5rem .55rem .4rem; width: 15.2rem; }
+.wc-endturn__why { text-align: center; font-style: italic; font-size: .9rem; line-height: 1.2; color: var(--bone-dim); white-space: nowrap; }
+.wc-endturn__why b { font-style: normal; font-weight: 500; color: var(--bone); }
+
+/* ───────────────────────────── wax: something awaits your word ───────────────────────────── */
+/* --_wax is --wax cooked down to real wax (a little of the table's brown in it); --_on-wax is light lettering on a dark wax and
+   dark on a pale one, bone where the browser can't tell */
+.wc-seal, .wc-medallion__jewel, .wc-chip--wax { --_wax: color-mix(in srgb, var(--wax) 84%, #3a2418); --_on-wax: var(--bone); }
+@supports (color: oklch(from red l c h)) {
+  .wc-seal, .wc-medallion__jewel, .wc-chip--wax { --_on-wax: oklch(from var(--_wax) clamp(.14, calc((.62 - l) * 999), .95) .012 h); }
+}
+.wc-seal {
+  position: relative; display: inline-grid; place-items: center; width: 3.3rem; height: 3.3rem; padding: 0; border: 0; cursor: pointer; flex: none;
+  font: 700 1.25rem/1 var(--wc-display); color: var(--_on-wax); font-variant-numeric: lining-nums;
+  background: radial-gradient(circle at 32% 26%, rgba(255, 240, 225, .26), rgba(255, 240, 225, 0) 34%), radial-gradient(circle at 70% 78%, rgba(0, 0, 0, .5), rgba(0, 0, 0, 0) 58%), url(../img/ui/wax.jpg) 0 0 / 100% 100%, var(--_wax);
+  background-blend-mode: normal, normal, overlay, normal;
+  border-radius: 54% 46% 50% 50% / 47% 55% 45% 53%;   /* wax never sets quite round */
+  box-shadow: inset .05rem .08rem .1rem rgba(255, 232, 214, .24), inset -.12rem -.14rem .24rem rgba(0, 0, 0, .5), .04rem .14rem .28rem rgba(6, 3, 1, .8);
+  transition: transform .14s ease-out;
+}
+.wc-seal::before { content: ''; position: absolute; inset: .4rem; border-radius: 50%; background: radial-gradient(circle at 62% 66%, rgba(0, 0, 0, .2), rgba(0, 0, 0, 0) 70%), radial-gradient(circle at 36% 30%, rgba(255, 255, 255, .1), rgba(255, 255, 255, 0) 60%); box-shadow: inset .1rem .12rem .22rem rgba(0, 0, 0, .6), .07rem .09rem 0 rgba(255, 232, 214, .2), 0 0 0 .07rem rgba(0, 0, 0, .16); pointer-events: none; }
+/* the wax ran a little past the rim on one side */
+.wc-seal::after { content: ''; position: absolute; left: -.1rem; bottom: .55rem; width: .62rem; height: .58rem; border-radius: 55% 45% 50% 50%; background: radial-gradient(circle at 35% 30%, rgba(255, 240, 225, .3), rgba(255, 240, 225, 0) 55%), url(../img/ui/wax.jpg) 30% 60% / 300% 300%, var(--_wax); background-blend-mode: normal, overlay, normal; box-shadow: inset -.05rem -.07rem .1rem rgba(0, 0, 0, .4), -.02rem .08rem .12rem rgba(6, 3, 1, .6); pointer-events: none; }
+.wc-seal > * { position: relative; z-index: 1; text-shadow: -.05rem -.06rem 0 rgba(0, 0, 0, .5), .05rem .06rem 0 rgba(255, 236, 220, .22); }
+.wc-seal:hover { transform: translateY(-1px); } .wc-seal:active { transform: translateY(1px) scale(.97); }
+.wc-seal--small { width: 2.4rem; height: 2.4rem; font-size: 1rem; }
+.wc-seal--small::before { inset: .3rem; }
+.wc-seal.is-settling { animation: wc-settle .5s cubic-bezier(.2, .8, .3, 1) both; }
+
+/* ───────────────────────────── the crest: a ribbon of the house's colours, the sigil in gold leaf ───────────────────────────── */
+.wc-ribbon { position: relative; flex: none; width: 2.9rem; align-self: stretch; margin: -.5rem 0 -1.2rem; filter: drop-shadow(.06rem .14rem .16rem rgba(6, 3, 1, .7)); }
+.wc-ribbon::before { content: ''; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - .85rem), 0 100%);
+  background: linear-gradient(90deg, rgba(0, 0, 0, .28), rgba(255, 255, 255, .1) 30%, rgba(0, 0, 0, .05) 60%, rgba(0, 0, 0, .32)), linear-gradient(90deg, var(--house-2) 0 11%, var(--house-1) 11% 89%, var(--house-2) 89% 100%); }
+.wc-ribbon > img { position: absolute; left: 50%; top: .95rem; width: 2.15rem; height: auto; transform: translateX(-50%); }
+/* the gold ring the sigil sits in */
+.wc-ribbon::after { content: ''; position: absolute; left: 50%; top: .6rem; width: 2.65rem; height: 2.8rem; transform: translateX(-50%); border-radius: 50% 50% 46% 46% / 42% 42% 58% 58%; border: .15rem solid transparent; background: var(--gold-leaf) border-box; -webkit-mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) exclude, linear-gradient(#000 0 0) padding-box; -webkit-mask-composite: xor; mask-composite: exclude; }
+
+/* the plate at the top left: house, the day, the season */
+.wc-crest { display: flex; align-items: center; gap: .8rem; padding: .5rem 1.2rem .5rem .75rem; }
+.wc-crest .wc-label { line-height: 1; }
+.wc-crest__date { font: 600 1.08rem/1.1 var(--wc-display); letter-spacing: .05em; color: var(--bone); white-space: nowrap; margin-top: .16rem; }
+.wc-crest__season { display: flex; align-items: center; gap: .4rem; font-style: italic; font-size: .92rem; line-height: 1.1; color: var(--bone-dim); margin-top: .14rem; white-space: nowrap; }
+.wc-crest__season .ico { width: 1rem; height: 1rem; color: var(--gold-flat); }
+
+/* the three vitals */
+.wc-vitals { display: flex; align-items: center; padding: .3rem .5rem; }
+.wc-vital { position: relative; display: flex; align-items: center; gap: .55rem; padding: .25rem .95rem; }
+.wc-vital + .wc-vital::before { content: ''; position: absolute; left: 0; top: 18%; bottom: 18%; border-left: 1px solid rgba(0, 0, 0, .6); box-shadow: 1px 0 0 rgba(255, 226, 170, .1); }
+.wc-vital > .ico { width: 1.5rem; height: 1.5rem; color: var(--bronze-hi); stroke-width: 1.4; }
+.wc-vital b { display: block; font: 600 1.42rem/1 var(--wc-serif); color: var(--bone); font-variant-numeric: lining-nums tabular-nums; letter-spacing: .01em; }
+.wc-vital small { display: block; margin-top: .22rem; font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .12em; color: var(--bone-dim); }
+.wc-trend { align-self: flex-start; margin-top: .1rem; }
+.wc-trend .ico { width: .8rem; height: .8rem; }
+.wc-trend--up { color: var(--verdigris); } .wc-trend--down { color: var(--madder-lit); } .wc-trend--flat { color: var(--bone-dim); }
+.wc-oak .wc-trend .ico { color: currentColor; }
+
+/* ───────────────────────────── the Chronicle: a headline strip that opens into cards ───────────────────────────── */
+.wc-strip { padding: .7rem 1rem .7rem 1.05rem; width: 27rem; }
+.wc-strip__head, .wc-chronicle__head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.wc-strip__head b, .wc-chronicle__head b { color: var(--gold-flat); font-weight: 600; }
+.wc-strip__head a { color: var(--bone-dim); text-decoration: none; font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .1em; }
+.wc-strip__head a:hover { color: var(--gold-flat); }
+.wc-strip__lines { list-style: none; margin: .5rem 0 0; padding: 0; }
+.wc-strip__lines li { display: flex; align-items: baseline; gap: .6rem; padding: .14rem 0; font-size: 1rem; line-height: 1.25; color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wc-strip__lines li.is-old { color: var(--bone-dim); }
+.wc-strip__lines li > .ico { flex: none; align-self: center; width: 1.1rem; height: 1.1rem; color: var(--gold-flat); }
+.wc-strip__lines li.is-old > .ico { color: var(--bone-dim); }
+.wc-chronicle { padding: .85rem .9rem .9rem 1rem; width: 27rem; display: flex; flex-direction: column; gap: .6rem; }
+.wc-chronicle__head h2 { margin: 0; font: 600 1.3rem/1 var(--wc-display); letter-spacing: .07em; color: var(--bone); }
+.wc-chronicle__head .wc-label { color: var(--bone-dim); font-weight: 500; font-style: normal; }
+.wc-chronicle__filters { display: flex; flex-wrap: wrap; gap: .35rem; }
+.wc-chronicle__cards { display: flex; flex-direction: column; gap: .5rem; }
+
+/* a card is a strip of dark leather with a leaf laid along its spine; the tier says how much it weighs */
+.wc-card {
+  --tier-rule: var(--iron-hi); --tier-marks: 1;
+  position: relative; padding: .5rem .8rem .45rem 1.2rem; color: var(--bone);
+  background: linear-gradient(135deg, rgba(255, 214, 150, .07), rgba(255, 214, 150, 0) 50%, rgba(0, 0, 0, .18)), url(../img/ui/leather.jpg) 0 0 / 11rem, var(--oak-2);
+  border: 1px solid rgba(0, 0, 0, .65); border-radius: var(--radius-card);
+  box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .09), inset -1px -1px 0 rgba(0, 0, 0, .4), 0 1px 2px rgba(0, 0, 0, .55);
+}
+.wc-card::before { content: ''; position: absolute; left: .32rem; top: .32rem; bottom: .32rem; width: .26rem; border-radius: 1px; background: var(--tier-rule); box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 1px 1px 0 1px rgba(255, 226, 170, .07); }
+.wc-card__head { margin: 0; font: 600 1.05rem/1.2 var(--wc-serif); font-variant-caps: small-caps; letter-spacing: .04em; color: var(--bone); }
+.wc-card__head::before { content: ''; display: inline-block; width: calc(var(--tier-marks) * .82em); height: .74em; margin-right: .5em; vertical-align: -.02em; background: url(../img/ui/ornaments.svg#tier-diamond) 0 50% / .82em .74em repeat-x; }
+.wc-card__body { margin: .2rem 0 0; font-size: .95rem; line-height: 1.27; color: var(--bone); opacity: .92; }
+.wc-card__meta { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .55rem; margin-top: .3rem; font-size: .9rem; color: var(--bone-dim); }
+.wc-card__meta .wc-label { font-size: var(--wc-min); }
+.wc-card__meta .ico { width: .9rem; height: .9rem; color: var(--bone-dim); }
+.wc-card__meta em { font-style: italic; }
+.wc-card__more { margin-left: auto; color: var(--bone-dim); text-decoration: none; font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .08em; }
+.wc-card__more:hover { color: var(--gold-flat); }
+.wc-tier-great { --tier-rule: var(--gold-leaf); --tier-marks: 3; }
+.wc-tier-great .wc-card__head { font-size: 1.22rem; letter-spacing: .045em; }
+.wc-tier-major .wc-card__head { font-size: 1.1rem; }
+.wc-tier-great { box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .12), inset -1px -1px 0 rgba(0, 0, 0, .4), 0 0 0 1px rgba(185, 138, 46, .28), 0 1px 2px rgba(0, 0, 0, .55); }
+.wc-tier-major { --tier-rule: linear-gradient(var(--bronze-hi), var(--bronze)); --tier-marks: 2; }
+.wc-tier-news { --tier-rule: linear-gradient(#8b8064, #5b5341); --tier-marks: 1; }
+.wc-tier-news .wc-card__head { font-size: 1.02rem; }
+.wc-tier-minor { --tier-rule: linear-gradient(var(--iron-hi), var(--iron)); }
+.wc-tier-minor .wc-card__head { font-size: .97rem; color: var(--bone-dim); }
+.wc-tier-minor .wc-card__head::before { width: .62em; height: .62em; margin-right: .55em; vertical-align: .02em; background: none; border: 1.5px solid var(--bone-dim); border-radius: 50%; }
+.wc-tier-meanwhile { --tier-rule: repeating-linear-gradient(180deg, var(--iron-hi) 0 .28rem, transparent .28rem .5rem); }
+.wc-tier-meanwhile .wc-card__head { font-size: .97rem; color: var(--bone-dim); font-style: italic; font-variant-caps: normal; letter-spacing: .01em; }
+.wc-tier-meanwhile .wc-card__head::before { width: 1.5em; height: .5em; margin-right: .55em; vertical-align: .1em; background: radial-gradient(circle, var(--bone-dim) 0 1.3px, transparent 1.8px) 0 50% / .5em .5em repeat-x; }
+
+/* ───────────────────────────── chips: a strip of vellum or oak with a cut end ───────────────────────────── */
+.wc-chip {
+  display: inline-flex; align-items: center; gap: .3rem; padding: .18rem .95rem .18rem .6rem; white-space: nowrap;
+  font: 600 var(--wc-min)/1.1 var(--wc-display); letter-spacing: .09em; color: var(--bone-dim);
+  background: linear-gradient(180deg, rgba(255, 226, 170, .06), rgba(0, 0, 0, .16)), var(--oak-edge);
+  border-block: 1px solid rgba(0, 0, 0, .55); border-left: 1px solid rgba(0, 0, 0, .55);
+  box-shadow: inset 0 1px 0 rgba(255, 226, 170, .1);
+  clip-path: polygon(0 0, 100% 0, calc(100% - .5rem) 50%, 100% 100%, 0 100%);
+  cursor: default;
+}
+button.wc-chip, a.wc-chip { cursor: pointer; }
+button.wc-chip:hover, a.wc-chip:hover { color: var(--bone); }
+/* the cut end would clip an outside ring, so the focus ring of a chip is drawn inside it */
+button.wc-chip:focus-visible, a.wc-chip:focus-visible { outline: none; box-shadow: inset 0 0 0 .14rem var(--ochre); }
+.wc-chip.is-on { color: var(--gold-flat); background: linear-gradient(180deg, rgba(255, 226, 170, .1), rgba(0, 0, 0, .1)), #4a3822; }
+.wc-chip .ico { width: .85rem; height: .85rem; color: currentColor; }
+.wc-oak .wc-chip .ico, .wc-leather .wc-chip .ico { color: currentColor; }
+.wc-chip--vellum { color: var(--rubric); background: linear-gradient(180deg, rgba(255, 255, 255, .25), rgba(0, 0, 0, .06)), var(--vellum); border-color: rgba(60, 40, 20, .5); box-shadow: none; }
+.wc-chip--gain { color: var(--verdigris-ink); background: rgba(232, 220, 192, .5); border-color: rgba(55, 99, 74, .55); box-shadow: none; }
+.wc-chip--loss { color: var(--madder-ink); background: rgba(232, 220, 192, .5); border-color: rgba(140, 47, 37, .5); box-shadow: none; }
+.wc-chip--flat { color: var(--ink-soft); background: rgba(232, 220, 192, .5); border-color: rgba(85, 64, 44, .45); box-shadow: none; }
+.wc-chip--wax { color: var(--_on-wax); background: var(--_wax); border-color: rgba(0, 0, 0, .5); box-shadow: inset 0 1px 0 rgba(255, 232, 214, .25), inset 0 -1px 2px rgba(0, 0, 0, .3); }
+
+/* ───────────────────────────── tabs: leather, the chosen one on top ───────────────────────────── */
+.wc-tabs { display: flex; align-items: flex-end; gap: .3rem; padding: 0 .8rem; position: relative; z-index: 1; }
+.wc-tab {
+  position: relative; top: 1px; padding: .42rem 1.1rem .38rem; margin: 0; cursor: pointer;
+  font: 600 var(--wc-min)/1.1 var(--wc-display); letter-spacing: .1em; color: var(--bone-dim); text-shadow: 0 1px 0 rgba(0, 0, 0, .7);
+  background: linear-gradient(180deg, rgba(255, 226, 170, .08), rgba(0, 0, 0, .2)), url(../img/ui/leather.jpg) 0 0 / 11rem, var(--leather);
+  border: 1px solid #0a0704; border-bottom: 0; border-radius: .4rem .4rem 0 0;
+  box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .14), inset -1px 0 0 rgba(0, 0, 0, .4);
+}
+.wc-tab:hover { color: var(--bone); }
+.wc-tab[aria-selected='true'] { padding-bottom: .55rem; margin-bottom: -1px; color: var(--rubric); text-shadow: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, 0) 60%), url(../img/ui/vellum.jpg) 0 0 / 29rem, var(--vellum);
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .4); z-index: 2; }
+
+/* ───────────────────────────── the ledger: a leather binding around vellum pages ───────────────────────────── */
+.wc-ledger { position: relative; }
+.wc-ledger__book { position: relative; padding: .5rem; border-radius: var(--radius-card);
+  background: linear-gradient(135deg, rgba(255, 214, 150, .1), rgba(255, 214, 150, 0) 45%, rgba(0, 0, 0, .25)), url(../img/ui/leather.jpg) 0 0 / 11rem, var(--leather);
+  border: 1px solid #0a0704;
+  box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .13), inset -1px -1px 0 rgba(0, 0, 0, .5), 0 .1rem .3rem rgba(8, 5, 2, .6), 0 .7rem 1.3rem -.6rem rgba(8, 5, 2, .7); }
+.wc-ledger__book::before { content: ''; position: absolute; inset: .17rem; border: 1px dashed rgba(214, 178, 116, .26); border-radius: 2px; pointer-events: none; }
+.wc-ledger__page { position: relative; padding: .7rem .9rem .8rem; color: var(--ink-iron);
+  background: url(../img/ui/vellum.jpg) 0 0 / 29rem, var(--vellum);
+  box-shadow: inset 0 0 0 1px rgba(60, 40, 20, .28), inset .1rem .12rem .5rem rgba(90, 60, 25, .22), inset -.1rem -.12rem .5rem rgba(90, 60, 25, .16); }
+
+.wc-table { width: 100%; border-collapse: collapse; color: var(--ink-iron); font-size: 1rem; }
+.wc-table th { padding: .25rem .5rem .35rem; text-align: right; font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .1em; color: var(--ink-soft); border-bottom: 3px double var(--vellum-deep); white-space: nowrap; }
+.wc-table th:first-child, .wc-table td:first-child { text-align: left; }
+.wc-table td { padding: .28rem .5rem; text-align: right; vertical-align: middle; border-bottom: 1px solid rgba(42, 29, 18, .16); font-variant-numeric: lining-nums tabular-nums; }
+.wc-table td:first-child { font-variant-numeric: normal; }
+.wc-table__house { display: block; white-space: nowrap; font: 600 1.05rem/1.1 var(--wc-serif); font-variant-caps: small-caps; letter-spacing: .05em; }
+.wc-table__note { display: block; margin-top: .1rem; font-style: italic; font-size: .9rem; line-height: 1.1; color: var(--ink-soft); font-variant-numeric: normal; }
+.wc-table tr.is-you td { background: linear-gradient(90deg, rgba(185, 138, 46, .3), rgba(185, 138, 46, .12)); border-bottom-color: rgba(123, 30, 23, .28); }
+.wc-table tr.is-you td:first-child { box-shadow: inset .28rem 0 0 var(--rubric); padding-left: .8rem; }
+.wc-table tr.is-you td:not(:first-child) { font-weight: 600; }
+.wc-spark { display: block; margin-left: auto; width: 5.4rem; height: 1.7rem; overflow: visible; }
+.wc-spark path { fill: none; stroke: var(--ink-iron); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.wc-spark .up { stroke: var(--verdigris-ink); } .wc-spark .down { stroke: var(--madder-ink); }
+.wc-spark .est { stroke-dasharray: 2.4 3; opacity: .8; }
+.wc-spark circle { fill: currentColor; stroke: none; }
+
+/* ───────────────────────────── slips of vellum: tooltips and the coach's notes ───────────────────────────── */
+.wc-slip, .wc-tooltip {
+  --_edge: .5rem;
+  position: relative; display: block; padding: .5rem .9rem .55rem; color: var(--ink-iron); font: 1rem/1.25 var(--wc-serif);
+  border: var(--_edge) solid transparent; border-image: url(../img/ui/vellum-edge.png) 28 / var(--_edge) round;
+  background: url(../img/ui/vellum.jpg) 0 0 / 29rem padding-box, var(--vellum) padding-box;
+  filter: drop-shadow(.08rem .14rem .14rem rgba(8, 5, 2, .55));
+}
+.wc-slip .wc-kicker, .wc-tooltip .wc-kicker { display: block; margin-bottom: .1rem; color: var(--rubric); }
+.wc-tooltip { position: absolute; z-index: 6; max-width: 17rem; opacity: 0; visibility: hidden; transition: opacity .14s ease-out .25s, visibility 0s .39s; pointer-events: none; }
+.wc-has-tip { position: relative; }
+.wc-has-tip:hover > .wc-tooltip, .wc-has-tip:focus-within > .wc-tooltip, .wc-tooltip.is-open { opacity: 1; visibility: visible; transition-delay: .25s, .25s; }
+/* the note points at what it speaks of */
+.wc-slip[data-arrow]::after, .wc-tooltip[data-arrow]::after { content: ''; position: absolute; width: 0; height: 0; border: .5rem solid transparent; }
+.wc-slip[data-arrow='up']::after, .wc-tooltip[data-arrow='up']::after { top: -1.15rem; left: var(--arrow-x, 1.6rem); border-bottom-color: var(--vellum-shade); border-top-width: 0; }
+.wc-slip[data-arrow='down']::after, .wc-tooltip[data-arrow='down']::after { bottom: -1.15rem; left: var(--arrow-x, 1.6rem); border-top-color: var(--vellum-shade); border-bottom-width: 0; }
+
+/* a coach mark: a wax dot that breathes slowly, and a slip that says one thing */
+.wc-coach { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: .55rem; }
+.wc-coach__dot { position: relative; width: 1rem; height: 1rem; border-radius: 50%; margin-left: .4rem; background: radial-gradient(circle at 34% 28%, rgba(255, 240, 225, .5), rgba(255, 240, 225, 0) 45%), url(../img/ui/wax.jpg) 0 0 / 100% 100%, color-mix(in srgb, var(--wax) 84%, #3a2418); background-blend-mode: normal, overlay, normal; box-shadow: inset -.06rem -.08rem .12rem rgba(0, 0, 0, .45), 0 .06rem .16rem rgba(6, 3, 1, .8); }
+.wc-coach__dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--wax-hi); animation: wc-ring 3s ease-out infinite; }
+
+/* ───────────────────────────── the command bar, an inkwell and a receipt ───────────────────────────── */
+.wc-cmd { padding: .5rem .65rem .55rem; width: 33rem; display: flex; flex-direction: column; gap: .4rem; }
+.wc-cmd__orders { display: flex; flex-wrap: wrap; gap: .4rem; position: relative; z-index: 1; }
+.wc-order { display: inline-flex; align-items: center; gap: .7rem; max-width: 100%; padding: .25rem 1.2rem .25rem .8rem; color: var(--ink-iron); font-size: 1.02rem; line-height: 1.2;
+  background: url(../img/ui/vellum.jpg) 0 0 / 29rem, var(--vellum); border-block: 1px solid rgba(60, 40, 20, .5); border-left: 1px solid rgba(60, 40, 20, .5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .45); clip-path: polygon(0 0, 100% 0, calc(100% - .6rem) 50%, 100% 100%, 0 100%); }
+.wc-order > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wc-order::before { content: ''; flex: none; width: .6rem; height: .6rem; background: url(../img/ui/ornaments.svg#rubric-bullet) center / 100% 100% no-repeat; }
+/* the receipt: stamped in verdigris ink, a little crooked, as a clerk would */
+.wc-receipt { display: inline-flex; align-items: center; gap: .25rem; flex: none; padding: .1rem .45rem .1rem .3rem; transform: rotate(-2deg); font: 700 var(--wc-min)/1 var(--wc-display); letter-spacing: .1em; color: var(--verdigris-ink);
+  border: 1.5px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(232, 220, 192, .6), inset 0 0 0 2px rgba(55, 99, 74, .35); }
+.wc-receipt .ico { width: .9rem; height: .9rem; color: currentColor; stroke-width: 2.2; }
+.wc-cmd__row { display: flex; gap: .55rem; align-items: stretch; position: relative; z-index: 1; }
+.wc-input { flex: 1; display: flex; align-items: center; gap: .6rem; margin: 0; padding: 0 .9rem; min-height: 2.45rem; color: var(--bone); font: italic 1.08rem/1.2 var(--wc-serif);
+  background: linear-gradient(180deg, rgba(0, 0, 0, .45), rgba(0, 0, 0, .12)), url(../img/ui/oak.jpg) 0 0 / 32rem 16rem, #120c07;
+  border: 1px solid #060302; border-radius: var(--radius-btn); box-shadow: inset 0 .12rem .4rem rgba(0, 0, 0, .75), 1px 1px 0 rgba(255, 226, 170, .1); }
+.wc-input .ico { width: 1.25rem; height: 1.25rem; color: var(--bronze-hi); flex: none; }
+.wc-input input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--bone); font: inherit; caret-color: var(--gold-flat); }
+.wc-input input::placeholder { color: var(--bone-dim); opacity: 1; }
+.wc-input:focus-within { box-shadow: inset 0 .12rem .4rem rgba(0, 0, 0, .75), 0 0 0 1px var(--bronze), 1px 1px 0 rgba(255, 226, 170, .1); }
+
+/* ───────────────────────────── the ruler: a medallion of iron and bronze, a ribbon behind it ───────────────────────────── */
+.wc-medallion { position: relative; flex: none; width: 7.6rem; height: 7.6rem; padding: .88rem; border-radius: 50%;
+  background: radial-gradient(circle at 30% 24%, rgba(255, 255, 255, .38), rgba(255, 255, 255, 0) 30%), conic-gradient(from 215deg, #64615b, #2b2a28 16%, #77736b 33%, #2b2a28 52%, #55524c 72%, #2b2a28 100%);
+  box-shadow: 0 0 0 1px #070605, inset 0 0 0 1px rgba(255, 255, 255, .16), inset -.05rem -.08rem .2rem rgba(0, 0, 0, .55), 0 .3rem .7rem rgba(6, 3, 1, .75); }
+.wc-medallion__face { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: #0d0a07;
+  box-shadow: 0 0 0 .12rem #0a0705, 0 0 0 .27rem var(--bronze), 0 0 0 .34rem #0a0705, 0 0 0 .58rem var(--house-1), 0 0 0 .66rem #0a0705; }
+.wc-medallion__face::after { content: ''; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset .12rem .18rem .5rem rgba(0, 0, 0, .55), inset -.05rem -.08rem .3rem rgba(255, 220, 160, .1); pointer-events: none; }
+.wc-medallion__face img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 14%; transform: scale(1.32); transform-origin: 50% 24%; }
+.wc-medallion::before { content: ''; position: absolute; z-index: -1; left: 50%; bottom: -1.7rem; width: 3.4rem; height: 4.6rem; transform: translateX(-50%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - .9rem), 0 100%);
+  background: linear-gradient(90deg, rgba(0, 0, 0, .3), rgba(255, 255, 255, .08) 32%, rgba(0, 0, 0, .3)), linear-gradient(90deg, var(--house-2) 0 12%, var(--house-1) 12% 88%, var(--house-2) 88% 100%); }
+.wc-medallion__jewel { position: absolute; right: .35rem; bottom: .55rem; width: 1.45rem; height: 1.45rem; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, rgba(255, 240, 225, .62), rgba(255, 240, 225, 0) 42%), var(--_wax);
+  box-shadow: 0 0 0 .13rem var(--bronze), 0 0 0 .2rem #0a0705, inset -.08rem -.1rem .16rem rgba(0, 0, 0, .5), 0 .12rem .22rem rgba(6, 3, 1, .8); }
+.wc-nameplate { padding: .5rem 1.1rem .5rem 1.3rem; text-align: right; }
+.wc-nameplate b { display: block; font: 600 1.05rem/1.1 var(--wc-display); letter-spacing: .09em; color: var(--bone); }
+.wc-nameplate small { display: block; margin-top: .15rem; font-size: .95rem; font-style: italic; line-height: 1.15; color: var(--bone-dim); }
+.wc-mood { display: inline-flex; align-items: center; gap: .4rem; margin-top: .25rem; font-size: .95rem; color: var(--verdigris); }
+.wc-mood::before { content: ''; width: .5rem; height: .5rem; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #a6c9ad, var(--verdigris) 60%, #3d6b4a); box-shadow: 0 1px 1px rgba(0, 0, 0, .7); }
+
+/* ───────────────────────────── the menu: three doors, and a quiet row beneath ───────────────────────────── */
+.wc-menu { padding: .55rem .4rem .45rem; width: 9.7rem; }
+.wc-menu__head { padding: 0 .7rem .35rem; }
+.wc-menu__item { display: flex; align-items: center; gap: .55rem; width: 100%; padding: .4rem .7rem; margin: 0; text-align: left; cursor: pointer; background: none; border: 0; border-radius: var(--radius-btn); color: var(--bone); font: 500 1.05rem/1.1 var(--wc-serif); }
+.wc-menu__item .ico { width: 1.2rem; height: 1.2rem; color: var(--bronze-hi); flex: none; }
+.wc-menu__item kbd { margin-left: auto; padding: .1rem .36rem; font: 600 var(--wc-min)/1 var(--wc-display); color: var(--bone-dim); background: rgba(0, 0, 0, .3); border: 1px solid rgba(0, 0, 0, .6); border-radius: 2px; box-shadow: 1px 1px 0 rgba(255, 226, 170, .1); }
+.wc-menu__item:hover { color: #fff4d6; background: linear-gradient(90deg, rgba(214, 150, 60, .2), rgba(214, 150, 60, 0)); }
+.wc-menu__item:hover .ico { color: var(--gold-flat); }
+.wc-menu__quiet { display: flex; justify-content: space-around; margin-top: .3rem; padding-top: .35rem; border-top: 1px solid rgba(0, 0, 0, .6); box-shadow: inset 0 1px 0 rgba(255, 226, 170, .09); }
+.wc-menu__quiet button { display: grid; place-items: center; width: 2.3rem; height: 2rem; padding: 0; cursor: pointer; background: none; border: 0; border-radius: var(--radius-btn); color: var(--bone-dim); }
+.wc-menu__quiet button:hover { color: var(--gold-flat); background: rgba(214, 150, 60, .12); }
+.wc-menu__quiet .ico { width: 1.3rem; height: 1.3rem; }
+
+/* ───────────────────────────── the candle: a warm vignette to lay over the table, no blur ───────────────────────────── */
+.wc-candle { pointer-events: none; background: radial-gradient(ellipse 70% 60% at 26% 20%, rgba(255, 186, 104, .16), rgba(255, 186, 104, 0) 65%), radial-gradient(ellipse at 50% 46%, rgba(8, 4, 2, 0) 46%, rgba(8, 4, 2, .5)); }
+
+/* ───────────────────────────── motion is ink and wax ───────────────────────────── */
+@keyframes wc-ring { 0% { transform: scale(1); opacity: .9; } 70%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes wc-settle { 0% { transform: scale(1.18) rotate(-4deg); opacity: 0; } 60% { transform: scale(.96) rotate(1deg); opacity: 1; } 100% { transform: none; } }
+@keyframes wc-ink { from { opacity: 0; filter: blur(.5px); } to { opacity: 1; filter: none; } }
+@keyframes wc-lay { from { opacity: 0; transform: translateY(.6rem); } to { opacity: 1; transform: none; } }
+.wc-ink-in { animation: wc-ink .24s ease-out both; }
+.wc-lay-down { animation: wc-lay .2s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .wc-coach__dot::after, .wc-seal.is-settling, .wc-ink-in, .wc-lay-down { animation: none; }
+  .wc-btn, .wc-plate, .wc-seal, .wc-tooltip { transition: none; }
+}
