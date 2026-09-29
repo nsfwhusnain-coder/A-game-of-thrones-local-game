@@ -1,6 +1,6 @@
 # Westeros Chronicles — improvement and development plan
 
-> **Superseded (2026-09-27):** the Game Design Document in [`docs/gdd/`](gdd/README.md) replaces this document wherever they disagree. Kept for history.
+> **Superseded (2026-09-27):** the Game Design Document in [`docs/gdd/`](gdd/README.md) replaces this document wherever they disagree. Kept for history. Status as of 2026-09-28: the GDD work packages A–D and E1–E5 are merged (see `docs/CHANGELOG.md`); E6–E8 are not started.
 
 
 _Written 27 September 2026, alongside `docs/REVIEW.md`. Read that first: it says what is broken and what is

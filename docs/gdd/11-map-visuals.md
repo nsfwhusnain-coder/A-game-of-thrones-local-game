@@ -5,6 +5,11 @@
 > delivers the "king's host visible, lords and ladies going places, people wandering" request. Files:
 > `public/js/map3d/MapScene.js`, `models.js`, `life.js`, `pathfind.js`, `public/js/map/terrain.worker.js`.
 
+> **Status (2026-09-28):** E1 (camera), E2 (modes), E3 (nature), E4 (labels) and E5 (tokens, stacks, routes) are
+> merged — see the *Implemented* notes in §2–§8 and `docs/CHANGELOG.md`. **Not started:** E6 (holdings' states §6.4, and the
+> §6.2 figures E5 left), E7 (ambient life restyle, graphics presets, performance budgets §10), E8 (playback choreography §11,
+> `dev/playback.html`). `dev/map-lod.html` and `dev/tokens.html` exist; the trade lanes of the Wealth mode wait for E6.
+
 ---
 
 ## 1. Art direction
