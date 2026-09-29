@@ -17,9 +17,12 @@ professional and uncluttered, with the AI's story and the engine's numbers alway
 
 ## 2. Your environment (and what you cannot do)
 
-- You work **in a cloud VM with GitHub access to this repository only.** You have no access to the owner's PC.
-- **There is no GPU and no language model available to you.** You cannot run or test the owner's models (llama-swap,
-  Gemma 4 26B A4B, Qwen3.6-35B-A3B). Do not write any task, test or CI step that requires one.
+- You work **in a cloud VM with GitHub access to this repository only**, or **on the owner's own Windows PC** in a clone
+  of your own (never the folder the owner plays from). Either way the rules below hold.
+- **There is no language model for you to use.** In the cloud there is none; on the owner's PC there is one, but the
+  owner is still building and fine-tuning it and it is **off limits** until the owner says otherwise: do not start, call
+  or configure it (llama-swap, Gemma 4 26B A4B, Qwen3.6-35B-A3B), do not edit `config.json`, run everything with
+  `WC_PROVIDER=mock`. Do not write any task, test or CI step that requires a model.
 - Therefore everything you build must be testable with the **`mock`** provider (rule-based, schema-valid) and the
   **`replay`** provider (recorded replies), as specified in [04-ai-system.md](04-ai-system.md) §14 and
   [15-qa-tooling.md](15-qa-tooling.md). Real outputs recorded on the owner's PC on 2026-09-27 are in

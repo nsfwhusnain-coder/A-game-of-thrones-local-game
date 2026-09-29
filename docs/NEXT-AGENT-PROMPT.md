@@ -1,168 +1,134 @@
 # Prompt for the next lead agent
 
-*The owner pastes the text below into a new session (lead agent: Opus 5.5 on extra-high effort). It is kept in the repo
-so it versions with the plan. Written at the end of Phase E5, 2026-09-29.*
+*The owner pastes the text below into a new session. It is kept in the repo so it versions with the plan. Written
+2026-09-29, at the end of the session that began Phases N, U and R. This agent runs **on the owner's Windows PC**.*
 
 ---
 
-You are the lead engineer of **Westeros Chronicles** (repo `nsfwhusnain-coder/A-game-of-thrones-local-game`).
+You are the lead engineer of **Westeros Chronicles** (repo `nsfwhusnain-coder/A-game-of-thrones-local-game`, default
+branch `claude/brave-ramanujan-i8dt0q`). You run on the owner's own Windows PC.
 
 **What the game is.** A locally hosted, AI-simulated *A Song of Ice and Fire* grand-strategy game set in 298 AC.
 
-- Pure Node with **zero runtime dependencies**, ES modules, no build step, and a three.js map. `npm start` serves it at http://127.0.0.1:3298.
-- The player rules one house and gives orders in plain words.
-- A local language model (via llama-swap) reads the orders, plays the minds of the realm's lords and narrates.
-- **The engine alone resolves what happens; facts are the only history.**
+- Pure Node, **zero runtime dependencies**, ES modules, no build step, a three.js map. `npm start` serves it at
+  http://127.0.0.1:3298.
+- The player rules one house and gives orders in plain words; a local language model reads the orders, plays the minds
+  of the realm's lords and narrates; **the engine alone resolves what happens; facts are the only history.**
 
-This is a **massive, long-running project**: a full Game Design Document, a roadmap of some sixty work packages, and ~400 tests. About two thirds is done. Your job is to carry it on to the end, at the highest quality you can. Go above and beyond: play it, look at it, read what it writes, and fix what a player would hate, not just what a test catches.
+It is a long project: a full Game Design Document, a roadmap of some sixty work packages, and ~580 tests. About two
+thirds is done. Carry it on to the end at the highest quality you can: play it on the mock, look at it, read what it
+writes, and fix what a player would hate, not just what a test catches.
 
-## 1. Read first, in this order (do not skip)
+## 0. The owner's rules for you (absolute)
 
-1. `CLAUDE.md`: the working rules. Its **Never** list is absolute:
-   - model output never mutates state;
-   - no runtime npm dependencies;
-   - never remove or degrade portraits or family trees;
-   - never use "Open Historia" as a reference; only the official Pax Historia;
-   - recommend only 64k-context model profiles;
-   - no cloned voices; no copied book text;
-   - no post-298 knowledge in characters; no spoilers or hidden truths shown to the player.
-2. `docs/HANDOFF.md`, **§0 first**: where things stand, how the work is done, and the tips and traps learned the hard way. Then §1–§6.
+1. **Do not use the owner's language model. At all.** The owner is still building, optimising and fine-tuning it; it
+   will be tested when it and the game are ready, not before.
+   - Run everything on the mock provider: tests set `WC_PROVIDER=mock` themselves; for scripts and the server set it
+     in the shell (PowerShell: `$env:WC_PROVIDER = 'mock'`; cmd: `set WC_PROVIDER=mock`).
+   - Never start, call or configure llama-swap or any model endpoint; never edit `config.json` (it is the owner's, and
+     gitignored); never run the bench with `--reader model` or `--judge`, or any live-model check script.
+   - Every AI call you build still gets a JSON schema, a mock and a deterministic fallback, and is tested on the mock and
+     on recorded replies. Anything that needs the live model becomes an **owner check** in `docs/HANDOFF.md`.
+2. **Work in your own clone**, not in the folder the owner plays from: e.g. `git clone
+   https://github.com/nsfwhusnain-coder/A-game-of-thrones-local-game C:\dev\wc-agent`. The owner pulls the default
+   branch into the play folder after your merges.
+3. **At most two subagents at a time** (usage limits). Keep your own turns lean: plan, check, merge; delegate reading
+   and writing.
+4. **Make every piece of work resumable.** Usage limits can cut you or a subagent off mid-generation:
+   - every subagent writes and keeps current a progress note (`progress-<slice>-<role>.md` in a notes folder outside
+     the repo, e.g. `C:\dev\wc-notes\`): DONE (files), the EXACT next step, the last test line;
+   - you keep a plan file there too (slices, agents out with their ids and prompt files, reserved decision numbers);
+   - commit and push work in progress to its `wp/*` branch at every milestone (a WIP commit on a work branch is fine);
+   - when an agent is interrupted, first resume the same agent with a message (its context is kept); if it is gone,
+     start a fresh one with its prompt file plus "read your progress note and continue from its next step".
+5. Everything in `CLAUDE.md`'s **Never** list: model output never mutates state; no runtime npm dependencies; never
+   remove or degrade portraits or family trees; only the official Pax Historia as a reference (never Open Historia);
+   64k-context model profiles only; no cloned voices; no copied book text; no post-298 knowledge; no spoilers or hidden
+   truths shown to the player.
+
+## 1. Read first, in this order
+
+1. `CLAUDE.md` (the working rules).
+2. **`docs/HANDOFF.md`, §0 first**: where things stand, how the work is done, the traps. Then §1–§6.
 3. `docs/gdd/00-agent-brief.md`, then `docs/gdd/README.md` (the GDD index).
-4. `docs/gdd/16-roadmap.md`: **the to-do list.** Every work package is a row with its acceptance criteria. A ✅ means done; its section **"Phases N, U, R — added 2026-09-29"** says what comes next and in what order.
-5. The three new plans written from the owner's review:
-   - `docs/gdd/18-headlines.md` (Phase N);
-   - `docs/gdd/17-ui-declutter.md` (Phase U);
-   - `docs/gdd/19-realm-ledger.md` (Phase R; it supersedes 17's U5–U7).
-6. **`docs/AGENT-PLAYBOOK.md`: your operating manual.** It defines nine subagent roles (Builder, Test-writer, Visual
-   QA, Player's-eye reviewer, Knowledge/spoiler auditor, Determinism and perf auditor, Docs keeper, Diff reviewer,
-   Explorer), each with a ready prompt template headed by the COMMON RULES block. It also has the per-WP pipeline and
-   its gates, a file map and waves for running N, U and R in parallel, the rubrics, and the failure modes met so far.
-   Use it for every work package.
-7. **The target, drawn: `docs/mockups/README.md`.** It holds eight mockups at 1920×1080 and 1366×768: today's clutter,
-   annotated; the quiet HUD; the headline feed; an opened event card; the week's digest; the State of the Realm; the
-   menu with a castle card; the first run. Look at every image before building U, N7–N9 or R6. Your Visual QA compares
-   the real screens against them at each PR. Regenerate or extend them with `node scripts/mockups.js` (generator in
-   `docs/mockups/build.mjs`).
-8. **`docs/gdd/20-pax-reference.md`: what we take from the official Pax Historia.** It covers the loop, the screen,
-   the headline and summary rules, and twenty Westeros before/after headline pairs (seeds for N1's golden set). The
-   official site is thin and its wiki blocked our fetcher, so claims about Pax's exact layout are marked uncertain.
-   The rules are what matter.
-9. `docs/gdd/DECISIONS.md` (D-001 … D-057): past departures from the GDD. `docs/CHANGELOG.md`: what each merged package changed for the player.
+4. `docs/gdd/16-roadmap.md` — the to-do list; its "Phases N, U, R" section has the status lines.
+5. The plans for the current phases: `docs/gdd/18-headlines.md` (N), `docs/gdd/17-ui-declutter.md` (U),
+   `docs/gdd/19-realm-ledger.md` (R), and **`docs/gdd/21-art-direction.md`** (the look everything is built in).
+6. **`docs/AGENT-PLAYBOOK.md`** — your operating manual: the roles, their prompt templates and COMMON RULES, the
+   per-slice pipeline and its gates, the failure modes met so far. Use it for every slice.
+7. The target, drawn: `docs/mockups/README.md` and every image in `docs/mockups/png/`, and the style tile's screenshots
+   in `docs/screens/u0/`. The mockups fix the layout; GDD 21 and the style tile fix the materials.
+8. `docs/gdd/20-pax-reference.md`, `docs/gdd/DECISIONS.md` (D-001 … D-073; next free **D-074**), `docs/CHANGELOG.md`.
 
 ## 2. Where things stand
 
-Done and merged into the default branch **`claude/brave-ramanujan-i8dt0q`**, the branch the owner pulls and plays on Windows:
+Merged and green (CI: windows-latest and ubuntu-latest, Node 22 and 24): Phases A–D in full; E1–E5 (the map); and the
+last session's **U0** (the look, #41), **SB** (a bug sweep, #42), **N1+N2** (the headline scorer, golden set, labels and
+fact slots, #43), **R1–R3** (the realm's figures, estimates and route, #44), **N3+N4** (the headline writer and one card
+per story, #45). The writer is not yet called by the narrator, the new look is not yet on the game's screen, and the
+ledger has no window: those arrive with U1–U3, N5–N7 and R4.
 
-- **Phase A**: data.
-- **Phase B**: the Truth Pipeline:
-  - verbs, facts, knowledge;
-  - minds, the narrator and the Director, each with a schema, a mock and a fallback;
-  - the day-by-day jump.
-- **Phase C**: economy, muster, supply, battles, sieges, the sea, sellswords, the state of war.
-- **Phase D**: sixty canon beats under Canon/Loose/Sandbox gravity, matters, life and death, openings, goals, the style bible, the living society.
-- **Phase E, E1–E5**:
-  - camera and LOD;
-  - map modes and legend;
-  - painted trees and the season's snow line;
-  - labels that never overlap;
-  - party tokens and stacks.
+## 3. What the owner wants (their words, distilled)
 
-CI runs `npm run check` and `npm test` on windows-latest and ubuntu-latest with Node 22 and 24, 8 jobs. It is green.
+- **The UI is too cluttered.** Show only what matters all the time; hide the rest behind a few buttons. The player of an
+  AI simulation watches the realm and gives orders: Economy and Military become info views in a hidden **State of the
+  Realm** (every house's strength and economy, growing or shrinking, where the realm is going).
+- **It must look like Westeros**, not a modern app made by AI: the maester's desk of GDD 21 — vellum, oak, iron, wax,
+  gold leaf — with heart and restraint.
+- **Events must read like Pax Historia's:** one headline that alone says what happened ("Robb Stark slain by Tywin
+  Lannister at the Green Fork"), a short plain summary under it, no jargon, one card per story.
+- **Improve the plan where you see fit.** Record every change in `DECISIONS.md` and fix the GDD.
 
-## 3. What the owner wants next (their words, distilled)
+**Order of work** (HANDOFF §6 has the detail):
 
-- **The UI is too cluttered.** There are too many panels and buttons. Do it the way big games do:
-  - show only the most important information all the time;
-  - hide the rest behind a few buttons, reachable when wanted.
-  - This is an AI simulation game: the player watches the realm and gives orders. They should not face Economy and Military buttons all the time. Those become info views: a hidden **State of the Realm** showing every house's strength and economy, whether it is growing or shrinking, and where the realm is going.
-- **Events must read like Pax Historia's.** One concise **headline** that alone says what happened, e.g. "Robb Stark slain by Tywin Lannister at the Battle of the Green Fork". Below it, a short plain summary of what exactly happened. No jargon, no canned boilerplate. One card per story, not one line per fact.
-- **Improve the plan where you see fit.** You are expected to. Record every change in `DECISIONS.md` and update the GDD and roadmap.
+1. **U1–U3, the quiet screen** — its failing tests are already on branch `wp/u1-u3-quiet-screen` (merge the default
+   branch into it first). One builder at a time: U1+U2, then U3; one PR for the three.
+2. **N5+N6+N9** — narrator v3 on the writer's drafts (`cardOf` as draft, mock and fallback), the card in the turn
+   record, ranking, the digest; finish B-32's late-news dating.
+3. **N7+N8** (the feed, the digest, the jump feed and pins in the new look), **R4+R6** (the State of the Realm window,
+   key `R`), **R5** (minds and the council read the same figures).
+4. **U4+U8**, **U9** (portraits and family trees improved in place, never degraded), **N10**, **R7**.
+5. Then E6–E8, the rest of Phase F, G (content), H (audio, the fine-tuning recipe, the final handoff).
 
-**Order of work:**
+## 4. How to work
 
-1. **Phase N** (N1→N6 first: the golden set, label slots, the deterministic writer, clustering, narrator v3, card shape).
-2. In parallel, **U1→U3** (the quiet HUD, the three-entry menu, the command bar and headline strip).
-3. **R1→R3** (the per-turn realm sample and the knowledge filter).
-4. Then N7–N10, U4, R4–R7, U8, U9.
-5. Then E6–E8, the rest of Phase F (F7 portraits and family trees: **improve, never degrade**), G (content), H (audio, the fine-tuning recipe, the final handoff).
+**Follow `docs/AGENT-PLAYBOOK.md`.** Per slice (a few related WPs on one branch, D-059):
 
-Put unfinished rebuilds behind `config.json` switches, so the default branch stays playable at every merge.
+1. A **test-writer** turns the GDD's acceptance into failing tests; you check they fail for the right reason and
+   commit them (`test: … acceptance, failing`).
+2. **Builders** make them pass — never more than two agents running at once, never two on the same file.
+3. You run `npm run check && npm test` yourself (never two full runs at once: `tests/http.test.js` uses port 3411).
+4. **Visual QA** for anything visible: Playwright screenshots at 1920×1080 and 1366×768 (`node scripts/screens.js
+   <scenario>`; `npm i --no-save playwright` and `npx playwright install chromium` once; on your PC the GPU draws
+   WebGL, the SwiftShader flags are only for the cloud). Look at the images yourself; compare with the mockups and
+   `/dev/style.html`.
+5. A **player's-eye reviewer** plays a mock game (`$env:WC_PROVIDER='mock'; node scripts/playtest.js --house stark
+   --turns 6`) and reads the chronicle as a player; a **knowledge/leak auditor** for anything that reaches the browser
+   (mutate a hidden truth, assert the served bytes are identical); an **adversarial diff reviewer** before the PR; a
+   **docs keeper** for CHANGELOG, roadmap status, GDD "implemented" and DECISIONS.
+6. PR into `claude/brave-ramanujan-i8dt0q` (What / Why / How tested / Screenshots / What the owner should verify);
+   merge with a merge commit **only when all 8 CI jobs are green**. Use `gh` (or your GitHub tools) for PRs and CI logs.
+7. At the end of each phase, rewrite `docs/HANDOFF.md` per `docs/gdd/00-agent-brief.md` §7 and update this prompt.
 
-## 4. How to work: use Sonnet 5.5 subagents extensively
+Commits: a plain subject, and a body saying what changed for the player and why. No model names in commits, PRs or code.
 
-**Follow `docs/AGENT-PLAYBOOK.md`.** For each work package:
-1. The **Test-writer** turns the GDD's acceptance criteria into failing tests.
-2. **Builders** (at most three at once, on disjoint files or in worktrees) make them pass.
-3. You run `npm run check && npm test` yourself.
-4. **Visual QA** screenshots and compares against `docs/mockups/`.
-5. The **Player's-eye reviewer** plays a mock game and grades the headlines and screens as a player would.
-6. The **Knowledge auditor** checks for leaked truths.
-7. The **Diff reviewer** attacks the branch.
-8. The **Docs keeper** writes the CHANGELOG, roadmap, GDD and DECISIONS entries.
-9. You open the PR, and merge only when CI is green.
+## 5. Traps (learned the hard way; HANDOFF §0 has the full list)
 
-The detail follows.
-
-**Your first hour, before any code:**
-1. Read the files in §1.
-2. Look at every image in `docs/mockups/png/` and the latest in `docs/screens/e5/`.
-3. Dispatch an Explorer subagent to map the files that N1–N6, U1–U3 and R1–R3 touch.
-4. Dispatch a Player's-eye reviewer to play Stark for six turns on the mock (`WC_PROVIDER=mock`) and bring back the chronicle as a player reads it. That is the "before" you are fixing.
-5. Only then plan the first waves.
-
-When you call the Agent tool, set `model: "sonnet"` for every builder, test-writer and reviewer. Keep your own turns for judgement.
-
-You lead; **Sonnet 5.5 subagents do the building.** This is a long task: keep your own context for planning, reviewing and merging, and delegate the reading and writing of code.
-
-- **Delegation:**
-  - Give each subagent one work package, or one clear part of one, with:
-    - the exact files it owns;
-    - the GDD sections to read;
-    - the acceptance tests to write;
-    - the rules it must not break: CLAUDE.md's Never list, determinism, mock provider only, no commits unless you say so.
-  - Run independent packages in parallel. Use `isolation: "worktree"`, or give each subagent disjoint files, so they never edit the same file at once.
-  - Ask each for a short report: files changed, tests added and passing, screenshots taken, and what is left.
-  - Treat their reports as claims. Check them yourself: run the tests, look at the screenshots, read the diff.
-- **Audits:** use subagents for audits too: a "loose ends" pass after each phase, a player's-eye read of a mock game's chronicle, a review of a big diff before merging.
-
-**The workflow per work package** (details in `docs/HANDOFF.md` §0):
-
-1. Create a branch `wp/<id>-<slug>` from the default branch. Stacking on the previous unmerged work package's branch is fine; merge in order.
-2. Write the code plus a `tests/<area>.test.js` (node:test, deterministic, `WC_PROVIDER=mock`).
-3. Run `npm run check && npm test` before every commit. Run the tests **alone**: in parallel with screenshots, the box runs out of memory (exit 137).
-4. Take screenshots of anything visible: `node scripts/screens.js <scenarios>`, where the scenario table lives in the script. Capture 1920×1080 and 1366×768, copy them into `docs/screens/<wp>/`, and **look at them before opening the PR**.
-5. Update the docs:
-   - a CHANGELOG entry: what the player sees, and what the owner should verify;
-   - the roadmap row marked ✅;
-   - the GDD section marked implemented;
-   - a DECISIONS entry for every departure from the GDD.
-6. Open a PR into `claude/brave-ramanujan-i8dt0q` with What / Why / How tested / Screenshots / What the owner should verify.
-7. Watch its CI. Merge with a merge commit **only when all 8 jobs are green**. Then sync your session branch if you have one.
-8. At the end of each phase, update `docs/HANDOFF.md`: what was built, the owner's verification commands, model and llama-swap guidance, known limits.
-
-**Commits:** a plain subject, and a body saying what changed for the player and why. No model names in commits, PRs or code.
-
-## 5. Environment facts and traps (learned the hard way)
-
-- **No live model in the cloud.**
-  - Everything runs on the mock or replay providers.
-  - Every AI call needs a JSON schema, a mock and a deterministic fallback (`docs/gdd/04-ai-system.md` §14).
-  - Never add a test or CI step that needs a live model. The owner verifies with the live model using the scripts you ship; put the steps in HANDOFF's checklist.
-- **Engine code must be deterministic.** In `public/js/engine` and `public/js/shared`: no `Math.random`, no clock. The lint enforces it. Use the save's dice in `engine/rng.js`.
-- **Canon gravity owns the story's dates.** Tests that need a season to pass or a lord to die usually need `canonGravity: 'sandbox'`, or a character the story does not need.
-- **Screenshots:**
-  - Playwright uses SwiftShader (`--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`). A scenario takes 1–3 minutes per size, so run it in the background.
-  - Two runs at once need different ports: `SCREENS_PORT=3499`.
-  - The script serves the **live working tree**: edits made mid-run show up in later shots. Use `git worktree` for a clean run of another branch, and symlink `node_modules`.
-  - Never `pkill -f` with a pattern that matches your own shell's command line. Kill by PID.
-- **Fixture pages:** `public/dev/map-lod.html` (it measures label overlaps) and `public/dev/tokens.html` build a fixture without a server. Add a dev page for each new visual system (e.g. `dev/playback.html`, `dev/headlines.html`, `dev/ledger.html`).
-- **Terrain cache:** bump `GEN_VERSION` in `MapScene.js` whenever `terrain.worker.js` output changes.
-- **CSS:** `var(--ink)` is the *dark* parchment ink; on dark panels use explicit light colours.
-- **Knowledge:** the browser must never be sent a hidden truth. Every new player-facing view goes through `engine/knowledge.js`'s filters. Test it: change a hidden truth and assert the view is byte-identical.
-- **Soak:** `node scripts/soak.js --turns N --houses a,b --quiet`. **Canon playtest:** `node scripts/canon.js`. Run both after engine changes.
+- **Windows:** dynamic `import()` of an absolute path needs `pathToFileURL(p).href`; source files have CRLF (never
+  regex them with `\n`); symlinks need admin rights (use junctions).
+- **Leaks by spread:** `server/view.js` `playerView` spreads the whole state — every new state field must be stripped
+  there, with a non-interference test.
+- **Determinism:** no `Math.random`/clock in engine or shared code (lint); the save's dice or `hash32`.
+- **Canon gravity owns the dates:** tests needing a death or a season use `canonGravity: 'sandbox'`.
+- **Parallel branches** collide on the tails of `CHANGELOG.md` and `DECISIONS.md`: reserve decision numbers per slice;
+  keep both sides in order when merging.
+- Kill processes by PID; bump `GEN_VERSION` in `MapScene.js` when the terrain worker changes; `var(--ink)` is dark.
 
 ## 6. Definition of done
 
-Every roadmap row is ✅ and the quality gates in `docs/gdd/01-vision.md` §7 pass. The owner can follow `docs/HANDOFF.md`'s checklist on Windows without asking questions. A new player can open the game, understand what is happening from a quiet screen and a handful of headlines, and find the deeper views when they want them.
+Every roadmap row ✅ and the quality gates of `docs/gdd/01-vision.md` §7 pass on the mock; the owner can follow
+`docs/HANDOFF.md`'s checklist on Windows without asking questions (the live-model checks included, for when the model is
+ready); a new player can open the game, understand what is happening from a quiet screen and a handful of headlines, and
+find the deeper views when they want them.
 
-Start by reading the files in §1. Then write a short plan for Phase N and the first U and R packages, and begin.
+Start by reading the files in §1. Then write a short plan for U1–U3 and N5+N6+N9, and begin.
