@@ -24,6 +24,7 @@
 import { slug } from '../../../public/js/engine/ids.js';
 import { anachronismsIn } from '../../../public/data/anachronisms.js';
 import { roughly } from '../../../public/js/engine/facts/label.js';
+import { ROLES } from '../../../public/js/engine/facts/heads.js';
 import { hasForeignScript } from '../schema.js';
 import { BOILERPLATE, JARGON, HEADLINE_VERBS, HEADLINE_MAX_WORDS, HEADLINE_MAX_CHARS, SUMMARY_MAX_CHARS } from '../../../public/data/style.js';
 import { GAME_WORDS, MATURE, namesIn, numbersIn, storyWorld, tablesFor, words } from './narration.js';
@@ -32,22 +33,9 @@ import { GAME_WORDS, MATURE, namesIn, numbersIn, storyWorld, tablesFor, words } 
 export const RULES = ['len', 'who', 'invented', 'verb', 'numbers', 'punct', 'boiler', 'roles', 'dup', 'outcome', 'script', 'anachronism', 'maturity'];
 
 // ── Roles (18 §3.3): who is the victim and who the agent, per kind of fact ────────────────────────────────────────────
-// A plain table (N3 moves it to engine/facts/heads.js, and the writer and this scorer both read it, so they cannot
-// disagree). `act` is the kind of deed; `patient` and `agent` are paths into the fact ("actors.0", "data.by"): a
-// character, or a house. A battle has sides instead: its winner and loser by house, their commanders by the actors.
-export const ROLES = {
-  slain_in_battle: { act: 'death', patient: 'actors.0', agent: 'data.by' },
-  executed: { act: 'death', patient: 'actors.0', agent: 'data.by' },
-  death: { act: 'death', patient: 'actors.0' },
-  captured_in_battle: { act: 'capture', patient: 'actors.0', agent: 'data.by' },
-  captured: { act: 'capture', patient: 'actors.0', agent: 'data.by' },
-  battle: { act: 'defeat', winner: 'data.winnerHouse', loser: 'data.loserHouse' },
-  // a siege: the besieged holding (and the house that holds it), and the besiegers (the house that sent them, and their commanders)
-  siege_begun: { act: 'siege', patient: 'data.holding', agent: 'data.by', agents: 'actors' },
-  siege_tick: { act: 'siege', patient: 'data.holding', agent: 'data.by', agents: 'actors' },
-  storm_assault: { act: 'siege', patient: 'data.holding', agent: 'data.by', agents: 'actors' },
-  holding_fell: { act: 'siege', patient: 'data.holding', agent: 'data.by' },
-};
+// The table lives in engine/facts/heads.js, beside the writer that tells the same deeds, so the writer and this scorer
+// cannot disagree; it is re-exported here for those who read it from the scorer.
+export { ROLES };
 // the words that claim a role, by deed: "X slain by Y" (passive, agent after "by") and "X slays Y" (active); a participle
 // that is also the simple past ("Tywin captured Jaime") is read as active when an object follows
 const CLAIMS = {
