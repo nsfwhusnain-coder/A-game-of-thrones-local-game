@@ -21,6 +21,8 @@ import { dayNumber } from '../time.js';
 import { MUSTER } from '../../../data/balance.js';
 
 const round50 = (n) => Math.round(n / 50) * 50;
+// who hears a lord's answer to the call, exact men and all: the lord's house and his liege (if he has one), once each
+const answerHouses = (v) => [...new Set([v.id, v.liege].filter(Boolean))];
 const RAVEN_MILES = 300; // a day's flight (engine/actions/diplomacy.js)
 
 /** The days a sworn lord's levies take to gather at his seat, by his country (07 §3.2; data/balance.js MUSTER). */
@@ -120,7 +122,7 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
   if (sent.men < 50 || !seatPos) {
     ob.stage = 'joined'; call.men = 0;
     const text = `${lordName} sends word that ${P.he} has no men left to send.`;
-    return { applied: [], events: shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text, where: v.seat, importance: 2, type: 'war', houses: [v.id] }, { actors: [v.lord], data: { men: 0 }, cause })), men: 0, party: null, text };
+    return { applied: [], events: shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text, where: v.seat, importance: 2, type: 'war', houses: answerHouses(v) }, { actors: [v.lord], data: { men: 0 }, cause })), men: 0, party: null, text };
   }
   const name = `Host of House ${v.name}`;
   const first = Math.min(sent.men, Math.max(50, round50(sent.men / call.gather)));
@@ -144,7 +146,7 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
   call.predicted = call.depart + marchFrom(state, v, call, seatPos);
   const t = targetOf(state, call);
   const text = `${lordName} answers the call with ${sent.men.toLocaleString('en-GB')} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with ${P.him}` : ''}; they gather at ${placeName(state, v.seat)} and march for ${t.name} in about ${call.gather} days.`;
-  const events = shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: [v.id] }, { actors: [v.lord, ...riding.map((c) => c.id)], data: { men: sent.men, party: a?.id || null, to: call.host ? ref(call.host) : call.muster || null, depart: call.depart }, cause }));
+  const events = shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: answerHouses(v) }, { actors: [v.lord, ...riding.map((c) => c.id)], data: { men: sent.men, party: a?.id || null, to: call.host ? ref(call.host) : call.muster || null, depart: call.depart }, cause }));
   return { applied: r.applied, events, men: sent.men, party: a?.id || null, text };
 }
 

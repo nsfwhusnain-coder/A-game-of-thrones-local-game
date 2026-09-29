@@ -26,6 +26,32 @@ for the player, and what the owner should verify.
 - Owner to verify: `node --test tests/headlines.test.js tests/labels.test.js`; then open
   `tests/fixtures/headlines/golden.json` and read the `reference` headlines: is this how you want events to read?
 - PR: (PR pending)
+## 2026-09-29 — SB: a bug sweep from the first playtest (PR pending)
+
+Found by playing Stark, Lannister and Greyjoy on the mock; one line per bug as you now see it (B-32c … B-38).
+
+- **Bran's fall tells only what was seen** (B-33): the card ends at Maester Luwin by his bed, not "The Lannisters are
+  very kind", and Bran's note no longer says "or was pushed" — no hint at a culprit, to any house.
+- **A refused order calls no banners** (B-34): "assemble the men of the north at Winterfell" as a Lannister is refused
+  whole, with the ✗ ("Winterfell is not your land"), and nothing marches. Banners muster only on your land, a sworn
+  lord's or an active ally's.
+- **A lord cannot move a host that is not his** (B-35): "Robb is to march the Northern Host to Moat Cailin" as a
+  Lannister is refused plainly ("No one of yours by that name") instead of sending your biggest host; a host named that
+  you do not have is "no host in the field"; when the words do not say which host, the reading is marked unsure.
+- **Crossings speak plainly** (B-37a): "is held up 6 days", "loses 1 man on the crossing" — never "loses 0 men and 6
+  days" or "1 men".
+- **A generated lord's heir is a new cousin** (B-37b): when a made-up lord dies with no heir, the man who claims the seat
+  has another name and age, no longer the dead lord's clone.
+- **A muster no longer tells the same card every day** (B-37c): a card when the levies begin to gather, one a week while
+  the camp fills, one when the host is whole — each naming the place.
+- **A vassal's answer is not heard by the whole realm** (B-32c): "answers the call with 2,000 men" is known to the
+  vassal's house and his liege's; the rest learn by news. (The rest of B-32 — late news shown on the day it happened —
+  is fixed with the headline work, N4–N6.)
+- Dev: `node scripts/playtest.js` runs without a `config.json` (on the mock) and reports an audience that became a
+  raven as "letter sent by raven (N days, answer due …)", not "> null" (B-36, B-38).
+- Owner to verify: `node --test tests/bugs-sb.test.js`; in a game as Lannister type "assemble the men of the north at
+  Winterfell" — a ✗ and nothing marches; as Stark call the banners and watch the muster cards over two weeks (one
+  when it begins, one a week, one when it is whole).
 
 ## 2026-09-29 — Handoff at E5: the plan for what comes next, and two old bugs closed
 

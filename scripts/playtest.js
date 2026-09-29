@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
+import { fileURLToPath, pathToFileURL } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, all) => (x.startsWith('--') ? [...a, [x.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true]] : a), []));
@@ -14,15 +14,17 @@ fs.symlinkSync(path.join(ROOT, 'public'), path.join(work, 'public'), 'junction')
 fs.mkdirSync(path.join(work, 'saves'));
 if (fs.existsSync(path.join(ROOT, 'config.json'))) fs.copyFileSync(path.join(ROOT, 'config.json'), path.join(work, 'config.json'));
 process.chdir(work);
-const game = await import(path.join(work, 'server/game.js'));
-const { whereabouts } = await import(path.join(work, 'public/js/shared/roads.js'));
-const { orderOutcome } = await import(path.join(work, 'public/js/shared/errands.js'));
+const game = await import(pathToFileURL(path.join(work, 'server/game.js')).href);
+const { loadConfig } = await import(pathToFileURL(path.join(work, 'server/llm.js')).href); // the copied llm.js: defaults when there is no config.json, and WC_PROVIDER honoured
+const { whereabouts } = await import(pathToFileURL(path.join(work, 'public/js/shared/roads.js')).href);
+const { orderOutcome } = await import(pathToFileURL(path.join(work, 'public/js/shared/errands.js')).href);
 const seenRavens = new Set();
 const s2threads = (id) => (game.loadState(id).storyThreads || []).map((t) => `${t.title}: ${t.last}`).join(' | ');
 const house = args.house || 'stark';
 const out = []; const log = (s) => { out.push(s); console.log(s); };
 const { id } = game.newGame('agot_298', house);
-log(`# Playtest — House ${house} — ${JSON.parse(fs.readFileSync('config.json', 'utf8')).model} — ${new Date().toISOString().slice(0, 16)}\n`);
+const cfg = loadConfig();
+log(`# Playtest — House ${house} — ${cfg.model || cfg.provider} — ${new Date().toISOString().slice(0, 16)}\n`);
 
 // the script: what a player might do, turn by turn (orders, audiences, acts)
 const script = {
@@ -39,7 +41,8 @@ for (let t = 1; t <= turns; t++) {
   for (const a0 of step.act || []) { const a = a0.army === '@jory' ? { ...a0, army: Object.values(game.loadState(id).parties).find((x) => x.commander === 'jory_cassel')?.id } : a0; try { const r = await game.act(id, a); log(`- act ${a.kind}: ${r.summary || 'done'}`); } catch (e) { log(`- act ${a.kind} FAILED: ${e.message}`); } }
   for (const [who, line] of step.talk || []) {
     const t0 = Date.now();
-    try { const r = await game.talk(id, who, line); log(`- **audience ${who}** (${((Date.now() - t0) / 1000).toFixed(0)}s, engine: ${r.stance?.verdict || '—'}, ${r.stance?.mood}) ← "${line}"\n  > ${String(r.reply).replace(/\s+/g, ' ')}${r.applied?.length ? `\n  applied: ${r.applied.map((x) => x.text).join('; ')}` : ''}`); } catch (e) { log(`- audience ${who} FAILED: ${e.message}`); }
+    // a far-off audience becomes a raven: there is no reply yet, only a letter on the wing
+    try { const r = await game.talk(id, who, line); log(`- **audience ${who}** (${((Date.now() - t0) / 1000).toFixed(0)}s, engine: ${r.stance?.verdict || '—'}, ${r.stance?.mood}) ← "${line}"\n  > ${r.raven ? `letter sent by raven (${r.raven.days} day${r.raven.days === 1 ? '' : 's'}, answer due ${r.raven.back})` : String(r.reply).replace(/\s+/g, ' ')}${r.applied?.length ? `\n  applied: ${r.applied.map((x) => x.text).join('; ')}` : ''}`); } catch (e) { log(`- audience ${who} FAILED: ${e.message}`); }
   }
   if (step.council) {
     const t0 = Date.now();

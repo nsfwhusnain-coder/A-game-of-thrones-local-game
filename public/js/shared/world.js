@@ -230,9 +230,13 @@ const NAME_POOLS = {
   essos: ['Tycho', 'Malaquo', 'Doniphos', 'Nyessos', 'Samarro', 'Horonno', 'Ferrego', 'Illyrio', 'Belicho', 'Doran', 'Tregar', 'Alequo'],
 };
 const TRAIT_POOL = ['ambitious', 'cautious', 'proud', 'honorable', 'greedy', 'pious', 'jovial', 'cruel', 'shrewd', 'loyal', 'craven', 'brave', 'stubborn', 'generous', 'wrathful', 'patient', 'scheming', 'just', 'lazy', 'diligent'];
-function generateLord(h, year) {
-  let seed = 0; for (const ch of h.id) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+// `salt` makes another man of the same house: the lord raised at the start is seeded on the house alone (salt ''), a
+// cousin who claims the seat later on the house and the turn he does (resolveSuccessions), so he is not his clone
+function generateLord(h, year, salt = '') {
+  let seed = 0; for (const ch of h.id + salt) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
   const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  // seeds one letter apart give first draws almost alike: stir a salted seed before it picks a name
+  if (salt) { seed = Math.imul(seed ^ (seed >>> 15), 2246822519) >>> 0; seed = Math.imul(seed ^ (seed >>> 13), 3266489917) >>> 0; seed = (seed ^ (seed >>> 16)) >>> 0; for (let k = 0; k < 4; k++) rnd(); }
   const pool = NAME_POOLS[h.region] || NAME_POOLS.reach;
   const first = pool[Math.floor(rnd() * pool.length)];
   const female = /^(Lyessa|Alys|Sarra|Wynafryd|Harma|Morna|Gysella|Bethany|Jeyne|Ysilla|Mya|Cerenna|Myranda|Lanna|Tanda|Falyse|Leonette|Rhonda|Sharna|Ellyn|Larra|Nymella|Belore)$/.test(first);
@@ -519,8 +523,12 @@ export function resolveSuccessions(state) {
       const chosen = { order: `the brothers choose ${heir.name} to succeed ${prev}`, company: `the company names ${heir.name} its captain after ${prev}`, tribe: `the free folk follow ${heir.name} now that ${prev} is gone` }[h.rank];
       text = chosen ? `SUCCESSION: ${chosen}` : `SUCCESSION: ${heir.name} succeeds ${prev} as head of House ${h.name}${(heir.age ?? 20) < 16 ? ` — a child of ${heir.age}; a regent will rule in all but name` : ''}`;
     } else {
-      const c = generateLord(h, state.meta.date.year);
+      // a different man from the one who died — and from any other of the house — however many times the seat has failed
+      const kin = Object.values(state.characters).filter((x) => x.house === h.id);
+      let c = null;
+      for (let k = 0; k < 24 && (!c || kin.some((x) => x.name === c.name) || c.age === lord?.age); k++) c = generateLord(h, state.meta.date.year, `#${state.meta.turn}${k ? '.' + k : ''}`);
       c.id = c.id + '_' + state.meta.turn;
+      while (state.characters[c.id]) c.id += '_';
       const elected = h.rank === 'city_state';
       c.bio = elected ? `Chosen by the magisters of ${h.name} to rule after ${lord?.name || 'the last'}.` : `A cousin who claimed the seat of House ${h.name} when the main line failed.`;
       state.characters[c.id] = c; h.lord = c.id;

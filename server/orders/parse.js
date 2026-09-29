@@ -97,6 +97,8 @@ const KIN = [
 const SOUGHT = /\b(?:meet|find|fetch|greet|see|visit|help|seek|look for|search for|wait for|await|join|relieve|reinforce|aid|guard|protect|bring back|warn|speak (?:with|to)|treat with|parley with)(?: (?:lady|lord|ser|my|our|the|prince|princess|maester|king|queen|young|old|son|daughter|wife|husband|brother|sister|uncle))*$/;
 // a prayer, a hope, a grief
 const PRAYER = /^(?:(?:let us|we|we shall|we will|i|i shall|i will|everyone|all) )?(?:pray|hope|mourn|weep|grieve|give thanks|thank the gods|light (?:a )?candles? for|may the (?:gods|seven|old gods|drowned god))\b/;
+// adjectives that name no house or land: "the whole host", "the royal army" are the lord's own
+const GENERIC_HOST_ADJ = /^(whole|entire|full|main|great|grand|combined|assembled|mustered|gathered|united|same|rest|other|first|second|new|last|remaining|royal|king's|queen's|lord's)$/;
 // the house's hosts in the words a lord uses for them, when none is named
 const MY_HOST = /\b(my|our|the) (host|army|forces|levies|men|troops|soldiers|bannermen|swords|spears|strength)\b|\ball (my|our) (men|forces|strength)\b|\bthe (whole|entire) (host|army)\b/;
 
@@ -415,11 +417,22 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     const someone = /\b(someone|somebody|anyone|a man|a rider|a messenger|an envoy|one of (?:my|our) (?:men|knights|people))\b/.test(t);
     const hostSent = hosts.length || MY_HOST.test(t) || (hailedHost && !RE.menWords.test(t)) || (!movers.length && !someone && (RE.march.test(t) || RE.attack.test(t)) && !/\b(send|ride|go)\s+(?:word|a raven)\b/.test(t));
     if (to && hostSent && (RE.march.test(t) || RE.attack.test(t) || /\bsail\b/.test(t)) && (!own.length || hosts.length || MY_HOST.test(t) || (hailedHost && !RE.menWords.test(t)) || own.every((c) => partyOf(state, c) && commands(state, house, partyOf(state, c)) && !RE.menWords.test(t)))) {
-      const host = hostMeant() || bigHost();
+      // whose host? Someone else's person named before the verb ("Robb is to march the Northern Host…") is no host of the
+      // lord's to bind: the order is about a man he does not have, and the verb says so. Nor is a "the <Adj> host" that is none
+      // of his ("the Northern Host" to a Lannister): that is no host. Only what the words leave open is the lord's biggest host.
+      const verbAt = Math.min(...[RE.march, RE.attack].map((re) => (t.search(re) < 0 ? Infinity : t.search(re))));
+      const stranger = others.find((c) => new RegExp(`\\b${given(c)}\\b`).test(t.slice(0, verbAt)));
+      const strangerHost = stranger && forces().find((a) => a.commander === stranger.id); // a sworn lord leading a host that answers to us
+      if (stranger && !strangerHost) { A('send_person', { character: stranger.id, to, men: 0 }); return; }
+      const adj = !hosts.length && !hailedHost && !strangerHost ? t.match(/\bthe ([a-z']+) (?:host|army|forces)\b/)?.[1] : null;
+      if (adj && !GENERIC_HOST_ADJ.test(adj) && ![me.name, me.region, state.holdings[me.seat]?.region].some((x) => x && String(x).toLowerCase().replace(/_/g, ' ').slice(0, 4) === adj.slice(0, 4))) { A('march_host', { army: null, to }); res.complete = false; return; }
+      const guessed = !strangerHost && !hostMeant();
+      const host = strangerHost || hostMeant() || bigHost();
       if (host) {
         const lead = own.find((c) => (/\b(under|led by|commanded by)\b/.test(t) || new RegExp(`\\b${given(c)}\\b[^.]*\\b(is to|should|will|shall|must)?\\s*(lead|take|command|march)\\b`).test(t)) && partyOf(state, c)?.id !== host.id)
           || (self && /\b(lead|command|take|ride at the head of)\b/.test(t) && host.commander !== L.lord.id ? L.lord : null);
         A('march_host', { army: host.id, to, ...(lead ? { commander: lead.id } : {}), ...(RE.attack.test(t) || /\b(siege|besiege|take it)\b/.test(t) ? { intent: /\bsiege|besiege\b/.test(t) ? 'lay siege' : 'take it' } : {}) });
+        if (guessed) res.complete = false; // nothing in the words said which host: the biggest was a guess, and a model may look
         // "bring three thousand spears to White Harbor" with a host of four thousand: part of it, or new levies? The
         // model decides (a split is a verb of phase C); the whole host is only the rule's best guess
         if (nums[0] && !hosts.length && nums[0] < host.men * 0.9) res.complete = false;
