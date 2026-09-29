@@ -1,23 +1,55 @@
-# Handoff — end of Phase D (the story and the realm's people)
+# Handoff — end of E1–E5 (the map), and the plan for what comes next
 
-*Written 2026-09-28 (Phase B's handoff, updated at the ends of Phases C and D). The plan is the Game Design Document in [`docs/gdd/`](gdd/README.md); the order of work is
-[`16-roadmap.md`](gdd/16-roadmap.md); design departures are in [`DECISIONS.md`](gdd/DECISIONS.md); the earlier sessions'
-handoff is archived at [`archive/HANDOFF-2026-09.md`](archive/HANDOFF-2026-09.md).*
+*Written 2026-09-29 (Phase B's handoff, updated at the ends of Phases C and D and now at E5). The plan is the Game
+Design Document in [`docs/gdd/`](gdd/README.md); the order of work is [`16-roadmap.md`](gdd/16-roadmap.md) — **read its
+"Phases N, U, R" section first: that is what comes next**; design departures are in
+[`DECISIONS.md`](gdd/DECISIONS.md); what changed for the player, WP by WP, is in [`CHANGELOG.md`](CHANGELOG.md).*
 
-Phase D gave the realm its story and its people: a beat engine with canon gravity (Canon, Loose, Sandbox — chosen on
-the begin screen), the sixty beats of 298–300 AC holding their order through a two-year playtest (Q9), a catalogue of
-matters the model cannot add to, lives that heal and end by rule while the story keeps its own, an opening for every
-house, a hundred goals and ways for every great house, the style bible as data (with a Book / Restrained choice), and
-lords who ride out every moon to feasts, tourneys, pilgrimages and their liege's court.
+## 0. Where things stand (for the next agent)
 
-Phase C made war and money real: the economy anchored in the books with lenders and default, the banners that come
-as lords would bring them, supply in man-days, battles by stance and ground, sieges won by terms, storms, hunger or
-treachery, the sea (fleets that carry, blockade and reave), sellswords by contract, outlaws, and the state of war with
-its score and its peace. All of it is engine rules on seeded dice: no model decides a man of it.
+- **Done and merged** into `claude/brave-ramanujan-i8dt0q` (the branch the owner pulls and plays; CI green on
+  windows-latest and ubuntu-latest, Node 22 and 24): Phases A, B, C, D in full; Phase E's **E1–E5** (camera and LOD,
+  map modes and legend, painted trees and the snow line, labels without overlaps and B-31, party tokens and stacks).
+- **Not started:** E6–E8, F1–F9, G1–G5, H1–H5, and the three new plans from the owner's review:
+  **N** (Pax-style headlines, [18](gdd/18-headlines.md)), **U** (declutter the interface, [17](gdd/17-ui-declutter.md)),
+  **R** (the State of the Realm ledger, [19](gdd/19-realm-ledger.md)). **Do N, U and R next**, in the order the
+  roadmap gives; Phase F is re-cut by U.
+- **The to-do list is the roadmap**: every work package is a row in [`16-roadmap.md`](gdd/16-roadmap.md) with its
+  acceptance; a row is done when it carries "✅" and a CHANGELOG entry. Nothing else is tracked elsewhere.
 
-Phase B rebuilt how a turn happens. The model no longer writes the world: **the engine resolves, the model proposes
-and narrates, and facts are the only history.** Every model call is small, schema-constrained, checked, and has a mock
-and a fallback, so the game always plays — with or without a model.
+### How the work has been done (keep doing it this way)
+
+- **One branch per work package** (`wp/<id>-<slug>`), a PR into `claude/brave-ramanujan-i8dt0q` with What / Why /
+  How tested / Screenshots / What the owner should verify, merged with a merge commit only when all 8 CI jobs are green.
+  Stacking a WP's branch on the previous WP's unmerged branch is fine (say so in the PR); merge in order.
+- **Per WP:** code + a `tests/<area>.test.js` (node:test, deterministic, mock provider) + a CHANGELOG entry (what the
+  player sees, and what the owner should verify) + the roadmap row marked ✅ + the GDD section marked implemented +
+  a `DECISIONS.md` entry (D-0NN) for every departure from the GDD. `npm run check && npm test` before every commit.
+- **Screenshots** for anything visible: `node scripts/screens.js <scenario…>` (Playwright + SwiftShader; scenarios are
+  a table in the script — add yours), copied into `docs/screens/<wp>/`, both 1920×1080 and 1366×768, and *look at them*
+  before opening the PR. Dev pages that build a fixture without a server are the fastest way to show one thing:
+  `public/dev/map-lod.html` (`?spot=&lod=&season=&days=&dist=&boxes=1`, and it measures label overlaps) and
+  `public/dev/tokens.html` (`?lod=&fan=1`).
+
+### Tips and traps learned the hard way
+
+- **SwiftShader is slow**: a screenshot scenario takes 1–3 minutes per size. Run screenshots in the background, and
+  **never run `npm test` at the same time** (the box has been OOM-killed, exit 137). Two screenshot runs at once need
+  different ports: `SCREENS_PORT=3499 node scripts/screens.js …`.
+- `scripts/screens.js` serves the *working tree live*: if you edit files while it runs, later shots pick up your edits.
+  For a clean run of another branch, use `git worktree add` (and symlink `node_modules`).
+- **Never `pkill -f scripts/screens.js`** from a shell whose own command line contains that string — it kills itself.
+  Kill by PID.
+- The game's opening flight to your seat can land after a scenario's camera move: set `map.target`/`map.dist`
+  directly and call `map.updateCamera()` (see the `mode-*` scenarios).
+- `var(--ink)` is the *dark* parchment ink; on dark panels use explicit light colours.
+- The terrain is cached in IndexedDB by `GEN_VERSION` in `MapScene.js`: bump it when `terrain.worker.js` output changes.
+- Engine code (`public/js/engine`, `shared`) must be deterministic: no `Math.random`, no clock (the lint enforces it);
+  use the save's dice (`engine/rng.js`).
+- Under Canon gravity the beats own the story's dates; a test that needs "a season to pass" or "a lord to die" usually
+  needs `canonGravity: 'sandbox'` or a character the story does not need.
+- **Model output never mutates state.** Every model call has a JSON schema, a mock and a deterministic fallback, and is
+  tested on the mock and on recorded replies; no test may need a live model (the cloud has none).
 
 ## 1. What was built
 
@@ -56,10 +88,15 @@ All merged into `claude/brave-ramanujan-i8dt0q` with CI green on windows-latest 
 | D6 | #31 | A hundred goals; ways for every great and major house; lords work at what they want. |
 | D7 | #32 | The style bible as data; *Book content / Restrained*; examples of other houses; anachronisms keyed to the beats. |
 | D8 | #33 | Lords ride out every moon (feasts, weddings, tourneys, pilgrimages, the King's passing) with kin, stay as guests, come home; the calendar and the small council. **Phase D done.** |
+| E1 | #34 | The camera frames Westeros and the Narrow Sea; never into the trees; smooth cursor zoom; Home and F. |
+| E2 | #35 | Map modes that read: Diplomacy (war, hostile, neutral, friendly, allied, your realm hatched), Knowledge, War; a key for each. |
+| E3 | #36 | Painted trees (pines, broadleaves, weirwoods) that sway; a palette by region; the snow line of the season, frozen rivers. |
+| E4 | #37 | Names never drawn over one another (placed by priority, at most 120); halos; tooltips that let go (B-31). |
+| E5 | #38 | A token and plate for every kind of party; the King's progress seen from L0; "3 hosts · 7,400" stacks that fan out; routes and ETAs for your own parties. |
 
 ## 2. What CI verifies, and what you should verify
 
-CI (`.github/workflows/ci.yml`) runs `npm run check` and `npm test` (≈ 380 tests, among them the two-year canon playtest Q9 for Hightower: engine, verbs, facts, knowledge,
+CI (`.github/workflows/ci.yml`) runs `npm run check` and `npm test` (≈ 400 tests, among them the two-year canon playtest Q9 for Hightower: engine, verbs, facts, knowledge,
 minds, narrator, audiences, the jump, the Director, memory, the HTTP API end to end, and the contract of every model
 call on the mock and on recorded replies). A nightly soak plays 200 turns × 6 houses and checks the invariants every turn (and at least five lords' journeys a moon); a nightly canon playtest (`node scripts/canon.js`) plays three houses for 24 moons.
 
@@ -137,11 +174,15 @@ the dataset the recipe will build from. Never train on book text.
   matters that belong to beats not yet written as matters (Renly's offer, the Iron Price, the kingsmoot, Jon's future,
   Lady, the debt, Jeyne, Karstark, Tyrion's trial) come with them (D-053).
 - The King's progress has no scheduled stops; lords near it ride to greet it when it halts (D8).
-- Portraits and family trees are unchanged in Phases B–D; Phase F improves them.
+- Portraits and family trees are unchanged in Phases B–E; U9 and F7 improve them (never degrade them).
+- E5 shows every rumoured host far out; the L0 map can get busy with grey "~N?" plates (see the roadmap's proposals).
+- Garrisons are no longer drawn on the map (E5); the castle's card gives them. The shield pip comes with E6.
 - Open question: do you want the Director *lively* by default once you have seen it with the live model?
 
 ## 6. What comes next
 
-E (the map: the
-living map of hosts, fleets, devastation and outlaws; weather), F (the interface, portraits and family trees improved),
-G (content: Essos, the canon beats of 299–300), H (audio, the fine-tuning recipe, the playtest reports).
+**N, U and R first** (the owner's review, 2026-09-29): events as Pax-style headlines with plain summaries
+([18](gdd/18-headlines.md)); a quiet interface with the rest a click away ([17](gdd/17-ui-declutter.md)); the State of
+the Realm ledger ([19](gdd/19-realm-ledger.md)). Then E6–E8 (holding states and the §6.2 figures, ambient life and
+graphics presets, playback), the rest of F (portraits and family trees improved, the Book, accessibility), G (content),
+H (audio, the fine-tuning recipe, the final handoff).
