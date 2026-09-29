@@ -282,3 +282,192 @@ test('regression evidence: the current mock\'s telling (plainEvent) scores under
   console.log(`\nthe mock's telling today: ${passing}/${GOLDEN.length} pass (${Math.round(rate * 100)} %); faults ${Object.entries(hist).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}`);
   assert.ok(rate < 0.5, `${Math.round(rate * 100)} % of the mock's cards already pass: the scorer is too lenient`);
 });
+
+// ── Review round: the holes an adversarial reader found in the scorer (WP N1) ────────────────────────────────────────
+const { roughly } = await import('../public/js/engine/facts/label.js');
+const { hasVerb, entitiesIn } = await import('../server/ai/validate/headline.js');
+const detailOf = (headline, story, summary) => score(headline, story, summary).detail.map((d) => `${d.rule}: ${d.text}`).join(' | ');
+
+test('numbers: the writer\'s own roughly() words are the story\'s numbers ("nearly two thousand" for 1,796), other roundings are not', () => {
+  // (the words are what label.js says today; pinned so a change of roughly() shows here)
+  assert.deepEqual([1796, 150, 45000, 3100].map(roughly), ['nearly two thousand', 'some two hundred', 'some fifty thousand', 'some three thousand']);
+  assert.deepEqual(faultsOf('Lord Karstark marches south with nearly two thousand men', 'g-march-02'), [], '1,796');
+  assert.deepEqual(faultsOf('Greatjon Umber raises some two hundred men at Last Hearth', 'g-muster-02'), [], '150');
+  assert.deepEqual(faultsOf('Greatjon Umber raises a hundred and fifty men at Last Hearth', 'g-muster-02'), [], '150, exactly, in words');
+  assert.deepEqual(faultsOf('Mance Rayder gathers some fifty thousand wildlings', 'g-muster-04'), [], '45,000');
+  assert.deepEqual(faultsOf('Tywin Lannister beats Roose Bolton', 'g-battle-01', 'The northmen lost some three thousand men at the ford.'), [], '3,100, in a summary');
+  // not the story's: a round figure the story never rounds to
+  assert.ok(faultsOf('Mance Rayder gathers some thirty thousand wildlings', 'g-muster-04').includes('numbers'), '30,000 is no rounding of 45,000');
+  assert.ok(faultsOf('Lord Karstark marches south with a thousand men', 'g-march-02').includes('numbers'), 'a thousand is not 1,796');
+  assert.ok(faultsOf('Tywin Lannister beats Roose Bolton', 'g-battle-01', 'The northmen lost some four thousand men at the ford.').includes('numbers'), '4,000 is no rounding of 3,100');
+});
+
+test('dup: a summary that names the same people is not a restatement; one that says the headline again is, at 0.8 and no lower', () => {
+  const h = 'Robb Stark slain by Tywin Lannister at the Twins';
+  assert.ok(!faultsOf(h, 'g-slain-01', 'Robb Stark was killed by Tywin Lannister during the fighting at the Twins.').includes('dup'), 'the same names, another telling');
+  assert.ok(faultsOf(h, 'g-slain-01', 'Robb Stark slain by Tywin Lannister at the Twins.').includes('dup'), 'restated');
+  assert.ok(faultsOf(h, 'g-slain-01', 'Robb Stark slain.').includes('dup'), 'a piece of the headline, said as a summary');
+  // five words of the headline that are no name (quickly, calls, all, northern, banners): four said again fail, three do not
+  const five = 'Eddard Stark quickly calls all northern banners to Winterfell';
+  assert.ok(faultsOf(five, 'g-muster-01', 'Eddard quickly calls all northern lords.').includes('dup'), '4 of 5');
+  assert.ok(!faultsOf(five, 'g-muster-01', 'Everyone calls all northern folk.').includes('dup'), '3 of 5');
+  assert.ok(!faultsOf(five, 'g-muster-01', 'Nineteen sworn houses are told to bring their men to the castle.').includes('dup'), 'a clearly different summary');
+});
+
+test('verb: the news present has a fallback — a word after the subject\'s name, and a wide lexicon; nouns after a name still fail', () => {
+  const V = STYLE.HEADLINE_VERBS;
+  for (const v of ['clash', 'clashes', 'drives', 'driven', 'drove', 'jails', 'arrests', 'names', 'rings', 'threatens', 'cuts', 'seizes', 'storms', 'sacks', 'relieves', 'lifts', 'dead']) assert.ok(V.includes(v), `"${v}" is a verb of the news`);
+  for (const [h, story] of [['Tywin Lannister drives Roose Bolton from the Twins', 'g-battle-01'], ['Robb Stark jails Jaime Lannister', 'g-capture-01'], ['Lord Karstark names Harrion his heir', 'g-death-01'],
+    ['Jaime Lannister rings Riverrun', 'g-siege-01'], ['Roose Bolton and Tywin Lannister clash at the Twins', 'g-battle-01'], ['Lady Hornwood threatens to hold her men back', 'g-refusal-01'],
+    ['Roose Bolton is driven from the Twins', 'g-battle-01'], ['Rickard Karstark dead at Karhold', 'g-death-01']]) assert.deepEqual(faultsOf(h, story), [], h);
+  // a verb the lexicon lacks, right after a person's name, is still a verb; a plural noun after a house or a person is not
+  assert.deepEqual(faultsOf('Tywin Lannister requisitions the ford at the Twins', 'g-battle-01'), []);
+  for (const [h, story] of [['Karstark banners at Karhold', 'g-march-02'], ['Lord Umber banners at Last Hearth', 'g-muster-02'], ["Lord Karstark's banners at Karhold", 'g-march-02']]) assert.ok(faultsOf(h, story).includes('verb'), h);
+  // (a headline that opens on a noun the lexicon also has as a verb does not count it)
+  assert.ok(faultsOf('Work at Karhold', 'g-works-03').includes('verb'));
+  // the reader of the subject: a person or a party right before the word
+  const h = 'Tywin Lannister requisitions the ford'; assert.ok(hasVerb(h, entitiesIn(state, h, { start: true })));
+  assert.ok(!hasVerb(h, []), 'without the subject the unknown word is only a word');
+});
+
+test('roles: "X wins/loses at P" is checked against the winner and the loser, and a draw has neither', () => {
+  assert.ok(faultsOf('Roose Bolton wins at the Twins', 'g-battle-01').includes('roles'), 'Tywin won');
+  assert.ok(faultsOf('Tywin Lannister loses at the Twins', 'g-battle-01').includes('roles'), 'Tywin won');
+  assert.deepEqual(faultsOf('Tywin Lannister wins at the Twins', 'g-battle-01'), []);
+  assert.deepEqual(faultsOf('Roose Bolton loses at the Twins', 'g-battle-01'), []);
+  assert.deepEqual(faultsOf('Robb Stark wins the tourney at the Eyrie', { facts: [{ id: 'f1', kind: 'tourney_result', actors: ['robb_stark'], houses: ['stark'], place: 'arryn', data: {}, importance: 3, text: 'Robb Stark is champion of the tourney at The Eyrie.' }], must: ['Robb Stark'], mustNot: [] }), [], 'a tourney is no battle: nothing to check it against');
+  // a draw: nobody beats, wins or loses
+  for (const h of ['Addam Marbrand beats Edmure Tully near Whitewalls', 'Addam Marbrand wins near Whitewalls', 'Edmure Tully loses near Whitewalls', 'Edmure Tully beaten by Addam Marbrand near Whitewalls']) assert.ok(faultsOf(h, 'g-battle-03').includes('roles'), `a draw: ${h}`);
+  assert.deepEqual(faultsOf('Addam Marbrand and Edmure Tully fight to a draw near Whitewalls', 'g-battle-03'), []);
+});
+
+test('roles: "cut down", "takes X prisoner", "seizes" and a siege are read like slain, captured and besieged — and not reversed', () => {
+  assert.ok(faultsOf('Robb Stark cuts down Tywin Lannister', 'g-slain-01').includes('roles'));
+  assert.ok(faultsOf('Tywin Lannister cut down by Robb Stark', 'g-slain-01').includes('roles'));
+  assert.deepEqual(faultsOf('Robb Stark cut down by Tywin Lannister', 'g-slain-01'), []);
+  assert.deepEqual(faultsOf('Tywin Lannister cuts down Robb Stark', 'g-slain-01'), []);
+  assert.ok(faultsOf('Jaime Lannister takes Robb Stark prisoner', 'g-capture-01').includes('roles'));
+  assert.deepEqual(faultsOf('Robb Stark takes Jaime Lannister prisoner', 'g-capture-01'), []);
+  assert.ok(faultsOf('Jaime Lannister seizes Robb Stark', 'g-capture-01').includes('roles'));
+  assert.ok(faultsOf('Robb Stark seized by Jaime Lannister', 'g-capture-01').includes('roles'));
+  assert.deepEqual(faultsOf('Jaime Lannister seized by Robb Stark', 'g-capture-01'), []);
+  assert.deepEqual(faultsOf('Robb Stark captured Jaime Lannister', 'g-capture-01'), [], 'the past, active: the agent is the one before the verb');
+  assert.ok(faultsOf('Jaime Lannister captured Robb Stark', 'g-capture-01').includes('roles'));
+  assert.ok(faultsOf('Riverrun lays siege to Jaime Lannister', 'g-siege-01').includes('roles'));
+  assert.ok(faultsOf('Jaime Lannister besieged by Riverrun', 'g-siege-01').includes('roles'));
+  assert.deepEqual(faultsOf('Jaime Lannister lays siege to Riverrun', 'g-siege-01'), []);
+  assert.deepEqual(faultsOf('Riverrun besieged by Jaime Lannister', 'g-siege-01'), []);
+  assert.ok(faultsOf('Gregor Clegane lays siege to Stannis Baratheon', 'g-siege-02').includes('roles'), 'the wrong besieged');
+});
+
+test('roles: a story\'s battle (world.js note) names its winner as a house and no winnerHouse — the scorer reads it', () => {
+  const story = { facts: [{ id: 'f1.1', kind: 'battle', actors: [], houses: ['stark', 'lannister'], place: 'tully', data: { attacker: 'stark', defender: 'lannister', winner: 'stark', lost: { stark: 700, lannister: 4200 } }, importance: 4, text: 'Battle near Riverrun: victory for House Stark.' }], must: ['Riverrun'], mustNot: [] };
+  assert.ok(faultsOf('Lannisters beat the Starks near Riverrun', story).includes('roles'));
+  assert.ok(faultsOf('The Starks lose near Riverrun', story).includes('roles'));
+  assert.deepEqual(faultsOf('The Starks beat the Lannisters near Riverrun', story), []);
+  const draw = { ...story, facts: [{ ...story.facts[0], data: { ...story.facts[0].data, winner: null } }] };
+  assert.ok(faultsOf('The Starks beat the Lannisters near Riverrun', draw).includes('roles'), 'no winner: no one beats');
+});
+
+test('outcome: "takes" or "storms" a holding needs a fall, a storming or a grant in the story — a siege only begun is not one', () => {
+  assert.ok(faultsOf('Jaime Lannister storms Riverrun', 'g-siege-01').includes('outcome'));
+  assert.ok(faultsOf('Jaime Lannister takes Riverrun', 'g-siege-01').includes('outcome'));
+  assert.ok(faultsOf('Riverrun taken by Jaime Lannister', 'g-siege-01').includes('outcome'));
+  assert.ok(faultsOf('Jaime Lannister captures Riverrun', 'g-siege-01').includes('outcome'));
+  assert.deepEqual(faultsOf('Jaime Lannister lays siege to Riverrun', 'g-siege-01'), []);
+  assert.deepEqual(faultsOf('Gregor Clegane storms Darry', 'g-fell-03'), [], 'a storming');
+  assert.deepEqual(faultsOf('Tywin Lannister takes Harrenhal', 'g-fell-01'), [], 'a fall');
+  assert.deepEqual(faultsOf('Harrenhal taken by Tywin Lannister', 'g-fell-01'), []);
+  assert.deepEqual(faultsOf("Lord Karstark's son takes Karhold", 'g-death-01'), [], '20 §5.2 row 10: an inheritance is a holding taken too');
+  assert.deepEqual(faultsOf('Black rot takes the wheat at Horn Hill', 'g-harvest-02'), [], 'no holding');
+});
+
+test('invented: a house\'s plural opening the headline is not that house; a name the game does not know, given away by an honorific or a castle, is invented', () => {
+  assert.deepEqual(faultsOf('Hunters bring down a white stag near Karhold', 'g-omen-02'), [], 'Hunter is a house, and a word');
+  assert.ok(faultsOf('Lord Karstark marches south with Ser Aldric Vance', 'g-march-02').includes('invented'), 'Ser + a name no one has');
+  assert.ok(faultsOf('Maester Corwin sees Rickard Karstark die at Karhold', 'g-death-01').includes('invented'), 'Maester + a name no one has');
+  assert.ok(faultsOf('Lord Karstark marches for Blackmoor Keep', 'g-march-02').includes('invented'), 'a keep no map has');
+  assert.ok(faultsOf('Lord Karstark holds a feast at Blackmoor Hall', 'g-march-02').includes('invented'));
+  assert.ok(faultsOf('Lord Karstark marches for Castle Blackmoor', 'g-march-02').includes('invented'));
+  // and the names the game does know pass: a title alone, a seat named with a possessive, a keep the story has, the Red Keep
+  assert.deepEqual(faultsOf('King Robert holds a tourney at King\'s Landing', 'g-tourney-02'), []);
+  assert.deepEqual(faultsOf('King Robert holds a tourney at the Red Keep', 'g-tourney-02'), []);
+  assert.ok(entitiesIn(state, "Stannis Baratheon besieges Storm's End").some((e) => e.kind === 'place' && e.text === "Storm's End"), 'a place with a possessive is a place');
+  assert.ok(faultsOf("Robb Stark slain at King's Landing", 'g-slain-01').includes('invented'), '... and one the story does not have is invented');
+});
+
+test('punct: mark-up, a spaced hyphen and an emoji fail, in the headline and in the summary', () => {
+  for (const h of ['Lord Karstark marches south [again]', 'Lord Karstark marches <south>', 'Lord Karstark marches *south*', 'Lord Karstark marches south #war', 'Lord Karstark marches south - at last', 'Lord Karstark marches south 🐺']) assert.ok(faultsOf(h, 'g-march-02').includes('punct'), h);
+  for (const s of ['The road is long. It is **very** long.', 'The road is long - very long.', 'The road is long 🐺.']) assert.ok(faultsOf('Lord Karstark marches south', 'g-march-02', s).includes('punct'), s);
+  assert.deepEqual(faultsOf('A two-headed calf is born near Hornwood', 'g-omen-03'), [], 'a hyphen inside a word is a hyphen');
+});
+
+test('boiler: the jargon is the engine\'s, not English — "levies", "stories" and "in fact" are fine; ids, counts and importance are not', () => {
+  const said = (t) => [...STYLE.BOILERPLATE, ...STYLE.JARGON].some((x) => new RegExp(x, 'i').test(t));
+  for (const t of ['story S3', 'stories S3', 'fact f1.2', 'S3 tells', 'importance 3', 'an op is run', '1,796 strong', 'two thousand strong', 'The host now numbers 896', 'calls up 9,977 levies']) assert.ok(said(t), t);
+  for (const t of ['The old stories of the Long Night', 'In fact he stayed', 'Lord Arryn raises his levies', 'a story is told']) assert.ok(!said(t), t);
+  assert.deepEqual(faultsOf('Lysa Arryn raises her levies at the Eyrie', 'g-muster-03'), []);
+  assert.deepEqual(faultsOf('Weirwood weeps red sap at Winterfell', 'g-omen-01', 'The old stories of the Long Night call it an omen, and in fact the smallfolk agree.'), []);
+});
+
+test('the checks that reuse the narration validator each fail a crafted card: script, anachronism, maturity, mustNot', () => {
+  assert.ok(faultsOf('Lord Karstark marches south 北方', 'g-march-02').includes('script'), 'a CJK leak');
+  assert.ok(faultsOf('Lord Karstark marches south', 'g-march-02', 'Он идёт на юг.').includes('script'), 'a Cyrillic summary');
+  assert.ok(faultsOf('Lord Karstark marches for the Red Wedding', 'g-march-02').includes('anachronism'), 'a later chapter');
+  assert.ok(faultsOf('Lord Karstark marches south', 'g-march-02', 'The men speak of the Red Wedding.').includes('anachronism'), '... in the summary');
+  assert.deepEqual(faultsOf(byId['g-crown-01'].reference, 'g-crown-01', byId['g-crown-01'].summary), [], 'unless the story\'s own facts say it');
+  assert.ok(faultsOf('Lord Karstark marches south', 'g-march-02', 'His men speak of intercourse on the road.').includes('maturity'));
+  assert.ok(faultsOf("Lady Hornwood refuses the Karstark summons", 'g-refusal-01').includes('invented'), 'mustNot: Karstark');
+  assert.match(detailOf("Lady Hornwood refuses the Karstark summons", 'g-refusal-01'), /must not say/);
+  assert.ok(faultsOf('Lady Hornwood refuses Stark\'s summons', 'g-refusal-01', 'Donella will not send Barristan.').includes('invented'), 'mustNot: Barristan, in a summary');
+});
+
+// ── Review round, part two: places with an apostrophe, offices, and the free cities ──────────────────────────────────────
+const placeStory = (place, house, text = 'Something happened.', actors = []) => ({ facts: [{ id: 'f1.1', kind: 'happening', actors, houses: [house], place, data: {}, importance: 2, text }], must: [], mustNot: [] });
+
+test('places with an apostrophe are read, straight or curly: a story of a place only can pass `who` at "Storm\'s End", "Widow\'s Watch", "King\'s Landing"', () => {
+  for (const [h, place, house] of [["Fire breaks out at Storm's End", 'baratheon_se', 'baratheon_se'], ['Fire breaks out at Storm’s End', 'baratheon_se', 'baratheon_se'],
+    ["Wolves gather near Widow's Watch", 'flint', 'flint'], ['Wolves gather near Widow’s Watch', 'flint', 'flint'],
+    ["Rats overrun the Street of Steel at King's Landing", 'baratheon', 'baratheon'], ['Rats overrun the Street of Steel at King’s Landing', 'baratheon', 'baratheon'],
+    ["Riots break out at the Sealord's Palace", 'braavos', 'braavos'], ['Riots break out at the Sealord’s Palace', 'braavos', 'braavos']]) assert.deepEqual(faultsOf(h, placeStory(place, house)), [], h);
+  // the entities are read from the text as it is
+  for (const [t, kind, text] of [["Stannis Baratheon besieges Storm's End", 'place', "Storm's End"], ['Fire at Widow’s Watch', 'place', 'Widow’s Watch'], ["The Night's Watch rides out", 'house', "Night's Watch"]]) {
+    assert.ok(entitiesIn(state, t, { start: true }).some((e) => e.kind === kind && e.text === text), `${kind} "${text}" in "${t}"`);
+  }
+  // and a place the story does not have is a place it does not have
+  const karhold = placeStory('karstark', 'karstark');
+  assert.ok(faultsOf("Fire breaks out at Storm's End", karhold).includes('invented'));
+  assert.ok(faultsOf("Fire breaks out at Storm's End", karhold).includes('who'));
+});
+
+test('offices: "the Queen", "the King", "the Hand" mean the story\'s own holder of the office — not the crown\'s, and not invented', () => {
+  const death = (id, place, cause) => ({ facts: [{ id: 'f1.1', kind: 'death', actors: [id], houses: [state.characters[id].house], place, data: { cause, how: 'fever' }, importance: 3, text: `${state.characters[id].name} is dead.` }], must: [], mustNot: [] });
+  // the Queen of the story is not the Queen the crown has (the alias reads "the Queen" as Cersei)
+  const rhaella = death('rhaella_targaryen', 'baratheon_ds', 'a fever');
+  assert.deepEqual(faultsOf('The Queen dies of a fever at Dragonstone', rhaella), []);
+  assert.ok(faultsOf('The Queen dies at Karhold', 'g-death-01').includes('invented'), 'no queen in that story');
+  // the Hand: no alias knows the office; a story of the man who held it
+  const jon = death('jon_arryn', 'arryn', 'a fever');
+  assert.deepEqual(faultsOf('The Hand dies of a fever at the Eyrie', jon), []);
+  assert.deepEqual(faultsOf('The Hand of the King dies of a fever at the Eyrie', jon), []);
+  assert.ok(faultsOf('The Hand names a new captain at Karhold', 'g-march-02').includes('invented'), 'no Hand in that story');
+  assert.ok(faultsOf('The Hand names a new captain', 'g-march-02').includes('who'), 'and names no one of the story');
+  // the King: the story's, and the crown's when the story has him
+  assert.deepEqual(faultsOf('The King holds a tourney at King\'s Landing', 'g-tourney-02'), []);
+  assert.ok(faultsOf('The King rides north', 'g-march-02').includes('invented'));
+  // "the King" inside "the Hand of the King" is not the King
+  const ents = entitiesIn(state, 'The Hand of the King dies', { start: true });
+  assert.deepEqual(ents.map((e) => [e.kind, e.ids[0]]), [['office', 'hand']]);
+});
+
+test('a free city is house and holding at once: "Pentos" and "Braavos" are the story\'s when its place or its house is', () => {
+  // (a story of a Pentoshi galley, told at Widow's Watch: the house is Pentos, the place is not)
+  assert.deepEqual(faultsOf("Pentos loses a galley off Widow's Watch", 'g-meanwhile-03'), []);
+  assert.ok(faultsOf("Pentos loses a galley off Widow's Watch", 'g-meanwhile-01').includes('invented'), 'a story without Pentos');
+  // (a story told at Braavos, no house named: the house is the city)
+  const braavos = placeStory('braavos', 'braavos');
+  assert.deepEqual(faultsOf('Braavos raises a new harbour chain', { ...braavos, facts: [{ ...braavos.facts[0], houses: [] }] }), []);
+  assert.deepEqual(faultsOf('House Braavos raises a new harbour chain', { ...braavos, facts: [{ ...braavos.facts[0], houses: [] }] }), [], 'the house named, the place the story has');
+  // an ordinary house and its castle are not the same thing: Tully is not Riverrun
+  assert.ok(faultsOf('House Tully sends a raven to Riverrun', placeStory('tully', 'lannister')).includes('invented'), 'House Tully is not in a story of Lannisters at Riverrun');
+});

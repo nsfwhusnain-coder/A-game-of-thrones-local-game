@@ -16,7 +16,7 @@
 
 const HOUSE_RANKS = new Set(['paramount', 'major', 'minor', 'exile']); // a rank that is a House (the crown is the Crown)
 const titled = (id) => String(id ?? '').replace(/[_-]+/g, ' ').trim().replace(/\b[a-z]/g, (x) => x.toUpperCase());
-const noThe = (s) => String(s || '').trim().replace(/^the\s+/i, '');
+const noThe = (s) => String(s || '').trim().replace(/^(?:the\s+)+/i, '');
 // the one house whose data name carries an epithet nobody uses ("Nymeros Martell": everyone says House Martell)
 const EPITHET = /^Nymeros\s+/;
 
@@ -61,10 +61,11 @@ export function who(state, charId) {
   const c = charId && typeof charId === 'object' ? charId : state?.characters?.[charId];
   const name = String(c?.name || '').trim();
   if (!name) return 'someone';
-  const m = name.match(/^(.*?)\s*["“]([^"”]+)["”]\s*(.*)$/);
+  // a byname sits between quotes, "double" or 'single' (an apostrophe inside a word, O'Neil, is no quote)
+  const m = name.match(/(?:^|\s)(?:["“]([^"”]+)["”]|['‘]([^'’]+)['’])(?=\s|$)/);
   if (!m) return name;
-  const [, first, byname, last] = m;
-  const surname = (last || first).trim();
+  const byname = m[1] || m[2]; const first = name.slice(0, m.index).trim(); const last = name.slice(m.index + m[0].length).trim();
+  const surname = last || first;
   if (state?.houses?.[c.house]?.lord === c.id) return `${c.sex === 'f' ? 'Lady' : 'Lord'} ${surname}`;
   return `${byname.trim()} ${surname}`.trim();
 }
@@ -84,7 +85,9 @@ const houseNamed = (state, tail, owner) => {
 function hostOf(state, h) {
   if (!h) return 'the host';
   if (h.rank === 'crown') return 'the royal host';
-  if (!isHouse(h)) return `${houseLabel(state, h.id)} host`;
+  // a free city's host is "the Braavos host"; an order, a tribe or a company is a body of men already: its own name
+  if (h.rank === 'city_state') return `the ${noThe(h.name)} host`;
+  if (!isHouse(h)) return houseLabel(state, h.id);
   const { base, place } = partsOf(h);
   // two Baratheon hosts are at war with each other: the one from Dragonstone is not the one from Storm's End
   const shared = place && Object.values(state?.houses || {}).some((o) => o.id !== h.id && partsOf(o).base === base);
@@ -93,6 +96,10 @@ function hostOf(state, h) {
 
 /** A party as it is told in a sentence: "the Stark host", "the Iron fleet"; a party with a name of its own keeps it. */
 export function partyLabel(state, party) {
+  // "the Stark Host" is a name the data may give; a sentence says "the Stark host", "the Iron fleet"
+  return partyName(state, party).replace(/\b(Host|Fleet)\b/g, (w) => w.toLowerCase());
+}
+function partyName(state, party) {
   if (!party || typeof party !== 'object') return 'a host';
   const name = String(party.name || '').trim();
   const owner = state?.houses?.[party.owner];

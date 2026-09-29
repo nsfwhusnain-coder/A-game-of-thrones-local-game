@@ -975,3 +975,83 @@ ransoms, `embargo`) and the price index of §6.3.
   (it was red): the map shows what the player would know of others' orders, which is nothing.
 - **This week's word carries no age** on a reported plate ("~6,000?"); older word says how old ("· 7 days old").
 
+## D-058 · 2026-09-29 · Headline tense: the news present, or a bare participle; summaries in the past (WP N1)
+
+- **A headline is news-headline present, or a bare passive participle when the patient is the news**: "Lady Hornwood
+  refuses Stark's summons", "King Robert crosses the Green Fork", "Robb Stark slain by Tywin Lannister at the Green
+  Fork". **The summary under it is in the simple past.**
+- **Why.** 18's own §4 examples and 20 §5 are in the present, and newspapers and Pax are too; "past, always" (18 H2)
+  would read "Lady Hornwood refused Stark's summons" in a feed that is already history, and contradicts the examples
+  the same document gives.
+- **Replaces** 18 H2 ("past tense … past, always") and §3.2's instruction to the narrator, and the scorer's rule `past`,
+  which is now `verb`: the headline holds a finite verb or a participle from `HEADLINE_VERBS` (`public/data/style.js`); a
+  bare noun phrase ("Battle near the Twins") fails.
+
+## D-059 · 2026-09-29 · Work packages ship in slices (all WPs)
+
+- **Related work packages of one chain share a branch and a PR**: N1+N2 (Slice 1), then, as planned, R1–R3, N3+N4,
+  U1–U3, N5+N6+N9 and so on. Every WP keeps its own acceptance criteria, its own roadmap mark and (in the slice's
+  changelog entry) its own line; a slice is merged only when all of its packages are.
+- **Why.** The packages of a chain share files and are tested together (N2's slots are read by N1's fixtures; the writer of
+  N3 is scored by N1), and `00-agent-brief.md` §5 (item 4) allows a PR "per small group of related packages". One PR per
+  package would be four reviews of the same files.
+- **Departs from** the one-branch-per-package wording of `docs/gdd/18-headlines.md` §5 ("its own branch
+  `wp/n<k>-<slug>`") and of `CLAUDE.md`'s Git rules, for chains only; the branch is then named for the slice
+  (`wp/n1-n2-headline-foundations`).
+
+## D-060 · 2026-09-29 · The headline scorer's shape (WP N1)
+
+- **`BOILERPLATE` and `JARGON` are new exports of `public/data/style.js`, separate from `FORBIDDEN`**, so the audience,
+  council and consolidate validators, which read `FORBIDDEN`, are unchanged. The scorer's `boiler` rule reads all of
+  them. "Rides for" is not boilerplate ([20](20-pax-reference.md) §5.2 row 16 calls "King Robert rides for Winterfell"
+  good); "Banners of" is, unless "the" follows ("the banners of the North" is English).
+- **Beyond 18 §5.2 the scorer also fails**: an uncalled-for "House X" or "the Xs" (`invented`: a house the story does
+  not hold, the player's own excepted); a house written "X of Place" (`boiler`: the ledger's form); a headline ending in
+  `!` or `?` (`punct`). It **accepts the story's houses for `who`** (a house of the story counts as a name, as a person
+  or a place does).
+- **An anachronism phrase is allowed when the story's own facts say it** ("crowned King in the North" in the story of the
+  crowning): the guard is against a headline that knows more than its facts, not against the facts.
+- **`roles` is read on the summary as well as the headline; `outcome` on the headline only** (a summary may say how a
+  death came without claiming an outcome the headline does not).
+
+## D-061 · 2026-09-29 · Fact slots and labels as built (WP N2)
+
+- **The slots** (additive; a slot is present only when the engine knows it):
+  `battle`: `winnerHouse`, `loserHouse`, `how`; `slain_in_battle`: `by`, `how`, `battle`, `place`;
+  `captured_in_battle`: `by`, `battle`, `place`; `executed`: `by`; `death`: `how` ∈ `age | illness | wound | fever |
+  winter`; `call_refused`: `why`, `liege` (no `why` when it was only the roll of the dice). Emitters:
+  `shared/battles.js`, `shared/world.js` (`note()`), `engine/military/muster.js`, `engine/actions/court.js`,
+  `engine/people/life.js`, `server/turn/day.js`. `shared/diplomacy.js` emits nothing and `engine/military/battle.js` only
+  resolves, so neither changed. The slots for `siege_*`, `crowned`, `wedding` and `arrived` in 18 §3.1 are not built.
+- **Battle `how` reuses the battle report's decisive-factor phrases** ("numbers and arms", "generalship", "the ground",
+  "surprise", "fortune"), not 18's `'charged' | 'held' | 'ambushed' | 'night'`: the engine resolves by factors, not
+  tactics, and the writer of N3 turns a factor into a clause. A draw has `null` houses and no `how`.
+- **`captured_in_battle.data.by` is a commander's id, else the captor house's id**: consumers look up characters first,
+  then houses. A slain man is put to the enemy commander who stood at the end of the day, never to one who fell or was
+  taken on the same field.
+- **Labels** (`public/js/engine/facts/label.js`): "the Crown" for the crown; "House Martell" (the data's "Nymeros" epithet
+  dropped); "House Baratheon", not "Baratheon of King's Landing"; a branch's host by its seat when two houses share a name
+  ("the Dragonstone host"); five or more names become a count with two named ("six in all, Umber and Manderly among
+  them"). `ago/soon` is not built.
+- **The lint rule** "importance ≥ 3 ⇒ a `HEAD` entry" of 18 §3.1 (and "⇒ has slots" of N2's row) becomes a test in N3:
+  `scripts/lint-engine.js` is a line scanner and cannot see a fact's importance.
+## D-067 · 2026-09-29 · Refused and unsure orders (WP SB)
+
+- **`call_banners` holds to a land rule, as `raise_levies` does** (B-34). The muster point must be the house's own land,
+  a sworn lord's, an active ally's, or a point that is no holding; anywhere else the verb is refused whole
+  ("Winterfell is not your land: the banners cannot muster there"). It is a little wider than `raise_levies`, which
+  takes only the house's own land and its sworn lords': a host may gather among allies, but a lord's own levies are
+  raised only where he rules.
+- **An order that names another house's person is not bound to your biggest host** (B-35). "Robb is to march the
+  Northern Host…" as a Lannister is read as `send_person` for Robb, which the verb refuses ("No one of yours by that
+  name"); a sworn lord who leads a host that answers to the house is still the house's to move. A "the <Adj> host" that
+  is none of the lord's (nor a generic word such as "whole" or "royal") is `march_host` with no host: "no host in the
+  field".
+- **A guessed host marks the reading unsure** (`complete = false`): when nothing in the words said which host, the
+  house's biggest is a best guess, and a model may be asked (with its schema, mock and fallback) rather than the rule
+  moving an army on a hunch.
+
+**Why.** A receipt must never say ✗ while half the order runs (B-34), and a lord must not move the wrong army (B-35).
+
+**Cost.** The pre-parser's sure readings on the order suite go 266 → 263 (three orders now ask); the exact reading on
+the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.

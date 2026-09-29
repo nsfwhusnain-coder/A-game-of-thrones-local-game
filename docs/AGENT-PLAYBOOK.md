@@ -168,7 +168,7 @@ Files you may touch: playtest/**, and scratch files in {SCRATCHPAD}. No source e
 Task: play {HOUSE} for {N} turns on the mock: `WC_PROVIDER=mock node scripts/playtest.js --house {HOUSE} --turns {N}`
 (it writes playtest/<house>-<date>.md), then repeat for {HOUSE2} and {HOUSE3}. Then READ what it wrote as a player who
 has never seen the code: the headline strip / cards, the chronicle, the digest, any ledger text. For each turn quote the
-headline(s) and grade each card: (a) at most 12 words; (b) names who, and where when there is a place; (c) past tense;
+headline(s) and grade each card: (a) at most 12 words; (b) names who, and where when there is a place; (c) a news-headline verb (present, or a participle: D-058);
 (d) no jargon or boilerplate (fact kinds, "holds court", "Word came that", "…and N more", "~N men", ids like
 `house_x`); (e) no invented name (every capitalised name exists in the game); (f) one card per story, not one line per
 fact; (g) the summary adds something the headline lacks; (h) nothing the player's house could not know (no spoilers,
@@ -433,7 +433,7 @@ machine. Test-writers and Explorers are cheap and can overlap with anything.
 ### 5.3 Headline rubric (GDD 18 §5.2; the scorer `scoreCard` implements it)
 
 A headline passes only if **all** hold: 3–12 words (≤ 80 chars); names **who** (and **where** if it has a place);
-past tense or passive participle ("slain", "taken", "crowned"); at most one number, from the story's data, no `~`, no
+a news-headline verb, present or passive participle ("refuses", "slain", "crowned"; D-058); at most one number, from the story's data, no `~`, no
 "N men"; no `()`, `:`, `;`, `—`, `…`, no trailing full stop; none of the boilerplate or jargon lists (fact kinds,
 "Word came that", "holds court", ids like `house_x`, "…and N more"); **no invented name** (every capitalised token
 resolves to the story); roles not reversed (who did it to whom); the summary is 1–3 sentences (≤ 340 chars), says

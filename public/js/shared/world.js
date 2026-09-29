@@ -230,9 +230,13 @@ const NAME_POOLS = {
   essos: ['Tycho', 'Malaquo', 'Doniphos', 'Nyessos', 'Samarro', 'Horonno', 'Ferrego', 'Illyrio', 'Belicho', 'Doran', 'Tregar', 'Alequo'],
 };
 const TRAIT_POOL = ['ambitious', 'cautious', 'proud', 'honorable', 'greedy', 'pious', 'jovial', 'cruel', 'shrewd', 'loyal', 'craven', 'brave', 'stubborn', 'generous', 'wrathful', 'patient', 'scheming', 'just', 'lazy', 'diligent'];
-function generateLord(h, year) {
-  let seed = 0; for (const ch of h.id) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+// `salt` makes another man of the same house: the lord raised at the start is seeded on the house alone (salt ''), a
+// cousin who claims the seat later on the house and the turn he does (resolveSuccessions), so he is not his clone
+function generateLord(h, year, salt = '') {
+  let seed = 0; for (const ch of h.id + salt) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
   const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  // seeds one letter apart give first draws almost alike: stir a salted seed before it picks a name
+  if (salt) { seed = Math.imul(seed ^ (seed >>> 15), 2246822519) >>> 0; seed = Math.imul(seed ^ (seed >>> 13), 3266489917) >>> 0; seed = (seed ^ (seed >>> 16)) >>> 0; for (let k = 0; k < 4; k++) rnd(); }
   const pool = NAME_POOLS[h.region] || NAME_POOLS.reach;
   const first = pool[Math.floor(rnd() * pool.length)];
   const female = /^(Lyessa|Alys|Sarra|Wynafryd|Harma|Morna|Gysella|Bethany|Jeyne|Ysilla|Mya|Cerenna|Myranda|Lanna|Tanda|Falyse|Leonette|Rhonda|Sharna|Ellyn|Larra|Nymella|Belore)$/.test(first);
@@ -519,8 +523,12 @@ export function resolveSuccessions(state) {
       const chosen = { order: `the brothers choose ${heir.name} to succeed ${prev}`, company: `the company names ${heir.name} its captain after ${prev}`, tribe: `the free folk follow ${heir.name} now that ${prev} is gone` }[h.rank];
       text = chosen ? `SUCCESSION: ${chosen}` : `SUCCESSION: ${heir.name} succeeds ${prev} as head of House ${h.name}${(heir.age ?? 20) < 16 ? ` — a child of ${heir.age}; a regent will rule in all but name` : ''}`;
     } else {
-      const c = generateLord(h, state.meta.date.year);
+      // a different man from the one who died — and from any other of the house — however many times the seat has failed
+      const kin = Object.values(state.characters).filter((x) => x.house === h.id);
+      let c = null;
+      for (let k = 0; k < 24 && (!c || kin.some((x) => x.name === c.name) || c.age === lord?.age); k++) c = generateLord(h, state.meta.date.year, `#${state.meta.turn}${k ? '.' + k : ''}`);
       c.id = c.id + '_' + state.meta.turn;
+      while (state.characters[c.id]) c.id += '_';
       const elected = h.rank === 'city_state';
       c.bio = elected ? `Chosen by the magisters of ${h.name} to rule after ${lord?.name || 'the last'}.` : `A cousin who claimed the seat of House ${h.name} when the main line failed.`;
       state.characters[c.id] = c; h.lord = c.id;
@@ -892,8 +900,8 @@ function applyOne(state, ch, ctx) {
       const why = `${ch.cause || ''} ${ch.note || ''}`;
       if (was.alive && !c.alive) {
         const kind = /battle|victory|slain|the field|fell /i.test(why) ? 'slain_in_battle' : /execut|behead|hanged|headsman/i.test(why) ? 'executed' : 'death';
-        // the slots a headline is written from, when the caller knows them: who did it, how, in which battle, where
-        note(kind, { ...f, ...(kind === 'slain_in_battle' && !f.place && ch.place ? { place: ch.place } : {}), data: { cause: ch.cause || null, ...(ch.by ? { by: ch.by } : {}), ...(ch.how ? { how: ch.how } : {}), ...(kind === 'slain_in_battle' && ch.battle ? { battle: ch.battle } : {}) } });
+        // the slots a headline is written from, when the caller knows them: who did it, how, in which battle
+        note(kind, { ...f, data: { cause: ch.cause || null, ...(ch.by ? { by: ch.by } : {}), ...(ch.how ? { how: ch.how } : {}), ...(kind === 'slain_in_battle' && ch.battle ? { battle: ch.battle } : {}) } });
       } else if (c.alive) {
         // a captive of the field is held by the host's commander (or, failing him, its house); one taken at a castle, by its lord's house
         const inBattle = /battle/i.test(why);
@@ -1014,7 +1022,11 @@ function applyOne(state, ch, ctx) {
       state.battles.push({ name: ch.name || `Battle at ${placeName(state, ch.at)}`, pos, date, turn: state.meta.turn, attacker: findHouse(state, ch.attacker), defender: findHouse(state, ch.defender), victor: findHouse(state, ch.victor), losses: ch.losses || {}, summary: ch.summary || '' });
       state.battles = state.battles.slice(-40);
       const bt = state.battles.at(-1);
-      note('battle', { actors: [], houses: [bt.attacker, bt.defender], place: resolvePlaceId(ch.at || ch.location) || null, pos, data: { attacker: bt.attacker, defender: bt.defender, winner: bt.victor, lost: bt.losses }, text: `${bt.name}${bt.victor ? `: victory for House ${state.houses[bt.victor]?.name}` : ''}.${bt.summary ? ` ${bt.summary}` : ''}` });
+      // the slots a headline is written from (as on the engine's own battles, shared/battles.js): a story battle names houses, not
+      // hosts, so its `winner` is already a house; the loser is the other side; `how` only if the op says it, in plain words
+      const loserHouse = bt.victor === bt.attacker ? bt.defender : bt.victor === bt.defender ? bt.attacker : null;
+      const how = typeof ch.how === 'string' && /^[a-z][a-z ,'-]{2,59}$/i.test(ch.how.trim()) ? ch.how.trim() : null;
+      note('battle', { actors: [], houses: [bt.attacker, bt.defender], place: resolvePlaceId(ch.at || ch.location) || null, pos, data: { attacker: bt.attacker, defender: bt.defender, winner: bt.victor, lost: bt.losses, winnerHouse: bt.victor || null, loserHouse: bt.victor ? loserHouse ?? null : null, ...(how ? { how } : {}) }, text: `${bt.name}${bt.victor ? `: victory for House ${state.houses[bt.victor]?.name}` : ''}.${bt.summary ? ` ${bt.summary}` : ''}` });
       return { op, text: `BATTLE: ${state.battles.at(-1).name}${ch.victor ? ' — victory for ' + (state.houses[findHouse(state, ch.victor)]?.name || ch.victor) : ''}` };
     }
     case 'raven': case 'letter': case 'message': {

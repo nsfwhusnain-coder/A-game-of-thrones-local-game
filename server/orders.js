@@ -3,8 +3,9 @@
 // reading is tried at once on a copy of the world: that is the order's receipt, line by line, ✓ done, ⚠ done with a
 // warning, ✗ refused with the reason the world gives. The turn then carries out exactly that reading through the verbs
 // (engine/actions/registry.js), and the story is told what was done — it narrates, it never decides whether to obey.
-import { applyChanges, resolvePlaceId, placeName } from '../public/js/shared/world.js';
+import { applyChanges, resolvePlaceId, placeName, nearestHolding } from '../public/js/shared/world.js';
 import { settle } from '../public/js/engine/parties.js';
+import { dayNumber } from '../public/js/engine/time.js';
 import { isFemale } from '../public/js/shared/people.js';
 import { commandable } from '../public/js/shared/errands.js';
 import { emit, fact } from '../public/js/engine/facts/log.js';
@@ -236,18 +237,33 @@ export function orderEvents(state, orders, modelEvents) {
   return out;
 }
 
-/** Bring the next day's levy contingent into its camp. Numbers are engine-owned and grow visibly. */
+/**
+ * Bring the next day's levy contingent into its camp. Numbers are engine-owned and grow visibly. Every day is a fact;
+ * the chronicle is told three things of a muster, each naming the camp's place: that it has begun, how many are still on
+ * the road once a week, and that it is whole — not the same card every day.
+ */
 export function advanceMusters(state, days) {
-  const events = [];
+  const events = []; const today = dayNumber(state.meta.date);
   for (const a of Object.values(state.parties)) {
-    if (!a.muster?.remaining || a.kind === 'fleet') continue;
-    const add = Math.min(a.muster.remaining, Math.max(0, Math.round(a.muster.daily * days)));
+    const m = a.muster;
+    if (!m?.remaining || a.kind === 'fleet') continue;
+    const add = Math.min(m.remaining, Math.max(0, Math.round(m.daily * days)));
     if (!add) continue;
-    a.men += add; a.muster.remaining -= add;
-    if (a.muster.remaining <= 0) { delete a.muster; settle(state, a); }
+    a.men += add; m.remaining -= add;
+    const whole = m.remaining <= 0;
+    if (whole) { delete a.muster; settle(state, a); }
     // a sworn lord's levies gathering at his seat grow quietly (a fact, never a card: 07 §3.2); the lord's own, openly
-    if (a.muster?.quiet || (!a.muster && a.serving)) { emit(state, 'muster_grew', { actors: [a.commander], houses: [a.owner], place: a.at || null, importance: 1, data: { party: a.id, men: add, total: a.men }, cause: { type: 'rule', ref: 'muster' } }); continue; }
-    events.push(fact(state, 'muster_grew', { title: `${a.name} grows in the fields`, text: `${add.toLocaleString('en-GB')} more men have reached the camp. The host now numbers ${a.men.toLocaleString('en-GB')}.`, where: a.at || null, importance: 2, houses: [a.owner] }, { actors: [a.commander], data: { party: a.id, men: add, total: a.men }, cause: { type: 'rule', ref: 'muster' } }));
+    if (m.quiet || (whole && a.serving)) { emit(state, 'muster_grew', { actors: [a.commander], houses: [a.owner], place: a.at || null, importance: 1, data: { party: a.id, men: add, total: a.men }, cause: { type: 'rule', ref: 'muster' } }); continue; }
+    // the camp stays where it was pitched, though the host may march before the last men come in
+    if (m.began == null) { m.began = today; m.told = today; m.place = a.at || nearestHolding(state, a.pos); }
+    const where = a.at || m.place; const P = placeName(state, where); const N = (n) => Math.round(n).toLocaleString('en-GB');
+    const card = whole ? { title: `${a.name} is whole at ${P}`, text: `The last of the levies have reached the camp at ${P}. The host now numbers ${N(a.men)}.` }
+      : m.began === today ? { title: `${a.name} begins to gather at ${P}`, text: `The levies are coming in from the fields to the camp at ${P}: ${N(add)} men have reached it today, ${N(m.remaining)} more are on the road. The host now numbers ${N(a.men)}.` }
+      : today - m.told >= 7 ? { title: `${a.name} is still filling at ${P}`, text: `${N(m.remaining)} men are still on the road to the camp at ${P}. The host now numbers ${N(a.men)}.` } : null;
+    const more = { actors: [a.commander], data: { party: a.id, men: add, total: a.men }, cause: { type: 'rule', ref: 'muster' } };
+    if (!card) { emit(state, 'muster_grew', { ...more, houses: [a.owner], place: where || null, importance: 1 }); continue; }
+    if (!whole) m.told = today;
+    events.push(fact(state, 'muster_grew', { ...card, where: where || null, importance: 2, houses: [a.owner] }, more));
   }
   return events;
 }
