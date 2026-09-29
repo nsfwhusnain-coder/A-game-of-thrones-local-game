@@ -15,10 +15,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 button{font:inherit;color:inherit}
 h1,h2,h3,h4{font-family:var(--display);font-weight:600;letter-spacing:.04em;margin:0;color:var(--gold2)}
 svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.map{position:fixed;inset:0;background:var(--bg) center/cover no-repeat}
+.map{position:fixed;inset:0;background:var(--bg) center/cover no-repeat;transform:scale(1.08);transform-origin:100% 100%} /* a little bigger: the screenshot's debug tag slides off the corner */
 .dim{position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(8,6,4,.45),rgba(8,6,4,.78))}
-.tag{position:fixed;top:.3rem;left:50%;transform:translateX(-50%);z-index:99;font:600 .56rem/1 var(--display);letter-spacing:.14em;color:rgba(236,211,146,.7);
-  background:rgba(14,11,8,.62);padding:.28rem .6rem;border-radius:2px;pointer-events:none;white-space:nowrap}
+.tag{position:fixed;left:.1rem;top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;z-index:99;font:600 .56rem/1 var(--display);letter-spacing:.16em;color:rgba(236,211,146,.75);
+  background:rgba(14,11,8,.6);padding:.6rem .28rem;border-radius:2px;pointer-events:none;white-space:nowrap}
 .panel{background:var(--panel);border:1px solid var(--line2);border-radius:4px;box-shadow:var(--shadow),inset 0 0 0 1px rgba(201,164,74,.07);backdrop-filter:blur(5px)}
 .btn{background:linear-gradient(#4a3b29,#241b12);border:1px solid var(--line2);color:var(--gold2);padding:.4rem .9rem;border-radius:3px;font-family:var(--display);font-size:.78rem;letter-spacing:.05em;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem}
 .btn.primary{background:linear-gradient(#b8923f,#7d5f22);color:#1b1408;border-color:#e0c072;font-weight:700}
@@ -29,10 +29,10 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 /* ---- the quiet HUD (GDD 17 §2.1) ---- */
 .hud{position:fixed;z-index:5;pointer-events:none}
 .hud>*{pointer-events:auto}
-.hud-tl{left:1rem;top:1rem;display:flex;gap:.6rem;align-items:stretch}
-.hud-tr{right:1rem;top:1rem;display:flex;gap:.6rem;align-items:flex-start}
+.hud-tl{left:.5rem;top:.5rem;display:flex;gap:.6rem;align-items:stretch}
+.hud-tr{right:.9rem;top:.5rem;display:flex;gap:.6rem;align-items:flex-start}
 .plate{display:flex;align-items:center;gap:.7rem;padding:.45rem .9rem .45rem .55rem;min-width:17rem}
-.plate .crest{width:2.5rem;height:3rem;flex:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+.plate .crest{width:auto;height:3.1rem;flex:none;align-self:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
 .plate .house{font:600 .68rem/1 var(--display);letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
 .plate .date{font:600 1.02rem/1.15 var(--display);color:var(--gold2);letter-spacing:.03em;margin-top:.2rem;white-space:nowrap}
 .plate .season{display:flex;align-items:center;gap:.3rem;font-style:italic;color:var(--muted);font-size:.86rem;margin-top:.1rem}
@@ -75,16 +75,16 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 .who .nm small{display:block;font-size:.85rem;color:var(--muted);margin-top:.15rem;font-style:italic}
 .who .nm .mood{display:inline-flex;align-items:center;gap:.3rem;font-style:normal;font-size:.8rem;color:var(--green);margin-top:.15rem}
 .who .nm .mood:before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--green)}
-.ring{width:6.2rem;height:6.2rem;border-radius:50%;padding:.28rem;background:conic-gradient(from 210deg,#8a6a2a,#f0d68a,#8a6a2a,#f0d68a,#8a6a2a);box-shadow:0 6px 22px rgba(0,0,0,.65),0 0 0 2px #1b1409;flex:none}
+.ring{width:7.2rem;height:7.2rem;border-radius:50%;padding:.28rem;background:conic-gradient(from 210deg,#8a6a2a,#f0d68a,#8a6a2a,#f0d68a,#8a6a2a);box-shadow:0 6px 22px rgba(0,0,0,.65),0 0 0 2px #1b1409;flex:none}
 .ring>div{width:100%;height:100%;border-radius:50%;overflow:hidden;border:2px solid #1b1409;background:#111}
-.ring svg{width:100%;height:100%;display:block}
+.ring img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.38);transform-origin:50% 26%}
 .chip{display:inline-flex;align-items:center;gap:.3rem;font:600 .62rem/1 var(--display);letter-spacing:.1em;text-transform:uppercase;padding:.28rem .5rem;border-radius:2rem;border:1px solid var(--line2);color:var(--muted);white-space:nowrap}
 .chip.up{color:var(--green);border-color:rgba(116,184,78,.5);background:rgba(116,184,78,.09)}
 .chip.down{color:#e8806b;border-color:rgba(224,102,79,.5);background:rgba(224,102,79,.09)}
 .chip.gold{color:var(--gold2);border-color:rgba(201,164,74,.55);background:rgba(201,164,74,.09)}
 .pchip{display:inline-flex;align-items:center;gap:.5rem;padding:.2rem .7rem .2rem .2rem;border:1px solid var(--line2);border-radius:2rem;background:rgba(0,0,0,.25);font-size:.95rem}
 .pchip .pf{width:2.1rem;height:2.1rem;border-radius:50%;overflow:hidden;border:1px solid var(--gold);flex:none}
-.pchip .pf svg{width:100%;height:100%;display:block}
+.pchip .pf img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.4);transform-origin:50% 26%}
 .pchip small{display:block;color:var(--muted);font-size:.78rem;line-height:1.1}
 .x{position:absolute;top:.7rem;right:.8rem;color:var(--muted);cursor:pointer}
 .parch{background:linear-gradient(#f2e7cb,#e6d6b0);color:var(--ink);border:1px solid #b79a5a;border-radius:4px;box-shadow:var(--shadow),inset 0 0 60px rgba(150,110,40,.22),inset 0 0 0 4px rgba(255,250,235,.35)}
@@ -94,27 +94,30 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 
 .map{background-image:url(../screens/e1/lod1-1920x1080.jpg)}@media (max-width:1500px){.map{background-image:url(../screens/e1/lod1-1366x768.jpg)}}
 
-.card{display:grid;grid-template-columns:.42rem 1fr;background:linear-gradient(90deg,rgba(255,255,255,.03),rgba(0,0,0,0));border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.card{flex:none;display:grid;grid-template-columns:.42rem 1fr;background:linear-gradient(90deg,rgba(255,255,255,.03),rgba(0,0,0,0));border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .card .bar{background:var(--muted)}
-.card.great{border-color:rgba(201,164,74,.75);box-shadow:0 0 0 1px rgba(201,164,74,.15),0 4px 18px rgba(0,0,0,.4);background:linear-gradient(90deg,rgba(201,164,74,.09),rgba(0,0,0,0))}
+.card.great{border-color:rgba(201,164,74,.75);box-shadow:0 0 0 1px rgba(201,164,74,.15),0 4px 18px rgba(0,0,0,.4);background:linear-gradient(90deg,rgba(201,164,74,.10),rgba(0,0,0,0))}
 .card.great .bar{background:linear-gradient(#f3d98d,#a67c2a)}
 .card.major .bar{background:var(--amber)}
 .card.news .bar{background:var(--blue)}
 .card.minor .bar{background:#6e6250}
 .card.meanwhile .bar{background:repeating-linear-gradient(#5b5140 0 .3rem,transparent .3rem .5rem)}
-.card .in{padding:.55rem .85rem .55rem .8rem;min-width:0}
-.tier{display:flex;align-items:center;gap:.5rem;font:600 .6rem/1 var(--display);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.great .tier{color:var(--gold2)}.major .tier{color:var(--amber)}.news .tier{color:#8db3e0}
-.tier .pips{letter-spacing:.1em;font-size:.7rem}
-.tier .mine{margin-left:auto;color:var(--gold);border:1px solid rgba(201,164,74,.5);padding:.15rem .4rem;border-radius:2px;letter-spacing:.12em}
-.card h3{font:600 1.12rem/1.22 var(--display);letter-spacing:.02em;color:#f6ecd2;margin:.35rem 0 .2rem}
-.great h3{font-size:1.3rem}
-.minor h3{font-size:.98rem;color:var(--text);margin:.3rem 0 0}
-.card p{margin:0;font-size:1rem;line-height:1.32;color:#d7cbb0}
-.meta{display:flex;align-items:center;gap:.45rem;margin-top:.35rem;font-size:.86rem;color:var(--muted);font-style:italic}
-.meta svg{width:.95em;height:.95em;color:var(--gold)}
-.meta .dt{font-style:normal;font-variant:small-caps;letter-spacing:.06em}
-.meta .more{margin-left:auto;font:600 .64rem/1 var(--display);letter-spacing:.1em;font-style:normal;color:var(--gold);text-transform:uppercase;cursor:pointer;white-space:nowrap}
+.card .in{padding:.5rem .85rem .45rem .8rem;min-width:0}
+.card h3{font:600 1.08rem/1.22 var(--display);letter-spacing:.02em;color:#f6ecd2;margin:0 0 .2rem}
+.card h3 .pips{font-size:.72rem;letter-spacing:.08em;margin-right:.5rem;vertical-align:.12em}
+.great h3{font-size:1.28rem}.great h3 .pips,.great .tl{color:var(--gold2)}
+.major h3 .pips,.major .tl{color:var(--amber)}
+.news h3 .pips,.news .tl{color:#8db3e0}
+.minor h3{font-size:.98rem;color:var(--text);margin:0}
+.minor h3 .pips,.meanwhile h3 .pips{color:var(--muted)}
+.meanwhile h3{font-size:.98rem;color:var(--text)}
+.card p{margin:0;font-size:.98rem;line-height:1.3;color:#d7cbb0}
+.meta{display:flex;align-items:center;gap:.4rem;margin-top:.3rem;font-size:.85rem;color:var(--muted);font-style:italic;white-space:nowrap}
+.meta svg{width:.95em;height:.95em;color:var(--gold);flex:none}
+.meta .tl{font:600 .58rem/1 var(--display);letter-spacing:.16em;text-transform:uppercase;font-style:normal;margin-right:.2rem;color:var(--muted)}
+.meta .dt{font-style:normal;font-variant:small-caps;letter-spacing:.05em}
+.meta .mine{font:600 .55rem/1 var(--display);letter-spacing:.12em;font-style:normal;color:var(--gold);border:1px solid rgba(201,164,74,.5);padding:.15rem .35rem;border-radius:2px;text-transform:uppercase;margin-left:.2rem}
+.meta .more{margin-left:auto;font:600 .62rem/1 var(--display);letter-spacing:.1em;font-style:normal;color:var(--gold);text-transform:uppercase;cursor:pointer;padding-left:.5rem}
 
     .feed{position:fixed;left:1rem;top:5.6rem;bottom:1rem;width:41rem;max-width:calc(100vw - 30rem);display:flex;flex-direction:column;z-index:6}
     .feed header{padding:.7rem 1rem .6rem;border-bottom:1px solid var(--line)}
@@ -125,10 +128,11 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
     .filters .chip{cursor:pointer}
     .filters .chip.on{color:var(--gold2);border-color:var(--gold);background:rgba(201,164,74,.12)}
     .filters .sp{margin-left:auto;font-size:.85rem;color:var(--muted);font-style:italic}
-    .list{flex:1;overflow:hidden;padding:.7rem .8rem;display:flex;flex-direction:column;gap:.5rem;position:relative}
+    .list{flex:1;overflow:hidden;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.45rem;position:relative}
     .day{font:600 .62rem/1 var(--display);letter-spacing:.2em;color:var(--muted);text-transform:uppercase;display:flex;gap:.6rem;align-items:center}
     .day:after{content:"";flex:1;border-top:1px solid var(--line)}
-    @media (max-height:800px){.opt{display:none}}
+    @media (min-height:1000px){.list{gap:.65rem}.card .in{padding:.7rem .95rem .6rem .9rem}.card h3{margin-bottom:.3rem}}
+    @media (max-height:800px){.opt{display:none}.feed{top:4.9rem;bottom:.6rem}.feed header{padding:.5rem 1rem .45rem}.list{padding:.5rem .8rem;gap:.35rem}.card .in{padding:.4rem .8rem .35rem .75rem}.card p{font-size:.94rem;line-height:1.26}.meta{margin-top:.2rem}}
     .hint{position:fixed;left:44rem;top:8rem;width:14rem;color:var(--gold2);font-style:italic;font-size:.95rem;text-shadow:0 1px 4px #000;display:none}</style></head>
 <body class=""><svg width="0" height="0" style="position:absolute"><defs>
 <symbol id="i-coin" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></symbol>
@@ -155,7 +159,7 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 <div class="map"></div>
 
 <div class="hud hud-tl">
-  <div class="panel plate"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#e9e9ec" stroke="#17120d" stroke-width="1.4"/><path d="M10 8l3 3h6l3-3v9l-3 5-3 2-3-2-3-5z" fill="#6c7078"/><path d="M14 20h6l-3 4z" fill="#e9e9ec"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><div><div class="house">House Stark</div><div class="date">15th of the 8th Moon, 298 AC</div><div class="season"><svg class="i "><use href="#i-sun"/></svg> Late summer &middot; the days shorten</div></div></div>
+  <div class="panel plate"><img class="crest " src="assets/banner-stark.png" alt=""><div><div class="house">House Stark</div><div class="date">15th of the 8th Moon, 298 AC</div><div class="season"><svg class="i "><use href="#i-sun"/></svg> Late summer &middot; the days shorten</div></div></div>
   
 </div>
 <div class="hud hud-tr" >
@@ -165,45 +169,21 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 </div><section class="feed panel"><header><div class="r1"><h2>Chronicle</h2><small>8th moon, 298 AC &middot; 5 new</small></div>
       <div class="filters"><span class="chip on">&#10003; Only what matters</span><span class="chip">Mine</span><span class="chip">War</span><span class="chip">Letters</span><span class="chip">Rumours</span><span class="sp"><svg class="i "><use href="#i-x"/></svg></span></div></header>
       <div class="list"><div class="day">Today</div><article class="card great "><div class="bar"></div><div class="in">
-    <div class="tier"><span class="pips">&#9670;&#9670;&#9670;</span>Great news<span class="mine">Your house</span></div>
-    <h3>The King’s progress reaches Winterfell</h3><p>King Robert rides through the gate with the Queen, her brothers and three hundred knights. Men say he means to make Lord Eddard his Hand.</p>
-    <div class="meta"><svg class="i "><use href="#i-pin"/></svg><span class="dt">15th of the 8th moon</span> &middot; <span>Winterfell</span><span class="more">Details &#9656;</span></div></div></article><article class="card major "><div class="bar"></div><div class="in">
-    <div class="tier"><span class="pips">&#9670;&#9670;</span>Major<span class="mine">Your kin</span></div>
-    <h3>Robb Stark calls the banners at Winterfell</h3><p>Nineteen sworn houses are told to bring their men to Winterfell before the first snow. The first ravens have already flown.</p>
-    <div class="meta"><svg class="i "><use href="#i-pin"/></svg><span class="dt">13th of the 8th moon</span> &middot; <span>Winterfell</span><span class="more">Details &#9656;</span></div></div></article><article class="card major "><div class="bar"></div><div class="in">
-    <div class="tier"><span class="pips">&#9670;&#9670;</span>Major<span class="mine">Your kin</span></div>
-    <h3>Lord Hoster Tully falls ill at Riverrun</h3><p>A raven from Riverrun says Lord Hoster has kept to his bed for a fortnight. Ser Edmure holds the castle in his name.</p>
-    <div class="meta"><svg class="i "><use href="#i-pin"/></svg><span class="dt">12th of the 8th moon</span> &middot; <span>Riverrun &middot; raven, 4 days old</span><span class="more">Details &#9656;</span></div></div></article><article class="card news "><div class="bar"></div><div class="in">
-    <div class="tier"><span class="pips">&#9670;</span>News</div>
-    <h3>Lady Hornwood refuses Stark’s summons</h3><p>Donella Hornwood will keep her men at home. Word of it reached Winterfell with the first ravens.</p>
-    <div class="meta"><svg class="i "><use href="#i-pin"/></svg><span class="dt">11th of the 8th moon</span> &middot; <span>Hornwood</span><span class="more">Details &#9656;</span></div></div></article><article class="card news opt"><div class="bar"></div><div class="in">
-    <div class="tier"><span class="pips">&#9670;</span>News</div>
-    <h3>Lady Lysa raises the Vale’s levies at the Eyrie</h3><p>House Arryn is calling its banners; nothing yet says against whom.</p>
-    <div class="meta"><svg class="i "><use href="#i-pin"/></svg><span class="dt">10th of the 8th moon</span> &middot; <span>The Eyrie &middot; rumour</span><span class="more">Details &#9656;</span></div></div></article><article class="card news opt"><div class="bar"></div><div class="in">
-    <div class="tier"><span class="pips">&#9670;</span>News</div>
-    <h3>Mance Rayder gathers the free folk beyond the Wall</h3><p>A great host of wildlings is answering him. The Night’s Watch has not yet learned how many.</p>
-    <div class="meta"><svg class="i "><use href="#i-pin"/></svg><span class="dt">9th of the 8th moon</span> &middot; <span>Castle Black &middot; a ranger’s word</span><span class="more">Details &#9656;</span></div></div></article><article class="card minor "><div class="bar"></div><div class="in">
-    <div class="tier"><span class="pips">&#9675;</span>Minor</div>
-    <h3>Lord Bolton begins a market at the Dreadfort</h3>
-    <div class="meta"><svg class="i "><use href="#i-pin"/></svg><span class="dt">9th of the 8th moon</span> &middot; <span>The Dreadfort</span><span class="more">Details &#9656;</span></div></div></article><article class="card meanwhile "><div class="bar"></div><div class="in">
-    <div class="tier"><span class="pips">&middot;</span>Meanwhile</div>
-    <h3>Lords ride to feasts and hunts across the Reach and the Vale</h3><p>A Pentoshi galley was wrecked off Widow’s Watch.</p>
-    <div class="meta"><svg class="i "><use href="#i-pin"/></svg><span class="dt">This week</span> &middot; <span>The realm</span><span class="more">Details &#9656;</span></div></div></article></div></section><div class="hud who"><div class="panel nm"><b>Eddard Stark</b><small>Lord of Winterfell, Warden of the North</small><span class="mood">in good health</span></div><div class="ring"><div><svg viewBox="0 0 100 120" preserveAspectRatio="xMidYMid slice"><defs>
-<radialGradient id="pb2" cx="50%" cy="35%" r="80%"><stop offset="0" stop-color="#37474a"/><stop offset="1" stop-color="#141b1c"/></radialGradient>
-<linearGradient id="pk2" x1="0" x2="1"><stop offset="0" stop-color="#d9b592"/><stop offset="1" stop-color="#d9b592" stop-opacity=".82"/></linearGradient>
-<linearGradient id="pc2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b646e"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></linearGradient>
-<radialGradient id="pl2" cx="30%" cy="25%" r="90%"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".4"/></radialGradient></defs>
-<rect width="100" height="120" fill="url(#pb2)"/>
-<path d="M6 122c0-24 16-34 32-38l12 8 12-8c16 4 32 14 32 38z" fill="url(#pc2)"/>
-<path d="M10 122c0-20 12-30 28-36l12 12 12-12c16 6 28 16 28 36z" fill="#8a8f96" opacity=".92"/><path d="M38 86l12 12 12-12" fill="none" stroke="#000" stroke-opacity=".25"/>
-<rect x="43" y="70" width="14" height="20" rx="5" fill="url(#pk2)"/>
-<ellipse cx="50" cy="50" rx="19" ry="23" fill="url(#pk2)"/>
-<ellipse cx="31.5" cy="52" rx="3" ry="5" fill="#d9b592"/><ellipse cx="68.5" cy="52" rx="3" ry="5" fill="#d9b592"/>
-<path d="M30 46c-2-18 8-28 20-28s22 10 20 28c-4-8-8-13-20-13s-16 5-20 13z" fill="#4b3d33"/><path d="M31 52c0 20 8 30 19 30s19-10 19-30c-3 10-9 14-19 14s-16-4-19-14z" fill="#4b3d33"/>
-<path d="M38 43q4-3 8 0M54 43q4-3 8 0" stroke="#4b3d33" stroke-width="2" fill="none" stroke-linecap="round"/>
-<ellipse cx="42" cy="49" rx="2.2" ry="1.4" fill="#3b4650"/><ellipse cx="58" cy="49" rx="2.2" ry="1.4" fill="#3b4650"/>
-<path d="M50 50v9l-2 1.5h4" stroke="#000" stroke-opacity=".22" fill="none" stroke-width="1.1"/>
-<path d="M44 66q6 3 12 0" stroke="#3a2416" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M40 50q3-2 6 0M54 50q3-2 6 0M40 63q10 5 20 0" stroke="#000" stroke-opacity=".18" fill="none" stroke-width="1"/>
-<rect width="100" height="120" fill="url(#pl2)"/></svg></div></div></div>
+    <h3><span class="pips">&#9670;&#9670;&#9670;</span>The King’s progress reaches Winterfell</h3><p>King Robert rides through the gate with the Queen, her brothers and three hundred knights. Men say he means to make Lord Eddard his Hand.</p>
+    <div class="meta"><span class="tl">Great</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">15th of the 8th moon</span> &middot; <span>Winterfell</span><span class="mine">Your house</span><span class="more">Details &#9656;</span></div></div></article><article class="card major "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;&#9670;</span>Robb Stark calls the banners at Winterfell</h3><p>Nineteen sworn houses are told to bring their men to Winterfell before the first snow. The first ravens have already flown.</p>
+    <div class="meta"><span class="tl">Major</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">13th of the 8th moon</span> &middot; <span>Winterfell</span><span class="mine">Your kin</span><span class="more">Details &#9656;</span></div></div></article><article class="card major "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;&#9670;</span>Lord Hoster Tully falls ill at Riverrun</h3><p>A raven from Riverrun says Lord Hoster has kept to his bed for a fortnight. Ser Edmure holds the castle in his name.</p>
+    <div class="meta"><span class="tl">Major</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">12th of the 8th moon</span> &middot; <span>Riverrun &middot; raven, 4 days old</span><span class="mine">Your kin</span><span class="more">Details &#9656;</span></div></div></article><article class="card news "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;</span>Lady Hornwood refuses Stark’s summons</h3><p>Donella Hornwood will keep her men at home. Word of it reached Winterfell with the first ravens.</p>
+    <div class="meta"><span class="tl">News</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">11th of the 8th moon</span> &middot; <span>Hornwood</span><span class="more">Details &#9656;</span></div></div></article><article class="card news opt"><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;</span>Lady Lysa raises the Vale’s levies at the Eyrie</h3><p>House Arryn is calling its banners; nothing yet says against whom.</p>
+    <div class="meta"><span class="tl">News</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">10th of the 8th moon</span> &middot; <span>The Eyrie &middot; rumour</span><span class="more">Details &#9656;</span></div></div></article><article class="card news opt"><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;</span>Mance Rayder gathers the free folk beyond the Wall</h3><p>A great host of wildlings is answering him. The Night’s Watch has not yet learned how many.</p>
+    <div class="meta"><span class="tl">News</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">9th of the 8th moon</span> &middot; <span>Castle Black &middot; a ranger’s word</span><span class="more">Details &#9656;</span></div></div></article><article class="card minor "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9675;</span>Lord Bolton begins a market at the Dreadfort</h3>
+    <div class="meta"><span class="tl">Minor</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">9th of the 8th moon</span> &middot; <span>The Dreadfort</span><span class="more">Details &#9656;</span></div></div></article><article class="card meanwhile "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&middot;</span>Lords ride to feasts and hunts across the Reach and the Vale</h3><p>A Pentoshi galley was wrecked off Widow’s Watch.</p>
+    <div class="meta"><span class="tl">Meanwhile</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">This week</span> &middot; <span>The realm</span><span class="more">Details &#9656;</span></div></div></article></div></section><div class="hud who"><div class="panel nm"><b>Eddard Stark</b><small>Lord of Winterfell, Warden of the North</small><span class="mood">in good health</span></div><div class="ring"><div><img src="assets/portrait-eddard_stark.jpg" alt=""></div></div></div>
 <div class="tag">MOCKUP &mdash; target design (GDD 17/18/19)</div>
 </body></html>

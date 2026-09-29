@@ -12,24 +12,24 @@ const S = (d, n) => [`../screens/${d}/${n}-1920x1080.jpg`, `../screens/${d}/${n}
   const [bg, bgS] = S('e2', 'mode-political');
   // [n, x1, y1, x2, y2 in 1920x1080 px, badge x, badge y, title, problem]
   const C = [
-    [1, 18, 10, 1008, 94, 1010, 8, 'Six-tile resource bar', 'Treasury, Levies, Men-at-arms, Ships, Food, Season: 6 labels, 6 values, 6 sub-lines. About 1000 px wide (three quarters of the screen at 1366). The player speaks and the AI acts, so these are read-outs, not levers. Keep 3 vitals.'],
-    [2, 1030, 10, 1258, 68, 1142, 82, 'Date box + turn counter', 'Date, "Turn 0" and "N decisions awaiting" in one box. Drop the turn number; fold the pending count into one Inbox badge.'],
-    [3, 1608, 14, 1904, 62, 1895, 78, 'Six system icons', 'Ravens, music, undo, help, settings, menu: six icons at the same weight. Collapse into one menu button.'],
-    [4, 1408, 14, 1594, 62, 1500, 80, 'End turn', 'The most important control is fine, but its reason ("next turn: 7 days, a quiet week") is a separate tiny line elsewhere. Put it inside the button.'],
-    [5, 38, 196, 573, 511, 590, 208, '"Your situation" card', 'Five lines of prose plus Aims and Levers, at the top of the feed on turn 0. Show once as a welcome card, then never again.'],
-    [6, 38, 522, 573, 890, 590, 540, '"How to play" wall', 'Eleven bullets (about 25 lines) that push the real chronicle out of sight. Move to the ? help; replace with three coach marks.'],
-    [7, 30, 908, 580, 1048, 594, 930, 'Order composer in the drawer', 'The command bar is trapped in the drawer and dies when the drawer collapses. Give it its own bottom-centre bar.'],
-    [8, 1778, 90, 1904, 126, 1748, 108, 'Nine map modes', 'Realms, Holders, Diplomacy, Knowledge, War, Wealth, Prosperity, Unrest, Terrain behind one dropdown. One dropdown with three pinned favourites is enough.'],
-    [9, 940, 972, 1606, 1062, 1620, 990, 'Eight-button dock', 'Realm, Council, Military, Economy, Diplomacy, Intrigue, People, Chronicle, always on: the "economy and military buttons all the time" the owner objects to, plus a fourth badge system. Replace with three menu entries.'],
-    [10, 1618, 972, 1904, 1062, 1626, 950, 'Portrait plate', 'Keep it, it is the player’s face. It is small, sits beside the dock and has no life in it: make it larger, framed and warmer.'],
-    [11, 676, 676, 1060, 766, 1066, 690, 'Colliding map labels', '"LANNI~300" and "KINGS SHIPS ING" overlap: army tokens and region names fight. Label declutter is work package U8.'],
+    [1, 18, 10, 1008, 94, 1010, 8, 'Six-tile resource bar', 'Treasury, Levies, Men-at-arms, Ships, Food, Season: 6 values and 6 sub-lines, 1000 px wide. Read-outs, not levers. Keep 3 vitals.'],
+    [2, 1030, 10, 1258, 68, 1142, 82, 'Date box + turn counter', 'Date, "Turn 0" and pending count in one box. Drop the turn number; one Inbox badge.'],
+    [3, 1608, 14, 1904, 62, 1895, 78, 'Six system icons', 'Ravens, music, undo, help, settings, menu at equal weight. Collapse into one menu button.'],
+    [4, 1408, 14, 1594, 62, 1500, 80, 'End turn', 'The key control is right, but its reason ("next turn: 7 days") floats loose beside it. Put it inside the button.'],
+    [5, 38, 196, 573, 511, 590, 208, '"Your situation" card', 'Prose plus Aims and Levers on top of the feed. Show once as a welcome card, never again.'],
+    [6, 38, 522, 573, 890, 590, 540, '"How to play" wall', 'Eleven bullets, about 25 lines, that bury the chronicle. Move to help; use 3 coach marks.'],
+    [7, 30, 908, 580, 1048, 594, 930, 'Order composer in the drawer', 'The command bar dies when the drawer collapses. Give it its own bottom-centre bar.'],
+    [8, 1778, 90, 1904, 126, 1748, 108, 'Nine map modes', 'Realms, Holders, Diplomacy, Knowledge, War, Wealth, Prosperity, Unrest, Terrain. One dropdown, three favourites.'],
+    [9, 940, 972, 1606, 1062, 936, 962, 'Eight-button dock', 'Realm, Council, Military, Economy, Diplomacy, Intrigue, People, Chronicle, always on: micromanagement bait. Replace with 3 menu entries.'],
+    [10, 1618, 972, 1904, 1062, 1626, 950, 'Portrait plate', 'Keep it. It is small and lifeless next to the dock: make it larger, framed and warmer.'],
+    [11, 676, 676, 1060, 766, 1066, 690, 'Colliding map labels', '"LANNI~300" and "KINGS SHIPS ING" overlap: tokens fight region names. Work package U8.'],
   ];
   const boxes = C.map(([n, x1, y1, x2, y2, bx, by]) => `<div class="cb" style="left:${x1 / 19.2}%;top:${y1 / 10.8}%;width:${(x2 - x1) / 19.2}%;height:${(y2 - y1) / 10.8}%"></div><div class="cn" style="left:${bx / 19.2}%;top:${by / 10.8}%">${n}</div>`).join('');
   const leg = C.map(([n, , , , , , , t, p]) => `<li><span class="cn s">${n}</span><div><b>${t}</b><p>${p}</p></div></li>`).join('');
   write('01-before-annotated.html', page({
     title: 'Before: annotated', cls: 'b4', css: `
     body{display:flex;background:#0b0907}
-    .left{flex:1;min-width:0;display:flex;flex-direction:column;padding:.6rem 0 .6rem .6rem;gap:.6rem}
+    .left{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;padding:.6rem 0 .6rem 1.2rem;gap:.7rem}
     .shot{position:relative;width:min(100%,calc((100vh - 5.6rem) * 16 / 9));aspect-ratio:16/9;border:1px solid var(--line2);box-shadow:var(--shadow);background:#000 url(${bg}) center/cover no-repeat}
     @media (max-width:1500px){.shot{background-image:url(${bgS})}}
     .cb{position:absolute;border:2px solid #ff4a3a;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 14px rgba(255,74,58,.35)}
@@ -39,15 +39,15 @@ const S = (d, n) => [`../screens/${d}/${n}-1920x1080.jpg`, `../screens/${d}/${n}
     .stat{flex:1;padding:.5rem .8rem;text-align:center}
     .stat b{display:block;font:700 1.55rem/1 var(--display);color:#ff7a68}
     .stat span{display:block;font-size:.85rem;color:var(--muted);margin-top:.25rem}
-    aside{width:26.5rem;flex:none;padding:.9rem 1rem .6rem;overflow:auto;background:#120e0a;border-left:1px solid var(--line)}
+    aside{width:25rem;flex:none;padding:.9rem 1rem .6rem;overflow:auto;background:#120e0a;border-left:1px solid var(--line)}
     aside h2{font-size:1.05rem;letter-spacing:.12em;margin-bottom:.15rem;color:#ff8a78}
     aside .sub{color:var(--muted);font-style:italic;font-size:.9rem;margin:0 0 .7rem}
     ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.55rem}
     li{display:flex;gap:.6rem}
     li b{font:600 .8rem/1.2 var(--display);letter-spacing:.05em;color:var(--gold2)}
     li p{margin:.1rem 0 0;font-size:.86rem;line-height:1.25;color:#cfc2a4}
-    @media (max-width:1500px){aside{width:24.5rem;padding:.6rem .8rem}li p{font-size:.8rem;line-height:1.2}ol{gap:.38rem}}
-    .tag{left:calc(50% - 13rem)}`,
+    @media (max-width:1500px){aside{width:24rem;padding:.6rem .8rem}li p{font-size:.8rem;line-height:1.18}ol{gap:.4rem}}
+    `,
     body: `<div class="left"><div class="shot">${boxes}</div>
       <div class="stats"><div class="panel stat"><b>~40</b><span>controls and read-outs on screen at turn 0</span></div><div class="panel stat"><b>55%</b><span>of the pixels covered at 1366&times;768</span></div><div class="panel stat"><b>3</b><span>badge systems for "something needs you"</span></div><div class="panel stat"><b>11</b><span>bullets of "How to play" always open</span></div></div></div>
       <aside><h2>Today: what is wrong</h2><p class="sub">The current UI at turn 0 (docs/screens/e2), before any player input. GDD 17 &sect;1.</p><ol>${leg}</ol></aside>`,
@@ -62,34 +62,36 @@ const S = (d, n) => [`../screens/${d}/${n}-1920x1080.jpg`, `../screens/${d}/${n}
 
 /* ============ 03 headline feed ============ */
 const CARD_CSS = `
-.card{display:grid;grid-template-columns:.42rem 1fr;background:linear-gradient(90deg,rgba(255,255,255,.03),rgba(0,0,0,0));border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.card{flex:none;display:grid;grid-template-columns:.42rem 1fr;background:linear-gradient(90deg,rgba(255,255,255,.03),rgba(0,0,0,0));border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .card .bar{background:var(--muted)}
-.card.great{border-color:rgba(201,164,74,.75);box-shadow:0 0 0 1px rgba(201,164,74,.15),0 4px 18px rgba(0,0,0,.4);background:linear-gradient(90deg,rgba(201,164,74,.09),rgba(0,0,0,0))}
+.card.great{border-color:rgba(201,164,74,.75);box-shadow:0 0 0 1px rgba(201,164,74,.15),0 4px 18px rgba(0,0,0,.4);background:linear-gradient(90deg,rgba(201,164,74,.10),rgba(0,0,0,0))}
 .card.great .bar{background:linear-gradient(#f3d98d,#a67c2a)}
 .card.major .bar{background:var(--amber)}
 .card.news .bar{background:var(--blue)}
 .card.minor .bar{background:#6e6250}
 .card.meanwhile .bar{background:repeating-linear-gradient(#5b5140 0 .3rem,transparent .3rem .5rem)}
-.card .in{padding:.55rem .85rem .55rem .8rem;min-width:0}
-.tier{display:flex;align-items:center;gap:.5rem;font:600 .6rem/1 var(--display);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.great .tier{color:var(--gold2)}.major .tier{color:var(--amber)}.news .tier{color:#8db3e0}
-.tier .pips{letter-spacing:.1em;font-size:.7rem}
-.tier .mine{margin-left:auto;color:var(--gold);border:1px solid rgba(201,164,74,.5);padding:.15rem .4rem;border-radius:2px;letter-spacing:.12em}
-.card h3{font:600 1.12rem/1.22 var(--display);letter-spacing:.02em;color:#f6ecd2;margin:.35rem 0 .2rem}
-.great h3{font-size:1.3rem}
-.minor h3{font-size:.98rem;color:var(--text);margin:.3rem 0 0}
-.card p{margin:0;font-size:1rem;line-height:1.32;color:#d7cbb0}
-.meta{display:flex;align-items:center;gap:.45rem;margin-top:.35rem;font-size:.86rem;color:var(--muted);font-style:italic}
-.meta svg{width:.95em;height:.95em;color:var(--gold)}
-.meta .dt{font-style:normal;font-variant:small-caps;letter-spacing:.06em}
-.meta .more{margin-left:auto;font:600 .64rem/1 var(--display);letter-spacing:.1em;font-style:normal;color:var(--gold);text-transform:uppercase;cursor:pointer;white-space:nowrap}
+.card .in{padding:.5rem .85rem .45rem .8rem;min-width:0}
+.card h3{font:600 1.08rem/1.22 var(--display);letter-spacing:.02em;color:#f6ecd2;margin:0 0 .2rem}
+.card h3 .pips{font-size:.72rem;letter-spacing:.08em;margin-right:.5rem;vertical-align:.12em}
+.great h3{font-size:1.28rem}.great h3 .pips,.great .tl{color:var(--gold2)}
+.major h3 .pips,.major .tl{color:var(--amber)}
+.news h3 .pips,.news .tl{color:#8db3e0}
+.minor h3{font-size:.98rem;color:var(--text);margin:0}
+.minor h3 .pips,.meanwhile h3 .pips{color:var(--muted)}
+.meanwhile h3{font-size:.98rem;color:var(--text)}
+.card p{margin:0;font-size:.98rem;line-height:1.3;color:#d7cbb0}
+.meta{display:flex;align-items:center;gap:.4rem;margin-top:.3rem;font-size:.85rem;color:var(--muted);font-style:italic;white-space:nowrap}
+.meta svg{width:.95em;height:.95em;color:var(--gold);flex:none}
+.meta .tl{font:600 .58rem/1 var(--display);letter-spacing:.16em;text-transform:uppercase;font-style:normal;margin-right:.2rem;color:var(--muted)}
+.meta .dt{font-style:normal;font-variant:small-caps;letter-spacing:.05em}
+.meta .mine{font:600 .55rem/1 var(--display);letter-spacing:.12em;font-style:normal;color:var(--gold);border:1px solid rgba(201,164,74,.5);padding:.15rem .35rem;border-radius:2px;text-transform:uppercase;margin-left:.2rem}
+.meta .more{margin-left:auto;font:600 .62rem/1 var(--display);letter-spacing:.1em;font-style:normal;color:var(--gold);text-transform:uppercase;cursor:pointer;padding-left:.5rem}
 `;
 {
   const [bg, bgS] = S('e1', 'lod1');
   const card = (t, h, s, dt, pl, o = {}) => `<article class="card ${t} ${o.cls || ''}"><div class="bar"></div><div class="in">
-    <div class="tier"><span class="pips">${{ great: '&#9670;&#9670;&#9670;', major: '&#9670;&#9670;', news: '&#9670;', minor: '&#9675;', meanwhile: '&middot;' }[t]}</span>${{ great: 'Great news', major: 'Major', news: 'News', minor: 'Minor', meanwhile: 'Meanwhile' }[t]}${o.mine ? `<span class="mine">${o.mine}</span>` : ''}</div>
-    <h3>${h}</h3>${s ? `<p>${s}</p>` : ''}
-    <div class="meta">${ico('pin')}<span class="dt">${dt}</span> &middot; <span>${pl}</span><span class="more">Details &#9656;</span></div></div></article>`;
+    <h3><span class="pips">${{ great: '&#9670;&#9670;&#9670;', major: '&#9670;&#9670;', news: '&#9670;', minor: '&#9675;', meanwhile: '&middot;' }[t]}</span>${h}</h3>${s ? `<p>${s}</p>` : ''}
+    <div class="meta"><span class="tl">${{ great: 'Great', major: 'Major', news: 'News', minor: 'Minor', meanwhile: 'Meanwhile' }[t]}</span>${ico('pin')}<span class="dt">${dt}</span> &middot; <span>${pl}</span>${o.mine ? `<span class="mine">${o.mine}</span>` : ''}<span class="more">Details &#9656;</span></div></div></article>`;
   const cards = [
     card('great', 'The King’s progress reaches Winterfell', 'King Robert rides through the gate with the Queen, her brothers and three hundred knights. Men say he means to make Lord Eddard his Hand.', '15th of the 8th moon', 'Winterfell', { mine: 'Your house' }),
     card('major', 'Robb Stark calls the banners at Winterfell', 'Nineteen sworn houses are told to bring their men to Winterfell before the first snow. The first ravens have already flown.', '13th of the 8th moon', 'Winterfell', { mine: 'Your kin' }),
@@ -111,10 +113,11 @@ const CARD_CSS = `
     .filters .chip{cursor:pointer}
     .filters .chip.on{color:var(--gold2);border-color:var(--gold);background:rgba(201,164,74,.12)}
     .filters .sp{margin-left:auto;font-size:.85rem;color:var(--muted);font-style:italic}
-    .list{flex:1;overflow:hidden;padding:.7rem .8rem;display:flex;flex-direction:column;gap:.5rem;position:relative}
+    .list{flex:1;overflow:hidden;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.45rem;position:relative}
     .day{font:600 .62rem/1 var(--display);letter-spacing:.2em;color:var(--muted);text-transform:uppercase;display:flex;gap:.6rem;align-items:center}
     .day:after{content:"";flex:1;border-top:1px solid var(--line)}
-    @media (max-height:800px){.opt{display:none}}
+    @media (min-height:1000px){.list{gap:.65rem}.card .in{padding:.7rem .95rem .6rem .9rem}.card h3{margin-bottom:.3rem}}
+    @media (max-height:800px){.opt{display:none}.feed{top:4.9rem;bottom:.6rem}.feed header{padding:.5rem 1rem .45rem}.list{padding:.5rem .8rem;gap:.35rem}.card .in{padding:.4rem .8rem .35rem .75rem}.card p{font-size:.94rem;line-height:1.26}.meta{margin-top:.2rem}}
     .hint{position:fixed;left:44rem;top:8rem;width:14rem;color:var(--gold2);font-style:italic;font-size:.95rem;text-shadow:0 1px 4px #000;display:none}`,
     body: hudTop({ vitals: false }) + `<section class="feed panel"><header><div class="r1"><h2>Chronicle</h2><small>8th moon, 298 AC &middot; 5 new</small></div>
       <div class="filters"><span class="chip on">&#10003; Only what matters</span><span class="chip">Mine</span><span class="chip">War</span><span class="chip">Letters</span><span class="chip">Rumours</span><span class="sp">${ico('x')}</span></div></header>
@@ -127,11 +130,11 @@ const CARD_CSS = `
   const [bg, bgS] = S('e5', 'tokens-l1');
   write('04-event-card-expanded.html', page({
     title: 'Target: expanded event card', bg, bgSmall: bgS, css: CARD_CSS + `
-    .ec{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(54rem,94vw);z-index:8;display:grid;grid-template-columns:.5rem 1fr;overflow:hidden}
+    .ec{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(62rem,94vw);z-index:8;display:grid;grid-template-columns:.5rem 1fr;overflow:hidden}
     .ec .bar{background:linear-gradient(#f3d98d,#a67c2a)}
     .ec .in{padding:1.1rem 1.5rem 1.1rem 1.3rem;position:relative}
     .ec h1{font:600 1.75rem/1.15 var(--display);letter-spacing:.02em;color:#f6ecd2;margin:.5rem 0 .55rem;padding-right:2rem}
-    .ec .lead{font-size:1.18rem;line-height:1.38;color:#e2d6ba;margin:0 0 .9rem}
+    .ec .lead{font-size:1.22rem;line-height:1.38;color:#e2d6ba;margin:0 0 .9rem}
     .cols{display:grid;grid-template-columns:1.1fr 1fr;gap:1.4rem}
     h4.sec{font-size:.66rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin:0 0 .45rem;padding-bottom:.3rem;border-bottom:1px solid var(--line)}
     .det{list-style:none;margin:0;padding:0;font-size:1rem}
@@ -139,16 +142,16 @@ const CARD_CSS = `
     .det li span:first-child{color:var(--muted)}
     .det li b{font-weight:500;color:var(--text);text-align:right}
     .det .loss b{color:#e8806b}.det .win b{color:var(--green)}
-    .scene{height:9.5rem;border:1px solid var(--line2);border-radius:3px;position:relative;background:url(${bg}) 11% 45%/400% no-repeat;box-shadow:inset 0 0 30px rgba(0,0,0,.5)}
+    .scene{height:10.6rem;border:1px solid var(--line2);border-radius:3px;position:relative;background:url(${bg}) 11% 45%/400% no-repeat;box-shadow:inset 0 0 30px rgba(0,0,0,.5)}
     @media (max-width:1500px){.scene{background-image:url(${bgS})}}
     .scene .mk{position:absolute;left:50%;top:50%;width:1.6rem;height:1.6rem;margin:-.8rem;border-radius:50%;border:2px solid #ffd76a;box-shadow:0 0 0 4px rgba(255,215,106,.25),0 0 20px rgba(255,215,106,.6)}
     .scene .mk:after{content:"";position:absolute;inset:.35rem;border-radius:50%;background:#ffd76a}
     .scene .lb{position:absolute;left:.6rem;bottom:.5rem;font:600 .7rem/1 var(--display);letter-spacing:.1em;color:#fff;text-shadow:0 0 4px #000,0 0 8px #000}
-    .people{display:flex;flex-wrap:wrap;gap:.5rem;margin:.9rem 0 .2rem}
+    .ec .pchip .pf{width:2.7rem;height:2.7rem}.ec .pchip{font-size:1.02rem;padding-right:.9rem}.people{display:flex;flex-wrap:wrap;gap:.5rem;margin:.9rem 0 .2rem}
     .foot{display:flex;gap:.6rem;align-items:center;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--line)}
     .foot .sp{margin-left:auto;font-size:.88rem;color:var(--muted);font-style:italic}
     .ec .meta{margin:0;font-size:.95rem}`,
-    body: hudTop({ vitals: false }) + '<div class="dim" style="background:rgba(8,6,4,.5)"></div>' + `
+    body: hudTop({ vitals: false }) + '<div class="dim" style="z-index:6;background:rgba(8,6,4,.5)"></div>' + `
     <article class="ec panel"><div class="bar"></div><div class="in"><span class="x">${ico('x')}</span>
       <div class="tier" style="display:flex;align-items:center;gap:.5rem;font:600 .68rem/1 var(--display);letter-spacing:.16em;color:var(--gold2);text-transform:uppercase"><span>&#9670;&#9670;&#9670;</span>Great news &middot; battle<span class="mine" style="margin-left:auto;margin-right:2rem;color:var(--gold);border:1px solid rgba(201,164,74,.5);padding:.2rem .45rem;border-radius:2px">Your host</span></div>
       <h1>Northmen scatter ironborn raiders on the Stony Shore</h1>
@@ -173,7 +176,7 @@ const CARD_CSS = `
   const [bg, bgS] = S('e1', 'lod1');
   write('05-turn-digest.html', page({
     title: 'Target: end-of-week digest', bg, bgSmall: bgS, css: `
-    .dg{width:min(47rem,94vw);padding:1.5rem 2.2rem 1.3rem;position:relative}
+    .dg{width:min(50rem,94vw);padding:1.5rem 2.2rem 1.3rem;position:relative}
     .dg .kick{text-align:center;font:600 .68rem/1 var(--display);letter-spacing:.3em;color:#8a6a3a;text-transform:uppercase}
     .dg h1{font:700 1.55rem/1.2 var(--display);text-align:center;letter-spacing:.04em;margin:.5rem 0 .2rem;color:#4a2f0c}
     .orn{display:flex;align-items:center;gap:.7rem;justify-content:center;color:#8a6a3a;margin:.5rem 0 .8rem}
@@ -181,8 +184,8 @@ const CARD_CSS = `
     .hl{display:grid;grid-template-columns:2rem 1fr;gap:.2rem .5rem;padding:.42rem 0}
     .hl+.hl{border-top:1px dotted rgba(90,58,18,.35)}
     .hl .n{font:700 1.5rem/1 var(--display);color:#a47a2a}
-    .hl h3{font:600 1.1rem/1.2 var(--display);color:#3a230a;letter-spacing:.02em}
-    .hl p{margin:.15rem 0 0;font-size:1.05rem;line-height:1.3;color:#3b2d1c}
+    .hl h3{font:600 1.16rem/1.2 var(--display);color:#3a230a;letter-spacing:.02em}
+    .hl p{margin:.15rem 0 0;font-size:1.08rem;line-height:1.3;color:#3b2d1c}
     .sect{font:600 .68rem/1 var(--display);letter-spacing:.24em;text-transform:uppercase;color:#7a5a2a;margin:.9rem 0 .35rem}
     .meanw{font-style:italic;font-size:1.05rem;line-height:1.35;color:#43331f;margin:0}
     .also{font-size:.95rem;color:#5a4a34;margin:.4rem 0 0}
@@ -190,9 +193,9 @@ const CARD_CSS = `
     .aw{display:flex;align-items:center;gap:.7rem;padding:.4rem .7rem;background:rgba(90,58,18,.09);border:1px solid rgba(90,58,18,.3);border-radius:3px;font-size:1.02rem;color:#2f2214}
     .aw span{flex:1}
     .aw em{font:600 .6rem/1 var(--display);letter-spacing:.12em;font-style:normal;color:#7a3a1a;text-transform:uppercase;border:1px solid rgba(122,58,26,.5);padding:.25rem .45rem;border-radius:2px}
-    .go{display:flex;justify-content:center;margin-top:1rem}
-    .go .btn{font-size:.95rem;padding:.65rem 2.6rem}`,
-    body: '<div class="dim"></div>' + `<div class="center"><section class="dg parch">
+    .dgo{display:flex;justify-content:center;margin-top:1rem}
+    .dgo .btn{font-size:.95rem;padding:.65rem 2.6rem}`,
+    body: hudTop({ vitals: true }) + stripBlock() + cmdBlock() + whoBlock() + '<div class="dim" style="z-index:6;background:rgba(8,6,4,.62)"></div>' + `<div class="center"><section class="dg parch">
       <div class="kick">The maester’s report</div>
       <h1>The week of 8&ndash;14th of the 8th moon, 298 AC</h1><div class="orn">&#10087;</div>
       <div class="hl"><span class="n">1</span><div><h3>Eleven northern houses answer Stark’s call</h3><p>Lords across the North gather their men for Winterfell; only Hornwood refused.</p></div></div>
@@ -203,7 +206,7 @@ const CARD_CSS = `
       <p class="also"><b>Also:</b> tourney at Bear Island proclaimed &middot; Lord Bolton opens a market</p>
       <div class="sect">Awaiting your word</div>
       <div class="await"><div class="aw"><span>The King asks you to name a day for the feast.</span><em>Audience</em></div><div class="aw"><span>Lady Hornwood’s answer is still unanswered.</span><em>Letter</em></div></div>
-      <div class="go"><span class="btn primary">Continue &#9654;</span></div>
+      <div class="dgo"><span class="btn primary">Continue &#9654;</span></div>
     </section></div>`,
   }));
 }
@@ -252,19 +255,19 @@ const CARD_CSS = `
     .going div{display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
     .going .k{font:600 .6rem/1 var(--display);letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
     .tbl{padding:.4rem 1.1rem .2rem}
-    .th,.tr{display:grid;grid-template-columns:1.4rem 10.6rem 4.1rem 6.3rem 5.9rem 4.7rem 3.1rem 3.1rem 1fr;gap:.35rem;align-items:center}
+    .th,.tr{display:grid;grid-template-columns:1.7rem 10.4rem 4.1rem 6.3rem 5.9rem 4.7rem 3.1rem 3.1rem 1fr;gap:.35rem;align-items:center}
     .th{font:600 .58rem/1 var(--display);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;padding:.35rem 0;border-bottom:1px solid var(--line)}
     .th .c,.tr .c{text-align:right}
     .th .s{color:var(--gold)}
-    .tr{padding:.32rem 0;border-bottom:1px solid rgba(77,60,40,.55);font-size:1rem}
-    .tr .rk{font:600 .85rem var(--display);color:var(--muted)}
+    .tr{padding:.38rem 0;border-bottom:1px solid rgba(77,60,40,.55);font-size:1rem}
+    .tr .rk{font:600 .85rem var(--display);color:var(--muted);padding-left:.5rem}
     .hs{display:flex;align-items:center;gap:.55rem;min-width:0}
     .hs .crest{width:1.55rem;height:1.85rem;flex:none}
     .nm b{display:block;font:600 .95rem/1.1 var(--display);letter-spacing:.03em;color:var(--text)}
     .nm b em{font:600 .5rem var(--display);font-style:normal;letter-spacing:.14em;color:#1b1408;background:var(--gold);padding:.12rem .3rem;border-radius:2px;vertical-align:.12em;margin-left:.2rem;text-transform:uppercase}
     .nm small{display:block;font-size:.76rem;line-height:1.1;color:var(--muted);font-style:italic;white-space:nowrap}
     .tr .c{font-variant-numeric:tabular-nums;color:#d9cdb0}
-    .tr .c.s{background:rgba(201,164,74,.07);margin:-.32rem 0;padding:.62rem .3rem;height:calc(100% + .64rem)}
+    .tr .c.s{background:rgba(201,164,74,.07);margin:-.38rem 0;padding:.68rem .3rem;height:calc(100% + .76rem)}
     .tr .c.e i{font-size:.82rem;color:var(--muted)}
     .tr.you{background:linear-gradient(90deg,rgba(201,164,74,.2),rgba(201,164,74,.04));box-shadow:inset 3px 0 0 var(--gold)}
     .tr.you .c{color:#fff;font-weight:600}
@@ -273,6 +276,18 @@ const CARD_CSS = `
     .tn{display:flex;align-items:center;justify-content:flex-end;gap:.5rem}
     .legend{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.82rem;color:var(--muted);font-style:italic;padding:.4rem 1.1rem .5rem}
     .legend b{font-style:normal;color:var(--gold2);font-weight:500}
+    .wars{padding:.55rem 1.1rem .5rem;border-top:1px solid var(--line)}
+    .wars h4,.say h4{font-size:.62rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:.35rem;font-weight:600}
+    .wars .w{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.25rem 0;font-size:1rem}
+    .wars .w b{font-weight:500;color:var(--gold2)}
+    .mult{padding:.6rem 1.1rem .7rem;border-top:1px solid var(--line)}
+    .mult h4{font-size:.62rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:.45rem;font-weight:600}
+    .mg{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem}
+    .mg .m{border:1px solid var(--line);border-radius:3px;padding:.4rem .6rem .35rem;background:rgba(0,0,0,.2);display:grid;grid-template-columns:1fr auto;row-gap:.05rem;align-items:end}
+    .mg small{font:600 .56rem/1 var(--display);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;grid-column:1/3}
+    .mg b{font:500 .98rem/1.2 var(--serif);color:var(--text);grid-column:1/3;white-space:nowrap}
+    .mg span{font-size:.85rem}.mg svg{justify-self:end}
+    @media (max-height:1000px){.mult{display:none}}
     .say{display:grid;grid-template-columns:1.25fr 1fr;gap:1.1rem;padding:.7rem 1.1rem .85rem;border-top:1px solid var(--line);margin-top:auto;background:rgba(0,0,0,.2)}
     .say h4{font-size:.62rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:.35rem;font-weight:600}
     .say ul{margin:0;padding:0;list-style:none;font-size:.98rem;line-height:1.3;display:flex;flex-direction:column;gap:.3rem}
@@ -281,13 +296,17 @@ const CARD_CSS = `
     .focus{display:flex;flex-direction:column;gap:.35rem}
     .focus .f{display:flex;align-items:center;gap:.6rem;justify-content:space-between;font-size:.95rem;line-height:1.2}
     .focus .btn{padding:.3rem .6rem;font-size:.66rem}
-    @media (max-width:1500px){.led .hud{display:none}.win{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);height:92vh;width:min(57rem,94vw)}}`,
-    body: '<div class="dim"></div>' + hudTop({ vitals: false }) + cmdBlock(false) + `
+    @media (min-height:1000px){.tr{padding:.6rem 0}.tr .c.s{margin:-.6rem 0;padding:.9rem .3rem;height:calc(100% + 1.2rem)}.going{padding:.8rem 1.1rem}.wars{padding:.8rem 1.1rem}.wars .w{padding:.4rem 0}.say{padding:1rem 1.1rem 1.1rem}}
+    @media (max-height:800px){.tr{padding:.24rem 0}.tr .c.s{margin:-.24rem 0;padding:.5rem .3rem;height:calc(100% + .48rem)}.wars .w:nth-of-type(2){display:none}.going{padding:.4rem 1.1rem}.win header{padding:.5rem 1.1rem .4rem}.legend{padding:.3rem 1.1rem .35rem}.wars{padding:.4rem 1.1rem .3rem}.say{padding:.5rem 1.1rem .6rem}.lens{padding-top:.3rem}}
+    @media (max-width:1500px){.led .hud{display:none}.win{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);height:96vh;width:min(57rem,94vw)}}`,
+    body: '<div class="dim" style="z-index:6"></div>' + hudTop({ vitals: false }) + cmdBlock(false) + `
     <section class="win panel"><header><h2>State of the Realm</h2><small>as of the 15th of the 8th moon, 298 AC</small><div class="seg"><span>3</span><span class="on">6</span><span>12 moons</span></div><span class="cl">${ico('x')}</span></header>
       <div class="lens"><span class="t on">Strength</span><span class="t">Economy</span><span class="t">Lands</span><span class="t">Wars</span><span class="sp">Show <b>Great houses &#9662;</b></span></div>
       <div class="going"><div><span class="k">Rising</span><span class="chip up">&#9650; Lannister</span><span class="chip up">&#9650; Arryn</span><span class="chip up">&#9650; Stark</span></div><div><span class="k">Falling</span><span class="chip down">&#9660; Baratheon</span><span class="chip down">&#9660; Tully</span></div></div>
       <div class="tbl"><div class="th"><span></span><span>House</span><span class="c s">Power</span><span class="c s">Men</span><span class="c">Coin</span><span class="c">Food</span><span class="c s">Ships</span><span class="c">Lands</span><span class="c">Six moons</span></div>${rows}</div>
       <div class="legend"><span><b>~</b> an estimate, dated as the word reached you</span><span><b>&asymp;</b> a band, <b>&ge;</b> at least</span><span><b>?</b> older than two turns</span><span><b>&mdash;</b> nothing known</span><span>Dashed line: estimated history</span></div>
+      <div class="wars"><h4>Wars, as your house knows them</h4><div class="w"><span><b>Greyjoy raids on the Stony Shore</b> &middot; Greyjoy against Stark</span><span class="chip gold">&#9644; You are holding</span></div><div class="w"><span><b>The free folk gather beyond the Wall</b> &middot; not yet a war</span><span class="chip">Watching</span></div></div>
+      <div class="mult"><h4>Your house over six moons</h4><div class="mg">${[['Swords', '17,200', '+41%', [9, 10, 12, 13, 15, 16, 17.2], 1], ['Coin', '120,000', '+12%', [90, 95, 100, 104, 110, 116, 120], 1], ['Income', '+6,900 a moon', '+3%', [6.4, 6.5, 6.6, 6.6, 6.7, 6.8, 6.9], 1], ['Food', '30 moons', '\u221214%', [40, 39, 37, 35, 33, 31, 30], 0], ['People', '2.0 million', '+1%', [1.95, 1.96, 1.97, 1.98, 1.99, 2.0, 2.0], 1]].map(([k, v, d, ser, up]) => `<div class="m"><small>${k}</small><b>${v}</b><span class="${up ? 'up' : 'down'}">${d}</span>${spark(ser, up ? G : R, 70, 22)}</div>`).join('')}</div></div>
       <div class="say"><div><h4>What the realm is saying</h4><ul><li><span>Lannister banners are called <small>raven, 6 days old</small></span></li><li><span>Lord Hoster is ill; Tully strength may fall <small>Riverrun, 4 days</small></span></li><li><span>The Crown owes six million dragons <small>public</small></span></li></ul></div>
       <div><h4>Where to focus</h4><div class="focus"><div class="f"><span>Hornwood keeps 400 men at home</span><span class="btn">Send a raven</span></div><div class="f"><span>Winter comes; grain is 30 moons</span><span class="btn">Buy grain</span></div></div></div></div>
     </section>` + '',
@@ -312,15 +331,15 @@ const CARD_CSS = `
     .menu .sm span:hover{background:rgba(255,255,255,.05)}
     .menu .sm svg{width:1.05rem;height:1.05rem}
     .hud-tr .iconbtn:last-child{border-color:var(--gold);box-shadow:0 0 0 1px rgba(201,164,74,.4),var(--shadow);background:rgba(50,38,22,.95)}
-    .pin{position:fixed;left:50%;top:77.6%;width:2rem;height:2rem;margin:-1rem;border-radius:50%;border:2px solid #ffd76a;box-shadow:0 0 0 5px rgba(255,215,106,.22),0 0 22px rgba(255,215,106,.7);z-index:4}
-    .cc{position:fixed;left:calc(50% + 2.8rem);top:39vh;width:24rem;z-index:7;padding:0;overflow:visible}
-    .cc:before{content:"";position:absolute;left:-.55rem;top:calc(77.6vh - 39vh - .5rem);width:1rem;height:1rem;background:var(--panel-solid);border-left:1px solid var(--line2);border-bottom:1px solid var(--line2);transform:rotate(45deg)}
+    .pin{position:fixed;left:46%;top:75.8%;width:2rem;height:2rem;margin:-1rem;border-radius:50%;border:2px solid #ffd76a;box-shadow:0 0 0 5px rgba(255,215,106,.22),0 0 22px rgba(255,215,106,.7);z-index:4}
+    .cc{position:fixed;left:calc(46% + 2.8rem);top:38vh;width:22rem;z-index:7;padding:0;overflow:visible}
+    .cc:before{content:"";position:absolute;left:-.55rem;top:calc(75.8vh - 38vh - .5rem);width:1rem;height:1rem;background:var(--panel-solid);border-left:1px solid var(--line2);border-bottom:1px solid var(--line2);transform:rotate(45deg)}
     .cc .hd{display:flex;gap:.8rem;align-items:center;padding:.85rem 1rem .7rem;border-bottom:1px solid var(--line)}
     .cc .hd .crest{width:2.6rem;height:3.1rem;flex:none}
     .cc h2{font-size:1.4rem;letter-spacing:.06em}
     .cc .hd small{display:block;color:var(--muted);font-style:italic;font-size:.95rem}
     .cc .bd{padding:.7rem 1rem .3rem;display:flex;flex-direction:column;gap:.55rem}
-    .kv{display:flex;gap:.8rem;font-size:1rem;align-items:baseline}
+    .kv{display:flex;gap:.8rem;font-size:1rem;align-items:center}
     .kv>span:first-child{width:5rem;flex:none;font:600 .6rem/1 var(--display);letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
     .kv b{font-weight:500;color:var(--text)}
     .kv small{color:var(--muted);font-style:italic}
@@ -330,7 +349,7 @@ const CARD_CSS = `
     .cc .act .btn{flex:1;justify-content:center;padding:.55rem .4rem;font-size:.72rem}
     .cc .warn{margin:0 1rem;font-size:.92rem;font-style:italic;color:#e0b070;display:flex;gap:.4rem;align-items:center}
     .cc .warn svg{color:#e0b070}
-    .lab{position:fixed;left:50%;top:77.6%;transform:translate(-50%,1.6rem);z-index:3}`,
+    `,
     body: '<div class="dim" style="background:rgba(8,6,4,.25)"></div>' + hudTop({ vitals: true }) + `
     <div class="panel menu"><div class="it on">${ico('crown')}<div><b>Realm</b><small>How your house stands</small></div><kbd>R</kbd></div>
       <div class="it">${ico('people')}<div><b>People</b><small>Family, court and guests</small></div><kbd>P</kbd></div>
@@ -375,10 +394,8 @@ const CARD_CSS = `
     .cm.dn:after{left:50%;margin-left:-.45rem;bottom:-.5rem;border-top:none;border-left:none}
     .cm.up:after{right:1.4rem;top:-.5rem;border-bottom:none;border-right:none}
     .cm.c1{left:50%;transform:translateX(-50%);bottom:8.3rem;width:17rem}
-    .r1{left:calc(50% - min(19rem,21vw) - .4rem);bottom:.6rem;width:calc(min(38rem,42vw) + .8rem);height:5.2rem;animation:none}
-    .r2{right:3.9rem;top:.6rem;width:16.5rem;height:4.2rem}
-    .r3{right:.6rem;top:.6rem;width:3.7rem;height:4.2rem}
-    .cm.c2{right:4.2rem;top:5.6rem}
+    .cm.c2{right:5.25rem;top:6rem}
+    .cm.c2:after{right:auto;left:50%;margin-left:-.45rem}
     .cm.c3{right:1rem;top:11.6rem;width:14rem}
     .cm.c3:after{right:.9rem}
     .lead{position:fixed;z-index:9;right:1.55rem;top:4.9rem;height:6.4rem;border-left:2px dashed #ffe08a}
@@ -389,9 +406,10 @@ const CARD_CSS = `
       <p><b>Aims</b>Decide whether to go south as Hand &middot; protect your family &middot; fill the granaries before winter.</p>
       <p><b>Levers</b>The North’s loyalty &middot; Moat Cailin &middot; White Harbor’s ships &middot; the old gods.</p>
       <div class="go"><small>You will not see this again.</small><span class="btn primary">Begin &#9654;</span></div></section></div>
-    <div class="ring2 r1"></div><div class="cm c1 dn"><span class="st">Tip <span>1 of 3</span></span>Tell your house what to do, in your own words.</div>
-    <div class="ring2 r2"></div><div class="cm c2 up"><span class="st">Tip <span>2 of 3</span></span>Then let the world move.</div>
-    <div class="ring2 r3"></div><div class="lead"></div><div class="cm c3 up"><span class="st">Tip <span>3 of 3</span></span>Open the menu to see how your house stands.</div>`,
+    <div class="ring2 r1" data-t=".cmd"></div><div class="cm c1 dn"><span class="st">Tip <span>1 of 3</span></span>Tell your house what to do, in your own words.</div>
+    <div class="ring2 r2" data-t=".hud-tr .endturn"></div><div class="cm c2 up"><span class="st">Tip <span>2 of 3</span></span>Then let the world move.</div>
+    <div class="ring2 r3" data-t=".hud-tr .iconbtn:last-child"></div><div class="lead"></div><div class="cm c3 up"><span class="st">Tip <span>3 of 3</span></span>Open the menu to see how your house stands.</div>
+    <script>document.querySelectorAll('.ring2').forEach(function(r){var b=document.querySelector(r.dataset.t).getBoundingClientRect(),m=5;r.style.left=b.left-m+'px';r.style.top=b.top-m+'px';r.style.width=b.width+2*m+'px';r.style.height=b.height+2*m+'px'})</script>`,
   }));
 }
 console.log('mockups written to', OUT);

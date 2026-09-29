@@ -15,10 +15,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 button{font:inherit;color:inherit}
 h1,h2,h3,h4{font-family:var(--display);font-weight:600;letter-spacing:.04em;margin:0;color:var(--gold2)}
 svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.map{position:fixed;inset:0;background:var(--bg) center/cover no-repeat}
+.map{position:fixed;inset:0;background:var(--bg) center/cover no-repeat;transform:scale(1.08);transform-origin:100% 100%} /* a little bigger: the screenshot's debug tag slides off the corner */
 .dim{position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(8,6,4,.45),rgba(8,6,4,.78))}
-.tag{position:fixed;top:.3rem;left:50%;transform:translateX(-50%);z-index:99;font:600 .56rem/1 var(--display);letter-spacing:.14em;color:rgba(236,211,146,.7);
-  background:rgba(14,11,8,.62);padding:.28rem .6rem;border-radius:2px;pointer-events:none;white-space:nowrap}
+.tag{position:fixed;left:.1rem;top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;z-index:99;font:600 .56rem/1 var(--display);letter-spacing:.16em;color:rgba(236,211,146,.75);
+  background:rgba(14,11,8,.6);padding:.6rem .28rem;border-radius:2px;pointer-events:none;white-space:nowrap}
 .panel{background:var(--panel);border:1px solid var(--line2);border-radius:4px;box-shadow:var(--shadow),inset 0 0 0 1px rgba(201,164,74,.07);backdrop-filter:blur(5px)}
 .btn{background:linear-gradient(#4a3b29,#241b12);border:1px solid var(--line2);color:var(--gold2);padding:.4rem .9rem;border-radius:3px;font-family:var(--display);font-size:.78rem;letter-spacing:.05em;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem}
 .btn.primary{background:linear-gradient(#b8923f,#7d5f22);color:#1b1408;border-color:#e0c072;font-weight:700}
@@ -29,10 +29,10 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 /* ---- the quiet HUD (GDD 17 §2.1) ---- */
 .hud{position:fixed;z-index:5;pointer-events:none}
 .hud>*{pointer-events:auto}
-.hud-tl{left:1rem;top:1rem;display:flex;gap:.6rem;align-items:stretch}
-.hud-tr{right:1rem;top:1rem;display:flex;gap:.6rem;align-items:flex-start}
+.hud-tl{left:.5rem;top:.5rem;display:flex;gap:.6rem;align-items:stretch}
+.hud-tr{right:.9rem;top:.5rem;display:flex;gap:.6rem;align-items:flex-start}
 .plate{display:flex;align-items:center;gap:.7rem;padding:.45rem .9rem .45rem .55rem;min-width:17rem}
-.plate .crest{width:2.5rem;height:3rem;flex:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+.plate .crest{width:auto;height:3.1rem;flex:none;align-self:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
 .plate .house{font:600 .68rem/1 var(--display);letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
 .plate .date{font:600 1.02rem/1.15 var(--display);color:var(--gold2);letter-spacing:.03em;margin-top:.2rem;white-space:nowrap}
 .plate .season{display:flex;align-items:center;gap:.3rem;font-style:italic;color:var(--muted);font-size:.86rem;margin-top:.1rem}
@@ -75,16 +75,16 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 .who .nm small{display:block;font-size:.85rem;color:var(--muted);margin-top:.15rem;font-style:italic}
 .who .nm .mood{display:inline-flex;align-items:center;gap:.3rem;font-style:normal;font-size:.8rem;color:var(--green);margin-top:.15rem}
 .who .nm .mood:before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--green)}
-.ring{width:6.2rem;height:6.2rem;border-radius:50%;padding:.28rem;background:conic-gradient(from 210deg,#8a6a2a,#f0d68a,#8a6a2a,#f0d68a,#8a6a2a);box-shadow:0 6px 22px rgba(0,0,0,.65),0 0 0 2px #1b1409;flex:none}
+.ring{width:7.2rem;height:7.2rem;border-radius:50%;padding:.28rem;background:conic-gradient(from 210deg,#8a6a2a,#f0d68a,#8a6a2a,#f0d68a,#8a6a2a);box-shadow:0 6px 22px rgba(0,0,0,.65),0 0 0 2px #1b1409;flex:none}
 .ring>div{width:100%;height:100%;border-radius:50%;overflow:hidden;border:2px solid #1b1409;background:#111}
-.ring svg{width:100%;height:100%;display:block}
+.ring img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.38);transform-origin:50% 26%}
 .chip{display:inline-flex;align-items:center;gap:.3rem;font:600 .62rem/1 var(--display);letter-spacing:.1em;text-transform:uppercase;padding:.28rem .5rem;border-radius:2rem;border:1px solid var(--line2);color:var(--muted);white-space:nowrap}
 .chip.up{color:var(--green);border-color:rgba(116,184,78,.5);background:rgba(116,184,78,.09)}
 .chip.down{color:#e8806b;border-color:rgba(224,102,79,.5);background:rgba(224,102,79,.09)}
 .chip.gold{color:var(--gold2);border-color:rgba(201,164,74,.55);background:rgba(201,164,74,.09)}
 .pchip{display:inline-flex;align-items:center;gap:.5rem;padding:.2rem .7rem .2rem .2rem;border:1px solid var(--line2);border-radius:2rem;background:rgba(0,0,0,.25);font-size:.95rem}
 .pchip .pf{width:2.1rem;height:2.1rem;border-radius:50%;overflow:hidden;border:1px solid var(--gold);flex:none}
-.pchip .pf svg{width:100%;height:100%;display:block}
+.pchip .pf img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.4);transform-origin:50% 26%}
 .pchip small{display:block;color:var(--muted);font-size:.78rem;line-height:1.1}
 .x{position:absolute;top:.7rem;right:.8rem;color:var(--muted);cursor:pointer}
 .parch{background:linear-gradient(#f2e7cb,#e6d6b0);color:var(--ink);border:1px solid #b79a5a;border-radius:4px;box-shadow:var(--shadow),inset 0 0 60px rgba(150,110,40,.22),inset 0 0 0 4px rgba(255,250,235,.35)}
@@ -117,70 +117,10 @@ export const SPRITE = `<svg width="0" height="0" style="position:absolute"><defs
 </defs></svg>`;
 export const ico = (n, cls = '') => `<svg class="i ${cls}"><use href="#i-${n}"/></svg>`;
 
-/* ---- crests: simple banners in the houses' colours (the game draws the real ones) ---- */
-const GL = {
-  stark: ['#e9e9ec', '<path d="M10 8l3 3h6l3-3v9l-3 5-3 2-3-2-3-5z" fill="#6c7078"/><path d="M14 20h6l-3 4z" fill="#e9e9ec"/>'],
-  lannister: ['#8f1d1d', '<circle cx="16" cy="17" r="6.5" fill="#e0b84a"/><circle cx="16" cy="17" r="3.4" fill="#8f1d1d"/>'],
-  tully: ['#2b5aa0', '<path d="M6 17c4-6 12-6 16 0-4 6-12 6-16 0z" fill="#e9eef7"/><path d="M22 17l5-4v8z" fill="#e9eef7"/>'],
-  baratheon: ['#d8ad2c', '<path d="M9 8l3 6M23 8l-3 6M16 12l0 12M12 14h8" stroke="#141110" stroke-width="2.6" stroke-linecap="round" fill="none"/>'],
-  tyrell: ['#3d7a3a', '<circle cx="16" cy="17" r="7" fill="#e6c34a"/><circle cx="16" cy="17" r="3.6" fill="#3d7a3a"/><circle cx="16" cy="17" r="1.5" fill="#e6c34a"/>'],
-  arryn: ['#7fb1de', '<path d="M11 9a9 9 0 100 16 7 7 0 010-16z" fill="#f2f6fb"/>'],
-  greyjoy: ['#1c1a1a', '<circle cx="16" cy="14" r="5" fill="#d6b14a"/><path d="M9 18c0 5 2 6 1 8M13 19c0 4 1 5 0 7M19 19c0 4-1 5 0 7M23 18c0 5-2 6-1 8" stroke="#d6b14a" stroke-width="2" fill="none" stroke-linecap="round"/>'],
-  martell: ['#c96a1e', '<circle cx="16" cy="16" r="6" fill="#c02a1f"/><path d="M16 4v26" stroke="#e8d28a" stroke-width="2.4"/>'],
-  bolton: ['#a8383c', '<path d="M16 8v12M9 12l14 6M23 12L9 18" stroke="#1a1010" stroke-width="2.4" stroke-linecap="round" fill="none"/>'],
-  umber: ['#7a3b1f', '<circle cx="16" cy="15" r="4.5" fill="#f0e2c0"/><path d="M9 26l7-8 7 8" stroke="#f0e2c0" stroke-width="2.4" fill="none"/>'],
-  frey: ['#5f7f9f', '<path d="M8 10h16v4H8zM8 18h16v4H8z" fill="#c9d3dc"/>'],
-};
-export const crest = (id, cls = '') => {
-  const [f, g] = GL[id] || GL.stark;
-  return `<svg class="crest ${cls}" viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="${f}" stroke="#17120d" stroke-width="1.4"/>${g}<path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg>`;
-};
-
-/* ---- portraits: painted-look busts drawn in SVG (the game uses its own generated ones; these keep the mockups honest about size and framing) ---- */
-let pid = 0;
-export function portrait(o = {}) {
-  const { skin = '#d9b592', hair = '#4a3421', style = 'short', beard = null, cloak = '#4c5560', collar = null, bg = ['#2c3a3d', '#131a1b'], age = 0, eye = '#3b4650', extra = '' } = o;
-  const u = ++pid;
-  const hairBack = style === 'long' ? `<path d="M22 44c-6 24-5 44-8 62h72c-3-18-2-38-8-62-4-20-12-26-28-26s-24 6-28 26z" fill="${hair}"/>` : '';
-  const hairTop = {
-    short: `<path d="M30 46c-2-18 8-28 20-28s22 10 20 28c-4-8-8-13-20-13s-16 5-20 13z" fill="${hair}"/>`,
-    long: `<path d="M29 48c-3-19 8-30 21-30s24 11 21 30c-3-9-8-15-21-15s-18 6-21 15z" fill="${hair}"/>`,
-    bald: `<path d="M28 44c0-6 2-9 4-11 2 3 3 5 3 9zM72 44c0-6-2-9-4-11-2 3-3 5-3 9z" fill="${hair}" opacity=".85"/>`,
-    white: `<path d="M29 48c-3-19 8-30 21-30s24 11 21 30c-3-9-8-15-21-15s-18 6-21 15z" fill="#e9e6e0"/>`,
-    crown: `<path d="M30 46c-2-18 8-28 20-28s22 10 20 28c-4-8-8-13-20-13s-16 5-20 13z" fill="${hair}"/><path d="M33 26l5 5 6-7 6 7 6-7 5 5-2 5H35z" fill="#d6b14a" stroke="#7a5f1e" stroke-width=".8"/>`,
-  }[style] || '';
-  const bd = beard ? `<path d="M31 52c0 20 8 30 19 30s19-10 19-30c-3 10-9 14-19 14s-16-4-19-14z" fill="${beard}"/>` : '';
-  const lines = age ? `<path d="M40 50q3-2 6 0M54 50q3-2 6 0M40 63q10 5 20 0" stroke="#000" stroke-opacity=".18" fill="none" stroke-width="1"/>` : '';
-  return `<svg viewBox="0 0 100 120" preserveAspectRatio="xMidYMid slice"><defs>
-<radialGradient id="pb${u}" cx="50%" cy="35%" r="80%"><stop offset="0" stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></radialGradient>
-<linearGradient id="pk${u}" x1="0" x2="1"><stop offset="0" stop-color="${skin}"/><stop offset="1" stop-color="${skin}" stop-opacity=".82"/></linearGradient>
-<linearGradient id="pc${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cloak}"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></linearGradient>
-<radialGradient id="pl${u}" cx="30%" cy="25%" r="90%"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".4"/></radialGradient></defs>
-<rect width="100" height="120" fill="url(#pb${u})"/>${hairBack}
-<path d="M6 122c0-24 16-34 32-38l12 8 12-8c16 4 32 14 32 38z" fill="url(#pc${u})"/>
-${collar ? `<path d="M10 122c0-20 12-30 28-36l12 12 12-12c16 6 28 16 28 36z" fill="${collar}" opacity=".92"/><path d="M38 86l12 12 12-12" fill="none" stroke="#000" stroke-opacity=".25"/>` : ''}
-<rect x="43" y="70" width="14" height="20" rx="5" fill="url(#pk${u})"/>
-<ellipse cx="50" cy="50" rx="19" ry="23" fill="url(#pk${u})"/>
-<ellipse cx="31.5" cy="52" rx="3" ry="5" fill="${skin}"/><ellipse cx="68.5" cy="52" rx="3" ry="5" fill="${skin}"/>
-${hairTop}${bd}
-<path d="M38 43q4-3 8 0M54 43q4-3 8 0" stroke="${hair === '#e9e6e0' ? '#999' : hair}" stroke-width="2" fill="none" stroke-linecap="round"/>
-<ellipse cx="42" cy="49" rx="2.2" ry="1.4" fill="${eye}"/><ellipse cx="58" cy="49" rx="2.2" ry="1.4" fill="${eye}"/>
-<path d="M50 50v9l-2 1.5h4" stroke="#000" stroke-opacity=".22" fill="none" stroke-width="1.1"/>
-<path d="M44 66q6 3 12 0" stroke="${beard ? '#3a2416' : '#9b4b3d'}" stroke-width="1.6" fill="none" stroke-linecap="round"/>${lines}${extra}
-<rect width="100" height="120" fill="url(#pl${u})"/></svg>`;
-}
-export const P = {
-  eddard: () => portrait({ hair: '#4b3d33', beard: '#4b3d33', cloak: '#5b646e', collar: '#8a8f96', age: 1, bg: ['#37474a', '#141b1c'] }),
-  robb: () => portrait({ skin: '#e3c0a0', hair: '#7a3b22', style: 'long', cloak: '#59626d', collar: '#8a8f96', bg: ['#33434a', '#12181b'] }),
-  hoster: () => portrait({ skin: '#d8b8a0', hair: '#e9e6e0', style: 'white', beard: '#e0ddd6', cloak: '#2f4f86', collar: '#8e2f2a', age: 1, bg: ['#2f4258', '#10151c'] }),
-  edmure: () => portrait({ skin: '#e0bd9c', hair: '#8a3f22', cloak: '#2f4f86', collar: '#8e2f2a', bg: ['#2f4258', '#10151c'] }),
-  robert: () => portrait({ skin: '#e0b998', hair: '#1c1613', beard: '#1c1613', cloak: '#c39a26', collar: '#2a2320', style: 'short', bg: ['#4b3a1c', '#17110a'] }),
-  rodrik: () => portrait({ skin: '#d6ae8c', hair: '#c8c2b8', style: 'bald', beard: '#c8c2b8', cloak: '#59626d', collar: '#3d4249', age: 1, bg: ['#37474a', '#141b1c'] }),
-  erik: () => portrait({ skin: '#cda88a', hair: '#251c17', beard: '#3a2a20', cloak: '#1f2426', collar: '#3b3f40', style: 'long', bg: ['#22303a', '#0d1114'] }),
-  lysa: () => portrait({ skin: '#ecd0b8', hair: '#8a4527', style: 'long', cloak: '#86aad0', collar: '#e8eef5', bg: ['#3a4f66', '#111820'] }),
-  donella: () => portrait({ skin: '#e4c6ac', hair: '#b8b2a8', style: 'long', cloak: '#6b4a2b', collar: '#3d2a18', age: 1, bg: ['#3c3428', '#15110c'] }),
-  mance: () => portrait({ skin: '#cfa98a', hair: '#2b211b', beard: '#2b211b', cloak: '#3b3a3a', collar: '#111', age: 1, bg: ['#26302f', '#0d1211'] }),
-};
+/* ---- crests and portraits: the game's own art, painted by scripts/mockup-assets.js into docs/mockups/assets/ ---- */
+export const crest = (id, cls = '') => `<img class="crest ${cls}" src="assets/banner-${id}.png" alt="">`;
+const PF = { eddard: 'eddard_stark', robb: 'robb_stark', hoster: 'hoster_tully', edmure: 'edmure_tully', robert: 'robert_baratheon', rodrik: 'rodrik_cassel', erik: 'erik_saltbeard', lysa: 'lysa_arryn', donella: 'donella_hornwood', mance: 'mance_rayder', catelyn: 'catelyn_stark' };
+export const P = new Proxy({}, { get: (_, k) => () => `<img src="assets/portrait-${PF[k]}.jpg" alt="">` });
 export const pf = (k, cls = 'pf') => `<span class="${cls}">${P[k]()}</span>`;
 export const person = (k, name, sub) => `<span class="pchip">${pf(k)}<span>${name}${sub ? `<small>${sub}</small>` : ''}</span></span>`;
 

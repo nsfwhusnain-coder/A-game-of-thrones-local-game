@@ -15,10 +15,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 button{font:inherit;color:inherit}
 h1,h2,h3,h4{font-family:var(--display);font-weight:600;letter-spacing:.04em;margin:0;color:var(--gold2)}
 svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.map{position:fixed;inset:0;background:var(--bg) center/cover no-repeat}
+.map{position:fixed;inset:0;background:var(--bg) center/cover no-repeat;transform:scale(1.08);transform-origin:100% 100%} /* a little bigger: the screenshot's debug tag slides off the corner */
 .dim{position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(8,6,4,.45),rgba(8,6,4,.78))}
-.tag{position:fixed;top:.3rem;left:50%;transform:translateX(-50%);z-index:99;font:600 .56rem/1 var(--display);letter-spacing:.14em;color:rgba(236,211,146,.7);
-  background:rgba(14,11,8,.62);padding:.28rem .6rem;border-radius:2px;pointer-events:none;white-space:nowrap}
+.tag{position:fixed;left:.1rem;top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;z-index:99;font:600 .56rem/1 var(--display);letter-spacing:.16em;color:rgba(236,211,146,.75);
+  background:rgba(14,11,8,.6);padding:.6rem .28rem;border-radius:2px;pointer-events:none;white-space:nowrap}
 .panel{background:var(--panel);border:1px solid var(--line2);border-radius:4px;box-shadow:var(--shadow),inset 0 0 0 1px rgba(201,164,74,.07);backdrop-filter:blur(5px)}
 .btn{background:linear-gradient(#4a3b29,#241b12);border:1px solid var(--line2);color:var(--gold2);padding:.4rem .9rem;border-radius:3px;font-family:var(--display);font-size:.78rem;letter-spacing:.05em;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem}
 .btn.primary{background:linear-gradient(#b8923f,#7d5f22);color:#1b1408;border-color:#e0c072;font-weight:700}
@@ -29,10 +29,10 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 /* ---- the quiet HUD (GDD 17 §2.1) ---- */
 .hud{position:fixed;z-index:5;pointer-events:none}
 .hud>*{pointer-events:auto}
-.hud-tl{left:1rem;top:1rem;display:flex;gap:.6rem;align-items:stretch}
-.hud-tr{right:1rem;top:1rem;display:flex;gap:.6rem;align-items:flex-start}
+.hud-tl{left:.5rem;top:.5rem;display:flex;gap:.6rem;align-items:stretch}
+.hud-tr{right:.9rem;top:.5rem;display:flex;gap:.6rem;align-items:flex-start}
 .plate{display:flex;align-items:center;gap:.7rem;padding:.45rem .9rem .45rem .55rem;min-width:17rem}
-.plate .crest{width:2.5rem;height:3rem;flex:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+.plate .crest{width:auto;height:3.1rem;flex:none;align-self:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
 .plate .house{font:600 .68rem/1 var(--display);letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
 .plate .date{font:600 1.02rem/1.15 var(--display);color:var(--gold2);letter-spacing:.03em;margin-top:.2rem;white-space:nowrap}
 .plate .season{display:flex;align-items:center;gap:.3rem;font-style:italic;color:var(--muted);font-size:.86rem;margin-top:.1rem}
@@ -75,16 +75,16 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 .who .nm small{display:block;font-size:.85rem;color:var(--muted);margin-top:.15rem;font-style:italic}
 .who .nm .mood{display:inline-flex;align-items:center;gap:.3rem;font-style:normal;font-size:.8rem;color:var(--green);margin-top:.15rem}
 .who .nm .mood:before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--green)}
-.ring{width:6.2rem;height:6.2rem;border-radius:50%;padding:.28rem;background:conic-gradient(from 210deg,#8a6a2a,#f0d68a,#8a6a2a,#f0d68a,#8a6a2a);box-shadow:0 6px 22px rgba(0,0,0,.65),0 0 0 2px #1b1409;flex:none}
+.ring{width:7.2rem;height:7.2rem;border-radius:50%;padding:.28rem;background:conic-gradient(from 210deg,#8a6a2a,#f0d68a,#8a6a2a,#f0d68a,#8a6a2a);box-shadow:0 6px 22px rgba(0,0,0,.65),0 0 0 2px #1b1409;flex:none}
 .ring>div{width:100%;height:100%;border-radius:50%;overflow:hidden;border:2px solid #1b1409;background:#111}
-.ring svg{width:100%;height:100%;display:block}
+.ring img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.38);transform-origin:50% 26%}
 .chip{display:inline-flex;align-items:center;gap:.3rem;font:600 .62rem/1 var(--display);letter-spacing:.1em;text-transform:uppercase;padding:.28rem .5rem;border-radius:2rem;border:1px solid var(--line2);color:var(--muted);white-space:nowrap}
 .chip.up{color:var(--green);border-color:rgba(116,184,78,.5);background:rgba(116,184,78,.09)}
 .chip.down{color:#e8806b;border-color:rgba(224,102,79,.5);background:rgba(224,102,79,.09)}
 .chip.gold{color:var(--gold2);border-color:rgba(201,164,74,.55);background:rgba(201,164,74,.09)}
 .pchip{display:inline-flex;align-items:center;gap:.5rem;padding:.2rem .7rem .2rem .2rem;border:1px solid var(--line2);border-radius:2rem;background:rgba(0,0,0,.25);font-size:.95rem}
 .pchip .pf{width:2.1rem;height:2.1rem;border-radius:50%;overflow:hidden;border:1px solid var(--gold);flex:none}
-.pchip .pf svg{width:100%;height:100%;display:block}
+.pchip .pf img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.4);transform-origin:50% 26%}
 .pchip small{display:block;color:var(--muted);font-size:.78rem;line-height:1.1}
 .x{position:absolute;top:.7rem;right:.8rem;color:var(--muted);cursor:pointer}
 .parch{background:linear-gradient(#f2e7cb,#e6d6b0);color:var(--ink);border:1px solid #b79a5a;border-radius:4px;box-shadow:var(--shadow),inset 0 0 60px rgba(150,110,40,.22),inset 0 0 0 4px rgba(255,250,235,.35)}
@@ -113,19 +113,19 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
     .going div{display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
     .going .k{font:600 .6rem/1 var(--display);letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
     .tbl{padding:.4rem 1.1rem .2rem}
-    .th,.tr{display:grid;grid-template-columns:1.4rem 10.6rem 4.1rem 6.3rem 5.9rem 4.7rem 3.1rem 3.1rem 1fr;gap:.35rem;align-items:center}
+    .th,.tr{display:grid;grid-template-columns:1.7rem 10.4rem 4.1rem 6.3rem 5.9rem 4.7rem 3.1rem 3.1rem 1fr;gap:.35rem;align-items:center}
     .th{font:600 .58rem/1 var(--display);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;padding:.35rem 0;border-bottom:1px solid var(--line)}
     .th .c,.tr .c{text-align:right}
     .th .s{color:var(--gold)}
-    .tr{padding:.32rem 0;border-bottom:1px solid rgba(77,60,40,.55);font-size:1rem}
-    .tr .rk{font:600 .85rem var(--display);color:var(--muted)}
+    .tr{padding:.38rem 0;border-bottom:1px solid rgba(77,60,40,.55);font-size:1rem}
+    .tr .rk{font:600 .85rem var(--display);color:var(--muted);padding-left:.5rem}
     .hs{display:flex;align-items:center;gap:.55rem;min-width:0}
     .hs .crest{width:1.55rem;height:1.85rem;flex:none}
     .nm b{display:block;font:600 .95rem/1.1 var(--display);letter-spacing:.03em;color:var(--text)}
     .nm b em{font:600 .5rem var(--display);font-style:normal;letter-spacing:.14em;color:#1b1408;background:var(--gold);padding:.12rem .3rem;border-radius:2px;vertical-align:.12em;margin-left:.2rem;text-transform:uppercase}
     .nm small{display:block;font-size:.76rem;line-height:1.1;color:var(--muted);font-style:italic;white-space:nowrap}
     .tr .c{font-variant-numeric:tabular-nums;color:#d9cdb0}
-    .tr .c.s{background:rgba(201,164,74,.07);margin:-.32rem 0;padding:.62rem .3rem;height:calc(100% + .64rem)}
+    .tr .c.s{background:rgba(201,164,74,.07);margin:-.38rem 0;padding:.68rem .3rem;height:calc(100% + .76rem)}
     .tr .c.e i{font-size:.82rem;color:var(--muted)}
     .tr.you{background:linear-gradient(90deg,rgba(201,164,74,.2),rgba(201,164,74,.04));box-shadow:inset 3px 0 0 var(--gold)}
     .tr.you .c{color:#fff;font-weight:600}
@@ -134,6 +134,18 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
     .tn{display:flex;align-items:center;justify-content:flex-end;gap:.5rem}
     .legend{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.82rem;color:var(--muted);font-style:italic;padding:.4rem 1.1rem .5rem}
     .legend b{font-style:normal;color:var(--gold2);font-weight:500}
+    .wars{padding:.55rem 1.1rem .5rem;border-top:1px solid var(--line)}
+    .wars h4,.say h4{font-size:.62rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:.35rem;font-weight:600}
+    .wars .w{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.25rem 0;font-size:1rem}
+    .wars .w b{font-weight:500;color:var(--gold2)}
+    .mult{padding:.6rem 1.1rem .7rem;border-top:1px solid var(--line)}
+    .mult h4{font-size:.62rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:.45rem;font-weight:600}
+    .mg{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem}
+    .mg .m{border:1px solid var(--line);border-radius:3px;padding:.4rem .6rem .35rem;background:rgba(0,0,0,.2);display:grid;grid-template-columns:1fr auto;row-gap:.05rem;align-items:end}
+    .mg small{font:600 .56rem/1 var(--display);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;grid-column:1/3}
+    .mg b{font:500 .98rem/1.2 var(--serif);color:var(--text);grid-column:1/3;white-space:nowrap}
+    .mg span{font-size:.85rem}.mg svg{justify-self:end}
+    @media (max-height:1000px){.mult{display:none}}
     .say{display:grid;grid-template-columns:1.25fr 1fr;gap:1.1rem;padding:.7rem 1.1rem .85rem;border-top:1px solid var(--line);margin-top:auto;background:rgba(0,0,0,.2)}
     .say h4{font-size:.62rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:.35rem;font-weight:600}
     .say ul{margin:0;padding:0;list-style:none;font-size:.98rem;line-height:1.3;display:flex;flex-direction:column;gap:.3rem}
@@ -142,7 +154,9 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
     .focus{display:flex;flex-direction:column;gap:.35rem}
     .focus .f{display:flex;align-items:center;gap:.6rem;justify-content:space-between;font-size:.95rem;line-height:1.2}
     .focus .btn{padding:.3rem .6rem;font-size:.66rem}
-    @media (max-width:1500px){.led .hud{display:none}.win{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);height:92vh;width:min(57rem,94vw)}}</style></head>
+    @media (min-height:1000px){.tr{padding:.6rem 0}.tr .c.s{margin:-.6rem 0;padding:.9rem .3rem;height:calc(100% + 1.2rem)}.going{padding:.8rem 1.1rem}.wars{padding:.8rem 1.1rem}.wars .w{padding:.4rem 0}.say{padding:1rem 1.1rem 1.1rem}}
+    @media (max-height:800px){.tr{padding:.24rem 0}.tr .c.s{margin:-.24rem 0;padding:.5rem .3rem;height:calc(100% + .48rem)}.wars .w:nth-of-type(2){display:none}.going{padding:.4rem 1.1rem}.win header{padding:.5rem 1.1rem .4rem}.legend{padding:.3rem 1.1rem .35rem}.wars{padding:.4rem 1.1rem .3rem}.say{padding:.5rem 1.1rem .6rem}.lens{padding-top:.3rem}}
+    @media (max-width:1500px){.led .hud{display:none}.win{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);height:96vh;width:min(57rem,94vw)}}</style></head>
 <body class="led"><svg width="0" height="0" style="position:absolute"><defs>
 <symbol id="i-coin" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></symbol>
 <symbol id="i-men" viewBox="0 0 24 24"><path d="M5 19L17 7M14 5h5v5M19 19L7 7M10 5H5v5M4 20l3-3M20 20l-3-3"/></symbol>
@@ -166,9 +180,9 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
 <symbol id="i-skull" viewBox="0 0 24 24"><path d="M5 11a7 7 0 1114 0c0 2-1 3.2-2 4v3H7v-3c-1-.8-2-2-2-4z"/><circle cx="9.3" cy="11.3" r="1.2"/><circle cx="14.7" cy="11.3" r="1.2"/></symbol>
 </defs></svg>
 <div class="map"></div>
-<div class="dim"></div>
+<div class="dim" style="z-index:6"></div>
 <div class="hud hud-tl">
-  <div class="panel plate"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#e9e9ec" stroke="#17120d" stroke-width="1.4"/><path d="M10 8l3 3h6l3-3v9l-3 5-3 2-3-2-3-5z" fill="#6c7078"/><path d="M14 20h6l-3 4z" fill="#e9e9ec"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><div><div class="house">House Stark</div><div class="date">15th of the 8th Moon, 298 AC</div><div class="season"><svg class="i "><use href="#i-sun"/></svg> Late summer &middot; the days shorten</div></div></div>
+  <div class="panel plate"><img class="crest " src="assets/banner-stark.png" alt=""><div><div class="house">House Stark</div><div class="date">15th of the 8th Moon, 298 AC</div><div class="season"><svg class="i "><use href="#i-sun"/></svg> Late summer &middot; the days shorten</div></div></div>
   
 </div>
 <div class="hud hud-tr" >
@@ -180,31 +194,33 @@ svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;
       <div class="lens"><span class="t on">Strength</span><span class="t">Economy</span><span class="t">Lands</span><span class="t">Wars</span><span class="sp">Show <b>Great houses &#9662;</b></span></div>
       <div class="going"><div><span class="k">Rising</span><span class="chip up">&#9650; Lannister</span><span class="chip up">&#9650; Arryn</span><span class="chip up">&#9650; Stark</span></div><div><span class="k">Falling</span><span class="chip down">&#9660; Baratheon</span><span class="chip down">&#9660; Tully</span></div></div>
       <div class="tbl"><div class="th"><span></span><span>House</span><span class="c s">Power</span><span class="c s">Men</span><span class="c">Coin</span><span class="c">Food</span><span class="c s">Ships</span><span class="c">Lands</span><span class="c">Six moons</span></div><div class="tr  "><span class="rk">1</span>
-      <span class="hs"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#8f1d1d" stroke="#17120d" stroke-width="1.4"/><circle cx="16" cy="17" r="6.5" fill="#e0b84a"/><circle cx="16" cy="17" r="3.4" fill="#8f1d1d"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><span class="nm"><b>Lannister</b><small>raven, 6 days old</small></span></span>
+      <span class="hs"><img class="crest " src="assets/banner-lannister.png" alt=""><span class="nm"><b>Lannister</b><small>raven, 6 days old</small></span></span>
       <span class="c s pw">71 ~</span><span class="c s">~52,000</span><span class="c e"><i>said to be rich</i></span><span class="c e">&mdash;</span><span class="c s">~40</span><span class="c">~9</span>
       <span class="tn"><svg width="58" height="22" viewBox="0 0 58 22" style="overflow:visible"><path d="M2.0 19.0L11.0 17.5L20.0 16.8L29.0 14.6L38.0 11.7L47.0 7.4L56.0 3.0" fill="none" stroke="#74b84e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 2.5" opacity=".8"/><circle cx="56" cy="3" r="2.1" fill="#74b84e"/></svg><span class="chip up">&#9650; Rising</span></span></div><div class="tr  faint"><span class="rk">2</span>
-      <span class="hs"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#3d7a3a" stroke="#17120d" stroke-width="1.4"/><circle cx="16" cy="17" r="7" fill="#e6c34a"/><circle cx="16" cy="17" r="3.6" fill="#3d7a3a"/><circle cx="16" cy="17" r="1.5" fill="#e6c34a"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><span class="nm"><b>Tyrell</b><small>rumour, a moon old ?</small></span></span>
+      <span class="hs"><img class="crest " src="assets/banner-tyrell.png" alt=""><span class="nm"><b>Tyrell</b><small>rumour, a moon old ?</small></span></span>
       <span class="c s pw">64 &asymp;</span><span class="c s">&asymp; 40&ndash;55k</span><span class="c e">&mdash;</span><span class="c e">&mdash;</span><span class="c s">~20</span><span class="c">~12</span>
       <span class="tn"><svg width="58" height="22" viewBox="0 0 58 22" style="overflow:visible"><path d="M2.0 19.0L11.0 19.0L20.0 11.0L29.0 19.0L38.0 11.0L47.0 11.0L56.0 3.0" fill="none" stroke="#a8977a" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 2.5" opacity=".8"/><circle cx="56" cy="3" r="2.1" fill="#a8977a"/></svg><span class="chip flat">&#9644; Steady</span></span></div><div class="tr you "><span class="rk">3</span>
-      <span class="hs"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#e9e9ec" stroke="#17120d" stroke-width="1.4"/><path d="M10 8l3 3h6l3-3v9l-3 5-3 2-3-2-3-5z" fill="#6c7078"/><path d="M14 20h6l-3 4z" fill="#e9e9ec"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><span class="nm"><b>Stark <em>you</em></b><small>exact &middot; your house</small></span></span>
+      <span class="hs"><img class="crest " src="assets/banner-stark.png" alt=""><span class="nm"><b>Stark <em>you</em></b><small>exact &middot; your house</small></span></span>
       <span class="c s pw">58</span><span class="c s">17,200</span><span class="c e">120,000</span><span class="c e">30 moons</span><span class="c s">4</span><span class="c">14</span>
       <span class="tn"><svg width="58" height="22" viewBox="0 0 58 22" style="overflow:visible"><path d="M2.0 19.0L11.0 17.0L20.0 13.1L29.0 11.2L38.0 7.3L47.0 5.3L56.0 3.0" fill="none" stroke="#74b84e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" /><circle cx="56" cy="3" r="2.1" fill="#74b84e"/></svg><span class="chip up">&#9650; Rising</span></span></div><div class="tr  "><span class="rk">4</span>
-      <span class="hs"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#d8ad2c" stroke="#17120d" stroke-width="1.4"/><path d="M9 8l3 6M23 8l-3 6M16 12l0 12M12 14h8" stroke="#141110" stroke-width="2.6" stroke-linecap="round" fill="none"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><span class="nm"><b>Baratheon</b><small>a rider, 9 days old</small></span></span>
+      <span class="hs"><img class="crest " src="assets/banner-baratheon.png" alt=""><span class="nm"><b>Baratheon</b><small>a rider, 9 days old</small></span></span>
       <span class="c s pw">44 ~</span><span class="c s">~30,000</span><span class="c e"><i>pressed</i></span><span class="c e">&mdash;</span><span class="c s">~60</span><span class="c">&ge; 6</span>
       <span class="tn"><svg width="58" height="22" viewBox="0 0 58 22" style="overflow:visible"><path d="M2.0 3.0L11.0 5.0L20.0 9.0L29.0 11.0L38.0 13.0L47.0 17.0L56.0 19.0" fill="none" stroke="#e0664f" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 2.5" opacity=".8"/><circle cx="56" cy="19" r="2.1" fill="#e0664f"/></svg><span class="chip down">&#9660; Falling</span></span></div><div class="tr  "><span class="rk">5</span>
-      <span class="hs"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#7fb1de" stroke="#17120d" stroke-width="1.4"/><path d="M11 9a9 9 0 100 16 7 7 0 010-16z" fill="#f2f6fb"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><span class="nm"><b>Arryn</b><small>raven, 4 days old</small></span></span>
+      <span class="hs"><img class="crest " src="assets/banner-arryn.png" alt=""><span class="nm"><b>Arryn</b><small>raven, 4 days old</small></span></span>
       <span class="c s pw">41 ~</span><span class="c s">~24,000</span><span class="c e">&mdash;</span><span class="c e">&mdash;</span><span class="c s">~10</span><span class="c">~5</span>
       <span class="tn"><svg width="58" height="22" viewBox="0 0 58 22" style="overflow:visible"><path d="M2.0 19.0L11.0 19.0L20.0 17.4L29.0 14.2L38.0 11.0L47.0 6.2L56.0 3.0" fill="none" stroke="#74b84e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 2.5" opacity=".8"/><circle cx="56" cy="3" r="2.1" fill="#74b84e"/></svg><span class="chip up">&#9650; Rising</span></span></div><div class="tr  "><span class="rk">6</span>
-      <span class="hs"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#1c1a1a" stroke="#17120d" stroke-width="1.4"/><circle cx="16" cy="14" r="5" fill="#d6b14a"/><path d="M9 18c0 5 2 6 1 8M13 19c0 4 1 5 0 7M19 19c0 4-1 5 0 7M23 18c0 5-2 6-1 8" stroke="#d6b14a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><span class="nm"><b>Greyjoy</b><small>seen off the coast, 3 days</small></span></span>
+      <span class="hs"><img class="crest " src="assets/banner-greyjoy.png" alt=""><span class="nm"><b>Greyjoy</b><small>seen off the coast, 3 days</small></span></span>
       <span class="c s pw">36 ~</span><span class="c s">~20,000</span><span class="c e">&mdash;</span><span class="c e">&mdash;</span><span class="c s">~100</span><span class="c">~7</span>
       <span class="tn"><svg width="58" height="22" viewBox="0 0 58 22" style="overflow:visible"><path d="M2.0 19.0L11.0 11.0L20.0 11.0L29.0 3.0L38.0 11.0L47.0 3.0L56.0 3.0" fill="none" stroke="#a8977a" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 2.5" opacity=".8"/><circle cx="56" cy="3" r="2.1" fill="#a8977a"/></svg><span class="chip flat">&#9644; Steady</span></span></div><div class="tr  "><span class="rk">7</span>
-      <span class="hs"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#2b5aa0" stroke="#17120d" stroke-width="1.4"/><path d="M6 17c4-6 12-6 16 0-4 6-12 6-16 0z" fill="#e9eef7"/><path d="M22 17l5-4v8z" fill="#e9eef7"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><span class="nm"><b>Tully</b><small>sworn ally &middot; this moon</small></span></span>
+      <span class="hs"><img class="crest " src="assets/banner-tully.png" alt=""><span class="nm"><b>Tully</b><small>sworn ally &middot; this moon</small></span></span>
       <span class="c s pw">33 ~</span><span class="c s">~9,000</span><span class="c e">&asymp; 30&ndash;50k</span><span class="c e">~12 moons</span><span class="c s">~8</span><span class="c">~11</span>
       <span class="tn"><svg width="58" height="22" viewBox="0 0 58 22" style="overflow:visible"><path d="M2.0 3.0L11.0 3.0L20.0 8.3L29.0 8.3L38.0 13.7L47.0 16.3L56.0 19.0" fill="none" stroke="#e0664f" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 2.5" opacity=".8"/><circle cx="56" cy="19" r="2.1" fill="#e0664f"/></svg><span class="chip down">&#9660; Falling</span></span></div><div class="tr  faint"><span class="rk">8</span>
-      <span class="hs"><svg class="crest " viewBox="0 0 32 38"><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="#c96a1e" stroke="#17120d" stroke-width="1.4"/><circle cx="16" cy="16" r="6" fill="#c02a1f"/><path d="M16 4v26" stroke="#e8d28a" stroke-width="2.4"/><path d="M2 1h28v27c0 5-9 8-14 9C11 36 2 33 2 28z" fill="none" stroke="#c9a44a" stroke-opacity=".7" stroke-width=".8" transform="translate(0 0)"/></svg><span class="nm"><b>Martell</b><small>long unheard of ?</small></span></span>
+      <span class="hs"><img class="crest " src="assets/banner-martell.png" alt=""><span class="nm"><b>Martell</b><small>long unheard of ?</small></span></span>
       <span class="c s pw">30 &asymp;</span><span class="c s">&asymp; 12&ndash;18k</span><span class="c e">&mdash;</span><span class="c e">&mdash;</span><span class="c s">~25</span><span class="c">~6</span>
       <span class="tn"><svg width="58" height="22" viewBox="0 0 58 22" style="overflow:visible"><path d="M2.0 3.0L11.0 3.0L20.0 3.0L29.0 19.0L38.0 3.0L47.0 3.0L56.0 3.0" fill="none" stroke="#a8977a" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 2.5" opacity=".8"/><circle cx="56" cy="3" r="2.1" fill="#a8977a"/></svg><span class="chip flat">&#9644; Steady</span></span></div></div>
       <div class="legend"><span><b>~</b> an estimate, dated as the word reached you</span><span><b>&asymp;</b> a band, <b>&ge;</b> at least</span><span><b>?</b> older than two turns</span><span><b>&mdash;</b> nothing known</span><span>Dashed line: estimated history</span></div>
+      <div class="wars"><h4>Wars, as your house knows them</h4><div class="w"><span><b>Greyjoy raids on the Stony Shore</b> &middot; Greyjoy against Stark</span><span class="chip gold">&#9644; You are holding</span></div><div class="w"><span><b>The free folk gather beyond the Wall</b> &middot; not yet a war</span><span class="chip">Watching</span></div></div>
+      <div class="mult"><h4>Your house over six moons</h4><div class="mg"><div class="m"><small>Swords</small><b>17,200</b><span class="up">+41%</span><svg width="70" height="22" viewBox="0 0 70 22" style="overflow:visible"><path d="M2.0 19.0L13.0 17.0L24.0 13.1L35.0 11.2L46.0 7.3L57.0 5.3L68.0 3.0" fill="none" stroke="#74b84e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" /><circle cx="68" cy="3" r="2.1" fill="#74b84e"/></svg></div><div class="m"><small>Coin</small><b>120,000</b><span class="up">+12%</span><svg width="70" height="22" viewBox="0 0 70 22" style="overflow:visible"><path d="M2.0 19.0L13.0 16.3L24.0 13.7L35.0 11.5L46.0 8.3L57.0 5.1L68.0 3.0" fill="none" stroke="#74b84e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" /><circle cx="68" cy="3" r="2.1" fill="#74b84e"/></svg></div><div class="m"><small>Income</small><b>+6,900 a moon</b><span class="up">+3%</span><svg width="70" height="22" viewBox="0 0 70 22" style="overflow:visible"><path d="M2.0 19.0L13.0 15.8L24.0 12.6L35.0 12.6L46.0 9.4L57.0 6.2L68.0 3.0" fill="none" stroke="#74b84e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" /><circle cx="68" cy="3" r="2.1" fill="#74b84e"/></svg></div><div class="m"><small>Food</small><b>30 moons</b><span class="down">−14%</span><svg width="70" height="22" viewBox="0 0 70 22" style="overflow:visible"><path d="M2.0 3.0L13.0 4.6L24.0 7.8L35.0 11.0L46.0 14.2L57.0 17.4L68.0 19.0" fill="none" stroke="#e0664f" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" /><circle cx="68" cy="19" r="2.1" fill="#e0664f"/></svg></div><div class="m"><small>People</small><b>2.0 million</b><span class="up">+1%</span><svg width="70" height="22" viewBox="0 0 70 22" style="overflow:visible"><path d="M2.0 19.0L13.0 15.8L24.0 12.6L35.0 9.4L46.0 6.2L57.0 3.0L68.0 3.0" fill="none" stroke="#74b84e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" /><circle cx="68" cy="3" r="2.1" fill="#74b84e"/></svg></div></div></div>
       <div class="say"><div><h4>What the realm is saying</h4><ul><li><span>Lannister banners are called <small>raven, 6 days old</small></span></li><li><span>Lord Hoster is ill; Tully strength may fall <small>Riverrun, 4 days</small></span></li><li><span>The Crown owes six million dragons <small>public</small></span></li></ul></div>
       <div><h4>Where to focus</h4><div class="focus"><div class="f"><span>Hornwood keeps 400 men at home</span><span class="btn">Send a raven</span></div><div class="f"><span>Winter comes; grain is 30 moons</span><span class="btn">Buy grain</span></div></div></div></div>
     </section>
