@@ -1,5 +1,9 @@
 # 17 · Declutter: a quiet screen, a deep ledger
 
+> **Reconciled with [19 — The State of the Realm](19-realm-ledger.md):** the ledger's data, knowledge filter, API and panel
+> are specified there (work packages R1–R7) and supersede this document's U5–U7 wherever they differ (e.g. the
+> `state.realmStats` sample rather than `state.trends`; the hotkey is settled in R6). U1–U4, U8 and U9 stand as written.
+
 > Owner feedback: "The UI is very cluttered — too much information, too many panels, too many things to look at. Hide it
 > gracefully, the way big games do. Show what matters all the time; hide the rest behind a few buttons. This is an AI
 > simulation: the player watches the world and gives orders in plain words, so they should not face economy and military
