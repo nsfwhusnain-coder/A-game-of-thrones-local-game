@@ -1092,3 +1092,31 @@ ransoms, `embargo`) and the price index of §6.3.
 
 **Cost.** The pre-parser's sure readings on the order suite go 266 → 263 (three orders now ask); the exact reading on
 the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
+
+## D-072 · 2026-09-29 · Clustering as built (WP N4)
+
+- **Cuts:** a story is cut at an archetype boundary above 6 facts and at a place boundary above 8 (18 §2.4 said 6 for
+  both: a muster of one place with its host's forming reads as one story); a story that buries news of weight 4 or more
+  in another archetype is cut however small (a refusal inside a muster).
+- **Roll-ups by road**, beyond set-outs: vassals answering one call (`call_answered` by `data.to`), hosts joining one
+  host (`host_joined`), arrivals at one place. A host's same-day, same-place, same-people facts ride with it.
+- **The Meanwhile (C7) takes more:** a lone minor march (importance ≤ 2) touching neither the player's house nor seat,
+  and "ambient" stories (kinds whose default importance is 1) — about a third of all cards in a 60-turn soak were such
+  noise. Nothing is dropped: they are one sentence.
+- **Arrival:** facts heard at different times (`heard.via` and day) are never one story (B-32); the narrator copies each
+  card's `heard`/`late` onto its facts before clustering. Ids sort naturally (f3.9 before f3.10).
+- Why: GDD 18 §2.4's aim — one card per story, not one line per fact — measured on two recorded games (tests/fixtures/
+  headlines/turns); facts per story 2.7 on a muster game, 1.5 on a quiet one.
+
+## D-073 · 2026-09-29 · The writer as built (WP N3)
+
+- Templates per kind (`HEAD`, `SUM`, `DETAIL`) with two to four forms chosen by a hash of the fact id; a natural death
+  always reads "<name> dies (of X) at <place>" (plain beats varied there).
+- Other houses' figures appear only in `details`, rounded to two significant figures ("about 10,000"); the viewer's
+  own house, its vassals and allies keep exact figures. Headlines and summaries never hold digits.
+- A holding named for the one who leads it ("Mance Rayder's host") is never used as a place clause; an order, a tribe
+  or a company is never pluralised ("the Night's Watch", not "Night's Watchs"); a foreign call to arms says against
+  whom when a war is public, and "nothing yet says against whom" when it is not.
+- Open: a minor lord under a regent (Robert Arryn) is named as the subject; naming the regent (Lysa Arryn) may read
+  better — left for N5/N6 with the owner's eye.
+

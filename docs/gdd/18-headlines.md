@@ -141,6 +141,8 @@ Card = {
 
 ### 2.4 Clustering: one card per story, not per fact
 
+*Implemented in N4 (Slice 4), as built in DECISIONS D-072: `public/js/engine/facts/cluster.js`, `tests/clusters.test.js`.*
+
 Stories are formed as now (`cluster.js`), then **shaped**:
 
 | Rule | Effect |
@@ -194,6 +196,8 @@ writer has already written and the validator holds it to the same facts. If the 
 still reads a good card, because the deterministic writer is the floor and not an afterthought.
 
 ### 3.1 The deterministic writer (`public/js/engine/facts/headline.js`, new; pure, no I/O, used by server and client)
+
+*Implemented in N3 (Slice 4), as built in DECISIONS D-073: `public/js/engine/facts/heads.js`, `headline.js` (`cardOf`, `meanwhileOf`), `tests/writer.test.js`. Not yet called by the narrator: N5.*
 
 `cardOf(state, story) → { headline, summary, details[], kind, who[], where }`
 
