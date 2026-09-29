@@ -13,6 +13,11 @@ export function commandable(state, a) {
   const v = state.houses[a.owner]; return !!v && v.liege === p && v.obligations?.host === a.id;
 }
 
+// where a marching party is really going: its live road's goal beats a `march.to` left over from an earlier order (B-25);
+// a party that is besieging, camped, in battle or routed has no arrival to wait for even if the old order lingers
+const RESTING = new Set(['besieging', 'camped', 'staying', 'mustering', 'engaged', 'routed']);
+export const goalOf = (a) => (!a?.march || (RESTING.has(a.state) && !a.route) ? null : a.route?.to ?? a.march.to);
+
 export const STATUS_LABEL = { inflight: 'In flight', queued: 'Queued', underway: 'Under way', done: 'Done', delivered: 'Delivered', answered: 'Answered', failed: 'Failed', delayed: 'Delayed', told: 'In the story' };
 
 /** How an order came out: { status, lines } — lines are the engine's own record of what was done. */
@@ -38,11 +43,11 @@ export function underway(state) {
     out.push({ kind: 'ride', id: c.id, who: c.name, text: `riding to ${r.route?.toName || placeName(state, r.march.to)}`, days: Math.max(1, Math.round(daysLeft(r) ?? 1)) });
   }
   for (const a of Object.values(state.parties)) {
-    if (!a.march || !commandable(state, a)) continue;
-    const foe = partyAt(state, a.march.to);
-    const dest = foe ? foe.pos : state.holdings[a.march.to]?.pos; if (!dest) continue;
+    const goal = goalOf(a); if (goal == null || !commandable(state, a)) continue;
+    const foe = partyAt(state, goal);
+    const dest = foe ? foe.pos : state.holdings[goal]?.pos; if (!dest) continue;
     const party = membersOf(state, a).filter((c) => c.alive).map((c) => c.name);
-    out.push({ kind: 'march', id: a.id, who: a.name, text: `${fmt(a.men)} men${party.length ? ` with ${party.slice(0, 3).join(', ')}` : ''}, ${foe ? `after ${foe.name}` : `marching to ${placeName(state, a.march.to)}`}`, days: Math.max(1, Math.round(daysLeft(a) ?? marchDays(a, a.pos, dest, state).days)) });
+    out.push({ kind: 'march', id: a.id, who: a.name, text: `${fmt(a.men)} men${party.length ? ` with ${party.slice(0, 3).join(', ')}` : ''}, ${foe ? `after ${foe.name}` : `marching to ${placeName(state, goal)}`}`, days: Math.max(1, Math.round(daysLeft(a) ?? marchDays(a, a.pos, dest, state).days)) });
   }
   for (const v of Object.values(state.houses)) {
     if (v.liege !== p || v.obligations?.levies !== 'called') continue;

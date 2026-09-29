@@ -4,7 +4,7 @@
 // coming, a quiet week. Never less than a day, never more than a moon.
 import { dayNumber, placeName } from './world.js';
 import { marchDays, atWar } from './warfare.js';
-import { commandable } from './errands.js';
+import { commandable, goalOf } from './errands.js';
 import { isRef, partyAt, forces } from '../engine/parties.js';
 import { pointAt, daysLeft } from '../engine/movement.js';
 import { THREADS } from './plots.js';
@@ -29,10 +29,11 @@ export function nextTurnLength(state) {
   const add = (days, reason, secret = false) => { if (days >= 1 && days <= TURN_MAX) cands.push({ days: Math.round(days), reason, secret }); };
   // the player's hosts and companies reach where they are going
   for (const a of Object.values(state.parties)) {
-    if (!a.march || !commandable(state, a) || (a.serving && a.owner !== p && !isRef(a.march.to))) continue;
-    const foe = partyAt(state, a.march.to);
-    const to = foe ? foe.pos : state.holdings[a.march.to]?.pos; if (!to) continue;
-    add(eta(state, a, to), `${a.name} ${foe ? `reaches ${foe.name}` : `reaches ${placeName(state, a.march.to)}`}`);
+    const goal = goalOf(a);
+    if (goal == null || !commandable(state, a) || (a.serving && a.owner !== p && !isRef(goal))) continue;
+    const foe = partyAt(state, goal);
+    const to = foe ? foe.pos : state.holdings[goal]?.pos; if (!to) continue;
+    add(eta(state, a, to), `${a.name} ${foe ? `reaches ${foe.name}` : `reaches ${placeName(state, goal)}`}`);
   }
   // A camp filling from the fields is itself a reason to look again tomorrow.
   // Without this, auto turns can jump over the visible growth of a muster.
