@@ -181,6 +181,18 @@ export function hasLeave(state, army, cp) {
   return null;
 }
 
+// what a crossing cost, in a chronicler's plain words: the men lost (one man, two men), the days lost (one day, six days),
+// and — when no man is lost — only that the host is held up, never "0 men"
+const nMen = (n) => `${n.toLocaleString('en-GB')} ${n === 1 ? 'man' : 'men'}`;
+const nDays = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
+export function crossingLine(army, cp, { gated, gate, lost = 0, days = 0 }) {
+  const held = days >= 1 ? `is held up ${nDays(days)}` : '';
+  const price = lost ? `loses ${nMen(lost)} on the crossing${held ? ` and ${held}` : ''}` : held;
+  return gated
+    ? `${army.name} crosses at ${gate}${price ? `, and ${price}` : ' without trouble'}.`
+    : `${cp.tollText} ${army.name} ${price || 'is held up'}.`;
+}
+
 const seasonBite = (state) => (state.world?.season === 'winter' ? 1.6 : state.world?.season === 'autumn' ? 1.15 : 1);
 
 /**
@@ -218,9 +230,7 @@ export function chokepointToll(state, army, from, to, days) {
     if (lost || d >= 1) {
       out.events.push({
         title: gated ? `${army.name} passes ${cp.name}` : `${army.name} pays the price of ${cp.name}`,
-        text: gated
-          ? `${army.name} crosses at ${cp.gate && state.holdings?.[cp.gate] ? state.holdings[cp.gate].name : cp.name}${lost ? `, and is ${lost.toLocaleString('en-GB')} men lighter for it` : ' without trouble'}.`
-          : `${cp.tollText} ${army.name} loses ${lost.toLocaleString('en-GB')} men and ${Math.round(d)} days.`,
+        text: crossingLine(army, cp, { gated, gate: cp.gate && state.holdings?.[cp.gate] ? state.holdings[cp.gate].name : cp.name, lost, days: Math.round(d) }),
         details: cp.blurb,
         where: cp.gate || null, at,
         importance: gated ? 2 : 3, type: 'war', houses: [army.owner],

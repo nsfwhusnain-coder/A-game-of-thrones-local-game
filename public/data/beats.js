@@ -56,8 +56,8 @@ export const THREADS = [
       {
         id: 'the_fall', at: YM(298, 9), needs: (s) => alive(s, 'bran_stark') && at(s, 'jaime_lannister', 'stark') && at(s, 'bran_stark', 'stark'),
         fire: (s) => ({
-          events: [ev('The boy who fell', 'Bran Stark, who climbed every wall of Winterfell and never fell, is found broken at the foot of the old tower. He lives, but sleeps and does not wake. The Lannisters are very kind.', 'stark', plays(s, 'stark') ? 5 : 3, 'intrigue', ['stark'])],
-          changes: [{ op: 'character', id: 'bran_stark', status: 'wounded', note: 'Fell from the broken tower — or was pushed. Cannot remember.' }],
+          events: [ev('The boy who fell', 'Bran Stark, who climbed every wall of Winterfell and never fell, is found broken at the foot of the old tower. He lives, but sleeps and does not wake. Maester Luwin sits by his bed.', 'stark', plays(s, 'stark') ? 5 : 3, 'intrigue', ['stark'])],
+          changes: [{ op: 'character', id: 'bran_stark', status: 'wounded', note: 'Found broken at the foot of the old tower; remembers nothing of the fall.' }],
         }),
       },
       {
