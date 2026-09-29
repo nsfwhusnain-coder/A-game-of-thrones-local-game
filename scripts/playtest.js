@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
+import { fileURLToPath, pathToFileURL } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, all) => (x.startsWith('--') ? [...a, [x.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true]] : a), []));
@@ -14,10 +14,10 @@ fs.symlinkSync(path.join(ROOT, 'public'), path.join(work, 'public'), 'junction')
 fs.mkdirSync(path.join(work, 'saves'));
 if (fs.existsSync(path.join(ROOT, 'config.json'))) fs.copyFileSync(path.join(ROOT, 'config.json'), path.join(work, 'config.json'));
 process.chdir(work);
-const game = await import(path.join(work, 'server/game.js'));
-const { loadConfig } = await import(path.join(work, 'server/llm.js')); // the copied llm.js: defaults when there is no config.json, and WC_PROVIDER honoured
-const { whereabouts } = await import(path.join(work, 'public/js/shared/roads.js'));
-const { orderOutcome } = await import(path.join(work, 'public/js/shared/errands.js'));
+const game = await import(pathToFileURL(path.join(work, 'server/game.js')).href);
+const { loadConfig } = await import(pathToFileURL(path.join(work, 'server/llm.js')).href); // the copied llm.js: defaults when there is no config.json, and WC_PROVIDER honoured
+const { whereabouts } = await import(pathToFileURL(path.join(work, 'public/js/shared/roads.js')).href);
+const { orderOutcome } = await import(pathToFileURL(path.join(work, 'public/js/shared/errands.js')).href);
 const seenRavens = new Set();
 const s2threads = (id) => (game.loadState(id).storyThreads || []).map((t) => `${t.title}: ${t.last}`).join(' | ');
 const house = args.house || 'stark';
