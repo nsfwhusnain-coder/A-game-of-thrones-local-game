@@ -1,61 +1,86 @@
-# Handoff — end of E1–E5 (the map), and the plan for what comes next
+# Handoff — N, U and R under way: headlines, the look, the realm's figures
 
-*Written 2026-09-29 (Phase B's handoff, updated at the ends of Phases C and D and now at E5). The plan is the Game
-Design Document in [`docs/gdd/`](gdd/README.md); the order of work is [`16-roadmap.md`](gdd/16-roadmap.md) — **read its
-"Phases N, U, R" section first: that is what comes next**; design departures are in
-[`DECISIONS.md`](gdd/DECISIONS.md); what changed for the player, WP by WP, is in [`CHANGELOG.md`](CHANGELOG.md).*
+*Written 2026-09-29 at the end of a lead session that ran Phases N, U and R with subagents (the previous handoff, at the
+end of E5, is [`archive/HANDOFF-2026-09-E5.md`](archive/HANDOFF-2026-09-E5.md)). The plan is the Game Design Document in
+[`docs/gdd/`](gdd/README.md); the order of work is [`16-roadmap.md`](gdd/16-roadmap.md); design departures are in
+[`DECISIONS.md`](gdd/DECISIONS.md) (now D-001 … D-073); what changed for the player is in [`CHANGELOG.md`](CHANGELOG.md).
+**The prompt for the next lead agent is [`NEXT-AGENT-PROMPT.md`](NEXT-AGENT-PROMPT.md).***
 
-## 0. Where things stand (for the next agent)
+## 0. Where things stand (read this first)
 
-- **Done and merged** into `claude/brave-ramanujan-i8dt0q` (the branch the owner pulls and plays; CI green on
-  windows-latest and ubuntu-latest, Node 22 and 24): Phases A, B, C, D in full; Phase E's **E1–E5** (camera and LOD,
-  map modes and legend, painted trees and the snow line, labels without overlaps and B-31, party tokens and stacks).
-- **Not started:** E6–E8, F1–F9, G1–G5, H1–H5, and the three new plans from the owner's review:
-  **N** (Pax-style headlines, [18](gdd/18-headlines.md)), **U** (declutter the interface, [17](gdd/17-ui-declutter.md)),
-  **R** (the State of the Realm ledger, [19](gdd/19-realm-ledger.md)). **Do N, U and R next**, in the order the
-  roadmap gives; Phase F is re-cut by U.
-- **The prompt for the next lead agent** is [`NEXT-AGENT-PROMPT.md`](NEXT-AGENT-PROMPT.md).
-- **How to run the work with subagents:** [`AGENT-PLAYBOOK.md`](AGENT-PLAYBOOK.md). **What to build, drawn:** [`mockups/`](mockups/README.md). **What we take from Pax Historia:** [`gdd/20-pax-reference.md`](gdd/20-pax-reference.md).
-- **The to-do list is the roadmap**: every work package is a row in [`16-roadmap.md`](gdd/16-roadmap.md) with its
-  acceptance; a row is done when it carries "✅" and a CHANGELOG entry. Nothing else is tracked elsewhere.
+- **The default branch `claude/brave-ramanujan-i8dt0q` is clean and green** (CI: windows-latest and ubuntu-latest,
+  Node 22 and 24). Everything below is merged; nothing is half-built on it; no PR is left open.
+- **Done and merged this session** (PRs #40–#45): the playbook, mockups and Pax reference (#40); **U0** the look — the
+  maester's desk (#41, GDD 21); **SB** a bug sweep from the first playtest (#42); **N1+N2** the headline scorer, the
+  golden set, labels and fact slots (#43); **R1–R3** the realm's figures, what a house learns of the others, and
+  `GET /api/games/:id/realm` (#44); **N3+N4** the deterministic headline writer and one card per story (#45).
+- **What the player sees today:** the bug fixes of SB. Everything else is the ground under the next packages: the new
+  look is a style tile (`/dev/style.html`), the writer is not yet called by the narrator, the ledger has no window yet.
+  That is deliberate — each of those becomes visible in one piece (U1–U3, N5–N7, R4) rather than half at a time.
+- **Next, in this order** (§6 has the detail): **U1–U3 the quiet screen** (its failing tests are written, on branch
+  `wp/u1-u3-quiet-screen`), **N5+N6+N9** narrator v3, the card in the turn record, ranking and the digest (fresh start),
+  then N7+N8 (the feed and pins), R4+R6 (the State of the Realm window), R5, U4+U8, U9, N10, R7; then E6–E8, F, G, H.
+- **The owner's rules for this work** (binding, added this session):
+  - **No live model** — not in the cloud, not on the owner's PC: the owner is still building and fine-tuning it.
+    `WC_PROVIDER=mock` for everything; never call the llama-swap endpoint; never edit the owner's `config.json`.
+  - **At most two subagents at once** (usage limits). Every subagent keeps a progress note so it can be resumed
+    (AGENT-PLAYBOOK §0).
+  - Commit and push work in progress often: an interrupted session must lose nothing.
 
 ### How the work has been done (keep doing it this way)
 
-- **One branch per work package** (`wp/<id>-<slug>`), a PR into `claude/brave-ramanujan-i8dt0q` with What / Why /
-  How tested / Screenshots / What the owner should verify, merged with a merge commit only when all 8 CI jobs are green.
-  Stacking a WP's branch on the previous WP's unmerged branch is fine (say so in the PR); merge in order.
-- **Per WP:** code + a `tests/<area>.test.js` (node:test, deterministic, mock provider) + a CHANGELOG entry (what the
-  player sees, and what the owner should verify) + the roadmap row marked ✅ + the GDD section marked implemented +
-  a `DECISIONS.md` entry (D-0NN) for every departure from the GDD. `npm run check && npm test` before every commit.
-- **Screenshots** for anything visible: `node scripts/screens.js <scenario…>` (Playwright + SwiftShader; scenarios are
-  a table in the script — add yours), copied into `docs/screens/<wp>/`, both 1920×1080 and 1366×768, and *look at them*
-  before opening the PR. Dev pages that build a fixture without a server are the fastest way to show one thing:
-  `public/dev/map-lod.html` (`?spot=&lod=&season=&days=&dist=&boxes=1`, and it measures label overlaps) and
-  `public/dev/tokens.html` (`?lod=&fan=1`).
+- **Slices** (D-059): related work packages of one chain share a branch `wp/<ids>-<slug>` and one PR (N1+N2, R1–R3,
+  N3+N4…); each WP keeps its own acceptance and roadmap mark. A PR into `claude/brave-ramanujan-i8dt0q` with What / Why
+  / How tested / Screenshots / What the owner should verify, merged with a merge commit only when all 8 CI jobs are green.
+- **Per slice** (AGENT-PLAYBOOK §3): a **test-writer** turns the GDD's acceptance into failing tests (committed first,
+  `test: … acceptance, failing`); **builders** make them pass on disjoint files; the lead runs `npm run check && npm
+  test` itself; **visual QA** for anything visible; a **player's-eye** read for anything the player reads; a
+  **knowledge/leak auditor** for anything that reaches the browser; an **adversarial diff reviewer**; a **docs keeper**
+  (CHANGELOG, roadmap status line, GDD "implemented", DECISIONS). Every review this session found real bugs (a scorer
+  that rejected its own writer's words, the whole truth series sent to the browser, allies' exact history behind
+  their estimates): keep all the gates.
+- **Parallel branches all append to `docs/CHANGELOG.md` (top) and `docs/gdd/DECISIONS.md` (tail).** Reserve decision
+  numbers per slice before dispatching, and resolve the merge conflicts by keeping both sides in order (newest
+  CHANGELOG entry first; decisions in number order). The next free decision is **D-074**.
 
 ### Tips and traps learned the hard way
 
-- **SwiftShader is slow**: a screenshot scenario takes 1–3 minutes per size. Run screenshots in the background, and
-  **never run `npm test` at the same time** (the box has been OOM-killed, exit 137). Two screenshot runs at once need
-  different ports: `SCREENS_PORT=3499 node scripts/screens.js …`.
-- `scripts/screens.js` serves the *working tree live*: if you edit files while it runs, later shots pick up your edits.
-  For a clean run of another branch, use `git worktree add` (and symlink `node_modules`).
-- **Never `pkill -f scripts/screens.js`** from a shell whose own command line contains that string — it kills itself.
-  Kill by PID.
-- The game's opening flight to your seat can land after a scenario's camera move: set `map.target`/`map.dist`
-  directly and call `map.updateCamera()` (see the `mode-*` scenarios).
-- `var(--ink)` is the *dark* parchment ink; on dark panels use explicit light colours.
-- The terrain is cached in IndexedDB by `GEN_VERSION` in `MapScene.js`: bump it when `terrain.worker.js` output changes.
-- Engine code (`public/js/engine`, `shared`) must be deterministic: no `Math.random`, no clock (the lint enforces it);
-  use the save's dice (`engine/rng.js`).
-- Under Canon gravity the beats own the story's dates; a test that needs "a season to pass" or "a lord to die" usually
-  needs `canonGravity: 'sandbox'` or a character the story does not need.
-- **Model output never mutates state.** Every model call has a JSON schema, a mock and a deterministic fallback, and is
-  tested on the mock and on recorded replies; no test may need a live model (the cloud has none).
+- **Windows** (CI and the owner's PC): a dynamic `import(path.join(...))` fails — use `import(pathToFileURL(p).href)`
+  or a relative specifier. A Windows checkout has CRLF: never regex over source files with `\n`; put the logic in an
+  importable module (see `public/js/ui/heraldry.js`). Symlinks need admin rights: use junctions (`fs.symlinkSync(…,
+  'junction')`) in scripts.
+- **`tests/http.test.js` uses a fixed port (3411)**: never run two full `npm test` at once (two worktrees collide).
+  Screenshots and a full test run at once can exhaust memory on small machines.
+- **Leaks by spread:** `server/view.js` `playerView` spreads `...state`, so every new top-level state field reaches the
+  browser unless it is deleted there (that is how `realmStats` leaked; D-069). Every new field: strip it, and add a
+  non-interference test (mutate a hidden truth, assert the served bytes are identical).
+- **Facts are not in `state` between turns** (they are in `facts.jsonl`): a view that needs old facts reads the log.
+- `scripts/screens.js` serves the live working tree; use a clean `git worktree` for another branch. Kill by PID, never
+  `pkill -f` with a pattern in your own command line. Bump `GEN_VERSION` in `MapScene.js` when the terrain worker's
+  output changes. `var(--ink)` is the dark parchment ink.
+- **Engine determinism:** no `Math.random`, no clock in `public/js/engine`, `public/js/shared`, `server/turn` (lint).
+  Use the save's dice (`engine/rng.js`), or `hash32` for noise that must not draw dice (the realm's estimates).
+- **Canon gravity owns the story's dates**: a test that needs a season to pass or a lord to die needs `canonGravity:
+  'sandbox'` or a character the story does not need.
+- **Test-writers that prove achievability** (a throwaway reference implementation in the scratchpad, never shipped) and
+  **builders that mutate their own code** to show the tests catch each break both paid off: ask for them.
 
 ## 1. What was built
 
 All merged into `claude/brave-ramanujan-i8dt0q` with CI green on windows-latest and ubuntu-latest, Node 22 and 24.
+
+### This session (Phases N, U, R begun)
+
+| Slice | PR | What changed |
+|---|---|---|
+| Docs | #40 | The agent playbook, the eight mockups of the target interface, the Pax Historia reference (GDD 20). |
+| **U0** the look | #41 | GDD 21 *the maester's desk*: vellum = the maester wrote this; oak and leather = the frame; iron = press it; wax = awaits your word; gold leaf = read first. `public/css/theme.css` (tokens, `wc-` components), textures painted by `scripts/paint-ui.js` (seeded, byte-identical, ≈ 110 KB), new icons, the house's colours on ribbon, rim and wax (`ui/heraldry.js`). A style tile at `/dev/style.html` (`?house=`). Nothing in the game changes yet: U1–U3 build the screen in it. |
+| **SB** bug sweep | #42 | From the first player's-eye playtest: Bran's fall no longer hints at a culprit (B-33); a refused order no longer half-runs (B-34); another house's man or an unknown host is refused, not bound to your biggest host (B-35); a vassal's answer is heard by vassal and liege only (B-32c); musters report at start, weekly and whole, with the place (B-37c); a dead lord's heir is no longer his clone (B-37b); playtest and bench scripts run on Windows and without `config.json` (B-36/38). |
+| **N1+N2** | #43 | `scoreCard` (`server/ai/validate/headline.js`): the headline rules of GDD 18 as code; a golden set of 71 stories and 69 bad headlines (`tests/fixtures/headlines/`). Facts carry who did it and how (battle winner/loser/how, slain/captured by, executed by, death how, refusal why); `engine/facts/label.js` names things as a herald would. |
+| **R1–R3** | #44 | `engine/realm/`: every house's figures sampled weekly (`state.realmStats`, never sent to the browser); what the player's house observes of the others (`knowledge[me].realm`, `hash32` noise, no dice); `realmViewFor` computed from that knowledge alone; `GET /api/games/:id/realm`. Non-interference proven on every served surface (`tests/leaks-r1-r3.test.js`). |
+| **N3+N4** | #45 | The deterministic writer (`engine/facts/heads.js`, `headline.js`: `cardOf`, `meanwhileOf`) for every kind of fact, and clustering v2 (`cluster.js`: roll-ups, splits, lead by weight, late news kept apart, Meanwhile, no cap). **Not yet called by the narrator: N5.** |
+
+### Earlier phases
 
 | WP | PR | What changed for the player |
 |---|---|---|
@@ -96,11 +121,28 @@ All merged into `claude/brave-ramanujan-i8dt0q` with CI green on windows-latest 
 | E4 | #37 | Names never drawn over one another (placed by priority, at most 120); halos; tooltips that let go (B-31). |
 | E5 | #38 | A token and plate for every kind of party; the King's progress seen from L0; "3 hosts · 7,400" stacks that fan out; routes and ETAs for your own parties. |
 
-## 2. What CI verifies, and what you should verify
 
-CI (`.github/workflows/ci.yml`) runs `npm run check` and `npm test` (≈ 400 tests, among them the two-year canon playtest Q9 for Hightower: engine, verbs, facts, knowledge,
-minds, narrator, audiences, the jump, the Director, memory, the HTTP API end to end, and the contract of every model
-call on the mock and on recorded replies). A nightly soak plays 200 turns × 6 houses and checks the invariants every turn (and at least five lords' journeys a moon); a nightly canon playtest (`node scripts/canon.js`) plays three houses for 24 moons.
+## 2. What CI verifies, and what the owner verifies
+
+CI (`.github/workflows/ci.yml`) runs `npm run check` and `npm test` (≈ 580 tests) on windows-latest and ubuntu-latest,
+Node 22 and 24: the engine, verbs, facts, knowledge, minds, narrator, audiences, the jump, the Director, memory, the
+HTTP API end to end, the contract of every model call on the mock and on recorded replies, the two-year canon playtest
+Q9 for Hightower, and now the headline scorer and golden set, the writer and clustering, the realm's figures and their
+leak tests, and the theme. A nightly soak plays 200 turns × 6 houses; a nightly canon playtest plays three houses for 24
+moons.
+
+**New checks for this session's work** (no model needed):
+
+1. `node --test tests/headlines.test.js tests/labels.test.js tests/writer.test.js tests/clusters.test.js` — then open
+   `tests/fixtures/headlines/golden.json` and read the `reference` headlines: *is this how events should read?*
+2. `npm start`, open http://127.0.0.1:3298/dev/style.html (and `?house=lannister`, `?house=tyrell`,
+   `?house=greyjoy`) — *does this look like Westeros?* Say what to change before the quiet screen is built in it.
+3. With a game running, http://127.0.0.1:3298/api/games/&lt;id&gt;/realm?scope=all — your house exact, the others as
+   estimates with their age.
+4. `node --test tests/bugs-sb.test.js`; in a game as Lannister type "assemble the men of the north at Winterfell" → a ✗
+   and nothing marches.
+
+**The live-model checklist (when the owner's model is ready — not before):**
 
 **Your checklist** (each one command; what to look for):
 
@@ -126,6 +168,7 @@ call on the mock and on recorded replies). A nightly soak plays 200 turns × 6 h
    canon*: the King does not come to Winterfell, but his death and the war still do. On the begin screen pick Manderly
    and Glover and read their openings; open a holding with guests (a feast or a tourney) and see them listed.
 9. If the bench gates fail: see §4.
+
 
 ## 3. Model guidance
 
@@ -155,6 +198,7 @@ call on the mock and on recorded replies). A nightly soak plays 200 turns × 6 h
 - Thinking off for every call (the schemas do the work); *Also think in audiences* only if you want slower, deeper
   replies.
 
+
 ## 4. Fine-tuning guidance
 
 **Not yet.** Phase B gives the models small, constrained tasks; fine-tune only if the bench gates in §2 fail. The
@@ -163,28 +207,44 @@ export, a `gemma4-26b-a4b-wc` llama-swap profile, bench before/after) is roadmap
 its README. Until then, keep playing with the live model: every call is logged to `saves/<game>/llm-log.jsonl`, which is
 the dataset the recipe will build from. Never train on book text.
 
+
 ## 5. Known limits and open questions
 
-- The economy still settles per week, not per day; the price index covers grain only.
-- Battle stances and siege terms are rules, not model calls (D-046, D-047); the model narrates them.
-- Winterfell → the Twins by road is about 1,000 miles (the atlas's road graph; E).
-- The realm's lords raid and blockade with their fleets but do not yet carry hosts by sea; they do not start letters of
-  their own (D6); outlaw bands are a mark on a holding, not a party on the map (E).
-- One soak run broke an invariant for Tyrell at turn 82 on a seed that was not recorded; six re-runs with fixed seeds
-  held. The nightly soak prints its seeds; if it recurs, replay it with `node scripts/soak.js --seed N --houses tyrell`.
-- The canon beats' effects are functions that return ops (D-051); routing them through the verbs waits. The GDD's canon
-  matters that belong to beats not yet written as matters (Renly's offer, the Iron Price, the kingsmoot, Jon's future,
-  Lady, the debt, Jeyne, Karstark, Tyrion's trial) come with them (D-053).
-- The King's progress has no scheduled stops; lords near it ride to greet it when it halts (D8).
-- Portraits and family trees are unchanged in Phases B–E; U9 and F7 improve them (never degrade them).
-- E5 shows every rumoured host far out; the L0 map can get busy with grey "~N?" plates (see the roadmap's proposals).
-- Garrisons are no longer drawn on the map (E5); the castle's card gives them. The shield pip comes with E6.
-- Open question: do you want the Director *lively* by default once you have seen it with the live model?
+- **The narrator does not yet use the writer.** On the mock and on a failed model call, stories are still told by
+  `plainEvent` (the lead fact's own title); with N4's roll-ups that means one card titled after one host for a story of
+  five. N5 makes `cardOf` the narrator's draft, mock and fallback — do it first.
+- **`playerView` still sends other houses' figures at two significant figures** (D-033, Phase B) to the old windows
+  that read them; retire them when the State of the Realm window (R4) replaces those windows. `meta.seed` also reaches
+  the browser (the realm's blur uses it; low risk in a single-player game).
+- `sampleRealm` takes ≈ 50 ms a turn (all 158 houses, D-068) and the save grows ≈ 0.5 MB by turn 40; an owner index in
+  `standing()`/`project()` is R7's (a prototype reached 15 ms).
+- Open (D-073): name a regent rather than a child lord as the subject ("Lysa Arryn calls the banners of the Vale",
+  not "Robert Arryn")?
+- The recorded turn fixtures (`tests/fixtures/headlines/turns/`) predate SB's muster cards; re-record them with
+  `tests/fixtures/headlines/turns/record.mjs` when N5/N6 change what the narrator is handed.
+- From the previous handoff, still true: the economy settles per week; battle stances and siege terms are rules, not
+  model calls; the realm's lords do not yet carry hosts by sea; outlaw bands are a mark, not a party; the King's
+  progress has no scheduled stops; the L0 map can get busy with rumoured hosts (U8); garrisons are on the castle card
+  only (E6).
 
 ## 6. What comes next
 
-**N, U and R first** (the owner's review, 2026-09-29): events as Pax-style headlines with plain summaries
-([18](gdd/18-headlines.md)); a quiet interface with the rest a click away ([17](gdd/17-ui-declutter.md)); the State of
-the Realm ledger ([19](gdd/19-realm-ledger.md)). Then E6–E8 (holding states and the §6.2 figures, ambient life and
-graphics presets, playback), the rest of F (portraits and family trees improved, the Book, accessibility), G (content),
-H (audio, the fine-tuning recipe, the final handoff).
+1. **U1–U3, the quiet screen** (GDD 17 §2, §4; the look of GDD 21; mockups 02, 03, 07, 08). Branch
+   `wp/u1-u3-quiet-screen` holds the failing tests (`tests/hud.test.js`: the pure logic in a new `public/js/ui/hud.js`
+   — `vitalsOf`, `inboxOf`, `MENU`/`routeKey`, `stripOf`, `turnLabel` — and the markup rules on `public/index.html`) and
+   `scripts/ui-gate.mjs` (dev-only Playwright gate of GDD 17 §5; today's screen fails it everywhere — 30 controls, the
+   HUD over 41 % of the pixels, a 106 px top bar, 9 overlapping pairs — the full "before" table is in the message of
+   the branch's commit `test: U1, U2 and U3 acceptance, failing`). The contract of `hud.js` is in the test file's
+   header; one reading to confirm with the owner: a "running audience" in the Inbox is a chat whose last entry is the
+   lord's reply this turn and whose mood is not closed. The branch already carries the latest default branch. U1+U2 then U3, one builder at a time (they share `index.html`,
+   `style.css`, `app.js`); ship the three in one PR so no half-built screen reaches the default branch.
+2. **N5+N6+N9** (GDD 18 §3.2, §5): the narrator's story sheet, schema with `summary`, `cardOf` as draft, mock and
+   fallback, the headline validator; the card shape in the turn record (`headline/summary/details[]/tier/score`, the
+   old `title/text` kept as aliases), the digest replacing `turn.summary`, and the ranking and Meanwhile (`rank.js`).
+   Also finish B-32: story cards carry `heard`/`late`, succession cards go through `holdNews` (game.js ~:433).
+   Expect to update `tests/__snapshots__/prompts/narrate.txt` and the eight adversarial narrate fixtures.
+3. **N7+N8**: the feed, the turn-end digest and the jump feed in the new look (mockups 03–05), then pins.
+4. **R4+R6**: the State of the Realm window (mockup 06; key `R`, D-070), wars, momentum, "where to focus"; then retire
+   the old windows' foreign figures from `playerView`. **R5**: minds and the council read `realmBrief`.
+5. **U4+U8**, **U9** (portraits and family trees improved in place — never degraded), **N10**, **R7**; then E6–E8,
+   the rest of F, G, H.

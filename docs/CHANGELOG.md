@@ -3,6 +3,17 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-29 — Handoff after N1–N4, U0, R1–R3: a clean start for the next lead
+
+- **Nothing changes in the game.** A new `docs/HANDOFF.md` (the previous one is in `docs/archive/`): where things stand,
+  what comes next in order, the traps learned this session, the owner's checklist (and the live-model checks, kept for
+  when the model is ready).
+- `docs/NEXT-AGENT-PROMPT.md` rewritten for a lead agent working **on the owner's Windows PC**: no live model at all
+  (`WC_PROVIDER=mock`, never the owner's model or `config.json`), a clone of its own, at most two subagents, and every
+  piece of work resumable after an interruption. `CLAUDE.md`, `docs/gdd/00-agent-brief.md` and
+  `docs/AGENT-PLAYBOOK.md` updated to match.
+- U1–U3's failing acceptance tests wait on branch `wp/u1-u3-quiet-screen` for the next lead.
+- PR: (PR #46)
 ## 2026-09-29 — N3 + N4: every story told in a headline and a line, one card per story
 
 - **Not yet in the feed.** The narrator still tells the chronicle its own way; N5 hands it these cards as its drafts and

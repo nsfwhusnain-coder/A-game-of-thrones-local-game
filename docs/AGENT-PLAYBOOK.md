@@ -16,6 +16,14 @@ R") first; this file is how to run them. Prompts below are copy-paste templates:
 4. **Tests and screenshots never run at the same time** on this box (OOM, exit 137). One heavy job at a time.
 5. **Nothing is left uncommitted at the end of your turn.** If Bash or git is down (classifier outage), wait and retry
    (`send_later`); do not end the turn with work only in the tree.
+6. **At most two subagents at once** (the owner's usage limits, 2026-09-29). Queue the rest. A test-writer or reviewer
+   counts as one. Pause an agent gracefully (it finishes its edit, writes its progress note, ends its turn) rather than
+   killing it.
+7. **Every agent is resumable.** Each keeps a progress note (DONE with files / the EXACT next step / the last test line)
+   in the lead's notes folder, updated after every step; the lead keeps a plan with an agent register (id, role,
+   worktree or branch, prompt file, progress file, state) and commits work in progress to its `wp/*` branch at every
+   milestone. An interrupted agent is resumed by a message to the same id (context kept) or, if gone, re-dispatched
+   with its prompt file plus "read your progress note and continue from its next step".
 
 ## 1. COMMON RULES (paste at the top of every subagent prompt)
 
@@ -50,6 +58,12 @@ HARD RULES (absolute; a breach makes your work worthless):
 - NEVER claim success you did not observe. Paste the actual last lines of every command you ran. If you could not run
   something, say "NOT RUN" and why. Do not "write blind": if a test cannot run, fix the cause or report the blocker.
 - Keep your final report SHORT (the format is given below); no prose essays, no full file dumps.
+- NO LIVE MODEL, even on the owner's PC: WC_PROVIDER=mock for every script and server you run; never call a model
+  endpoint; never edit config.json.
+- Windows: a dynamic import of an absolute path is `await import(pathToFileURL(p).href)`; never regex a source file with
+  \n-only line ends (CRLF checkouts); no symlinks in scripts (junctions).
+- Keep your progress note ({PROGRESS_FILE}) current after every step: DONE (files), the EXACT next step, the last test
+  summary line. If you are interrupted, the next agent continues from it.
 ```
 
 ## 2. The roles
@@ -387,6 +401,13 @@ Files come from the WPs' tables in GDD 17, 18 and 19. **Hot files** (many WPs wa
 - **Wave 5:** N7 ∥ R4 **conflict** (`app.js`, `windows.js`, `css`): serialise, N7 first (it unblocks U3's strip), or split by giving one builder both and two test-writers. N8 ∥ N9 ∥ R5 ∥ R6 are disjoint from that (N9 needs `game.js`: after N6 only).
 - **Wave 6:** U4, U8 (UI hot files, serial), N10, R7; **U9** last (portraits: improve, never degrade); then the phase-end audits.
 
+### 4.2b Status at the 2026-09-29 handoff, and the remaining order (two agents at a time)
+
+Done: N1–N4, U0, R1–R3 (and the bug sweep SB). U1–U3's failing tests are on `wp/u1-u3-quiet-screen`. Remaining, in
+order, one builder plus one test-writer or reviewer at a time: **U1+U2 → U3** (hot files, serial) ∥ **N5+N6+N9**
+(`server/game.js`, `narrate.js`, `migrate.js`: disjoint from U's files) → **N7+N8** and **R4+R6** (both touch `app.js`,
+`windows.js`, `style.css`: serialise) → **R5** → **U4+U8** → **U9** → **N10**, **R7** → phase-end audits and HANDOFF.
+
 ### 4.3 Critical path
 
 `N1 → N3 → N5 → N6 → N7 → (U3 strip) → U4 → U8 → U9`. Everything else (N2, N4, N8–N10, R1–R7, U1–U2) hangs off it and
@@ -471,6 +492,12 @@ at the Green Fork"* — never *"Battle at green_fork: Lannister defeated Stark (
 | **Leaks by convenience** | a new endpoint returns raw state | Every new view: knowledge-filtered, non-interference test, spoiler auditor. |
 | **Docs drift** | roadmap ✅ without CHANGELOG, GDD out of date | Docs keeper is a mandatory pipeline step; fix the GDD in the same PR. |
 | **Nondeterminism from iteration order or clocks** | soak seed cannot be replayed | `lint-engine`; the determinism probe; sort before iterating anything that reaches a fact. |
+| **Windows-only CI failures** | `ERR_UNSUPPORTED_ESM_URL_SCHEME` ("Received protocol 'd:'"); a regex over a source file returns null | `import(pathToFileURL(p).href)`; put logic a test needs in an importable module (e.g. `ui/heraldry.js`), never regex the source (CRLF). |
+| **Two full test runs at once** | `EADDRINUSE`/flaky `http.test.js` | Port 3411 is fixed: one full `npm test` at a time across all worktrees. |
+| **A new state field leaks** | the browser receives the truth (`realmStats` did) | `playerView` spreads `...state`: delete every new field there; test with a non-interference run on `GET /api/games/:id`. |
+| **Parallel branches' docs collide** | merge conflicts in the top of CHANGELOG and the tail of DECISIONS | Reserve decision numbers per slice; merge by keeping both sides in order (newest CHANGELOG entry first, decisions by number). |
+| **Usage limits cut agents off** | an agent's run fails mid-generation with a rate-limit error | Progress notes, WIP commits, the agent register (law 7); resume by message after the reset. |
+| **A test that cannot fail** | green with the feature broken | Ask builders and reviewers to mutate their own code (the N2 builder broke it 34 ways) and to prove each test catches its break. |
 
 ## 7. Context hygiene for the lead
 
