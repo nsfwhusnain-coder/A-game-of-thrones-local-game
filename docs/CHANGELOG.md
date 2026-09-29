@@ -25,8 +25,8 @@ for the player, and what the owner should verify.
   Folk", "the Stark host", "Lord Umber", "nearly two thousand". Nothing calls them yet.
 - Owner to verify: `node --test tests/headlines.test.js tests/labels.test.js`; then open
   `tests/fixtures/headlines/golden.json` and read the `reference` headlines: is this how you want events to read?
-- PR: (PR pending)
-## 2026-09-29 — SB: a bug sweep from the first playtest (PR pending)
+- PR: (PR #43)
+## 2026-09-29 — SB: a bug sweep from the first playtest (PR #42)
 
 Found by playing Stark, Lannister and Greyjoy on the mock; one line per bug as you now see it (B-32c … B-38).
 
