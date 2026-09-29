@@ -380,6 +380,14 @@ const SCENARIOS = {
       const o = await page.evaluate(() => window.__overlaps); if (o.bad.length) throw new Error(`${name}: ${o.bad.length} labels overlap: ${JSON.stringify(o.bad.slice(0, 5))}`);
     },
   })])),
+  // party tokens (WP E5): every kind of party on one stretch of the North, the stack of three hosts, and the progress from L0
+  ...Object.fromEntries([['tokens-l0', 0, ''], ['tokens-l1', 1, ''], ['tokens-l2', 2, ''], ['tokens-fan', 1, '&fan=1']].map(([name, lod, extra]) => [name, async () => ({
+    page: async (page) => {
+      await page.goto(`http://127.0.0.1:${PORT}/dev/tokens.html?lod=${lod}${extra}`); await page.waitForFunction(() => document.title === 'ready', null, { timeout: 240000, polling: 500 });
+      const plates = await page.evaluate(() => window.__plates);
+      if (!plates.some((p) => /King's progress/.test(p))) throw new Error(`${name}: the King's progress has no plate (${JSON.stringify(plates)})`);
+    },
+  })])),
   // the map's modes at L0 (WP E2): Diplomacy, Knowledge and War beside Realms, each with its key; Stark at war with the West
   ...Object.fromEntries(['political', 'diplomacy', 'knowledge', 'war'].map((m) => [`mode-${m}`, async () => {
     const { id } = await api('/games', { scenario: 'agot_298', house: 'stark' });

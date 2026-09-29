@@ -841,3 +841,14 @@ body:has(#window:not(.hidden)) .mapmodes { right: calc(min(30rem, 36vw) + 1.6rem
 .map-legend .ml-k { display: flex; align-items: center; gap: 0.4rem; line-height: 1.5; }
 .map-legend .ml-sw { width: 0.9rem; height: 0.65rem; border-radius: 2px; border: 1px solid rgba(0,0,0,0.5); display: inline-block; }
 .map-legend .ml-p { color: var(--muted, #b9ad95); }
+/* party plates by kind (docs/gdd/11-map-visuals.md §6.1; WP E5) */
+.lbl.army.progress { border-color: #e2c25a; box-shadow: 0 0 0 1px rgba(226,194,90,0.45), 0 0 12px rgba(226,194,90,0.45); color: #f6e7b0; font-size: 0.8rem; }
+.lbl.army.progress .flag { background: linear-gradient(180deg, #e2c25a 0 45%, #1a1a1a 45% 100%) !important; }
+.lbl.army.retinue { padding: 0.05rem; margin-top: -1.1rem; background: transparent; border: 0; box-shadow: none; }
+.lbl.army.retinue .flag { width: 0.5rem; height: 0.8rem; clip-path: polygon(0 0, 100% 0, 60% 50%, 100% 100%, 0 100%); }
+.lbl.army.band { border-color: #3a2a22; color: #b8a890; font-style: italic; }
+.lbl.army.band .flag { background: #2a1e18 !important; clip-path: polygon(0 0, 100% 0, 70% 30%, 100% 55%, 60% 75%, 100% 100%, 0 100%); }
+.lbl.army.fleet .flag { border-radius: 0 0 40% 40%; }
+.lbl.army.stack { border-color: #c9a44a; border-style: double; border-width: 3px; }
+.lbl.army.stack .stackflag { background: repeating-linear-gradient(90deg, #8a6a3a 0 3px, #3a2a18 3px 5px); }
+.lbl.eta { font-family: var(--serif); font-size: 0.7rem; color: #f6e27a; font-style: italic; }

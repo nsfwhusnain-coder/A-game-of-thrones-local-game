@@ -958,3 +958,20 @@ ransoms, `embargo`) and the price index of §6.3.
   `labels-*` screenshot scenarios fail on any) as well as on the pure placement in `tests/map-labels.test.js`; CI runs
   only the latter (no browser in `npm test`).
 
+## D-057 · 2026-09-28 · Tokens: plates over the existing figures; syncParties later (WP E5)
+
+- **The plates and the stack are new; the 3D figures are the existing ones** (`models.js` buildArmy: soldiers, ships,
+  banners), scaled with the log of the men. §6.2's marching columns ∝ men, camps with tents and smoke, retinues of
+  riders with litters and wheelhouses, and the progress's 40-figure column are left for E6/E7 (states and ambient
+  life), which rebuild those models anyway. The token's size and the progress's gold rim are the E5 part.
+- **`syncArmies` keeps its name** rather than becoming §6's `syncParties(prev, next, keyframes)`: the keyframes are
+  E8's (playback choreography), and riders stay in `syncRiders` until then.
+- **A stack forms on screen, not in the world**: plates within 18 px merge, whatever their owners; the pointer on a
+  stack fans it out until it moves 90 px away. The anchor is the largest party. Each plate is anchored at its party's
+  true point (the models still fan out so each stays visible).
+- **Garrisons are not drawn** as tokens or plates; the castle's card already gives the garrison. The "small shield
+  pip on the castle" waits for E6 (holding states).
+- **Routes (§6.3)**: your own in gold with the days left at the end; an ally's faint blue; an enemy's is no longer drawn
+  (it was red): the map shows what the player would know of others' orders, which is nothing.
+- **This week's word carries no age** on a reported plate ("~6,000?"); older word says how old ("· 7 days old").
+

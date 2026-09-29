@@ -5,7 +5,7 @@
 
 /** Priority by kind (higher first): the player's seat, the realms' names (shown only far out, where they are the map), the
  *  great seats, cities, hosts' plates, castles, then the small things. */
-export const PRIORITY = { pin: 200, own: 120, realm: 105, great: 100, city: 80, army: 70, sea: 60, rider: 55, castle: 50, landmark: 40, feature: 30, place: 20, dot: 10 };
+export const PRIORITY = { pin: 200, own: 120, progress: 110, realm: 105, great: 100, city: 80, army: 70, sea: 60, rider: 55, castle: 50, landmark: 40, feature: 30, place: 20, dot: 10 };
 export const BUDGET = 120;
 const PAD = 2;
 
@@ -18,6 +18,9 @@ export function kindOf(cls, { own = false } = {}) {
     const tier = Number(cls.match(/t(\d)/)?.[1] || 3);
     return tier >= 6 ? 'great' : tier >= 5 ? 'city' : 'castle';
   }
+  if (cls.startsWith('army') && /\bprogress\b/.test(cls)) return 'progress'; // the King's progress: seen from the farthest zoom
+  if (cls.startsWith('stack')) return 'army';
+  if (cls.startsWith('eta')) return 'army';
   for (const k of ['realm', 'army', 'sea', 'rider', 'landmark', 'feature', 'place']) if (cls.startsWith(k)) return k;
   return 'feature';
 }
