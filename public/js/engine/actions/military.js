@@ -159,6 +159,14 @@ export const MILITARY = [
       const v = i.params.vassals; const some = v === 'all' || !Array.isArray(v) || !v.length ? sworn : sworn.filter((h) => v.some((x) => slug(x) === h.id || String(x).toLowerCase().includes(h.name.toLowerCase())));
       if (!some.length) return { code: 'no_vassals', text: 'No sworn lord of yours is among those named.' };
       if (i.params.at && !resolvePlaceId(i.params.at) && !destination(state, i.params.at)) return { code: 'no_place', text: `There is no place called ${i.params.at} to muster at.` };
+      // banners muster on friendly ground — one's own land, a sworn lord's, an ally's — as raise_levies holds to its land,
+      // so a Lannister's "assemble the men of the north at Winterfell" is refused whole, not carried out by halves
+      const place = (i.params.at && (resolvePlaceId(i.params.at) || destination(state, i.params.at))) || state.houses[i.house]?.seat;
+      const hold = state.holdings[place]; const owner = hold?.owner;
+      if (hold && owner && owner !== i.house && state.houses[owner]?.liege !== i.house
+        && !(state.pacts || []).some((p) => p.type === 'alliance' && p.status === 'active' && ((p.a === i.house && p.b === owner) || (p.b === i.house && p.a === owner)))) {
+        return { code: 'not_yours', text: `${hold.name} is not your land: the banners cannot muster there.` };
+      }
       return null;
     },
     start: (state, i) => {
