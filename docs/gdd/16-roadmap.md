@@ -115,7 +115,7 @@ summary. Three plans answer it; each has its own work packages, files and accept
 | **U** | [17 — Declutter](17-ui-declutter.md), [21 — Art direction](21-art-direction.md) | U0 (the look), U1–U4, U8, U9 (U5–U7 → R) | a quiet HUD (date, 3 vitals, End turn, one inbox, one menu), three menu entries instead of eight docks, the command bar freed, contextual cards, first-run guidance that goes away, focus mode |
 | **R** | [19 — The State of the Realm](19-realm-ledger.md) | R1–R7 | a hidden-by-default ledger: every house's strength, coin, food, lands and trend, knowledge-filtered; rising and falling houses; the same numbers feed the minds and the council |
 
-**Status (2026-09-29):** U0 ✅ (art direction, pulled from F1: [21](21-art-direction.md), D-062; `public/css/theme.css`, `scripts/paint-ui.js`, `public/dev/style.html`).
+**Status (2026-09-29):** U0 ✅ (art direction, pulled from F1: [21](21-art-direction.md), D-062; `public/css/theme.css`, `scripts/paint-ui.js`, `public/dev/style.html`). U1–U3: failing acceptance tests written (`tests/hud.test.js`, `scripts/ui-gate.mjs`) on branch `wp/u1-u3-quiet-screen`; not yet built.
 
 **Order:** N1 → N2 → N3 → N4 → N5 → N6 (the engine side of the headlines; the golden set first) · in parallel U1 → U2 →
 U3 (the HUD and the menu; U3 needs N6's cards for the headline strip) · R1 → R2 → R3 (the data and the filter), then
