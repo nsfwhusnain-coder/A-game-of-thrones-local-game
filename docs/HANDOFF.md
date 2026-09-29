@@ -14,6 +14,7 @@ Design Document in [`docs/gdd/`](gdd/README.md); the order of work is [`16-roadm
   **N** (Pax-style headlines, [18](gdd/18-headlines.md)), **U** (declutter the interface, [17](gdd/17-ui-declutter.md)),
   **R** (the State of the Realm ledger, [19](gdd/19-realm-ledger.md)). **Do N, U and R next**, in the order the
   roadmap gives; Phase F is re-cut by U.
+- **The prompt for the next lead agent** is [`NEXT-AGENT-PROMPT.md`](NEXT-AGENT-PROMPT.md).
 - **The to-do list is the roadmap**: every work package is a row in [`16-roadmap.md`](gdd/16-roadmap.md) with its
   acceptance; a row is done when it carries "✅" and a CHANGELOG entry. Nothing else is tracked elsewhere.
 
