@@ -24,7 +24,10 @@ export async function narrateTurn(state, cards, { provider = 'mock', cfg, log, o
   const news = cards.filter((c) => !c.bg && idsOf(c).length);
   // and the lord's own deeds this turn, which the chronicle tells under the order that made them (orders.js orderEvents)
   const carded = new Set(cards.flatMap(idsOf));
-  const facts = [...news.flatMap((c) => idsOf(c).map((id) => factById(state, id)).filter(Boolean)), ...own.filter((f) => !carded.has(f.id))];
+  // a card that news reached by raven or rumour (`heard`, and `late` if it came after the week it happened in) hands that on to
+  // its facts, so the clusterer never tells what was seen and what was heard as one story (B-32a); the log's own facts stay as they are
+  const heard = (f, c) => (f && (c.heard || c.late) ? { ...f, ...(c.heard ? { heard: c.heard } : {}), ...(c.late ? { late: true } : {}) } : f);
+  const facts = [...news.flatMap((c) => idsOf(c).map((id) => heard(factById(state, id), c)).filter(Boolean)), ...own.filter((f) => !carded.has(f.id))];
   const small = cards.filter((c) => c.bg).map((c) => c.text).filter(Boolean);
   const { stories, meanwhile } = clusterFacts(state, facts, { together: news.filter((c) => idsOf(c).length > 1).map(idsOf) });
   const smallTexts = [...small, ...meanwhile.map((f) => f.text)];
