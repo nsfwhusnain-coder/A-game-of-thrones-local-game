@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Target: headline feed</title>
+<style>
+@font-face{font-family:'Cinzel';font-weight:400 700;src:url(../../public/fonts/cinzel-normal-latin-1.woff2) format('woff2')}
+@font-face{font-family:'Cinzel Decorative';font-weight:700;src:url(../../public/fonts/cinzeldecorative-normal-latin-3.woff2) format('woff2')}
+@font-face{font-family:'EB Garamond';font-style:normal;font-weight:400 600;src:url(../../public/fonts/ebgaramond-normal-latin-7.woff2) format('woff2')}
+@font-face{font-family:'EB Garamond';font-style:italic;font-weight:400 600;src:url(../../public/fonts/ebgaramond-italic-latin-5.woff2) format('woff2')}
+:root{--bg:#0e0b08;--panel:rgba(22,17,12,.94);--panel-solid:#17120d;--panel2:#221a12;--line:#4d3c28;--line2:#6b5334;--gold:#c9a44a;--gold2:#ecd392;
+--text:#ece1c8;--muted:#a8977a;--red:#b03a2e;--green:#74b84e;--blue:#5a8ac8;--amber:#d99a3a;--parch:#efe2c4;--ink:#2b2016;
+--serif:'EB Garamond',Georgia,'Times New Roman',serif;--display:'Cinzel',Georgia,serif;--shadow:0 10px 40px rgba(0,0,0,.55)}
+*{box-sizing:border-box}
+html{font-size:clamp(12.5px,.5vw + 6.4px,16px)}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--serif);overflow:hidden;font-size:1rem;line-height:1.35}
+button{font:inherit;color:inherit}
+h1,h2,h3,h4{font-family:var(--display);font-weight:600;letter-spacing:.04em;margin:0;color:var(--gold2)}
+svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.map{position:fixed;inset:0;background:var(--bg) center/cover no-repeat;transform:scale(1.08);transform-origin:100% 100%} /* a little bigger: the screenshot's debug tag slides off the corner */
+.dim{position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(8,6,4,.45),rgba(8,6,4,.78))}
+.tag{position:fixed;left:.1rem;top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;z-index:99;font:600 .56rem/1 var(--display);letter-spacing:.16em;color:rgba(236,211,146,.75);
+  background:rgba(14,11,8,.6);padding:.6rem .28rem;border-radius:2px;pointer-events:none;white-space:nowrap}
+.panel{background:var(--panel);border:1px solid var(--line2);border-radius:4px;box-shadow:var(--shadow),inset 0 0 0 1px rgba(201,164,74,.07);backdrop-filter:blur(5px)}
+.btn{background:linear-gradient(#4a3b29,#241b12);border:1px solid var(--line2);color:var(--gold2);padding:.4rem .9rem;border-radius:3px;font-family:var(--display);font-size:.78rem;letter-spacing:.05em;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem}
+.btn.primary{background:linear-gradient(#b8923f,#7d5f22);color:#1b1408;border-color:#e0c072;font-weight:700}
+.btn.ghost{background:transparent}
+.muted{color:var(--muted)}
+.up{color:var(--green)}.down{color:#e0664f}.flat{color:var(--muted)}
+
+/* ---- the quiet HUD (GDD 17 §2.1) ---- */
+.hud{position:fixed;z-index:5;pointer-events:none}
+.hud>*{pointer-events:auto}
+.hud-tl{left:.5rem;top:.5rem;display:flex;gap:.6rem;align-items:stretch}
+.hud-tr{right:.9rem;top:.5rem;display:flex;gap:.6rem;align-items:flex-start}
+.plate{display:flex;align-items:center;gap:.7rem;padding:.45rem .9rem .45rem .55rem;min-width:17rem}
+.plate .crest{width:auto;height:3.1rem;flex:none;align-self:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+.plate .house{font:600 .68rem/1 var(--display);letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.plate .date{font:600 1.02rem/1.15 var(--display);color:var(--gold2);letter-spacing:.03em;margin-top:.2rem;white-space:nowrap}
+.plate .season{display:flex;align-items:center;gap:.3rem;font-style:italic;color:var(--muted);font-size:.86rem;margin-top:.1rem}
+.plate .season svg{color:var(--gold);width:1.05em;height:1.05em}
+.vitals{display:flex;align-items:center;padding:0 .4rem}
+.vital{display:flex;align-items:center;gap:.55rem;padding:.35rem .85rem;position:relative}
+.vital+.vital:before{content:"";position:absolute;left:0;top:22%;bottom:22%;border-left:1px solid var(--line)}
+.vital>svg{width:1.6rem;height:1.6rem;color:var(--gold)}
+.vital b{display:block;font:600 1.3rem/1 var(--display);color:var(--text);letter-spacing:.02em}
+.vital small{display:block;font:600 .62rem/1 var(--display);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:.2rem}
+.vital .tr{font-size:.85rem;margin-left:.15rem;align-self:flex-start;margin-top:.15rem}
+.iconbtn{width:3.1rem;height:3.1rem;display:grid;place-items:center;position:relative;cursor:pointer;color:var(--gold2)}
+.iconbtn svg{width:1.5rem;height:1.5rem}
+.iconbtn .badge{position:absolute;top:-.35rem;right:-.35rem;background:var(--red);color:#fff;font:600 .68rem/1 sans-serif;border-radius:1rem;padding:.2rem .4rem;border:1px solid #1a1109}
+.endturn{display:flex;flex-direction:column;align-items:stretch;padding:.3rem;width:16.5rem}
+.endturn .go{background:linear-gradient(#3a69ad,#1f3f6e);border:1px solid #7ea6dc;border-radius:3px;color:#f0e8d2;font:700 1.05rem/1 var(--display);letter-spacing:.1em;padding:.7rem 1rem;text-align:center;text-transform:uppercase;box-shadow:0 0 18px rgba(90,138,200,.35)}
+.endturn .why{font-style:italic;font-size:.88rem;color:var(--muted);text-align:center;padding:.3rem .2rem .1rem;white-space:nowrap}
+.endturn .why b{font-style:normal;font-weight:500;color:var(--gold2)}
+.modechip{position:fixed;right:1rem;top:5.6rem;z-index:5;font:600 .68rem/1 var(--display);letter-spacing:.1em;padding:.45rem .7rem;color:var(--muted);text-transform:uppercase;display:flex;gap:.4rem;align-items:center}
+
+.strip{left:1rem;bottom:1rem;width:23rem;padding:.55rem .75rem .6rem}
+.strip h4{display:flex;justify-content:space-between;font-size:.66rem;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:.35rem}
+.strip h4 b{color:var(--gold);font-weight:600}
+.strip .ln{display:flex;gap:.55rem;align-items:baseline;padding:.2rem 0;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.strip .ln i{flex:none;width:.5rem;height:.5rem;border-radius:50%;background:var(--gold);transform:translateY(-.08rem)}
+.strip .ln.old i{background:transparent;border:1px solid var(--muted)}
+.strip .ln.old{color:var(--muted)}
+.strip .ln span{overflow:hidden;text-overflow:ellipsis}
+.cmd{left:50%;transform:translateX(-50%);bottom:1rem;width:min(38rem,42vw);padding:.5rem}
+.cmd .order{display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.3rem .6rem;margin-bottom:.4rem;background:rgba(0,0,0,.28);border-radius:3px;font-size:.95rem;color:var(--text)}
+.cmd .order em{font:600 .58rem/1 var(--display);letter-spacing:.14em;font-style:normal;color:var(--green);border:1px solid rgba(116,184,78,.5);padding:.2rem .4rem;border-radius:2px;flex:none}
+.cmd .order span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmd .row{display:flex;gap:.5rem;align-items:stretch}
+.cmd .in{flex:1;background:#120d08;border:1px solid var(--line);border-radius:3px;padding:.65rem .8rem;color:var(--muted);font-style:italic;font-size:1.05rem;box-shadow:inset 0 2px 8px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden}
+.cmd .sq{width:2.8rem;display:grid;place-items:center;background:#241b12;border:1px solid var(--line2);border-radius:3px;color:var(--gold2)}
+.cmd .sq svg{width:1.2rem;height:1.2rem}
+.who{right:1rem;bottom:1rem;display:flex;align-items:center;gap:.7rem}
+.who .nm{text-align:right;padding:.5rem .9rem}
+.who .nm b{display:block;font:600 .95rem/1.1 var(--display);letter-spacing:.06em;color:var(--gold2);text-transform:uppercase}
+.who .nm small{display:block;font-size:.85rem;color:var(--muted);margin-top:.15rem;font-style:italic}
+.who .nm .mood{display:inline-flex;align-items:center;gap:.3rem;font-style:normal;font-size:.8rem;color:var(--green);margin-top:.15rem}
+.who .nm .mood:before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--green)}
+.ring{width:7.2rem;height:7.2rem;border-radius:50%;padding:.28rem;background:conic-gradient(from 210deg,#8a6a2a,#f0d68a,#8a6a2a,#f0d68a,#8a6a2a);box-shadow:0 6px 22px rgba(0,0,0,.65),0 0 0 2px #1b1409;flex:none}
+.ring>div{width:100%;height:100%;border-radius:50%;overflow:hidden;border:2px solid #1b1409;background:#111}
+.ring img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.38);transform-origin:50% 26%}
+.chip{display:inline-flex;align-items:center;gap:.3rem;font:600 .62rem/1 var(--display);letter-spacing:.1em;text-transform:uppercase;padding:.28rem .5rem;border-radius:2rem;border:1px solid var(--line2);color:var(--muted);white-space:nowrap}
+.chip.up{color:var(--green);border-color:rgba(116,184,78,.5);background:rgba(116,184,78,.09)}
+.chip.down{color:#e8806b;border-color:rgba(224,102,79,.5);background:rgba(224,102,79,.09)}
+.chip.gold{color:var(--gold2);border-color:rgba(201,164,74,.55);background:rgba(201,164,74,.09)}
+.pchip{display:inline-flex;align-items:center;gap:.5rem;padding:.2rem .7rem .2rem .2rem;border:1px solid var(--line2);border-radius:2rem;background:rgba(0,0,0,.25);font-size:.95rem}
+.pchip .pf{width:2.1rem;height:2.1rem;border-radius:50%;overflow:hidden;border:1px solid var(--gold);flex:none}
+.pchip .pf img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.4);transform-origin:50% 26%}
+.pchip small{display:block;color:var(--muted);font-size:.78rem;line-height:1.1}
+.x{position:absolute;top:.7rem;right:.8rem;color:var(--muted);cursor:pointer}
+.parch{background:linear-gradient(#f2e7cb,#e6d6b0);color:var(--ink);border:1px solid #b79a5a;border-radius:4px;box-shadow:var(--shadow),inset 0 0 60px rgba(150,110,40,.22),inset 0 0 0 4px rgba(255,250,235,.35)}
+.parch h1,.parch h2,.parch h3,.parch h4{color:#5a3a12}
+.center{position:fixed;inset:0;display:grid;place-items:center;padding:1rem;z-index:10}
+@media (max-width:1500px){.strip{width:20.5rem}}
+
+.map{background-image:url(../screens/e1/lod1-1920x1080.jpg)}@media (max-width:1500px){.map{background-image:url(../screens/e1/lod1-1366x768.jpg)}}
+
+.card{flex:none;display:grid;grid-template-columns:.42rem 1fr;background:linear-gradient(90deg,rgba(255,255,255,.03),rgba(0,0,0,0));border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.card .bar{background:var(--muted)}
+.card.great{border-color:rgba(201,164,74,.75);box-shadow:0 0 0 1px rgba(201,164,74,.15),0 4px 18px rgba(0,0,0,.4);background:linear-gradient(90deg,rgba(201,164,74,.10),rgba(0,0,0,0))}
+.card.great .bar{background:linear-gradient(#f3d98d,#a67c2a)}
+.card.major .bar{background:var(--amber)}
+.card.news .bar{background:var(--blue)}
+.card.minor .bar{background:#6e6250}
+.card.meanwhile .bar{background:repeating-linear-gradient(#5b5140 0 .3rem,transparent .3rem .5rem)}
+.card .in{padding:.5rem .85rem .45rem .8rem;min-width:0}
+.card h3{font:600 1.08rem/1.22 var(--display);letter-spacing:.02em;color:#f6ecd2;margin:0 0 .2rem}
+.card h3 .pips{font-size:.72rem;letter-spacing:.08em;margin-right:.5rem;vertical-align:.12em}
+.great h3{font-size:1.28rem}.great h3 .pips,.great .tl{color:var(--gold2)}
+.major h3 .pips,.major .tl{color:var(--amber)}
+.news h3 .pips,.news .tl{color:#8db3e0}
+.minor h3{font-size:.98rem;color:var(--text);margin:0}
+.minor h3 .pips,.meanwhile h3 .pips{color:var(--muted)}
+.meanwhile h3{font-size:.98rem;color:var(--text)}
+.card p{margin:0;font-size:.98rem;line-height:1.3;color:#d7cbb0}
+.meta{display:flex;align-items:center;gap:.4rem;margin-top:.3rem;font-size:.85rem;color:var(--muted);font-style:italic;white-space:nowrap}
+.meta svg{width:.95em;height:.95em;color:var(--gold);flex:none}
+.meta .tl{font:600 .58rem/1 var(--display);letter-spacing:.16em;text-transform:uppercase;font-style:normal;margin-right:.2rem;color:var(--muted)}
+.meta .dt{font-style:normal;font-variant:small-caps;letter-spacing:.05em}
+.meta .mine{font:600 .55rem/1 var(--display);letter-spacing:.12em;font-style:normal;color:var(--gold);border:1px solid rgba(201,164,74,.5);padding:.15rem .35rem;border-radius:2px;text-transform:uppercase;margin-left:.2rem}
+.meta .more{margin-left:auto;font:600 .62rem/1 var(--display);letter-spacing:.1em;font-style:normal;color:var(--gold);text-transform:uppercase;cursor:pointer;padding-left:.5rem}
+
+    .feed{position:fixed;left:1rem;top:5.6rem;bottom:1rem;width:41rem;max-width:calc(100vw - 30rem);display:flex;flex-direction:column;z-index:6}
+    .feed header{padding:.7rem 1rem .6rem;border-bottom:1px solid var(--line)}
+    .feed header .r1{display:flex;justify-content:space-between;align-items:center}
+    .feed h2{font-size:1.1rem;letter-spacing:.1em}
+    .feed header small{color:var(--muted);font-style:italic}
+    .filters{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center}
+    .filters .chip{cursor:pointer}
+    .filters .chip.on{color:var(--gold2);border-color:var(--gold);background:rgba(201,164,74,.12)}
+    .filters .sp{margin-left:auto;font-size:.85rem;color:var(--muted);font-style:italic}
+    .list{flex:1;overflow:hidden;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.45rem;position:relative}
+    .day{font:600 .62rem/1 var(--display);letter-spacing:.2em;color:var(--muted);text-transform:uppercase;display:flex;gap:.6rem;align-items:center}
+    .day:after{content:"";flex:1;border-top:1px solid var(--line)}
+    @media (min-height:1000px){.list{gap:.65rem}.card .in{padding:.7rem .95rem .6rem .9rem}.card h3{margin-bottom:.3rem}}
+    @media (max-height:800px){.opt{display:none}.feed{top:4.9rem;bottom:.6rem}.feed header{padding:.5rem 1rem .45rem}.list{padding:.5rem .8rem;gap:.35rem}.card .in{padding:.4rem .8rem .35rem .75rem}.card p{font-size:.94rem;line-height:1.26}.meta{margin-top:.2rem}}
+    .hint{position:fixed;left:44rem;top:8rem;width:14rem;color:var(--gold2);font-style:italic;font-size:.95rem;text-shadow:0 1px 4px #000;display:none}</style></head>
+<body class=""><svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-coin" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></symbol>
+<symbol id="i-men" viewBox="0 0 24 24"><path d="M5 19L17 7M14 5h5v5M19 19L7 7M10 5H5v5M4 20l3-3M20 20l-3-3"/></symbol>
+<symbol id="i-food" viewBox="0 0 24 24"><path d="M12 21V8M12 8c-2-1-3-3-3-5 2 0 3 2 3 5zM12 8c2-1 3-3 3-5-2 0-3 2-3 5zM12 13c-2-1-4-1-5-3 2-.3 4 .5 5 3zM12 13c2-1 4-1 5-3-2-.3-4 .5-5 3zM12 18c-2-1-4-1-5-3 2-.3 4 .5 5 3zM12 18c2-1 4-1 5-3-2-.3-4 .5-5 3z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 7l9 7 9-7"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+<symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 19h16M4 19L3 7l5 4 4-6 4 6 5-4-1 12"/></symbol>
+<symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.6 0 4.5 2 4.5 5"/></symbol>
+<symbol id="i-scroll" viewBox="0 0 24 24"><path d="M7 4h11a2 2 0 012 2v12a2 2 0 01-2 2H8M7 4a2 2 0 00-2 2v12a2 2 0 002 2M9 9h7M9 13h7"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 .3c0 1.7-2.5 2-2.5 3.7M12 17v.5"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-raven" viewBox="0 0 24 24"><path d="M3 16c4 0 6.5-3 8-6 1-1.6 3-2.2 5-1.2l3.5 1.2-2.2 2.1c0 5-4 8.4-9.3 8.4-2 0-3.2-.9-5-4.5z"/><path d="M16 9.8l.01 0"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4M6 5h11l-2 4 2 4H6"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-castle" viewBox="0 0 24 24"><path d="M4 21V8l2.5 1.5V6l2.5 1.5V6H15v1.5L17.5 6v3.5L20 8v13zM10 21v-5a2 2 0 014 0v5"/></symbol>
+<symbol id="i-skull" viewBox="0 0 24 24"><path d="M5 11a7 7 0 1114 0c0 2-1 3.2-2 4v3H7v-3c-1-.8-2-2-2-4z"/><circle cx="9.3" cy="11.3" r="1.2"/><circle cx="14.7" cy="11.3" r="1.2"/></symbol>
+</defs></svg>
+<div class="map"></div>
+
+<div class="hud hud-tl">
+  <div class="panel plate"><img class="crest " src="assets/banner-stark.png" alt=""><div><div class="house">House Stark</div><div class="date">15th of the 8th Moon, 298 AC</div><div class="season"><svg class="i "><use href="#i-sun"/></svg> Late summer &middot; the days shorten</div></div></div>
+  
+</div>
+<div class="hud hud-tr" >
+  <div class="panel iconbtn" title="Inbox"><svg class="i "><use href="#i-mail"/></svg><span class="badge">3</span></div>
+  <div class="panel endturn"><div class="go">End turn &#9654;</div><div class="why">next: <b>7 days</b> &mdash; the banners gather</div></div>
+  <div class="panel iconbtn" title="Menu"><svg class="i "><use href="#i-menu"/></svg></div>
+</div><section class="feed panel"><header><div class="r1"><h2>Chronicle</h2><small>8th moon, 298 AC &middot; 5 new</small></div>
+      <div class="filters"><span class="chip on">&#10003; Only what matters</span><span class="chip">Mine</span><span class="chip">War</span><span class="chip">Letters</span><span class="chip">Rumours</span><span class="sp"><svg class="i "><use href="#i-x"/></svg></span></div></header>
+      <div class="list"><div class="day">Today</div><article class="card great "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;&#9670;&#9670;</span>The King’s progress reaches Winterfell</h3><p>King Robert rides through the gate with the Queen, her brothers and three hundred knights. Men say he means to make Lord Eddard his Hand.</p>
+    <div class="meta"><span class="tl">Great</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">15th of the 8th moon</span> &middot; <span>Winterfell</span><span class="mine">Your house</span><span class="more">Details &#9656;</span></div></div></article><article class="card major "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;&#9670;</span>Robb Stark calls the banners at Winterfell</h3><p>Nineteen sworn houses are told to bring their men to Winterfell before the first snow. The first ravens have already flown.</p>
+    <div class="meta"><span class="tl">Major</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">13th of the 8th moon</span> &middot; <span>Winterfell</span><span class="mine">Your kin</span><span class="more">Details &#9656;</span></div></div></article><article class="card major "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;&#9670;</span>Lord Hoster Tully falls ill at Riverrun</h3><p>A raven from Riverrun says Lord Hoster has kept to his bed for a fortnight. Ser Edmure holds the castle in his name.</p>
+    <div class="meta"><span class="tl">Major</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">12th of the 8th moon</span> &middot; <span>Riverrun &middot; raven, 4 days old</span><span class="mine">Your kin</span><span class="more">Details &#9656;</span></div></div></article><article class="card news "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;</span>Lady Hornwood refuses Stark’s summons</h3><p>Donella Hornwood will keep her men at home. Word of it reached Winterfell with the first ravens.</p>
+    <div class="meta"><span class="tl">News</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">11th of the 8th moon</span> &middot; <span>Hornwood</span><span class="more">Details &#9656;</span></div></div></article><article class="card news opt"><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;</span>Lady Lysa raises the Vale’s levies at the Eyrie</h3><p>House Arryn is calling its banners; nothing yet says against whom.</p>
+    <div class="meta"><span class="tl">News</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">10th of the 8th moon</span> &middot; <span>The Eyrie &middot; rumour</span><span class="more">Details &#9656;</span></div></div></article><article class="card news opt"><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9670;</span>Mance Rayder gathers the free folk beyond the Wall</h3><p>A great host of wildlings is answering him. The Night’s Watch has not yet learned how many.</p>
+    <div class="meta"><span class="tl">News</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">9th of the 8th moon</span> &middot; <span>Castle Black &middot; a ranger’s word</span><span class="more">Details &#9656;</span></div></div></article><article class="card minor "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&#9675;</span>Lord Bolton begins a market at the Dreadfort</h3>
+    <div class="meta"><span class="tl">Minor</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">9th of the 8th moon</span> &middot; <span>The Dreadfort</span><span class="more">Details &#9656;</span></div></div></article><article class="card meanwhile "><div class="bar"></div><div class="in">
+    <h3><span class="pips">&middot;</span>Lords ride to feasts and hunts across the Reach and the Vale</h3><p>A Pentoshi galley was wrecked off Widow’s Watch.</p>
+    <div class="meta"><span class="tl">Meanwhile</span><svg class="i "><use href="#i-pin"/></svg><span class="dt">This week</span> &middot; <span>The realm</span><span class="more">Details &#9656;</span></div></div></article></div></section><div class="hud who"><div class="panel nm"><b>Eddard Stark</b><small>Lord of Winterfell, Warden of the North</small><span class="mood">in good health</span></div><div class="ring"><div><img src="assets/portrait-eddard_stark.jpg" alt=""></div></div></div>
+<div class="tag">MOCKUP &mdash; target design (GDD 17/18/19)</div>
+</body></html>

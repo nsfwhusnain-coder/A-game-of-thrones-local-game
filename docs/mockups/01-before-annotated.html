@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Before: annotated</title>
+<style>
+@font-face{font-family:'Cinzel';font-weight:400 700;src:url(../../public/fonts/cinzel-normal-latin-1.woff2) format('woff2')}
+@font-face{font-family:'Cinzel Decorative';font-weight:700;src:url(../../public/fonts/cinzeldecorative-normal-latin-3.woff2) format('woff2')}
+@font-face{font-family:'EB Garamond';font-style:normal;font-weight:400 600;src:url(../../public/fonts/ebgaramond-normal-latin-7.woff2) format('woff2')}
+@font-face{font-family:'EB Garamond';font-style:italic;font-weight:400 600;src:url(../../public/fonts/ebgaramond-italic-latin-5.woff2) format('woff2')}
+:root{--bg:#0e0b08;--panel:rgba(22,17,12,.94);--panel-solid:#17120d;--panel2:#221a12;--line:#4d3c28;--line2:#6b5334;--gold:#c9a44a;--gold2:#ecd392;
+--text:#ece1c8;--muted:#a8977a;--red:#b03a2e;--green:#74b84e;--blue:#5a8ac8;--amber:#d99a3a;--parch:#efe2c4;--ink:#2b2016;
+--serif:'EB Garamond',Georgia,'Times New Roman',serif;--display:'Cinzel',Georgia,serif;--shadow:0 10px 40px rgba(0,0,0,.55)}
+*{box-sizing:border-box}
+html{font-size:clamp(12.5px,.5vw + 6.4px,16px)}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--serif);overflow:hidden;font-size:1rem;line-height:1.35}
+button{font:inherit;color:inherit}
+h1,h2,h3,h4{font-family:var(--display);font-weight:600;letter-spacing:.04em;margin:0;color:var(--gold2)}
+svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.map{position:fixed;inset:0;background:var(--bg) center/cover no-repeat;transform:scale(1.08);transform-origin:100% 100%} /* a little bigger: the screenshot's debug tag slides off the corner */
+.dim{position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(8,6,4,.45),rgba(8,6,4,.78))}
+.tag{position:fixed;left:.1rem;top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;z-index:99;font:600 .56rem/1 var(--display);letter-spacing:.16em;color:rgba(236,211,146,.75);
+  background:rgba(14,11,8,.6);padding:.6rem .28rem;border-radius:2px;pointer-events:none;white-space:nowrap}
+.panel{background:var(--panel);border:1px solid var(--line2);border-radius:4px;box-shadow:var(--shadow),inset 0 0 0 1px rgba(201,164,74,.07);backdrop-filter:blur(5px)}
+.btn{background:linear-gradient(#4a3b29,#241b12);border:1px solid var(--line2);color:var(--gold2);padding:.4rem .9rem;border-radius:3px;font-family:var(--display);font-size:.78rem;letter-spacing:.05em;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem}
+.btn.primary{background:linear-gradient(#b8923f,#7d5f22);color:#1b1408;border-color:#e0c072;font-weight:700}
+.btn.ghost{background:transparent}
+.muted{color:var(--muted)}
+.up{color:var(--green)}.down{color:#e0664f}.flat{color:var(--muted)}
+
+/* ---- the quiet HUD (GDD 17 §2.1) ---- */
+.hud{position:fixed;z-index:5;pointer-events:none}
+.hud>*{pointer-events:auto}
+.hud-tl{left:.5rem;top:.5rem;display:flex;gap:.6rem;align-items:stretch}
+.hud-tr{right:.9rem;top:.5rem;display:flex;gap:.6rem;align-items:flex-start}
+.plate{display:flex;align-items:center;gap:.7rem;padding:.45rem .9rem .45rem .55rem;min-width:17rem}
+.plate .crest{width:auto;height:3.1rem;flex:none;align-self:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+.plate .house{font:600 .68rem/1 var(--display);letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.plate .date{font:600 1.02rem/1.15 var(--display);color:var(--gold2);letter-spacing:.03em;margin-top:.2rem;white-space:nowrap}
+.plate .season{display:flex;align-items:center;gap:.3rem;font-style:italic;color:var(--muted);font-size:.86rem;margin-top:.1rem}
+.plate .season svg{color:var(--gold);width:1.05em;height:1.05em}
+.vitals{display:flex;align-items:center;padding:0 .4rem}
+.vital{display:flex;align-items:center;gap:.55rem;padding:.35rem .85rem;position:relative}
+.vital+.vital:before{content:"";position:absolute;left:0;top:22%;bottom:22%;border-left:1px solid var(--line)}
+.vital>svg{width:1.6rem;height:1.6rem;color:var(--gold)}
+.vital b{display:block;font:600 1.3rem/1 var(--display);color:var(--text);letter-spacing:.02em}
+.vital small{display:block;font:600 .62rem/1 var(--display);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:.2rem}
+.vital .tr{font-size:.85rem;margin-left:.15rem;align-self:flex-start;margin-top:.15rem}
+.iconbtn{width:3.1rem;height:3.1rem;display:grid;place-items:center;position:relative;cursor:pointer;color:var(--gold2)}
+.iconbtn svg{width:1.5rem;height:1.5rem}
+.iconbtn .badge{position:absolute;top:-.35rem;right:-.35rem;background:var(--red);color:#fff;font:600 .68rem/1 sans-serif;border-radius:1rem;padding:.2rem .4rem;border:1px solid #1a1109}
+.endturn{display:flex;flex-direction:column;align-items:stretch;padding:.3rem;width:16.5rem}
+.endturn .go{background:linear-gradient(#3a69ad,#1f3f6e);border:1px solid #7ea6dc;border-radius:3px;color:#f0e8d2;font:700 1.05rem/1 var(--display);letter-spacing:.1em;padding:.7rem 1rem;text-align:center;text-transform:uppercase;box-shadow:0 0 18px rgba(90,138,200,.35)}
+.endturn .why{font-style:italic;font-size:.88rem;color:var(--muted);text-align:center;padding:.3rem .2rem .1rem;white-space:nowrap}
+.endturn .why b{font-style:normal;font-weight:500;color:var(--gold2)}
+.modechip{position:fixed;right:1rem;top:5.6rem;z-index:5;font:600 .68rem/1 var(--display);letter-spacing:.1em;padding:.45rem .7rem;color:var(--muted);text-transform:uppercase;display:flex;gap:.4rem;align-items:center}
+
+.strip{left:1rem;bottom:1rem;width:23rem;padding:.55rem .75rem .6rem}
+.strip h4{display:flex;justify-content:space-between;font-size:.66rem;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:.35rem}
+.strip h4 b{color:var(--gold);font-weight:600}
+.strip .ln{display:flex;gap:.55rem;align-items:baseline;padding:.2rem 0;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.strip .ln i{flex:none;width:.5rem;height:.5rem;border-radius:50%;background:var(--gold);transform:translateY(-.08rem)}
+.strip .ln.old i{background:transparent;border:1px solid var(--muted)}
+.strip .ln.old{color:var(--muted)}
+.strip .ln span{overflow:hidden;text-overflow:ellipsis}
+.cmd{left:50%;transform:translateX(-50%);bottom:1rem;width:min(38rem,42vw);padding:.5rem}
+.cmd .order{display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.3rem .6rem;margin-bottom:.4rem;background:rgba(0,0,0,.28);border-radius:3px;font-size:.95rem;color:var(--text)}
+.cmd .order em{font:600 .58rem/1 var(--display);letter-spacing:.14em;font-style:normal;color:var(--green);border:1px solid rgba(116,184,78,.5);padding:.2rem .4rem;border-radius:2px;flex:none}
+.cmd .order span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmd .row{display:flex;gap:.5rem;align-items:stretch}
+.cmd .in{flex:1;background:#120d08;border:1px solid var(--line);border-radius:3px;padding:.65rem .8rem;color:var(--muted);font-style:italic;font-size:1.05rem;box-shadow:inset 0 2px 8px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden}
+.cmd .sq{width:2.8rem;display:grid;place-items:center;background:#241b12;border:1px solid var(--line2);border-radius:3px;color:var(--gold2)}
+.cmd .sq svg{width:1.2rem;height:1.2rem}
+.who{right:1rem;bottom:1rem;display:flex;align-items:center;gap:.7rem}
+.who .nm{text-align:right;padding:.5rem .9rem}
+.who .nm b{display:block;font:600 .95rem/1.1 var(--display);letter-spacing:.06em;color:var(--gold2);text-transform:uppercase}
+.who .nm small{display:block;font-size:.85rem;color:var(--muted);margin-top:.15rem;font-style:italic}
+.who .nm .mood{display:inline-flex;align-items:center;gap:.3rem;font-style:normal;font-size:.8rem;color:var(--green);margin-top:.15rem}
+.who .nm .mood:before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--green)}
+.ring{width:7.2rem;height:7.2rem;border-radius:50%;padding:.28rem;background:conic-gradient(from 210deg,#8a6a2a,#f0d68a,#8a6a2a,#f0d68a,#8a6a2a);box-shadow:0 6px 22px rgba(0,0,0,.65),0 0 0 2px #1b1409;flex:none}
+.ring>div{width:100%;height:100%;border-radius:50%;overflow:hidden;border:2px solid #1b1409;background:#111}
+.ring img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.38);transform-origin:50% 26%}
+.chip{display:inline-flex;align-items:center;gap:.3rem;font:600 .62rem/1 var(--display);letter-spacing:.1em;text-transform:uppercase;padding:.28rem .5rem;border-radius:2rem;border:1px solid var(--line2);color:var(--muted);white-space:nowrap}
+.chip.up{color:var(--green);border-color:rgba(116,184,78,.5);background:rgba(116,184,78,.09)}
+.chip.down{color:#e8806b;border-color:rgba(224,102,79,.5);background:rgba(224,102,79,.09)}
+.chip.gold{color:var(--gold2);border-color:rgba(201,164,74,.55);background:rgba(201,164,74,.09)}
+.pchip{display:inline-flex;align-items:center;gap:.5rem;padding:.2rem .7rem .2rem .2rem;border:1px solid var(--line2);border-radius:2rem;background:rgba(0,0,0,.25);font-size:.95rem}
+.pchip .pf{width:2.1rem;height:2.1rem;border-radius:50%;overflow:hidden;border:1px solid var(--gold);flex:none}
+.pchip .pf img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;transform:scale(1.4);transform-origin:50% 26%}
+.pchip small{display:block;color:var(--muted);font-size:.78rem;line-height:1.1}
+.x{position:absolute;top:.7rem;right:.8rem;color:var(--muted);cursor:pointer}
+.parch{background:linear-gradient(#f2e7cb,#e6d6b0);color:var(--ink);border:1px solid #b79a5a;border-radius:4px;box-shadow:var(--shadow),inset 0 0 60px rgba(150,110,40,.22),inset 0 0 0 4px rgba(255,250,235,.35)}
+.parch h1,.parch h2,.parch h3,.parch h4{color:#5a3a12}
+.center{position:fixed;inset:0;display:grid;place-items:center;padding:1rem;z-index:10}
+@media (max-width:1500px){.strip{width:20.5rem}}
+
+
+
+    body{display:flex;background:#0b0907}
+    .left{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;padding:.6rem 0 .6rem 1.2rem;gap:.7rem}
+    .shot{position:relative;width:min(100%,calc((100vh - 5.6rem) * 16 / 9));aspect-ratio:16/9;border:1px solid var(--line2);box-shadow:var(--shadow);background:#000 url(../screens/e2/mode-political-1920x1080.jpg) center/cover no-repeat}
+    @media (max-width:1500px){.shot{background-image:url(../screens/e2/mode-political-1366x768.jpg)}}
+    .cb{position:absolute;border:2px solid #ff4a3a;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 14px rgba(255,74,58,.35)}
+    .cn{position:absolute;transform:translate(-50%,-50%);width:1.55rem;height:1.55rem;border-radius:50%;background:#d8281a;border:2px solid #fff;color:#fff;font:700 .85rem/1 sans-serif;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.7)}
+    .cn.s{position:static;transform:none;flex:none;margin-top:.1rem}
+    .stats{display:flex;gap:1rem;width:min(100%,calc((100vh - 5.6rem) * 16 / 9))}
+    .stat{flex:1;padding:.5rem .8rem;text-align:center}
+    .stat b{display:block;font:700 1.55rem/1 var(--display);color:#ff7a68}
+    .stat span{display:block;font-size:.85rem;color:var(--muted);margin-top:.25rem}
+    aside{width:25rem;flex:none;padding:.9rem 1rem .6rem;overflow:auto;background:#120e0a;border-left:1px solid var(--line)}
+    aside h2{font-size:1.05rem;letter-spacing:.12em;margin-bottom:.15rem;color:#ff8a78}
+    aside .sub{color:var(--muted);font-style:italic;font-size:.9rem;margin:0 0 .7rem}
+    ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.55rem}
+    li{display:flex;gap:.6rem}
+    li b{font:600 .8rem/1.2 var(--display);letter-spacing:.05em;color:var(--gold2)}
+    li p{margin:.1rem 0 0;font-size:.86rem;line-height:1.25;color:#cfc2a4}
+    @media (max-width:1500px){aside{width:24rem;padding:.6rem .8rem}li p{font-size:.8rem;line-height:1.18}ol{gap:.4rem}}
+    </style></head>
+<body class="b4"><svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-coin" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></symbol>
+<symbol id="i-men" viewBox="0 0 24 24"><path d="M5 19L17 7M14 5h5v5M19 19L7 7M10 5H5v5M4 20l3-3M20 20l-3-3"/></symbol>
+<symbol id="i-food" viewBox="0 0 24 24"><path d="M12 21V8M12 8c-2-1-3-3-3-5 2 0 3 2 3 5zM12 8c2-1 3-3 3-5-2 0-3 2-3 5zM12 13c-2-1-4-1-5-3 2-.3 4 .5 5 3zM12 13c2-1 4-1 5-3-2-.3-4 .5-5 3zM12 18c-2-1-4-1-5-3 2-.3 4 .5 5 3zM12 18c2-1 4-1 5-3-2-.3-4 .5-5 3z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 7l9 7 9-7"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+<symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 19h16M4 19L3 7l5 4 4-6 4 6 5-4-1 12"/></symbol>
+<symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.6 0 4.5 2 4.5 5"/></symbol>
+<symbol id="i-scroll" viewBox="0 0 24 24"><path d="M7 4h11a2 2 0 012 2v12a2 2 0 01-2 2H8M7 4a2 2 0 00-2 2v12a2 2 0 002 2M9 9h7M9 13h7"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 .3c0 1.7-2.5 2-2.5 3.7M12 17v.5"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-raven" viewBox="0 0 24 24"><path d="M3 16c4 0 6.5-3 8-6 1-1.6 3-2.2 5-1.2l3.5 1.2-2.2 2.1c0 5-4 8.4-9.3 8.4-2 0-3.2-.9-5-4.5z"/><path d="M16 9.8l.01 0"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4M6 5h11l-2 4 2 4H6"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-castle" viewBox="0 0 24 24"><path d="M4 21V8l2.5 1.5V6l2.5 1.5V6H15v1.5L17.5 6v3.5L20 8v13zM10 21v-5a2 2 0 014 0v5"/></symbol>
+<symbol id="i-skull" viewBox="0 0 24 24"><path d="M5 11a7 7 0 1114 0c0 2-1 3.2-2 4v3H7v-3c-1-.8-2-2-2-4z"/><circle cx="9.3" cy="11.3" r="1.2"/><circle cx="14.7" cy="11.3" r="1.2"/></symbol>
+</defs></svg>
+
+<div class="left"><div class="shot"><div class="cb" style="left:0.9375%;top:0.9259259259259258%;width:51.5625%;height:7.777777777777778%"></div><div class="cn" style="left:52.60416666666667%;top:0.7407407407407407%">1</div><div class="cb" style="left:53.645833333333336%;top:0.9259259259259258%;width:11.875%;height:5.37037037037037%"></div><div class="cn" style="left:59.47916666666667%;top:7.592592592592592%">2</div><div class="cb" style="left:83.75%;top:1.2962962962962963%;width:15.416666666666668%;height:4.444444444444444%"></div><div class="cn" style="left:98.69791666666667%;top:7.222222222222221%">3</div><div class="cb" style="left:73.33333333333334%;top:1.2962962962962963%;width:9.6875%;height:4.444444444444444%"></div><div class="cn" style="left:78.125%;top:7.4074074074074066%">4</div><div class="cb" style="left:1.9791666666666667%;top:18.148148148148145%;width:27.864583333333336%;height:29.166666666666664%"></div><div class="cn" style="left:30.729166666666668%;top:19.25925925925926%">5</div><div class="cb" style="left:1.9791666666666667%;top:48.33333333333333%;width:27.864583333333336%;height:34.07407407407407%"></div><div class="cn" style="left:30.729166666666668%;top:50%">6</div><div class="cb" style="left:1.5625%;top:84.07407407407406%;width:28.645833333333336%;height:12.962962962962962%"></div><div class="cn" style="left:30.9375%;top:86.1111111111111%">7</div><div class="cb" style="left:92.60416666666667%;top:8.333333333333332%;width:6.5625%;height:3.333333333333333%"></div><div class="cn" style="left:91.04166666666667%;top:10%">8</div><div class="cb" style="left:48.958333333333336%;top:90%;width:34.6875%;height:8.333333333333332%"></div><div class="cn" style="left:48.75%;top:89.07407407407406%">9</div><div class="cb" style="left:84.27083333333334%;top:90%;width:14.895833333333334%;height:8.333333333333332%"></div><div class="cn" style="left:84.6875%;top:87.96296296296296%">10</div><div class="cb" style="left:35.208333333333336%;top:62.59259259259259%;width:20%;height:8.333333333333332%"></div><div class="cn" style="left:55.520833333333336%;top:63.888888888888886%">11</div></div>
+      <div class="stats"><div class="panel stat"><b>~40</b><span>controls and read-outs on screen at turn 0</span></div><div class="panel stat"><b>55%</b><span>of the pixels covered at 1366&times;768</span></div><div class="panel stat"><b>3</b><span>badge systems for "something needs you"</span></div><div class="panel stat"><b>11</b><span>bullets of "How to play" always open</span></div></div></div>
+      <aside><h2>Today: what is wrong</h2><p class="sub">The current UI at turn 0 (docs/screens/e2), before any player input. GDD 17 &sect;1.</p><ol><li><span class="cn s">1</span><div><b>Six-tile resource bar</b><p>Treasury, Levies, Men-at-arms, Ships, Food, Season: 6 values and 6 sub-lines, 1000 px wide. Read-outs, not levers. Keep 3 vitals.</p></div></li><li><span class="cn s">2</span><div><b>Date box + turn counter</b><p>Date, "Turn 0" and pending count in one box. Drop the turn number; one Inbox badge.</p></div></li><li><span class="cn s">3</span><div><b>Six system icons</b><p>Ravens, music, undo, help, settings, menu at equal weight. Collapse into one menu button.</p></div></li><li><span class="cn s">4</span><div><b>End turn</b><p>The key control is right, but its reason ("next turn: 7 days") floats loose beside it. Put it inside the button.</p></div></li><li><span class="cn s">5</span><div><b>"Your situation" card</b><p>Prose plus Aims and Levers on top of the feed. Show once as a welcome card, never again.</p></div></li><li><span class="cn s">6</span><div><b>"How to play" wall</b><p>Eleven bullets, about 25 lines, that bury the chronicle. Move to help; use 3 coach marks.</p></div></li><li><span class="cn s">7</span><div><b>Order composer in the drawer</b><p>The command bar dies when the drawer collapses. Give it its own bottom-centre bar.</p></div></li><li><span class="cn s">8</span><div><b>Nine map modes</b><p>Realms, Holders, Diplomacy, Knowledge, War, Wealth, Prosperity, Unrest, Terrain. One dropdown, three favourites.</p></div></li><li><span class="cn s">9</span><div><b>Eight-button dock</b><p>Realm, Council, Military, Economy, Diplomacy, Intrigue, People, Chronicle, always on: micromanagement bait. Replace with 3 menu entries.</p></div></li><li><span class="cn s">10</span><div><b>Portrait plate</b><p>Keep it. It is small and lifeless next to the dock: make it larger, framed and warmer.</p></div></li><li><span class="cn s">11</span><div><b>Colliding map labels</b><p>"LANNI~300" and "KINGS SHIPS ING" overlap: tokens fight region names. Work package U8.</p></div></li></ol></aside>
+<div class="tag">MOCKUP &mdash; target design (GDD 17/18/19)</div>
+</body></html>

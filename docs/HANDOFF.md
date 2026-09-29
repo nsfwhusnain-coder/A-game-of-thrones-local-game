@@ -15,6 +15,7 @@ Design Document in [`docs/gdd/`](gdd/README.md); the order of work is [`16-roadm
   **R** (the State of the Realm ledger, [19](gdd/19-realm-ledger.md)). **Do N, U and R next**, in the order the
   roadmap gives; Phase F is re-cut by U.
 - **The prompt for the next lead agent** is [`NEXT-AGENT-PROMPT.md`](NEXT-AGENT-PROMPT.md).
+- **How to run the work with subagents:** [`AGENT-PLAYBOOK.md`](AGENT-PLAYBOOK.md). **What to build, drawn:** [`mockups/`](mockups/README.md). **What we take from Pax Historia:** [`gdd/20-pax-reference.md`](gdd/20-pax-reference.md).
 - **The to-do list is the roadmap**: every work package is a row in [`16-roadmap.md`](gdd/16-roadmap.md) with its
   acceptance; a row is done when it carries "✅" and a CHANGELOG entry. Nothing else is tracked elsewhere.
 

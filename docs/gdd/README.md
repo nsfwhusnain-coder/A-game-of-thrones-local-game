@@ -48,6 +48,8 @@ the map. It is written for an implementing agent working from GitHub alone (no l
 | 17 | [Declutter the interface](17-ui-declutter.md) | the owner's review: a quiet HUD, three menu entries, the headline strip, contextual cards, first-run guidance; **U1–U9** |
 | 18 | [Headlines](18-headlines.md) | Pax-style event cards: a headline that says what happened, a plain summary; the deterministic writer under the narrator; **N1–N10** |
 | 19 | [The State of the Realm](19-realm-ledger.md) | the hidden ledger of every house's strength and trend, knowledge-filtered, one source for the minds and the council; **R1–R7** |
+| 20 | [Pax Historia reference](20-pax-reference.md) | what we take from the official Pax Historia: its loop, its screen, headline and summary rules with twenty Westeros before/after pairs |
+| — | [Mockups](../mockups/README.md) | **the target interface, drawn**: eight screens at 1920×1080 and 1366×768 (the quiet HUD, headline feed, event card, digest, the State of the Realm, menu and card, first run, and today's clutter annotated) |
 | — | [assets/](assets/) | recorded model outputs and screenshots from 2026-09-27 |
 
 ## 4. Status legend
