@@ -3,6 +3,30 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-29 — R1–R3: the realm's figures, as your house knows them (PR pending)
+
+Nothing on screen yet (the window is R4); what exists is the data under it, and one way to look at it.
+
+- **A weekly record of every house's figures** (R1, [GDD 19](gdd/19-realm-ledger.md) §3.1): swords, coin, income, bread,
+  ships, lands, people and Power for all 158 houses of the scenario, taken when the turn closes and once when a game
+  begins (an old save begins its record at load). It lives in the save, so undo unmakes it, and a whole row is kept in
+  each turn's file. A long game stays small: the newest 16 weeks whole, older ones one to a four-week bucket, 48 at most
+  (about 0.5 MB at 40 turns, 0.8 MB at the cap). It draws no dice, so no game plays differently for it.
+- **What your house learns of the others** (R2): your own house is exact; a house sworn to you is known to a few in a
+  hundred; everyone else only by what your house has seen, been told or been taught, each figure with its way and its
+  age: `~` an estimate, `≈` a band, `≥` at least, `—` unknown, or a word ("sound", "modest") for a coffer no one has
+  counted. A hidden treasury, the Rock's failing mines or a war's true score cannot change any of it until word reaches
+  you.
+- **`GET /api/games/:id/realm`** (R3): the player's house's view of the realm; there is no way to ask with another house's
+  eyes (`?viewer=` is ignored) and it changes nothing. Options: `lens` (`strength`, `economy`, `land`), `scope`
+  (`great`, `mine`, `war`, `all`), `realm=1`, `window` (3, 6 or 12 moons), `house=<id>` for one house's detail.
+- **A leak closed before it shipped**: the new record held every house's true figures and would have gone to the browser
+  inside the game state (`GET /api/games/:id`); it and the turn records' `realm` row now stay on the server, and invariant
+  10 checks both.
+- Owner to verify: `node --test tests/realm-stats.test.js tests/realm-view.test.js tests/realm-http.test.js`; then, with
+  the game running, open `http://127.0.0.1:3298/api/games/<id>/realm?scope=all` in the browser: your house exact, the
+  others `~`, `≈`, `≥`, `—` or a word, each with an age.
+
 ## 2026-09-29 — Handoff at E5: the plan for what comes next, and two old bugs closed
 
 - **The turn no longer ends "until a host reaches" a place it is not going to** (B-25): a host that is besieging,
