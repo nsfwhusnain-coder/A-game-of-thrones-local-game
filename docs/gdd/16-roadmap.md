@@ -97,9 +97,39 @@ validator is the real fix.**
 | E3 | Terrain palette, forest impostors (no low-poly trees), the snow line | E1 | L | L3 shows impostor trees; winter shifts the snow line — ✅ `map3d/nature.js` (snow line, frozen rivers, regional tints, the procedural tree atlas), impostor forests in `models.js`, the snow line and canopy mass in the terrain shader; `tests/map-nature.test.js`, `docs/screens/e3/` |
 | E4 | Labels: priority placement, no overlaps, halos; tooltip clearing | E1 | M | label-overlap assertion passes; B-31 gone — ✅ `map3d/labels.js` (greedy placement by priority, budget 120), halos; tooltips clear on leave, blur and camera moves; `tests/map-labels.test.js`, and `dev/map-lod.html` measures the drawn labels' overlaps (0 at L0–L2, `docs/screens/e4/`) |
 | E5 | Party tokens, clustering, figures (hosts, retinues, the progress, envoys, fleets), routes, trails | B2, E1 | L | `dev/tokens.html`; the progress visible from L0 — ✅ tokens and plates (`map3d/tokens.js`), stacks that fan out, the progress from L0, garrisons off the map, routes with ETA for your own parties only; `dev/tokens.html`, `tests/map-tokens.test.js`. The L2–L3 figures of §6.2 (columns ∝ men, camps, retinue riders, the progress's column) keep the existing models: see D-057 |
-| E6 | Holding states and effects (siege, smoke, battle markers, weather) | E5 | M | fixture holdings in each state render |
+| E6 | Holding states and effects (siege, smoke, battle markers, weather) + the §6.2 figures E5 left (camps, columns, retinue riders) | E5 | M | fixture holdings in each state render |
 | E7 | Ambient life restyle + graphics presets + performance budgets | E5 | M | draw-call budget in SwiftShader test; Fast preset disables ambient |
 | E8 | Playback choreography (keyframes, day counter, facts on their day, camera rules) | B11, E5 | M | `dev/playback.html` fixture plays in order; reduced-motion cuts |
+
+## Phases N, U, R — added 2026-09-29 from the owner's review (do these next)
+
+The owner's verdict after Phases A–E: **the interface is cluttered, and the events do not read well.** Too many panels
+and buttons at once; the player of an AI simulation should *watch the realm and give orders*, with the economy, the
+military and the rest one click away rather than always in view; and each event should read like Pax Historia's: one
+headline that alone says what happened ("Robb Stark slain by Tywin Lannister at the Green Fork"), then a short plain
+summary. Three plans answer it; each has its own work packages, files and acceptance tests:
+
+| Phase | Plan | Work packages | What changes for the player |
+|---|---|---|---|
+| **N** | [18 — Headlines](18-headlines.md) | N1–N10 | every event one card: headline + 1–3 plain sentences, details folded; one card per story; a weekly digest; ranking that favours your own news |
+| **U** | [17 — Declutter](17-ui-declutter.md) | U1–U4, U8, U9 (U5–U7 → R) | a quiet HUD (date, 3 vitals, End turn, one inbox, one menu), three menu entries instead of eight docks, the command bar freed, contextual cards, first-run guidance that goes away, focus mode |
+| **R** | [19 — The State of the Realm](19-realm-ledger.md) | R1–R7 | a hidden-by-default ledger: every house's strength, coin, food, lands and trend, knowledge-filtered; rising and falling houses; the same numbers feed the minds and the council |
+
+**Order:** N1 → N2 → N3 → N4 → N5 → N6 (the engine side of the headlines; the golden set first) · in parallel U1 → U2 →
+U3 (the HUD and the menu; U3 needs N6's cards for the headline strip) · R1 → R2 → R3 (the data and the filter), then
+N7–N10, U4, R4–R7, U8, U9. **Phase F is re-cut by U:** F2 (layout) and F5 (cards) are done as U1–U4; F1, F3, F4, F6,
+F7, F8, F9 remain and follow U. Then E6–E8, G, H.
+
+**Further improvements proposed at the handoff (not yet planned in detail):**
+- *A playtest loop*: after each of N, U, R, run `npm run playtest` for three houses on the mock, read the chronicle as a
+  player would, and file what reads badly; screenshots of the first five turns attached to each PR.
+- *Turn pacing*: the default turn length and *Stop the days here* should be re-tuned once the digest exists (the owner
+  should be able to "watch the realm" for a moon and get a one-screen digest).
+- *Save size and speed*: turn records and snapshots grow with the per-turn sample of R1; measure a 200-turn save and
+  keep it under 50 MB, and keep a turn under 2 s on the mock.
+- *Map clarity at L0*: fewer reported-host plates far out (E5 shows every rumour); consider showing only the player's
+  realm's and at-war rumours at L0 (see D-057).
+- *E5's leftovers*: the §6.2 figures (columns ∝ men, camps, retinue riders, the progress's column) fold into E6/E7.
 
 ## Phase F — The interface ([12](12-ui-ux.md))
 

@@ -30,7 +30,7 @@ the map. It is written for an implementing agent working from GitHub alone (no l
 |---|---|---|
 | 00 | [Agent brief](00-agent-brief.md) | the implementing agent's situation, latitude, standards, never-do list, handoff |
 | 01 | [Vision](01-vision.md) | the game in one paragraph, pillars, Pax Historia comparison, target experience, scope, **quality gates** |
-| 02 | [Audit](02-audit.md) | the evidence: root causes R1–R6, the live playtest, the **bug register B-01…B-31**, module dispositions |
+| 02 | [Audit](02-audit.md) | the evidence: root causes R1–R6, the live playtest, the **bug register B-01…B-31** (fixed ones are marked ✅ with the WP), module dispositions |
 | 03 | [Architecture](03-architecture.md) | **the Truth Pipeline**: propose → resolve → narrate; data model v3; parties; activities; facts; verbs; the turn pipeline; saves; migration |
 | 04 | [AI system](04-ai-system.md) | every model call: interpreter, minds, narrator, director, audience, council, memory; **constrained decoding**; models and bench; fine-tuning; **testing without a model** |
 | 05 | [Gameplay loop](05-gameplay-loop.md) | planning, the jump, interrupts, playback, turn summary, difficulty, canon gravity, endings, ambitions, onboarding, pacing |
@@ -45,6 +45,9 @@ the map. It is written for an implementing agent working from GitHub alone (no l
 | 14 | [Audio](14-audio.md) | music states, sound cues from facts, voices |
 | 15 | [QA & tooling](15-qa-tooling.md) | test pyramid, **scenario tests (the owner's complaints)**, coherence checker, determinism, CI, dev tools, owner verification |
 | 16 | [Roadmap](16-roadmap.md) | **work packages A–H** with dependencies and acceptance criteria; milestones |
+| 17 | [Declutter the interface](17-ui-declutter.md) | the owner's review: a quiet HUD, three menu entries, the headline strip, contextual cards, first-run guidance; **U1–U9** |
+| 18 | [Headlines](18-headlines.md) | Pax-style event cards: a headline that says what happened, a plain summary; the deterministic writer under the narrator; **N1–N10** |
+| 19 | [The State of the Realm](19-realm-ledger.md) | the hidden ledger of every house's strength and trend, knowledge-filtered, one source for the minds and the council; **R1–R7** |
 | — | [assets/](assets/) | recorded model outputs and screenshots from 2026-09-27 |
 
 ## 4. Status legend

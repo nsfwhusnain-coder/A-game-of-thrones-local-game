@@ -10,7 +10,7 @@ import { musterState } from '../context/officers.js';
 import { dateStr, placeName } from '../../../public/js/shared/world.js';
 import { forces } from '../../../public/js/engine/parties.js';
 import { VOICES } from '../../../public/data/voices.js';
-import { GAME_WORDS } from '../validate/narration.js';
+import { GAME_WORDS, numbersIn } from '../validate/narration.js';
 import { anachronismsIn } from '../../../public/data/anachronisms.js';
 
 const n = (x) => Math.round(Number(x) || 0).toLocaleString('en-GB');
@@ -83,6 +83,12 @@ export default {
     if (strings(v).some(hasForeignScript)) out.push('a word in a script that is not the realm\'s');
     for (const re of GAME_WORDS) { const m = text.match(re); if (m) { out.push(`"${m[0]}" is not a word of the realm`); break; } }
     for (const a of anachronismsIn(ctx.state, text)) out.push(`"${a.phrase}": ${a.note}`);
+    // B-15: a counsellor's figures are the engine's (the dossier), never the chronicle's or the model's own
+    const known = numbersIn(ctx.dossier);
+    for (const x of numbersIn(text)) {
+      if (x <= 12 || known.some((k) => Math.abs(k - x) <= Math.max(1, k * 0.02))) continue;
+      out.push(`${x.toLocaleString('en-GB')} is not a number the dossier gives`); break;
+    }
     return out;
   },
   mock: (ctx) => valueOf(ctx),

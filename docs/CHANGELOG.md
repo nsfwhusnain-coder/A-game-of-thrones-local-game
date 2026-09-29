@@ -3,6 +3,18 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-29 — Handoff at E5: the plan for what comes next, and two old bugs closed
+
+- **The turn no longer ends "until a host reaches" a place it is not going to** (B-25): a host that is besieging,
+  camped or chasing another party waits for no arrival at an order it has left.
+- **Your council quotes only the engine's numbers** (B-15): a counsellor who names a figure the house's books and
+  musters do not give is sent back to answer again (or falls back to the plain report).
+- **New plans** from the owner's review: Pax-style headlines ([GDD 18](gdd/18-headlines.md)), a decluttered interface
+  ([17](gdd/17-ui-declutter.md)) and the State of the Realm ledger ([19](gdd/19-realm-ledger.md)); the roadmap puts
+  them first. `docs/HANDOFF.md` and `docs/NEXT-AGENT-PROMPT.md` hand the work on.
+- Owner to verify: hold a council during a muster and ask "How stand the banners?": the numbers should match the
+  host cards.
+
 ## 2026-09-28 — E5: every party has its token, and hosts on one spot stack
 
 - **Each kind of party looks like itself**: a host's plate gives its count and, from the middle zoom in, who leads it
