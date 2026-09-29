@@ -103,6 +103,15 @@ Put unfinished rebuilds behind `config.json` switches, so the default branch sta
 
 The detail follows.
 
+**Your first hour, before any code:**
+1. Read the files in §1.
+2. Look at every image in `docs/mockups/png/` and the latest in `docs/screens/e5/`.
+3. Dispatch an Explorer subagent to map the files that N1–N6, U1–U3 and R1–R3 touch.
+4. Dispatch a Player's-eye reviewer to play Stark for six turns on the mock (`WC_PROVIDER=mock`) and bring back the chronicle as a player reads it. That is the "before" you are fixing.
+5. Only then plan the first waves.
+
+When you call the Agent tool, set `model: "sonnet"` for every builder, test-writer and reviewer. Keep your own turns for judgement.
+
 You lead; **Sonnet 5.5 subagents do the building.** This is a long task: keep your own context for planning, reviewing and merging, and delegate the reading and writing of code.
 
 - **Delegation:**
