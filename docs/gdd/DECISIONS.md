@@ -975,3 +975,23 @@ ransoms, `embargo`) and the price index of §6.3.
   (it was red): the map shows what the player would know of others' orders, which is nothing.
 - **This week's word carries no age** on a reported plate ("~6,000?"); older word says how old ("· 7 days old").
 
+## D-067 · 2026-09-29 · Refused and unsure orders (WP SB)
+
+- **`call_banners` holds to a land rule, as `raise_levies` does** (B-34). The muster point must be the house's own land,
+  a sworn lord's, an active ally's, or a point that is no holding; anywhere else the verb is refused whole
+  ("Winterfell is not your land: the banners cannot muster there"). It is a little wider than `raise_levies`, which
+  takes only the house's own land and its sworn lords': a host may gather among allies, but a lord's own levies are
+  raised only where he rules.
+- **An order that names another house's person is not bound to your biggest host** (B-35). "Robb is to march the
+  Northern Host…" as a Lannister is read as `send_person` for Robb, which the verb refuses ("No one of yours by that
+  name"); a sworn lord who leads a host that answers to the house is still the house's to move. A "the <Adj> host" that
+  is none of the lord's (nor a generic word such as "whole" or "royal") is `march_host` with no host: "no host in the
+  field".
+- **A guessed host marks the reading unsure** (`complete = false`): when nothing in the words said which host, the
+  house's biggest is a best guess, and a model may be asked (with its schema, mock and fallback) rather than the rule
+  moving an army on a hunch.
+
+**Why.** A receipt must never say ✗ while half the order runs (B-34), and a lord must not move the wrong army (B-35).
+
+**Cost.** The pre-parser's sure readings on the order suite go 266 → 263 (three orders now ask); the exact reading on
+the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
