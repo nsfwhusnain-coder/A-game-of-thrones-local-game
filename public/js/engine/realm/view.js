@@ -7,8 +7,7 @@
 // Pure: it reads the state and changes nothing, draws no dice, calls no model. Rows and columns are put in a fixed
 // order (rank, then house id), so the same state always gives the same bytes.
 import { seriesOf } from './stats.js';
-import { estimateOf, realmContext, knownTo } from './estimate.js';
-import { knows } from '../knowledge.js';
+import { estimateOf, realmContext, knownTo, readSworn, learnWars } from './estimate.js';
 import { dayNumber, dateOfDay, dateStr } from '../time.js';
 
 /** The columns of each lens (§4.1): the Strength lens leads with Power; every lens's rows are ranked by Power. */
@@ -87,16 +86,22 @@ function pooled(parts, own) {
 }
 
 // ── the trend of one row ────────────────────────────────────────────────────────────────────────────────────────────────
+/**
+ * `[[day, value]]` of one figure of one row. The viewer's own house is the truth series; a sworn house's is read the way
+ * its cell is (estimate.js `readSworn`, the same steady blur, so the last point is the cell and the trend is true, and an
+ * ally's coin is offset like its band); any other house only from what was observed of it, gaps left as gaps.
+ */
 function seriesFor(state, viewer, est, field, since) {
   const id = est.house;
+  const read = (f, s) => (est.kind === 'sworn' ? s.map(([d, v]) => [d, readSworn(state, viewer, id, f, v, est.ally)]) : s);
   let s;
   if (est.kind === 'other') {
     const f = field === 'net' ? 'income' : field;
     s = (state.knowledge?.[viewer]?.realm?.[id]?.obs || []).filter((o) => o.v[f] != null).map((o) => [o.day, o.v[f]]);
   } else if (field === 'net') {
-    const inc = seriesOf(state, id, 'income'), exp = seriesOf(state, id, 'expenses');
+    const inc = read('income', seriesOf(state, id, 'income')), exp = read('expenses', seriesOf(state, id, 'expenses'));
     s = inc.map(([d, v], i) => [d, v - (exp[i]?.[1] ?? 0)]);
-  } else s = seriesOf(state, id, field);
+  } else s = read(field, seriesOf(state, id, field));
   return s.filter(([d]) => d >= since);
 }
 function trendOf(state, viewer, est, lens, since) {
@@ -108,16 +113,15 @@ function trendOf(state, viewer, est, lens, since) {
   return { field, ...said, why: [], series };
 }
 
-// ── wars, as far as the viewer knows them (the momentum and the score come with WP R6) ────────────────────────────────────
+// ── wars, as the viewer has heard of them (the momentum and the score come with WP R6) ─────────────────────────────────────
+/** From the viewer's own notes of the wars and the war facts it has just heard (estimate.js `learnWars`) — never from the live list. */
 function warsKnown(state, viewer, ctx) {
-  const told = new Set();
-  for (const f of state.facts || []) if ((f.kind === 'war_declared' || f.kind === 'war_joined') && f.data?.war && knows(state, viewer, f)) told.add(f.data.war);
+  const notes = learnWars(state, viewer, state.knowledge?.[viewer]?.wars ?? null);
   const out = [];
-  for (const w of state.wars || []) {
-    if (w.status === 'ended') continue;
-    const A = w.attackers.filter((h) => knownTo(state, viewer, h, ctx)), D = w.defenders.filter((h) => knownTo(state, viewer, h, ctx));
-    const mine = w.attackers.some((h) => ctx.friends.has(h)) ? 'A' : w.defenders.some((h) => ctx.friends.has(h)) ? 'D' : null;
-    if (mine || told.has(w.id)) out.push({ id: w.id, name: w.name, sides: { A, D }, you: mine });
+  for (const [id, n] of Object.entries(notes)) {
+    if (n.over) continue;
+    const A = n.A.filter((h) => knownTo(state, viewer, h, ctx)), D = n.D.filter((h) => knownTo(state, viewer, h, ctx));
+    out.push({ id, name: n.name, sides: { A, D }, you: A.some((h) => ctx.friends.has(h)) ? 'A' : D.some((h) => ctx.friends.has(h)) ? 'D' : null });
   }
   return out.sort((a, b) => (a.id < b.id ? -1 : 1));
 }

@@ -12,7 +12,7 @@
 //
 // No dice, ever: every blur is `hash32(save seed, viewer, subject, field, turn)`, a pure function, so the same house
 // looks the same however often it is asked, after a reload or a replay — and the truth cannot be had by asking twice.
-import { knowledgeOf, friendsOf, eyesOf, seesParty } from '../knowledge.js';
+import { knowledgeOf, friendsOf, eyesOf, seesParty, knows } from '../knowledge.js';
 import { forces } from '../parties.js';
 import { dayNumber } from '../time.js';
 import { hash32 } from '../rng.js';
@@ -42,7 +42,7 @@ const SWORN_BLUR = 0.045;
 const PEOPLE_BLUR = { seen: 0.04, reported: 0.06, rumour: 0.08 };
 /** The reach of a band round a figure, by the way it was learned: the wider, the less the viewer can tell. */
 const POWER_BAND = { seen: [0.8, 1.6], reported: [0.8, 1.6], learned: [0.85, 1.35], rumour: [0.8, 1.4] }; // as factors: a house's hidden coin and men at home mostly lie above what is seen
-const INCOME_BAND = 0.3, ALLY_GOLD_BAND = 0.25;
+const INCOME_BAND = 0.3, ALLY_GOLD_BAND = 0.25, ALLY_OFFSET = 0.15; // the offset keeps the truth inside the band (0.87–1.18 of its middle)
 
 /** How often the viewer hears of a house in a turn, by its rank: the great almost always, a far minor house seldom (knowledge.js newsChance). */
 const NEWS = { crown: 0.97, paramount: 0.9, major: 0.6, city_state: 0.55, order: 0.5, company: 0.4, tribe: 0.4, exile: 0.3, minor: 0.25 };
@@ -162,11 +162,58 @@ export function observe(state, viewer = state.meta.player) {
     }
     if (lesson) note(R, id, { day: today, turn: t, via: 'learned', v: { ...lesson } });
   }
+  k.wars = learnWars(state, viewer, k.wars);
+}
+
+// ── wars, as the house has heard of them ─────────────────────────────────────────────────────────────────────────────────
+const WAR_FACTS = new Set(['war_declared', 'war_joined', 'peace_made']);
+/**
+ * What `viewer` knows of the realm's wars: `{ [warId]: { name, A, D, turn, day, fs, over? } }`, from the wars as they stood
+ * when it first looked (what every lord knows at the start) and every war fact it has heard since — a declaration, a house
+ * joining, a peace. A war is never read from the live list after that, so a house that joined in secret, a peace made in
+ * secret or a war renamed does not show until word of it comes. Pure: `notes` is returned as a changed copy, and `observe`
+ * keeps it. A fact's own words (`data.name`, `data.attackers`, `data.defenders`, `data.side`) are preferred to the war's
+ * state now; the war is looked at only to fill what the fact does not say, at the moment the fact is first heard.
+ */
+export function learnWars(state, viewer, notes) {
+  const t = state.meta.turn, today = dayNumber(state.meta.date);
+  const out = notes ? structuredClone(notes) : {};
+  if (!notes) for (const w of state.wars || []) if (w.status !== 'ended') out[w.id] = { name: w.name, A: [...w.attackers], D: [...w.defenders], turn: t, day: today, fs: [] };
+  let E = null;
+  for (const f of state.facts || []) {
+    const id = f.data?.war;
+    if (!WAR_FACTS.has(f.kind) || !id || out[id]?.fs.includes(f.id)) continue;
+    if (!knows(state, viewer, f, today, (E ||= eyesOf(state, viewer)))) continue;
+    const live = (state.wars || []).find((w) => w.id === id);
+    const n = out[id] ||= { name: f.data.name ?? live?.name ?? 'a war', A: [], D: [], turn: t, day: today, fs: [] };
+    if (f.kind === 'peace_made') n.over = { turn: t, day: today };
+    else {
+      const joined = f.kind === 'war_declared' ? f.houses : f.data.side !== undefined ? f.houses.slice(0, 1) : f.data.houses || f.houses;
+      for (const h of joined) {
+        const side = f.data.attackers?.includes(h) ? 'A' : f.data.defenders?.includes(h) ? 'D' : f.data.side !== undefined ? (f.data.side === 'defender' ? 'D' : 'A') : live?.attackers.includes(h) ? 'A' : live?.defenders.includes(h) ? 'D' : null;
+        if (side && !n[side].includes(h)) n[side].push(h);
+      }
+    }
+    n.fs = [...n.fs, f.id].slice(-12);
+  }
+  for (const [id, n] of Object.entries(out)) if (n.over && t - n.over.turn > 6) delete out[id]; // a peace is remembered a few turns, then the war is history
+  return out;
 }
 
 // ── estimateOf: one house as the viewer may show it ──────────────────────────────────────────────────────────────────
 const exact = (v) => ({ v, mark: '', via: 'self', age: 0 });
-const blurred = (state, viewer, subject, field, v, turn) => (v === 0 ? 0 : sig(v * (1 + noise(state, viewer, subject, field, turn, SWORN_BLUR)), 3));
+/**
+ * A sworn house's figure as its liege reads it, for a cell and for every point of a series alike: one steady misjudgement
+ * per house and figure (±4.5 %, to three figures) — so its trend is true, its exact level is not, and asking again next
+ * turn cannot average the blur away. An ally's coin is only a band whose middle is put off the truth by a like steady
+ * amount, so the band does not give the treasury away by where its centre lies.
+ */
+export function readSworn(state, viewer, subject, field, v, ally = false) {
+  if (v === 0) return 0;
+  if (ally && field === 'gold') return sig(v * (1 + noise(state, viewer, subject, 'gold-centre', 'steady', ALLY_OFFSET)), 3);
+  const x = sig(v * (1 + noise(state, viewer, subject, field, 'steady', SWORN_BLUR)), 3);
+  return field === 'power' ? clamp(x, 0, 100) : x;
+}
 /** A figure as a band: `reach` is a share either side, or [low factor, high factor]; `v` is the middle the viewer ranks by. */
 const band = (v, reach, via, age, max = Infinity) => {
   const [lo, hi] = Array.isArray(reach) ? reach : [1 - reach, 1 + reach];
@@ -191,10 +238,10 @@ export function estimateOf(state, viewer, subject, ctx = realmContext(state, vie
     const f = ctx.figuresOf(subject); const ally = h.liege !== viewer;
     for (const k of FIELDS) {
       cells[k] = k === 'holdings' ? { v: f[k], mark: '~', via: 'sworn', age: 0 }
-        : k === 'gold' && ally ? band(blurred(state, viewer, subject, k, f[k], turn), ALLY_GOLD_BAND, 'sworn', 0)
-        : { v: k === 'power' ? clamp(blurred(state, viewer, subject, k, f[k], turn), 0, 100) : blurred(state, viewer, subject, k, f[k], turn), mark: '~', via: 'sworn', age: 0 };
+        : k === 'gold' && ally ? band(readSworn(state, viewer, subject, k, f[k], true), ALLY_GOLD_BAND, 'sworn', 0)
+        : { v: readSworn(state, viewer, subject, k, f[k]), mark: '~', via: 'sworn', age: 0 };
     }
-    return { house: subject, kind: 'sworn', cells };
+    return { house: subject, kind: 'sworn', ally, cells };
   }
   const obs = state.knowledge?.[viewer]?.realm?.[subject]?.obs || [];
   let prior = null; const rumour = () => (prior ||= faceOf(state, viewer, subject, ctx, { turn: 0, via: 'rumour' }));

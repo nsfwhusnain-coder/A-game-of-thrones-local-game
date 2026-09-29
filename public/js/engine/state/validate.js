@@ -19,6 +19,8 @@ import { landmassOf } from '../geo.js';
 import { capacityOf } from '../military/supply.js';
 import { CANON_DEATHS, CANON_PROTECTED } from '../../../data/fates.js';
 import { dateOfDay, dayNumber } from '../time.js';
+import { FIELDS } from '../realm/figures.js';
+import { KEEP_MAX } from '../realm/stats.js';
 
 const finite = (p) => Array.isArray(p) && p.length === 2 && p.every((x) => typeof x === 'number' && isFinite(x));
 const isPlace = (state, id) => !!(state.holdings?.[id] || JUNCTIONS[id]);
@@ -116,14 +118,20 @@ export const INVARIANTS = {
     const out = [];
     const R = state.realmStats;
     if (R) {
-      const width = (R.fields || []).length; let prev = -Infinity;
-      if (!width) out.push('12: the realm series names no fields');
+      // the series is whole: the fields it was written under are the ones the engine reads it by (said once, not for every row),
+      // each row is that wide and all whole numbers, days go strictly forward, no sample is from a turn not yet played, and
+      // there are never more than the thinning keeps
+      const fieldsOk = JSON.stringify(R.fields) === JSON.stringify(FIELDS); let prev = -Infinity;
+      if (!fieldsOk) out.push(`12: the realm series is written under fields (${JSON.stringify(R.fields)}) that are not the engine's`);
+      if ((R.samples || []).length > KEEP_MAX) out.push(`12: the realm series keeps ${R.samples.length} samples, more than ${KEEP_MAX}`);
       for (const s of R.samples || []) {
         if (!(s.day > prev)) out.push(`12: the realm sample of turn ${s.turn} is on day ${s.day}, not after day ${prev}`);
         prev = s.day;
+        if (!(s.turn <= state.meta.turn)) out.push(`12: the realm sample of day ${s.day} is of turn ${s.turn}, which is not yet played (turn ${state.meta.turn})`);
+        if (!fieldsOk) continue;
         for (const [house, row] of Object.entries(s.h || {})) {
-          if (!Array.isArray(row) || row.length !== width) out.push(`12: ${house}'s realm row of day ${s.day} is ${row?.length ?? 'no'} wide, not ${width}`);
-          else if (!row.every((x) => Number.isFinite(x))) out.push(`12: ${house}'s realm row of day ${s.day} has a figure that is no number`);
+          if (!Array.isArray(row) || row.length !== FIELDS.length) out.push(`12: ${house}'s realm row of day ${s.day} is ${row?.length ?? 'no'} wide, not ${FIELDS.length}`);
+          else if (!row.every((x) => Number.isInteger(x))) out.push(`12: ${house}'s realm row of day ${s.day} has a figure that is no whole number`);
         }
       }
     }

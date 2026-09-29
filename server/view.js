@@ -49,6 +49,9 @@ export function playerView(state) {
     const { ledger, ...rest } = h;
     houses[h.id] = { ...rest, figures: Object.fromEntries(Object.entries(h.figures || {}).map(([key, f]) => [key, f && typeof f === 'object' && 'v' in f ? { ...f, v: about(f.v) } : f])) };
   }
+  // what the house has noted of the other houses' strength is asked of the server (GET /realm), never read from the state:
+  // the browser has no use for it (`k` is a clone of the house's own knowledge, so the save is not touched)
+  delete k.realm;
   const view = {
     ...state, parties, characters, houses,
     // our own knowledge only; the other houses' are theirs

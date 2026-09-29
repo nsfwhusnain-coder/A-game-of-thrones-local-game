@@ -11,7 +11,9 @@ import { dayNumber } from '../time.js';
 /** A week is the least between two samples: a shorter turn takes the place of the last one, so a stop-and-go jump adds none. */
 export const WEEK = 7;
 /** The newest samples are kept whole; older ones one to a four-week bucket; never more than 48 in all (about four years of moons). */
-export const KEEP_NEW = 16, KEEP_MAX = 48, BUCKET = 28;
+export const KEEP_NEW = 16;
+export const KEEP_MAX = 48;
+export const BUCKET = 28;
 
 const LISTED = new Set(['crown', 'paramount', 'major', 'order', 'tribe', 'city_state', 'company', 'exile']);
 
