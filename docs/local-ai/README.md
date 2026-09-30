@@ -10,6 +10,7 @@
 | [`MAESTER-12B.md`](MAESTER-12B.md) | **For the game's builder:** the model's capabilities per call kind, its weaknesses, design rules, budgets. |
 | [`RESULTS.md`](RESULTS.md) | Every number: headline, all runs (auto-generated table), speed and memory, per-order misses, what did not work, earlier baselines. [`results/`](results/) has the machine-readable runs. |
 | [`MODEL-WISHLIST.md`](MODEL-WISHLIST.md) | **Add a row whenever a model-driven call behaves badly** — the next fine-tune is built from this list. |
+| [`samples/`](samples/) | A real 8-turn scripted playtest of the game on Maester-12B (orders, audience, council, minds, narrator) — read it to see what the model actually writes. |
 | [`RECOMMENDATIONS.md`](RECOMMENDATIONS.md) | R1–R11: concrete changes for the game (file, evidence). [`patches/`](patches/) has ready patches for R2, R7, R8. |
 | [`TRAINING.md`](TRAINING.md) | How Maester-12B was made (data, recipe, cost) and how to redo it. Code: [`../../finetune/westeros/`](../../finetune/westeros/README.md). |
 | [`OWNER-CHECKLIST.md`](OWNER-CHECKLIST.md), [`deploy/`](deploy/) | Putting it into play: llama-swap entries, the game's routing block, the adapter's identity. Nothing has been applied. |

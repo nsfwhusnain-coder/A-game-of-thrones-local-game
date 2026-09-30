@@ -26,5 +26,5 @@ on the RTX 5070 with the game's own suites (fair yardstick: only orders no train
 
 - Interpret and narrate gates are missed; the fine-tune is a modest gain, not a step change. A single adapter's score is partly luck; validation used replicates and an average.
 - The adapter is trained on the prompts of game commit `255b302` (narrator rewrite still in progress → narrate on the untuned alias). Large prompt changes reduce its benefit — log them.
-- Untested call kinds (`letter`, `advisor`, `counsel`, `polish`, `probe`) run the untuned alias. No 12-turn playtest was run against the game (the suites were). llama-swap was tested on my own instance (port 8096), the owner's live config was not touched.
+- Untested call kinds (`letter`, `advisor`, `counsel`, `polish`, `probe`) run the untuned alias. The game was played for 8 scripted turns through the served aliases without errors (18–31 s a turn; `samples/`), but no long playtest (12+ turns, several houses) was run. llama-swap was tested on my own instance (port 8096), the owner's live config was not touched.
 - The owner's llama.cpp build (5266f24) was not tested with the 12B or the adapter; b11242 is required.
