@@ -130,6 +130,8 @@ export function storyWorld(state, story) {
     for (const s of sentencesOf(`${f.title || ''}. ${f.text || ''}`)) for (const n of namesIn(state, s)) (n.kind === 'person' ? people : n.kind === 'place' ? places : parties).add(n.id);
   }
   for (const id of parties) { const p = state.parties[id]; if (!p) continue; for (const m of p.members || []) people.add(m); if (p.commander) people.add(p.commander); for (const x of [p.at, p.march?.to, p.route?.to]) if (state.holdings[x]) places.add(x); }
+  // a host is named after the place it was raised at ("the host of Winterfell", "the Blacktyde host"): naming it names that place
+  for (const id of parties) { const p = state.parties[id]; if (!p?.name) continue; for (const h of Object.values(state.holdings || {})) if (h.name.length > 3 && p.name.includes(h.name)) places.add(h.id); }
   const roads = [...parties].map((id) => state.parties[id]?.route?.path).filter(Boolean);
   const houses = new Set([...(story.houses || []), ...[...people].map((id) => state.characters[id]?.house)].filter(Boolean));
   // who arrives where: the actors and parties of the arrival facts at their places, and whoever their own words have
@@ -156,11 +158,12 @@ const posOf = (state, c) => { const p = partyOf(state, c); return p?.pos || stat
 
 /**
  * Check one narrated event against its story. Returns problems: [{ rule, text }] (empty when the event is true).
- * `ev`: { headline, line, scene, pov }; `story`: a story of engine/facts/cluster.js.
+ * `ev`: { headline, summary, scene, pov }; `story`: a story of engine/facts/cluster.js.
  */
 export function checkEvent(state, ev, story, W = storyWorld(state, story)) {
   const out = []; const say = (rule, text) => { if (!out.some((p) => p.rule === rule && p.text === text)) out.push({ rule, text }); };
-  const text = [ev.headline, ev.line, ev.scene].filter(Boolean).join('\n');
+  const summary = ev.summary ?? ev.line; // (`line` is the old name of the summary: recorded replies still say it)
+  const text = [ev.headline, summary, ev.scene].filter(Boolean).join('\n');
   if ([text, ev.pov].some(hasForeignScript)) say('script', 'a word in a script that is not the realm\'s');
   for (const re of GAME_WORDS) { const m = text.match(re); if (m) say('game words', `"${m[0]}" is not a word of the realm`); }
   if (MATURE.test(text)) say('maturity', 'explicit description');
@@ -171,7 +174,7 @@ export function checkEvent(state, ev, story, W = storyWorld(state, story)) {
     if (!W.numbers.some((x) => Math.abs(x - n) <= Math.max(1, x * 0.02))) say('numbers', `${n.toLocaleString('en-GB')} is not a number of this story`);
   }
   // the headline is a sentence of its own (it has no full stop to end it)
-  for (const sentence of [ev.headline, ...sentencesOf(ev.line), ...sentencesOf(ev.scene)].filter(Boolean)) {
+  for (const sentence of [ev.headline, ...sentencesOf(summary), ...sentencesOf(ev.scene)].filter(Boolean)) {
     const ws = words(sentence); const found = namesIn(state, sentence);
     const absent = ABSENT.test(sentence); const memory = MEMORY.test(sentence);
     const named = found.filter((m) => m.kind === 'place').map((m) => m.id);

@@ -1,6 +1,6 @@
 // Right drawer: chronicle feed, letters, audiences (one-on-one or council).
 import { eventArt } from './event-art.js';
-import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal } from './common.js';
+import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal, foldText } from './common.js';
 import { dateStr } from '../shared/world.js';
 import { orderOutcome, STATUS_LABEL } from '../shared/errands.js';
 import { icon } from './icons.js';
@@ -23,7 +23,7 @@ export function renderDrawer() {
 }
 
 export function eventHtml(e, compact = false) {
-  return `<div class="event imp-${e.importance}${compact ? ' compact' : ''}" ${e.where ? `data-where="${e.where}"` : ''}>${!compact || e.importance >= 4 ? eventArt(e) : ''}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<details class="ev-more"><summary>More</summary><div>${esc(e.details)}</div></details>` : ''}<div class="meta">${e.date ? `${esc(e.date.replace(/, \d+ AC$/, ''))} · ` : e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
+  return `<div class="event imp-${e.importance}${compact ? ' compact' : ''}" ${e.where ? `data-where="${e.where}"` : ''}>${!compact || e.importance >= 4 ? eventArt(e) : ''}<div class="et">${esc(e.headline || e.title)}</div><div class="eb">${esc(e.summary ?? e.text)}</div>${foldText(e) ? `<details class="ev-more"><summary>More</summary><div>${esc(foldText(e))}</div></details>` : ''}<div class="meta">${e.date ? `${esc(e.date.replace(/, \d+ AC$/, ''))} · ` : e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
 }
 // The small life of the realm, told briefly beneath the turn's great events, grouped by where it happened
 const REGION_ORDER = ['north', 'wall', 'beyond', 'iron_islands', 'riverlands', 'vale', 'westerlands', 'crownlands', 'reach', 'stormlands', 'dorne', 'essos'];
@@ -82,7 +82,7 @@ function openNews(turn, idx) {
   const s = app.state; const t = s.history.find((x) => x.turn === turn); const e = t?.events?.[idx]; if (!e) return;
   if (e.where && s.holdings[e.where]) { app.map?.flyTo(s.holdings[e.where].pos, 420); app.map?.flash(s.holdings[e.where].pos); }
   modal(`<div class="pin-head"><span class="pin-place">${esc(e.where ? placeName(s, e.where) : '')}</span><span class="pin-count">${esc(t.date)}</span></div>
-    <div class="pin-body event imp-${e.importance}">${eventArt(e)}<div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>${e.details ? `<div class="pin-details">${esc(e.details)}</div>` : ''}${recordHtml(e)}</div>
+    <div class="pin-body event imp-${e.importance}">${eventArt(e)}<div class="et">${esc(e.headline || e.title)}</div><div class="eb">${esc(e.summary ?? e.text)}</div>${foldText(e) ? `<div class="pin-details">${esc(foldText(e))}</div>` : ''}${recordHtml(e)}</div>
     <div class="report-actions"><button class="btn primary" data-action="close-modal">Close</button></div>`);
 }
 function openMeanwhile(turn) {
@@ -105,10 +105,10 @@ function storyHtml(s, t, e) {
   const ordered = e.orderId && (t.orders || []).find((o) => o.id === e.orderId);
   const hidden = app.reveal && app.reveal.turn === t.turn && !app.reveal.shown.has((t.events || []).indexOf(e));
   return `<div class="story imp-${e.importance}${mine ? ' mine' : ''}${hidden ? ' unrevealed' : ''}" data-news="${t.turn}:${(t.events || []).indexOf(e)}">
-    <div class="story-h">${NEWS_ICON[e.type] ? icon(NEWS_ICON[e.type], 'sh-ico') : ''}${esc(e.title)}</div>
+    <div class="story-h">${NEWS_ICON[e.type] ? icon(NEWS_ICON[e.type], 'sh-ico') : ''}${esc(e.headline || e.title)}</div>
     <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">${icon('pin', 'tg-ico')}${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
     ${ordered ? `<div class="story-order">${esc(s.characters[s.houses[s.meta.player].lord]?.name || 'The lord')} commanded: “${esc(ordered.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim())}”</div>` : ''}
-    <div class="story-x">${esc(e.text)}</div>${e.details ? `<div class="story-d">${esc(e.details)}</div>` : ''}${recordHtml(e)}${heardHtml(e, date)}</div>`;
+    <div class="story-x">${esc(e.summary ?? e.text)}</div>${foldText(e) ? `<div class="story-d">${esc(foldText(e))}</div>` : ''}${recordHtml(e)}${heardHtml(e, date)}</div>`;
 }
 // news that came late: the day it happened, and how word of it came (09 §7.1)
 const CAME = { raven: 'the raven came', rumour: 'word came', letter: 'the letter came', rider: 'the rider came' };

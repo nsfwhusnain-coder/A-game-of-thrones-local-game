@@ -5,6 +5,7 @@
 import { knowledgeOf, eyesOf, seesParty, knows } from '../public/js/engine/knowledge.js';
 import { forces, idOf } from '../public/js/engine/parties.js';
 import { moodWord } from '../public/js/shared/temperament.js';
+import { shapeCard, digestOf } from '../public/js/engine/facts/digest.js';
 
 // what a seen host shows of itself: its banners, its numbers, who leads it — not where it is going
 const SEEN = ['id', 'kind', 'owner', 'serving', 'name', 'commander', 'at', 'men', 'pos', 'members', 'state', 'composition', 'ships', 'public', 'exile', 'contingents'];
@@ -74,13 +75,20 @@ export function playerView(state) {
   // the realm ledger's truth series holds every house's true coin, levies and income: the browser never has it — the State
   // of the Realm is asked of the server, which builds it from what the house knows (GET /realm, engine/realm/view.js)
   delete view.realmStats;
+  // which firsts the chronicle has had is the ranking's memory (engine/facts/rank.js), not the player's to read
+  delete view.firsts;
   return view;
 }
 
-/** A turn record as the player may read it: the chronicle, not the engine's workings. */
+/**
+ * A turn record as the player may read it: the chronicle, not the engine's workings. A record made before the headlines (N6) is
+ * read in the new shape: each card gets its headline, summary, details[] and tier from its old title, text and details, and the turn
+ * a digest from them (the words stay the old ones; a save is never rewritten for it).
+ */
 export function viewTurn(t) {
   if (!t || typeof t !== 'object') return t;
   const { minds, hooks, applied, rejected, invariants, realm, ...rest } = t; // `realm` is the turn's row of every house's true figures
+  if (Array.isArray(rest.events)) { rest.events = rest.events.map(shapeCard); if (!rest.digest) rest.digest = digestOf(rest.events, rest.meanwhile || ''); }
   return rest;
 }
 
@@ -113,6 +121,7 @@ export function hiddenTruths(state, view) {
   for (const h of Object.keys(view.knowledge || {})) if (h !== me) out.push(`10: House ${h}'s knowledge is sent`);
   for (const t of view.history || []) if (t.minds || t.hooks) out.push(`10: turn ${t.turn}'s minds or hooks are sent`);
   if (view.realmStats) out.push('10: the realm ledger\'s true series is sent');
+  if (view.firsts) out.push('10: the chronicle\'s firsts are sent');
   for (const t of view.history || []) if (t.realm) out.push(`10: turn ${t.turn}'s true realm figures are sent`);
   return out;
 }

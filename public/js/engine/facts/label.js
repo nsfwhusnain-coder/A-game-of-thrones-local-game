@@ -39,7 +39,9 @@ export function houseLabel(state, houseId) {
   if (isHouse(h)) { const { base } = partsOf(h); return base ? `House ${base}` : 'a house'; }
   const name = String(h.name || '').trim();
   if (!name) return titled(houseId) || 'a house';
-  // a free city is its own name ("Braavos"); an order, a tribe or a company is "the …", whatever the data called it
+  // a free city is its own name ("Braavos"); an order, a tribe or a company is "the …", whatever the data called it; and a ledger's
+  // "Khalasar of Drogo" is "the Dothraki" (the people's own word, from its id), never a name with a person's in it
+  if (h.rank !== 'city_state' && / of /.test(name) && titled(houseId)) return `the ${titled(houseId)}`;
   if (h.rank === 'city_state') return /^the\s+/i.test(name) ? `the ${noThe(name)}` : name;
   return `the ${noThe(name)}`;
 }

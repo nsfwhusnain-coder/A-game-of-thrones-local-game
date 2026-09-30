@@ -74,6 +74,13 @@ export function foldInto(state, host, other) {
 }
 
 /** Call up a house's own levies at one of its holdings (or a sworn lord's) — into the host already standing there. */
+/** Against whom a call to arms is made, when a war is open and not gone cold: the foe's house, for the fact to carry (the headline's writer says it; it never reads the war list). */
+function againstOf(state, house) {
+  const war = (state.wars || []).find((w) => w.status !== 'ended' && !w.cold && [...(w.attackers || []), ...(w.defenders || [])].includes(house));
+  if (!war) return {};
+  const foe = (((war.attackers || []).includes(house) ? war.defenders : war.attackers) || []).find((h) => state.houses?.[h]);
+  return foe ? { against: foe } : {};
+}
 export function raiseLevies(state, { house = state.meta.player, at, men, commander, name, to, immediate, cause }) {
   const me = state.houses[house];
   const place = resolvePlaceId(at) || me.seat; const hold = state.holdings[place];
@@ -102,7 +109,7 @@ export function raiseLevies(state, { house = state.meta.player, at, men, command
   }
   for (const v of Object.values(state.houses)) if (v.liege === house && v.obligations?.muster === place && ['called', 'delayed', 'answered'].includes(v.obligations.levies) && !(v.obligations.join && state.parties[v.obligations.join])) v.obligations.join = host.id;
   if (n < Math.round(Number(men) || 0)) out.push(`only ${fmtN(n)} could be found of the ${fmtN(Math.round(Number(men)))} asked for`);
-  emit(state, 'levies_called', { actors: [me.lord, host.commander], houses: [house], place, pos: hold.pos, data: { party: host.id, men: n, now: first }, cause, text: `House ${me.name} calls up ${fmtN(n)} levies at ${hold.name}${n > first ? `; ${fmtN(n - first)} of them are still coming in from the fields` : ''}.` });
+  emit(state, 'levies_called', { actors: [me.lord, host.commander], houses: [house], place, pos: hold.pos, data: { party: host.id, men: n, now: first, ...againstOf(state, house) }, cause, text: `House ${me.name} calls up ${fmtN(n)} levies at ${hold.name}${n > first ? `; ${fmtN(n - first)} of them are still coming in from the fields` : ''}.` });
   const dest = to && destination(state, to);
   if (dest && dest !== place) { host.march = { to: dest, since: state.meta.turn }; settle(state, host); out.push(`${host.name} marches for ${placeName(state, dest)}`); emit(state, 'set_out', { actors: [host.commander], houses: [house], pos: host.pos, data: { party: host.id, to: dest }, cause }); }
   return { lines: out, host: host.id, men: n, first };

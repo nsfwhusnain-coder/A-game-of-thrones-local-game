@@ -220,7 +220,8 @@ const numberOk = (V, n) => n <= 12 || V.W.numbers.some((x) => Math.abs(x - n) <=
 const violent = (f) => /\b(kill|slain|slay|slew|murder|assassin|duel|stab|poison|blade|sword|arrow|cut down|hanged|behead)/i.test(`${f.data?.cause || ''} ${f.data?.how || ''} ${f.text || ''}`);
 const OUTCOMES = [
   { say: 'slain', re: /\b(slain|slays?|slew|killed|kills?|murder(?:s|ed)?|assassinat\w+)\b/, has: (f) => ['slain_in_battle', 'executed'].includes(f.kind) || (f.kind === 'death' && violent(f)) },
-  { say: 'captured', re: /\b(captured|captures?|captive|prisoner)\b/, has: (f) => ['captured_in_battle', 'captured', 'hostage_taken'].includes(f.kind) },
+  // (a prisoner or a captive is a noun, and "A prisoner escapes" claims no capture: only the deed does — "captured", "takes him prisoner", "prisoner of")
+  { say: 'captured', re: /\b(?:captured|captures?)\b|\btake[sn]?\b[^.,;]{0,40}\b(?:captive|prisoner)\b|\bprisoner of\b/, has: (f) => ['captured_in_battle', 'captured', 'hostage_taken'].includes(f.kind) },
   { say: 'won', re: /\b(wins?|won|victorious|triumphs?|beats?|beaten|defeats?|defeated|routs?|routed|crushes|crushed)\b/, has: (f, h) => (/\b(tourney|tournament|lists|joust|melee)\b/.test(h) ? f.kind === 'tourney_result' : (f.kind === 'battle' && !!(f.data?.winner || f.data?.winnerHouse)) || ['rout', 'sea_battle', 'sally', 'ambush', 'storm_assault'].includes(f.kind)) },
   { say: 'fallen', re: 'fall', has: (f) => f.kind === 'holding_fell' || (f.kind === 'storm_assault' && f.data?.carried !== false) },
   { say: 'crowned', re: /\b(crowned|crowns|crowning|enthroned)\b/, has: (f) => f.kind === 'crowned' },
@@ -238,6 +239,7 @@ function fallClaimed(state, headline) {
 }
 // "Jaime Lannister storms Riverrun", "Harrenhal taken by Tywin Lannister": a holding won by force, or by the will of the crown
 // ("Lord Karstark's son takes Karhold" is an inheritance). null when the headline claims no holding, else the kinds of fact that say it.
+const HOST_WORDS = new Set('host army men fleet banner banners levies riders company knights ships'.split(' '));
 const TAKES = new Set('takes take took taken seizes seize seized captures capture captured conquers conquered'.split(' '));
 const STORMS = new Set('storms stormed sacks sacked'.split(' '));
 function holdingClaim(state, headline) {
@@ -245,6 +247,8 @@ function holdingClaim(state, headline) {
   for (let v = 0; v < R.ws.length; v++) {
     const w = R.lower[v]; if (!/^[a-z]/.test(R.ws[v].w) || !(TAKES.has(w) || STORMS.has(w))) continue;
     const obj = R.after(v); const subj = R.before(v); const passive = /^(?:taken|seized|captured|conquered|stormed|sacked)$/.test(w);
+    // "takes the Blacktyde host to sea": a place before a host, an army or its men is the host's name, not a holding taken
+    if (obj?.kind === 'place' && HOST_WORDS.has(R.lower[obj.to])) continue;
     if (obj?.kind === 'place' || (passive && subj?.kind === 'place')) {
       return STORMS.has(w) ? { say: 'storming', kinds: ['holding_fell', 'storm_assault'] } : { say: 'taking a holding', kinds: ['holding_fell', 'storm_assault', 'succession', 'holding_granted', 'house_ended', 'attainder'] };
     }
@@ -482,4 +486,29 @@ export function scoreCard(card, story, state) {
 
   const faults = RULES.filter((r) => found.some((p) => p.rule === r));
   return { pass: !faults.length, faults, detail: faults.flatMap((r) => found.filter((p) => p.rule === r)) };
+}
+
+/**
+ * The Meanwhile sentence (18 §2.4 C7), as the model may rewrite it: the words of the small happenings of the week and no more.
+ * Returns problems [{ rule, text }] ([] when it is fine): at most 200 characters and a full stop at the end, no digit, no game word
+ * or ledger phrase, no script that is not the realm's, no later chapter, and no person, place or party that no small happening names.
+ */
+export function checkMeanwhile(state, text, facts = []) {
+  const t = String(text || '').trim(); const found = [];
+  const say = (rule, what) => { if (!found.some((p) => p.rule === rule && p.text === what)) found.push({ rule, text: what }); };
+  if (t.length > 200) say('len', `the Meanwhile is ${t.length} characters (at most 200)`);
+  if (/…|\.\.\./.test(t) || !/\.["”’]?$/.test(t)) say('punct', 'the Meanwhile must be whole sentences ending in a full stop, never cut short');
+  if (/\d|~/.test(t)) say('numbers', 'a digit or "~": numbers are written in words');
+  for (const re of GAME_WORDS) { const m = t.match(re); if (m) say('game words', `"${m[0]}" is not a word of the realm`); }
+  for (const re of BP) { const m = t.match(re); if (m) say('boiler', `"${m[0]}" is the ledger's phrase, not the herald's`); }
+  if (hasForeignScript(t)) say('script', 'a word in a script that is not the realm\'s');
+  if (MATURE.test(t)) say('maturity', 'explicit description');
+  for (const a of anachronismsIn(state, t)) say('anachronism', `"${a.phrase}": ${a.note}`);
+  const V = viewOf(state, { facts });
+  for (const s of sentencesIn(t)) for (const e of entitiesIn(state, s)) {
+    if (e.kind === 'house' && e.bare) continue;
+    if (e.kind === 'house' ? e.ids.some((id) => id === state.meta?.player || holds(V, state, { ...e, ids: [id] })) : holds(V, state, e)) continue;
+    say('invented', `${e.text} is not in the week's small news`);
+  }
+  return found;
 }

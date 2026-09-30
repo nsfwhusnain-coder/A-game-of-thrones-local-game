@@ -956,10 +956,9 @@ export const SUM = {
   levies_called: (f, s, c) => {
     const d = f.data || {}; const to = c.dest(d.muster); const n = (d.vassals || []).length;
     if (n) return sentences(`${cap1(count(n))} sworn houses are told to bring their men${to ? ` to ${to}` : ''}`);
-    const h = (f.houses || [])[0]; const war = (s.wars || []).find((w) => w.status !== 'ended' && [...(w.attackers || []), ...(w.defenders || [])].includes(h));
-    const other = war ? ((war.attackers || []).includes(h) ? war.defenders : war.attackers) || [] : [];
-    const foe = other.find((x) => c.known.house(x));
-    const why = war ? (foe ? `It is for the war with ${c.hs(foe)}` : 'They mean war') : 'Nothing yet says against whom';
+    // against whom is the fact's own word (`data.against`, set when the call is made in an open war), never the state's: what the house has not been told it may not read
+    const foe = c.known.house(d.against) ? d.against : null;
+    const why = foe ? `It is for the war with ${c.hs(foe)}` : 'Nothing yet says against whom';
     return sentences(d.men ? `The call is for ${body(d.men)}` : 'The banners are called', why);
   },
   call_answered: (f, s, c) => {
@@ -1109,7 +1108,7 @@ export const SUM = {
     return guests.length ? sentences(`${list(guests)} sit at the table`) : sentences('It is a feast for the household, with no great guests');
   },
   tourney: (f) => { const d = f.data || {}; const n = say(d.guests); return sentences(n ? `${cap1(n)} houses are asked to send knights` : 'Knights are called to the lists'); },
-  tourney_result: (f, s, c) => { const h = (f.houses || []).find((x) => c.known.house(x)); const P = pro(c, f); return h ? sentences(`${P.He} rides for ${c.hs(h)}`) : sentences(`${P.He} is the champion of the lists`); },
+  tourney_result: (f, s, c) => { const own = s.characters?.[(f.actors || [])[0]]?.house; const h = c.known.house(own) ? own : (f.houses || []).find((x) => c.known.house(x)); const P = pro(c, f); return h ? sentences(`${P.He} rides for ${c.hs(h)}`) : sentences(`${P.He} is the champion of the lists`); },
   judgement: (f) => { const v = String(f.data?.verdict || '').trim(); return v ? sentences(`The verdict is ${v}`) : ''; },
   petition: () => '',
   tax_changed: () => '',
