@@ -1,0 +1,151 @@
+[
+ {
+  "name": "full-audience",
+  "args": [
+   "--kind",
+   "audience",
+   "--games",
+   "30",
+   "--turns",
+   "6",
+   "--n",
+   "300",
+   "--seed",
+   "52000",
+   "--k",
+   "3",
+   "--conc",
+   "8",
+   "--out",
+   "C:/wc-ai/finetune/pool/audience.jsonl"
+  ]
+ },
+ {
+  "name": "full-council",
+  "args": [
+   "--kind",
+   "council",
+   "--games",
+   "30",
+   "--turns",
+   "6",
+   "--n",
+   "300",
+   "--seed",
+   "62000",
+   "--k",
+   "3",
+   "--conc",
+   "8",
+   "--out",
+   "C:/wc-ai/finetune/pool/council.jsonl"
+  ]
+ },
+ {
+  "name": "full-director",
+  "args": [
+   "--kind",
+   "director",
+   "--games",
+   "40",
+   "--turns",
+   "8",
+   "--n",
+   "150",
+   "--seed",
+   "72000",
+   "--k",
+   "3",
+   "--conc",
+   "8",
+   "--out",
+   "C:/wc-ai/finetune/pool/director.jsonl"
+  ]
+ },
+ {
+  "name": "full-consolidate",
+  "args": [
+   "--kind",
+   "consolidate",
+   "--games",
+   "40",
+   "--turns",
+   "8",
+   "--n",
+   "120",
+   "--seed",
+   "82000",
+   "--k",
+   "3",
+   "--conc",
+   "8",
+   "--out",
+   "C:/wc-ai/finetune/pool/consolidate.jsonl"
+  ]
+ },
+ {
+  "name": "full-mind-suite",
+  "args": [
+   "--kind",
+   "mind",
+   "--gen",
+   "suite",
+   "--n",
+   "700",
+   "--seed",
+   "22000",
+   "--k",
+   "3",
+   "--conc",
+   "8",
+   "--out",
+   "C:/wc-ai/finetune/pool/mind-suite.jsonl"
+  ]
+ },
+ {
+  "name": "full-mind-natural",
+  "args": [
+   "--kind",
+   "mind",
+   "--gen",
+   "natural",
+   "--games",
+   "40",
+   "--turns",
+   "8",
+   "--perTurn",
+   "3",
+   "--n",
+   "600",
+   "--seed",
+   "32000",
+   "--k",
+   "3",
+   "--conc",
+   "8",
+   "--out",
+   "C:/wc-ai/finetune/pool/mind-natural.jsonl"
+  ]
+ },
+ {
+  "name": "full-narrate",
+  "args": [
+   "--kind",
+   "narrate",
+   "--games",
+   "60",
+   "--turns",
+   "8",
+   "--n",
+   "450",
+   "--seed",
+   "42000",
+   "--k",
+   "3",
+   "--conc",
+   "8",
+   "--out",
+   "C:/wc-ai/finetune/pool/narrate.jsonl"
+  ]
+ }
+]

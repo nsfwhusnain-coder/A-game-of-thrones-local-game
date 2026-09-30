@@ -1,0 +1,9 @@
+[
+ {"label":"Gemma 4 12B untuned (game 255b302)","i":"gemma12-latest-base","m":"gemma12-latest-base","n":"gemma12-latest-base","v":"gemma12-latest-base"},
+ {"label":"12B untuned, replicate (game e3a8a36)","i":"gemma12-64k-new"},
+ {"label":"12B untuned + MTP","i":"gemma12-latest-mtp","m":"gemma12-latest-mtp"},
+ {"label":"p2A adapter","i":"gemma12-lora-p2A","m":"gemma12-lora-p2A","n":"gemma12-lora-p2A-more","v":"gemma12-lora-p2A-more"},
+ {"label":"p2B adapter","i":"gemma12-lora-p2B","m":"gemma12-lora-p2B","n":"gemma12-lora-p2B-more","v":"gemma12-lora-p2B-more"},
+ {"label":"p2M adapter (average of A+B)","i":"gemma12-lora-p2M","m":"gemma12-lora-p2M","n":"gemma12-lora-p2M-more","v":"gemma12-lora-p2M-more"},
+ {"label":"p2M + MTP","i":"gemma12-lora-p2M-mtp","m":"gemma12-lora-p2M-mtp"}
+]

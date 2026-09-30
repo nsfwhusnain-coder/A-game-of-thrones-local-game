@@ -1,0 +1,345 @@
+[
+ {
+  "label": "Gemma 4 12B, untuned (3 runs)",
+  "note": "",
+  "fairRuns": [
+   107,
+   108,
+   108
+  ],
+  "fair125": 107.7,
+  "fairPct": 86.2,
+  "dev100": 89,
+  "holdout25": 18,
+  "interpret300": 271,
+  "clarifyPct": 6.5,
+  "mindInChar": 106,
+  "mindTotal": 123,
+  "mindPct": 86.2,
+  "mindFallbacks": 16,
+  "narrateFirstTry": 178,
+  "narrateStories": 212,
+  "narratePct": 84,
+  "narratePlain": 12,
+  "narrateFaults": {
+   "numbers": 17,
+   "game words": 2,
+   "places": 22,
+   "script": 15,
+   "arrival": 12,
+   "anachronism": 2
+  },
+  "voices": {
+   "audience": "18/20",
+   "council": "8/15",
+   "director": "17/20",
+   "consolidate": "6/6"
+  },
+  "voicesFirstTry": 49,
+  "voicesN": 61
+ },
+ {
+  "label": "untuned + MTP",
+  "note": "",
+  "fairRuns": [
+   105
+  ],
+  "fair125": 105,
+  "fairPct": 84,
+  "dev100": 88,
+  "holdout25": 17,
+  "interpret300": 271,
+  "clarifyPct": 6.5,
+  "mindInChar": 107,
+  "mindTotal": 123,
+  "mindPct": 87,
+  "mindFallbacks": 19
+ },
+ {
+  "label": "untuned, game with the R8 men-count fix",
+  "note": "",
+  "fairRuns": [
+   110
+  ],
+  "fair125": 110,
+  "fairPct": 88,
+  "dev100": 91,
+  "holdout25": 19,
+  "interpret300": 272,
+  "clarifyPct": 6.5
+ },
+ {
+  "label": "phase 1 (interpret only): p1A",
+  "note": "",
+  "fairRuns": [
+   110
+  ],
+  "fair125": 110,
+  "fairPct": 88,
+  "dev100": 90,
+  "holdout25": 20,
+  "interpret300": 285,
+  "clarifyPct": 2.2
+ },
+ {
+  "label": "phase 1: p1B",
+  "note": "",
+  "fairRuns": [
+   107
+  ],
+  "fair125": 107,
+  "fairPct": 85.6,
+  "dev100": 89,
+  "holdout25": 18,
+  "interpret300": 279,
+  "clarifyPct": 1.8
+ },
+ {
+  "label": "phase 1: p1M (average)",
+  "note": "",
+  "fairRuns": [
+   108
+  ],
+  "fair125": 108,
+  "fairPct": 86.4,
+  "dev100": 89,
+  "holdout25": 19,
+  "interpret300": 283,
+  "clarifyPct": 2.2
+ },
+ {
+  "label": "phase 1: p1A merged into the 4-bit model",
+  "note": "",
+  "fairRuns": [
+   108
+  ],
+  "fair125": 108,
+  "fairPct": 86.4,
+  "dev100": 88,
+  "holdout25": 20,
+  "interpret300": 274,
+  "clarifyPct": 4.3
+ },
+ {
+  "label": "phase 2: p2A",
+  "note": "",
+  "fairRuns": [
+   114
+  ],
+  "fair125": 114,
+  "fairPct": 91.2,
+  "dev100": 91,
+  "holdout25": 23,
+  "interpret300": 276,
+  "clarifyPct": 2.8,
+  "mindInChar": 106,
+  "mindTotal": 123,
+  "mindPct": 86.2,
+  "mindFallbacks": 4,
+  "narrateFirstTry": 164,
+  "narrateStories": 212,
+  "narratePct": 77.4,
+  "narratePlain": 16,
+  "narrateFaults": {
+   "numbers": 22,
+   "places": 21,
+   "names": 1,
+   "arrival": 8,
+   "script": 2,
+   "anachronism": 1
+  },
+  "voices": {
+   "audience": "17/20",
+   "council": "10/15",
+   "director": "18/20",
+   "consolidate": "6/6"
+  },
+  "voicesFirstTry": 51,
+  "voicesN": 61
+ },
+ {
+  "label": "phase 2: p2B",
+  "note": "",
+  "fairRuns": [
+   105
+  ],
+  "fair125": 105,
+  "fairPct": 84,
+  "dev100": 89,
+  "holdout25": 16,
+  "interpret300": 278,
+  "clarifyPct": 2.2,
+  "mindInChar": 110,
+  "mindTotal": 123,
+  "mindPct": 89.4,
+  "mindFallbacks": 3,
+  "narrateFirstTry": 178,
+  "narrateStories": 212,
+  "narratePct": 84,
+  "narratePlain": 15,
+  "narrateFaults": {
+   "numbers": 19,
+   "places": 16,
+   "names": 1,
+   "arrival": 16,
+   "anachronism": 1
+  },
+  "voices": {
+   "audience": "17/20",
+   "council": "12/15",
+   "director": "17/20",
+   "consolidate": "6/6"
+  },
+  "voicesFirstTry": 52,
+  "voicesN": 61
+ },
+ {
+  "label": "**phase 2: p2M (average of A+B) = Maester-12B v1**",
+  "note": "",
+  "fairRuns": [
+   110,
+   110
+  ],
+  "fair125": 110,
+  "fairPct": 88,
+  "dev100": 89,
+  "holdout25": 21,
+  "interpret300": 279,
+  "clarifyPct": 2.5,
+  "mindInChar": 110,
+  "mindTotal": 123,
+  "mindPct": 89.4,
+  "mindFallbacks": 2,
+  "narrateFirstTry": 171,
+  "narrateStories": 212,
+  "narratePct": 80.7,
+  "narratePlain": 13,
+  "narrateFaults": {
+   "numbers": 14,
+   "arrival": 8,
+   "places": 16,
+   "names": 4,
+   "script": 1,
+   "anachronism": 1
+  },
+  "voices": {
+   "audience": "18/20",
+   "council": "13/15",
+   "director": "19/20",
+   "consolidate": "6/6"
+  },
+  "voicesFirstTry": 56,
+  "voicesN": 61
+ },
+ {
+  "label": "p2M + MTP (the default served profile)",
+  "note": "",
+  "fairRuns": [
+   109
+  ],
+  "fair125": 109,
+  "fairPct": 87.2,
+  "dev100": 88,
+  "holdout25": 21,
+  "interpret300": 277,
+  "clarifyPct": 2.5,
+  "mindInChar": 108,
+  "mindTotal": 123,
+  "mindPct": 87.8,
+  "mindFallbacks": 3
+ },
+ {
+  "label": "phase 3: p3A",
+  "note": "",
+  "fairRuns": [
+   112
+  ],
+  "fair125": 112,
+  "fairPct": 89.6,
+  "dev100": 90,
+  "holdout25": 22,
+  "interpret300": 282,
+  "clarifyPct": 2.8
+ },
+ {
+  "label": "phase 3: p3B",
+  "note": "",
+  "fairRuns": [
+   112
+  ],
+  "fair125": 112,
+  "fairPct": 89.6,
+  "dev100": 92,
+  "holdout25": 20,
+  "interpret300": 284,
+  "clarifyPct": 2.5
+ },
+ {
+  "label": "phase 3: p3M (average)",
+  "note": "",
+  "fairRuns": [
+   111,
+   112
+  ],
+  "fair125": 111.5,
+  "fairPct": 89.2,
+  "dev100": 90,
+  "holdout25": 21,
+  "interpret300": 283,
+  "clarifyPct": 3.1,
+  "mindInChar": 105,
+  "mindTotal": 123,
+  "mindPct": 85.4,
+  "mindFallbacks": 0,
+  "narrateFirstTry": 180,
+  "narrateStories": 212,
+  "narratePct": 84.9,
+  "narratePlain": 16,
+  "narrateFaults": {
+   "names": 8,
+   "numbers": 19,
+   "arrival": 15,
+   "places": 14,
+   "game words": 2,
+   "anachronism": 1
+  },
+  "voices": {
+   "audience": "19/20",
+   "council": "9/15",
+   "director": "19/20",
+   "consolidate": "5/6"
+  },
+  "voicesFirstTry": 52,
+  "voicesN": 61
+ },
+ {
+  "label": "p3M, game with the R8 men-count fix",
+  "note": "",
+  "fairRuns": [
+   113
+  ],
+  "fair125": 113,
+  "fairPct": 90.4,
+  "dev100": 91,
+  "holdout25": 22,
+  "interpret300": 286,
+  "clarifyPct": 2.8
+ },
+ {
+  "label": "phase 4: p4M (average)",
+  "note": "",
+  "fairRuns": [
+   111
+  ],
+  "fair125": 111,
+  "fairPct": 88.8,
+  "dev100": 89,
+  "holdout25": 22,
+  "interpret300": 279,
+  "clarifyPct": 3.4,
+  "mindInChar": 107,
+  "mindTotal": 123,
+  "mindPct": 87,
+  "mindFallbacks": 6
+ }
+]
