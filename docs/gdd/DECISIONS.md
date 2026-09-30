@@ -1260,3 +1260,16 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **Orders:** three in view, the rest behind "+N earlier"; the newest order (and any with a steward's question) shows every line of its receipt, two lines each, the whole line in its hover.
 - **No `ui: 'v3'|'v4'` switch** (§4): the old screen is replaced outright. The old markup's ids are gone (`#res-row`, `#date-box`, `#action-ring`, `#mapmodes`, `#drawer-tabs`, `#raven-badge`) and
   a test (`tests/hud.test.js`) fails if a script still points at one, so a stale handler cannot stop the game at load.
+
+## D-080 · 2026-09-30 · The chronicle as cards, the report and the pins as built (WP N7 + N8)
+
+- **`ui/feed.js` is pure** and reads only `state.history` and the player's house id (a test hands it a Proxy that throws on any other key), so the feed can carry nothing that the turn records the server sent
+  did not; the cards are those records, already through the knowledge filters (D-074…D-076).
+- **The chronicle keeps every story the old feed did** when "Only what matters" is off (the test counts them on a real game); on, it is tier news and above (18 §2.6). "Read" is when the panel is closed (not when it is opened), so the
+  "N new" of a session is stable while you read it. The matters that waited at the head of the old feed are the Inbox's now (U3); "Threads to follow" stays.
+- **The maester's report is a modal after each turn** (mockup 05), skipped for a quiet turn and when an ending is being told, and it can be switched off in Settings (`localStorage` `wc-report`, on by default): a page every turn is
+  a beat some will not want. It is the turn's `digest` (or one built from its cards for a save from before), so it cannot contradict the cards.
+- **Playback controls moved to the strip** (they lived in the chronicle's head): the strip is what shows the turn being told now that the chronicle is closed by default.
+- **Pins:** tier decides (news and above; a minor one only if it is the player's); a card from before the tiers keeps the old importance rule; the small life of the realm (Meanwhile) only when it touched the player's own and mattered a little.
+  A battle pin takes the recent battle card of the same two houses; if none was told, the old line stands rather than nothing. The map's pin glyphs are still emoji (a map job: E-phase).
+- `modal(html, { vellum: true })` frames nothing (no border, no ✕) so a page of vellum is the whole dialog; the report and a pin's card use it. A matter's card and a confirmation keep the old frame until U8.

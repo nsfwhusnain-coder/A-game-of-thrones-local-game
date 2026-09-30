@@ -18,11 +18,23 @@ export function decisionPlace(s, d) {
   return s.houses[s.meta.player]?.seat || null;
 }
 
-// Is this piece of news worth a pin? The great events of the turn, and whatever touched the player's own lands.
-function pinworthy(s, e) {
+// Is this piece of news worth a pin? A card of tier news or above with a place, and a minor one that is the player's own (18 §2.6). A card from
+// before the tiers is judged as it was, by its importance; the small life of the realm (Meanwhile) only when it touched the player's own.
+const PIN_TIERS = new Set(['great', 'major', 'news']);
+export function pinworthy(s, e) {
   if (!e.where || !s.holdings[e.where]) return false;
   if (e.bg) return !!e.mine && e.importance >= 2;
-  return e.importance >= 2;
+  if (!e.tier) return e.importance >= 2;
+  return PIN_TIERS.has(e.tier) || (e.tier === 'minor' && !!e.mine);
+}
+// The card the writer made of a battle: the recent turn's battle card of the same two houses (a headline that says who beat whom, not "X defeated Y.")
+function battleCard(s, b) {
+  const sides = [b.attacker, b.defender].filter(Boolean); if (!sides.length) return null;
+  for (const t of [...(s.history || [])].reverse().slice(0, NEWS_TURNS + 1)) {
+    const e = (t.events || []).find((x) => !x.bg && x.archetype === 'battle' && sides.every((h) => (x.houses || []).includes(h)));
+    if (e) return e;
+  }
+  return null;
 }
 
 /** Every open pin: Map(where → { events:[{...e, key}], decisions:[d] }) */
@@ -37,7 +49,9 @@ export function openPins(s) {
   // battles fought away from any castle are pinned where they were fought
   (s.battles || []).forEach((b, i) => {
     if (!b.pos || s.meta.turn - b.turn >= NEWS_TURNS) return; const key = `battle-${b.turn}-${i}`; if (acks[key]) return;
-    const where = `@battle${i}`; add(where, 'events', { title: b.name, text: b.summary || `${s.houses[b.victor]?.name ? 'House ' + s.houses[b.victor].name + ' won the field.' : 'The field is red.'}`, details: Object.entries(b.losses || {}).map(([h, n]) => `${s.houses[h]?.name || h} lost ~${n} men.`).join(' '), importance: 4, type: 'war', key, turn: b.turn, date: b.date, houses: [b.attacker, b.defender].filter(Boolean) });
+    const where = `@battle${i}`; const card = battleCard(s, b);
+    if (card) add(where, 'events', { ...card, key, turn: b.turn, date: b.date, importance: Math.max(card.importance || 0, 4), type: 'war', houses: card.houses?.length ? card.houses : [b.attacker, b.defender].filter(Boolean) });
+    else add(where, 'events', { title: b.name, text: b.summary || `${s.houses[b.victor]?.name ? 'House ' + s.houses[b.victor].name + ' won the field.' : 'The field is red.'}`, details: Object.entries(b.losses || {}).map(([h, n]) => `${s.houses[h]?.name || h} lost ~${n} men.`).join(' '), importance: 4, type: 'war', key, turn: b.turn, date: b.date, houses: [b.attacker, b.defender].filter(Boolean) });
     out.get(where).pos = b.pos;
   });
   for (const g of out.values()) g.events.sort((a, b) => (b.importance || 0) - (a.importance || 0) || (a.day || 0) - (b.day || 0));

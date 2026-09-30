@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/hud.css">
+  <link rel="stylesheet" href="css/chronicle.css">
   <script type="importmap">
     { "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }
   </script>
@@ -104,12 +105,13 @@
     <!-- the chronicle, opened: the news in full, and the audiences and letters (H, or the strip's "All"); closed, the strip is its one-line form -->
     <aside id="drawer" class="wc-oak wc-chronicle drawer hidden" role="complementary" aria-label="Chronicle">
       <div class="wc-chronicle__head"><h2 id="drawer-title">Chronicle</h2><span class="wc-label" id="drawer-sub"></span><button class="win-close" data-action="close-drawer" aria-label="Close the chronicle"><i data-i="close"></i></button></div>
+      <div id="drawer-filters" class="wc-chronicle__filters" role="group" aria-label="Filter the chronicle"></div>
       <div class="drawer-body" id="drawer-body" role="region" aria-live="polite"></div>
     </aside>
 
     <!-- the headline strip: the last three things worth a line -->
     <aside id="strip" class="wc-oak wc-strip" aria-label="The latest news">
-      <div class="wc-strip__head"><span class="wc-label" id="strip-head">Chronicle</span><button class="wc-strip__all" data-action="chronicle" title="The whole chronicle (H)">All</button></div>
+      <div class="wc-strip__head"><span class="wc-label" id="strip-head">Chronicle</span><span class="wc-strip__ctl hidden" id="strip-ctl"></span><button class="wc-strip__all" data-action="chronicle" title="The whole chronicle (H)">All</button></div>
       <ul class="wc-strip__lines" id="strip-lines"></ul>
     </aside>
 

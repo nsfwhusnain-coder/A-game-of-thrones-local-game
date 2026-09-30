@@ -1,6 +1,7 @@
 // Right drawer: chronicle feed, letters, audiences (one-on-one or council).
 import { eventArt } from './event-art.js';
-import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal, foldText } from './common.js';
+import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal, foldText, detailLines } from './common.js';
+import { feedOf, feedIds, FILTERS, TIER_LABEL, storyOrder, shortDate, daysOf } from './feed.js';
 import { dateStr } from '../shared/world.js';
 import { orderOutcome, STATUS_LABEL } from '../shared/errands.js';
 import { icon } from './icons.js';
@@ -17,14 +18,17 @@ export const drawerOpen = () => !$('#drawer').classList.contains('hidden');
 export function setDrawer(tab) { app.drawerTab = tab; renderDrawer(); }
 export function openDrawer(tab = app.drawerTab) {
   app.drawerTab = tab; $('#drawer').classList.remove('hidden'); document.body.classList.add('has-drawer'); renderDrawer();
-  if (tab === 'feed') { app.markSeen?.(app.stripIds || []); app.renderStrip?.(); }
 }
-export function closeDrawer() { $('#drawer').classList.add('hidden'); document.body.classList.remove('has-drawer'); app.chatWith = null; app.council = null; app.drawerTab = 'feed'; }
+/** Shut the panel; what the chronicle showed is read (the strip's "N new" clears), unless `read` is false (a game just loaded). */
+export function closeDrawer({ read = true } = {}) {
+  if (read && app.state && drawerOpen() && app.drawerTab === 'feed') { app.markSeen?.(feedIds(app.state)); app.renderStrip?.(); }
+  $('#drawer').classList.add('hidden'); document.body.classList.remove('has-drawer'); app.chatWith = null; app.council = null; app.drawerTab = 'feed';
+}
 export function renderDrawer() {
   if (!app.state || !drawerOpen()) return;
   const body = $('#drawer-body');
   $('#drawer-title').textContent = app.drawerTab === 'audience' && app.council ? 'Council' : DRAWER_TITLE[app.drawerTab] || 'Chronicle';
-  $('#drawer-sub').textContent = app.drawerTab === 'feed' ? app.state.history.at(-1)?.date?.replace(/^\d+ /, '').replace(/, \d+ AC$/, '') || '' : '';
+  $('#drawer-sub').textContent = ''; $('#drawer-filters')?.classList.toggle('hidden', app.drawerTab !== 'feed');
   if (app.drawerTab === 'audience') return renderAudience(body);
   if (app.drawerTab === 'letters') return renderLetters(body);
   renderFeed(body);
@@ -38,7 +42,7 @@ const REGION_ORDER = ['north', 'wall', 'beyond', 'iron_islands', 'riverlands', '
 const REGION_TITLE = { north: 'The North', wall: 'The Wall', beyond: 'Beyond the Wall', iron_islands: 'The Iron Islands', riverlands: 'The Riverlands', vale: 'The Vale', westerlands: 'The Westerlands', crownlands: 'The Crownlands', reach: 'The Reach', stormlands: 'The Stormlands', dorne: 'Dorne', essos: 'Across the Narrow Sea' };
 export const mainEvents = (evs) => (evs || []).filter((e) => !e.bg);
 /** The turn's news in the order it is told: by day; on a day, what the lord ordered first, then the weightiest. */
-export const storyEvents = (t) => mainEvents(t.events).map((e) => [e, (t.events || []).indexOf(e)]).sort(([a, i], [b, j]) => (a.day || 0) - (b.day || 0) || (b.orderId ? 1 : 0) - (a.orderId ? 1 : 0) || (b.importance || 0) - (a.importance || 0) || i - j).map(([e]) => e);
+export const storyEvents = storyOrder;
 export function meanwhileHtml(evs, open = false) {
   const bg = (evs || []).filter((e) => e.bg); if (!bg.length) return '';
   const s = app.state; const groups = new Map();
@@ -84,7 +88,6 @@ export function wireDecisions(root, { onAllDone, onDecided } = {}) {
     } catch (e) { card.classList.remove('busy'); $$('.dec-opt, .dec-custom', card).forEach((x) => { x.disabled = false; x.classList.remove('chosen'); }); toast(e.message, true); }
   });
 }
-const NEWS_ICON = { war: 'swords', diplomacy: 'letter', intrigue: 'dagger', economy: 'scales', court: 'crown', disaster: 'fire', religion: 'candle', magic: 'sparkle', rumor: 'speak' };
 // One event, told in full, in a window over the map
 export function openNews(turn, idx) {
   const s = app.state; const t = s.history.find((x) => x.turn === turn); const e = t?.events?.[idx]; if (!e) return;
@@ -104,19 +107,29 @@ function threadsHtml(s) {
   if (!great.length && !open.length) return '';
   return `<details class="threads"${app.threadsOpen ? ' open' : ''}><summary>${icon('scroll', 'tg-ico')} Threads to follow <span class="muted">(${great.length + open.length})</span></summary>${open.length ? '' : ''}<ul>${great.join('')}</ul>${open.length ? `<ul>${open.join('')}</ul>` : ''}</details>`;
 }
-// One event as the story reads it: a plain headline; where, when, who; the whole account inline — no modal needed
-function storyHtml(s, t, e) {
-  const p = s.meta.player; const mine = e.mine || (e.houses || []).includes(p);
-  const rumour = e.type === 'rumor' || /^(rumou?r|it is said|word comes|men say)/i.test(e.text || '');
-  const houses = (e.houses || []).filter((h) => s.houses[h]).slice(0, 3);
-  const date = (e.date || t.date).replace(/, \d+ AC$/, '');
+// One story as a card of the chronicle (GDD 18 §2.6, mockup 03): its tier's rule and marks, the headline, two lines of summary, where and when, whose it is,
+// and "Details" — the order that led to it, the scene, the numbers, the engine's record — folded away until asked for. A minor card is its headline alone.
+const CAME_SHORT = { raven: 'by raven', rumour: 'a rumour', letter: 'by letter', rider: 'by rider' };
+function cardHtml(s, t, c, fresh) {
+  const e = c.e; const p = s.meta.player;
+  const hidden = app.reveal && app.reveal.turn === t.turn && !app.reveal.shown.has(c.idx);
+  const date = shortDate(e.date || t.date);
+  const place = e.where && s.holdings[e.where] ? placeName(s, e.where) : '';
+  const yours = (e.houses || []).includes(p) ? 'Your house' : c.mine ? 'Your people' : '';
+  const late = e.heard?.via ? CAME_SHORT[e.heard.via] || 'word came' : c.rumour ? 'a rumour' : '';
   const ordered = e.orderId && (t.orders || []).find((o) => o.id === e.orderId);
-  const hidden = app.reveal && app.reveal.turn === t.turn && !app.reveal.shown.has((t.events || []).indexOf(e));
-  return `<div class="story imp-${e.importance}${mine ? ' mine' : ''}${hidden ? ' unrevealed' : ''}" data-news="${t.turn}:${(t.events || []).indexOf(e)}">
-    <div class="story-h">${NEWS_ICON[e.type] ? icon(NEWS_ICON[e.type], 'sh-ico') : ''}${esc(e.headline || e.title)}</div>
-    <div class="story-tags">${e.where && s.holdings[e.where] ? `<span class="tag place" data-goto="${e.where}">${icon('pin', 'tg-ico')}${esc(placeName(s, e.where))}</span>` : ''}<span class="tag">${esc(date)}</span>${houses.map((h) => `<span class="tag">${sig(s.houses[h], 0.9)} ${esc(s.houses[h].name)}</span>`).join('')}${rumour ? '<span class="tag rumour">Rumour</span>' : ''}</div>
-    ${ordered ? `<div class="story-order">${esc(s.characters[s.houses[s.meta.player].lord]?.name || 'The lord')} commanded: “${esc(ordered.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim())}”</div>` : ''}
-    <div class="story-x">${esc(e.summary ?? e.text)}</div>${foldText(e) ? `<div class="story-d">${esc(foldText(e))}</div>` : ''}${recordHtml(e)}${heardHtml(e, date)}</div>`;
+  const foldParts = [
+    c.tier === 'minor' && e.summary ? `<p class="wc-card__sum">${esc(e.summary)}</p>` : '',
+    ordered ? `<p class="story-order">${esc(s.characters[s.houses[p].lord]?.name || 'The lord')} commanded: “${esc(ordered.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim())}”</p>` : '',
+    e.scene ? `<p class="wc-card__scene">${esc(e.scene)}</p>` : '',
+    detailLines(e).length ? `<ul class="wc-card__facts">${detailLines(e).map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '',
+    recordHtml(e), heardHtml(e, date),
+  ].filter(Boolean);
+  return `<article class="wc-card wc-tier-${c.tier} story${hidden ? ' unrevealed' : ''}${fresh ? ' is-new' : ''}" data-news="${c.id}" tabindex="0">
+    <h3 class="wc-card__head">${esc(e.headline || e.title)}</h3>
+    ${c.tier === 'minor' ? '' : `<p class="wc-card__body">${esc(e.summary ?? e.text)}</p>`}
+    <div class="wc-card__meta"><span class="wc-label">${TIER_LABEL[c.tier] || ''}</span>${yours ? `<span class="wc-chip wc-chip--wax">${esc(yours)}</span>` : ''}${place || date ? `<span class="wc-card__where">${icon('pin')}${esc(date)}${place ? ` · <em>${esc(place)}</em>` : ''}</span>` : ''}${late ? `<em>${esc(late)}</em>` : ''}${foldParts.length ? `<button class="wc-card__more" data-fold aria-expanded="false" title="The numbers, the record and the scene">Details ${icon('chevronR')}</button>` : ''}</div>
+    ${foldParts.length ? `<div class="wc-card__fold" hidden>${foldParts.join('')}</div>` : ''}</article>`;
 }
 // news that came late: the day it happened, and how word of it came (09 §7.1)
 const CAME = { raven: 'the raven came', rumour: 'word came', letter: 'the letter came', rider: 'the rider came' };
@@ -135,25 +148,45 @@ function yoursHtml(t) {
   const rows = (t.orders || []).filter((o) => (!o.auto || o.status) && !told.has(o.id)).map((o) => { const r = orderOutcome(o, app.state); return `<div class="yo">“${esc(o.text.length > 110 ? o.text.slice(0, 110) + '…' : o.text)}”</div>${r.lines.slice(0, 3).map((l) => `<div class="yr${/^could not/i.test(l) ? ' bad' : ''}">→ ${esc(l.replace(/^could not be done: /i, 'Could not: '))}</div>`).join('') || `<div class="yr">→ ${esc(STATUS_LABEL[r.status])}</div>`}`; }).join('');
   return rows ? `<div class="yours"><div class="yh">The commands of ${esc(app.state.characters[app.state.houses[app.state.meta.player].lord]?.name || 'the lord')}</div>${rows}</div>` : '';
 }
+// The filters above the cards: "Only what matters" (on by default) and, one at a time, Mine, War, Letters, Rumours
+const feedState = () => (app.feed ||= { matters: true, only: null });
+function renderFilters() {
+  const el = $('#drawer-filters'); if (!el) return;
+  const f = feedState(); const chip = (id, label, on, hint) => `<button class="wc-chip${on ? ' is-on' : ''}" data-feed="${id}" aria-pressed="${on}" title="${esc(hint)}">${on && id === 'matters' ? icon('check') : ''}${esc(label)}</button>`;
+  el.innerHTML = chip('matters', 'Only what matters', f.matters, 'Hide the small news') + FILTERS.map((x) => chip(x.id, x.label, f.only === x.id, x.hint)).join('');
+}
 function renderFeed(body) {
-  const s = app.state;
-  const turns = [...s.history].reverse().slice(0, 30);
-  // the news, as a list: a date, then one row per event (icon, headline, one line); click a row for the whole story
+  const s = app.state; const f = feedState();
+  const { groups, hidden } = feedOf(s, { matters: f.matters, only: f.only });
+  const seen = app.seen || new Set();
+  const fresh = groups.flatMap((g) => g.cards).filter((c) => !seen.has(c.id) && !(app.reveal && app.reveal.turn === c.turn && !app.reveal.shown.has(c.idx))).length;
+  const last = s.history.at(-1);
+  $('#drawer-sub').textContent = last ? `${last.date.replace(/^\d+ /, '')}${fresh ? ` · ${fresh} new` : ''}` : '';
+  renderFilters();
+  // playback (Pause, Next, Skip) lives on the strip, which is what shows while a turn is told; here it is shown too when the chronicle is open
   const rv = app.reveal;
-  const bar = rv ? `<div class="reveal-bar"><span class="rb-date" id="rb-date">${esc(rv.date || '')}</span><button class="btn small ghost" data-rb="pause">${rv.ctl.paused ? 'Resume' : 'Pause'}</button><button class="btn small ghost" data-rb="next">Next ›</button><button class="btn small ghost" data-rb="skip">Skip ⏭</button><span class="rb-count" id="rb-count">${rv.n} / ${rv.total}</span></div>` : '';
-  body.innerHTML = bar + decisionsHtml() + threadsHtml(s) + (turns.length ? turns.map((t) => { const ev = storyEvents(t).reverse(); const bg = (t.events || []).filter((e) => e.bg).length; return `<div class="news-day"><div class="news-date">${esc(t.date)}</div>
-      ${yoursHtml(t)}${ev.map((e) => storyHtml(s, t, e)).join('') || '<div class="news-quiet">No news of note.</div>'}
-      ${t.meanwhile ? `<div class="news-meanwhile">${esc(t.meanwhile)}</div>` : ''}${bg ? `<div class="news-more" data-meanwhile="${t.turn}">+ ${bg} small happening${bg > 1 ? 's' : ''} across the realm</div>` : ''}</div>`; }).join('')
-    : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>
-      ${(() => { const b = briefFor(s.houses[s.meta.player], s); return `<div class="event imp-4"><div class="et">Your situation</div><div class="eb">${esc(b.situation)}</div><div class="eb" style="margin-top:0.4rem"><b>Aims:</b> ${b.goals.map(esc).join(' · ')}</div>${b.levers?.length ? `<div class="eb"><b>Levers:</b> ${b.levers.map(esc).join(' · ')}</div>` : ''}</div>`; })()}
-`);
-  wireDecisions(body);
-  // a place tag flies the map there; the card itself focuses its place too — the full account is already here
+  const bar = rv ? `<div class="reveal-bar"><span class="rb-date" id="rb-date">${esc(rv.date || '')}</span><button class="wc-btn wc-btn--small" data-rb="pause">${rv.ctl.paused ? 'Resume' : 'Pause'}</button><button class="wc-btn wc-btn--small" data-rb="next">Next</button><button class="wc-btn wc-btn--small" data-rb="skip">Skip</button><span class="rb-count" id="rb-count">${rv.n} / ${rv.total}</span></div>` : '';
+  const day = (g) => { const t = s.history.find((x) => x.turn === g.turn); return `<div class="wc-day"><span>${esc(daysOf(t).text)}</span></div>${yoursHtml(t)}`; };
+  const quiet = (g) => `<p class="wc-quiet">${g.held ? `Nothing of note${g.held ? ` — ${g.held} small ${g.held === 1 ? 'matter is' : 'matters are'} held back` : ''}.` : 'No news of note.'}</p>`;
+  const blocks = groups.map((g) => {
+    const t = s.history.find((x) => x.turn === g.turn);
+    const bg = g.small;
+    return `<section class="wc-daygroup">${day(g)}<div class="wc-chronicle__cards">${g.cards.map((c) => cardHtml(s, t, c, !seen.has(c.id))).join('') || quiet(g)}</div>${g.meanwhile ? `<p class="news-meanwhile">${esc(g.meanwhile)}</p>` : ''}${bg ? `<button class="news-more" data-meanwhile="${g.turn}">${bg} small happening${bg > 1 ? 's' : ''} across the realm</button>` : ''}</section>`;
+  }).join('');
+  const first = `<div class="wc-card wc-tier-major"><h3 class="wc-card__head">Your situation</h3>${(() => { const b = briefFor(s.houses[s.meta.player], s); return `<p class="wc-card__body">${esc(b.situation)}</p><p class="wc-card__body"><b>Aims:</b> ${b.goals.map(esc).join(' · ')}</p>${b.levers?.length ? `<p class="wc-card__body"><b>Levers:</b> ${b.levers.map(esc).join(' · ')}</p>` : ''}`; })()}</div>`;
+  body.innerHTML = bar + threadsHtml(s) + (groups.length ? blocks + (hidden && f.matters ? `<p class="wc-quiet wc-quiet--foot">${hidden} smaller ${hidden === 1 ? 'story is' : 'stories are'} held back. <button class="news-more" data-feed="matters">Show them</button></p>` : '') : first);
+  // a card opens on a click (the map goes to its place); Details folds out what is behind it; the small happenings open across the realm
   const th = $('.threads', body); if (th) th.ontoggle = () => { app.threadsOpen = th.open; };
-  $$('[data-goto]', body).forEach((el) => el.onclick = (ev) => { ev.stopPropagation(); const h = s.holdings[el.dataset.goto]; if (h) { app.map.flyTo(h.pos, 420); app.map.flash(h.pos); } });
-  $$('[data-news]', body).forEach((el) => el.onclick = () => { const [tn, i] = el.dataset.news.split(':').map(Number); const e = s.history.find((x) => x.turn === tn)?.events?.[i]; const h = e?.where && s.holdings[e.where]; if (h) { app.map.flyTo(h.pos, 420); app.map.flash(h.pos); } else openNews(tn, i); });
+  $$('[data-fold]', body).forEach((b) => b.onclick = (ev) => { ev.stopPropagation(); const fold = b.closest('.wc-card').querySelector('.wc-card__fold'); const open = fold.hidden; fold.hidden = !open; b.setAttribute('aria-expanded', String(open)); b.classList.toggle('is-open', open); });
+  $$('[data-news]', body).forEach((el) => { const go = () => { const [tn, i] = el.dataset.news.split(':').map(Number); const e = s.history.find((x) => x.turn === tn)?.events?.[i]; const h = e?.where && s.holdings[e.where]; if (h) { app.map.flyTo(h.pos, 420); app.map.flash(h.pos); } else openNews(tn, i); }; el.onclick = go; el.onkeydown = (ev) => { if (ev.key === 'Enter' && ev.target === el) go(); }; });
   $$('[data-meanwhile]', body).forEach((el) => el.onclick = () => openMeanwhile(Number(el.dataset.meanwhile)));
-  $$('.event[data-where], .mw-item[data-where]', body).forEach((el) => el.onclick = () => { const w = el.dataset.where; if (s.holdings[w]) { app.map.flyTo(s.holdings[w].pos); app.map.flash(s.holdings[w].pos); } });
+  $$('[data-feed="matters"]', body).forEach((el) => el.onclick = () => { feedState().matters = false; renderDrawer(); });
+}
+/** A filter chip pressed: "Only what matters" toggles; the others are one at a time, and pressing the chosen one again clears it. */
+export function pickFilter(id) {
+  const f = feedState();
+  if (id === 'matters') f.matters = !f.matters; else f.only = f.only === id ? null : id;
+  renderDrawer();
 }
 // While an answer is written: what is happening, in the world's words (a reply that fails says so, with a retry)
 function waitStatus(who, together) {

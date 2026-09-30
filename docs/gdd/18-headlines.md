@@ -178,6 +178,8 @@ only, no summary until opened), `meanwhile` < 2 (one sentence).
 summary*, then "**Also**" — up to five more as headlines only, then the Meanwhile sentence. ≤ 90 words in all; it is what
 replaces `turn.summary`. It is assembled by the engine from cards (no model), so it can never contradict them.
 
+*Implemented in N7 and N8 (Slice 7), as built in D-080: `ui/feed.js` (which cards, which order, the filters, the report — pure, tested), `ui/drawer.js` (the cards), `ui/report.js` (the maester's report), `shared/pins.js`, `ui/pins.js`.*
+
 ### 2.6 Where cards show
 
 | Surface | What it shows | Change |

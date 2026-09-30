@@ -1,0 +1,100 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   The chronicle as cards, and the maester's report (docs/gdd/18-headlines.md §2.6, WP N7; mockups 03, 04 and 05), in the look of theme.css.
+   The panel is oak; a card is a strip of leather with a leaf laid along its spine whose weight is its tier (theme.css `.wc-card`); the report is
+   a page of vellum. Loaded after hud.css.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* the filters under the panel's title: "Only what matters", then one of Mine, War, Letters, Rumours */
+.wc-chronicle__filters { display: flex; flex-wrap: wrap; gap: .3rem; padding: 0 .1rem .1rem; }
+.wc-chronicle__filters.hidden { display: none; }
+.wc-chronicle__filters .wc-chip { margin: 0; border-right: 0; padding: .16rem .75rem .16rem .45rem; font-size: max(.66rem, 13px); }
+.wc-chronicle__filters .wc-chip .ico { width: .8rem; height: .8rem; stroke-width: 2.2; }
+.wc-chronicle .drawer-body { display: block; padding: .3rem .35rem .3rem 0; }
+
+/* a day's cards */
+.wc-day { display: flex; align-items: center; gap: .7rem; margin: .5rem 0 .45rem; font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .1em; color: var(--bone-dim); text-transform: uppercase; }
+.wc-day::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255, 226, 170, .28), rgba(255, 226, 170, 0)); }
+.wc-daygroup + .wc-daygroup { margin-top: .9rem; }
+.wc-chronicle .yours { margin: 0 0 .5rem; padding: .35rem .6rem; background: rgba(0, 0, 0, .25); border: 1px solid rgba(0, 0, 0, .55); border-radius: var(--radius-card); font-size: .92rem; color: var(--bone-dim); }
+.wc-chronicle .yours .yh { color: var(--bone); font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .08em; }
+.wc-chronicle .yours .yr.bad { color: var(--madder-lit); }
+
+/* a card */
+.wc-chronicle .wc-card { cursor: pointer; }
+.wc-chronicle .wc-card:hover { background: linear-gradient(135deg, rgba(255, 214, 150, .12), rgba(255, 214, 150, 0) 50%, rgba(0, 0, 0, .12)), url(../img/ui/leather.jpg) 0 0 / 11rem, #2f2216; }
+.wc-chronicle .wc-card:focus-visible { outline: .14rem solid var(--ochre); outline-offset: .1rem; }
+.wc-card__body { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.wc-card__where { display: inline-flex; align-items: center; gap: .3rem; }
+.wc-card__where em { color: var(--bone); }
+.wc-card__meta .wc-chip { padding: .1rem .8rem .1rem .5rem; font-size: max(.62rem, 13px); }
+.wc-card__more { margin-top: 0; padding: 0; background: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: .2rem; }
+.wc-card__more .ico { width: .8rem; height: .8rem; transition: transform .15s ease-out; }
+.wc-card__more.is-open .ico { transform: rotate(90deg); }
+.wc-card.is-new::after { content: ''; position: absolute; top: .55rem; right: .65rem; width: .5rem; height: .5rem; border-radius: 50%; background: radial-gradient(circle at 34% 30%, var(--wax-hi), var(--wax) 70%); box-shadow: 0 1px 1px rgba(0, 0, 0, .7); }
+.wc-card__fold { margin-top: .45rem; padding-top: .4rem; border-top: 1px dashed rgba(214, 178, 116, .22); font-size: .95rem; line-height: 1.3; }
+.wc-card__fold[hidden] { display: none; }
+.wc-card__fold > * { margin: .25rem 0 0; }
+.wc-card__sum { color: var(--bone); }
+.wc-card__scene { font-style: italic; color: var(--bone); }
+.wc-card__facts { padding-left: 1.1rem; color: var(--bone-dim); }
+.wc-card__fold .story-order { font-style: italic; color: var(--gold-flat); border-left: 2px solid var(--bronze); padding-left: .5rem; }
+.wc-card__fold .story-rec { color: var(--bone-dim); }
+.wc-card__fold .story-rec summary { cursor: pointer; font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .08em; }
+.wc-card__fold .story-rec ul { margin: .2rem 0 0; padding-left: 1.1rem; }
+.wc-card__fold .story-heard { font-style: italic; color: var(--bone-dim); }
+.wc-card.unrevealed { display: none; }
+
+/* the quiet lines, the Meanwhile and what is held back */
+.wc-quiet { margin: .3rem .1rem; font-style: italic; color: var(--bone-dim); }
+.wc-quiet--foot { margin-top: .9rem; text-align: center; }
+.wc-chronicle .news-meanwhile { margin: .5rem .15rem 0; font-size: .97rem; font-style: italic; color: var(--bone-dim); line-height: 1.3; }
+.wc-chronicle .news-more { display: inline; margin: .3rem .1rem 0; padding: 0; background: none; border: 0; cursor: pointer; color: var(--bone-dim); font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .06em; text-align: left; }
+.wc-chronicle .news-more:hover { color: var(--gold-flat); }
+.wc-chronicle .threads { margin-bottom: .6rem; border-color: rgba(0, 0, 0, .6); background: rgba(0, 0, 0, .22); color: var(--bone); }
+.wc-chronicle .threads summary { color: var(--bone); font-family: var(--wc-display); }
+.wc-chronicle .reveal-bar { background: rgba(0, 0, 0, .55); border-color: var(--bronze); }
+.wc-chronicle .reveal-bar .rb-date { color: var(--bone); }
+
+/* playback's Pause, Next and Skip, on the strip while a turn is told */
+.wc-strip__ctl { display: inline-flex; gap: .1rem; margin: 0 .5rem 0 auto; }
+.wc-strip__ctl.hidden { display: none; }
+.wc-strip__ctl .wc-btn--quiet { padding: .1rem .5rem; font: 600 var(--wc-min)/1.1 var(--wc-display); letter-spacing: .08em; }
+
+/* ───────────────────────────── the maester's report: a page of vellum over the map ───────────────────────────── */
+#modal-box.is-vellum { width: min(50rem, 94vw); max-height: none; overflow: visible; padding: 0; background: none; border: 0; box-shadow: none; }
+#modal-box.is-vellum > .close { display: none; }
+.wc-report { padding: 1.1rem 2.2rem 1.3rem; }
+.wc-report__kicker { text-align: center; }
+.wc-report .wc-title { margin: .35rem 0 0; font-size: 1.6rem; }
+.wc-digest { list-style: none; margin: .5rem 0 .6rem; padding: 0; }
+.wc-digest li { display: grid; grid-template-columns: 2.5rem 1fr; gap: .7rem; align-items: start; padding: .5rem 0 .55rem; border-bottom: 1px solid rgba(42, 29, 18, .2); }
+.wc-digest li:last-child { border-bottom: 0; }
+.wc-digest .wc-numeral { text-align: center; }
+.wc-digest li:first-child .wc-numeral { margin-top: -.25rem; }
+.wc-digest h3 { margin: 0; font: 600 1.32rem/1.15 var(--wc-display); font-variant-caps: small-caps; letter-spacing: .04em; color: var(--ink-iron); }
+.wc-digest p { margin: .2rem 0 0; font-size: 1.12rem; line-height: 1.3; }
+.wc-report .wc-kicker { margin-top: .75rem; }
+.wc-report__mw { margin: .2rem 0 0; font-size: 1.1rem; font-style: italic; line-height: 1.3; }
+.wc-report__also { margin: .45rem 0 0; font-size: 1rem; color: var(--ink-soft); }
+.wc-report__also b { font-weight: 600; color: var(--ink-iron); }
+.wc-report__waits { display: flex; flex-direction: column; gap: .35rem; margin-top: .3rem; }
+.wc-report__wait { display: flex; justify-content: space-between; align-items: center; gap: 1rem; width: 100%; margin: 0; padding: .4rem .7rem; cursor: pointer; text-align: left; font: 1.08rem/1.2 var(--wc-serif); color: var(--ink-iron); background: rgba(60, 40, 20, .07); border: 1px solid rgba(60, 40, 20, .35); border-radius: 0; }
+.wc-report__wait:hover { background: rgba(123, 30, 23, .09); border-color: var(--rubric); }
+.wc-report__wait .wc-chip { flex: none; cursor: pointer; }
+.wc-report__go { display: flex; justify-content: center; margin-top: 1.1rem; }
+.wc-report__go .wc-btn { padding-inline: 2.4rem; }
+.wc-report__go .ico { width: 1rem; height: 1rem; }
+
+/* ───────────────────────────── a pin's card: the story on vellum, over the map (mockup 04) ───────────────────────────── */
+.wc-pin { padding: 1rem 2rem 1.2rem; }
+#modal-box.is-vellum:has(.wc-pin) { width: min(38rem, 94vw); }
+.wc-pin__head { display: flex; justify-content: space-between; gap: 1rem; }
+.wc-pin .wc-title { margin: .3rem 0 0; font-size: 1.45rem; }
+.wc-pin__sum { margin: .1rem 0 0; font-size: 1.18rem; line-height: 1.35; }
+.wc-pin__scene { margin: .5rem 0 0; font-style: italic; line-height: 1.35; color: var(--ink-soft); }
+.wc-pin__facts { margin: .6rem 0 0; font-size: 1.05rem; line-height: 1.3; color: var(--ink-iron); }
+.wc-pin__facts > li { margin: .15rem 0; }
+.wc-pin__houses { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
+.wc-pin .pin-order { margin-top: .8rem; color: var(--ink-iron); }
+.wc-pin .pin-order summary { cursor: pointer; font: 600 var(--wc-min)/1.3 var(--wc-display); letter-spacing: .08em; color: var(--ink-soft); }
+.wc-pin .pin-order textarea { width: 100%; margin: .4rem 0; box-sizing: border-box; color: var(--ink-iron); background: rgba(255, 255, 255, .35); border: 1px solid rgba(60, 40, 20, .4); }
