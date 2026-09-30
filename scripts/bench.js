@@ -29,6 +29,10 @@
 //   npm run bench -- --suite narrate --judge              # and a judge's score for the voice (the 3.8 gate)
 //   npm run bench -- --suite narrate --mode cards         # the model also says the card (default: the writer's cards, the model's scenes)
 //   npm run bench -- --suite narrate --record tests/fixtures/model/narrate
+//
+// The headlines suite (18 §5, WP N10): the writer's own headlines over the same weeks, no model asked
+//   npm run bench -- --suite headlines                    # pass rate, length, names, verbs, facts a card tells (bench/headlines-mock-<date>.md)
+//   npm run bench -- --suite headlines --weeks 6          # only the first six weeks of each game
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -40,6 +44,18 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, all) => (
 if (args.suite === 'interpret') { await interpretBench(); process.exit(0); }
 if (args.suite === 'mind') { await mindBench(); process.exit(0); }
 if (args.suite === 'narrate') { await narrateBench(); process.exit(0); }
+if (args.suite === 'headlines') { await headlinesBench(); process.exit(process.exitCode || 0); }
+async function headlinesBench() {
+  process.env.WC_PROVIDER = 'mock'; // the writer needs no model; the suite's games are played on the mock
+  const { runHeadlinesSuite, headlinesReport, verdicts } = await import('../bench/lib/headlines.js');
+  const r = await runHeadlinesSuite({ only: typeof args.house === 'string' ? args.house.split(',') : null, weeks: Number.isFinite(+args.weeks) ? +args.weeks : Infinity });
+  const text = headlinesReport(r) + `
+_${new Date().toISOString().slice(0, 16)} · the writer, no model_
+`;
+  const out = path.join(ROOT, 'bench', `headlines-mock-${new Date().toISOString().slice(0, 10)}.md`);
+  fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, text); console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`);
+  if (verdicts(r).some((v) => !v.ok)) process.exitCode = 1;
+}
 async function narrateBench() {
   const { loadConfig } = await import('../server/llm.js');
   const cfg = { ...loadConfig(), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.provider ? { provider: args.provider } : {}), ...(args.mock ? { provider: 'mock' } : {}), ...(args.mode ? { narratorMode: args.mode } : {}) };

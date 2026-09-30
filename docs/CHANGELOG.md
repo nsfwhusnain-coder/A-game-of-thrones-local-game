@@ -3,6 +3,14 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — N10: the headlines are measured
+
+- **A group of one house's lords names the house.** "Four Lannister lords take the road across the Westerlands", "Three Stark banners rally to the Crown" — not "One lords take the road" or a region alone. Found by the new
+  suite below, over 505 stories of four games.
+- **The headlines suite** (`npm run bench -- --suite headlines`, a report in `bench/headlines-mock-<date>.md`): four games (Stark, Lannister, Greyjoy, Tyrell) × six weeks are played on the mock and every story is written
+  by the writer and held to the scorer: 100 % pass, headlines 7.2 words on average (12 at most), no boilerplate, five verbs to a kind of story, two and a half facts a card. `npm test` runs one game of it (`tests/headlines-bench.test.js`).
+  Nothing here asks a model; it is the floor a model's telling is measured against (`scripts/headlines-check.js` is yours to run with the live model).
+
 ## 2026-09-30 — R4 + R5 + R6: the State of the Realm, and the realm's lords reading it
 
 - **The Realm door (R) is now a ledger of the houses**, in a wide window on the right, closed until you ask. Tabs: **Strength** (Power, Swords, Ships, Lands, People), **Economy** (Coin, Income, Food), **Lands**, **Wars**; the

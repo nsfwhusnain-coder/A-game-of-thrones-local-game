@@ -341,6 +341,11 @@ wrong. Validation stats (fail rate by rule) go into the turn record; a rising ra
 - Headlines like a herald's cry, about a person: "Lord Umber marches the banners south". Not "The March".
 - `line` = one sentence of plain fact for the collapsed card; `scene` = 2–5 sentences.
 
+*(N10, implemented: the headlines suite, `bench/lib/headlines.js` + `bench/suites/headlines/weeks.json` (four games, six weeks each, played on the mock), `npm run bench -- --suite headlines` →
+`bench/headlines-mock-<date>.md`. It tells every story of every week with the deterministic writer and holds it to `scoreCard`: pass rate 100 %, headline mean ≤ 9 / longest ≤ 12 words, no boilerplate, the headline
+names someone or somewhere of its story (≥ 99 %), at least two verbs for a kind of story seen six times or more, at least 1.5 facts a card. `tests/headlines-bench.test.js` runs one game × six weeks in `npm test`;
+`scripts/soak.js` scores every card it sees; `scripts/headlines-check.js` is the owner's live-model run. The writer is the floor a model's card is measured against.)*
+
 ## 7. The Director (story hooks)
 
 **When:** once per jump (first segment), optional (Settings → *A director keeps the realm eventful*: off / light /

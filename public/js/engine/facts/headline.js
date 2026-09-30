@@ -46,6 +46,8 @@ const houseIds = (c, group) => [...new Set(group.map((f) => c.owner(f)).filter(B
 /** "northern hosts", "hosts of the Vale": the noun of a roll-up with its region, when all its houses share one. */
 const REGION = { north: ['the North', 'northern'], westerlands: ['the Westerlands', 'western'], dorne: ['Dorne', 'Dornish'], iron_islands: ['the Iron Islands', 'ironborn'], vale: ['the Vale'], riverlands: ['the Riverlands'], reach: ['the Reach'], stormlands: ['the Stormlands'], crownlands: ['the Crownlands'] };
 function regionNoun(c, hs, noun) {
+  // one house alone is named (the story's own who), not placed: "Four Lannister hosts", not "four western hosts"
+  if (hs.length === 1 && c.short(hs[0])) return `${c.short(hs[0])} ${noun === 'houses' ? 'banners' : noun}`;
   const rs = [...new Set(hs.map((h) => c.region(h)).filter(Boolean))];
   if (rs.length !== 1 || !REGION[rs[0]]) return noun;
   const [place, adj] = REGION[rs[0]];
@@ -54,25 +56,25 @@ function regionNoun(c, hs, noun) {
 const rollHead = {
   set_out: (g, s, c) => {
     const host = g.filter((f) => f.data?.party && c.known.party(f.data.party) ? !['rider', 'envoy', 'retinue'].includes(c.known.party(f.data.party).kind) : !f.data?.why).length * 2 >= g.length;
-    const hs = houseIds(c, g); const N = cap1(c.count(hs.length || g.length)); const to = c.dest(g.every((f) => f.data?.to === g[0].data?.to) ? g[0].data?.to : null);
+    const hs = houseIds(c, g); const N = cap1(c.count(hs.length > 1 ? hs.length : g.length)); const to = c.dest(g.every((f) => f.data?.to === g[0].data?.to) ? g[0].data?.to : null);
     const noun = regionNoun(c, hs, host ? 'hosts' : 'lords');
     if (to) return c.pick(g[0], host ? [`${N} ${noun} march for ${to}`, `${N} ${noun} ride for ${to}`, `${N} ${noun} leave for ${to}`] : [`${N} ${noun} ride for ${to}`, `${N} ${noun} leave for ${to}`, `${N} ${noun} take the road to ${to}`]);
-    const rs = regionCount(c, hs);
-    return c.pick(g[0], [`${N} ${host ? 'hosts' : 'lords'} ride out across ${rs}`, `${N} ${host ? 'hosts' : 'lords'} take the road across ${rs}`]);
+    const rs = regionCount(c, hs); const who = hs.length === 1 ? noun : host ? 'hosts' : 'lords';
+    return c.pick(g[0], [`${N} ${who} ride out across ${rs}`, `${N} ${who} take the road across ${rs}`]);
   },
   call_answered: (g, s, c) => {
-    const hs = houseIds(c, g); const N = cap1(c.count(hs.length || g.length)); const noun = regionNoun(c, hs, 'houses');
+    const hs = houseIds(c, g); const N = cap1(c.count(hs.length > 1 ? hs.length : g.length)); const noun = regionNoun(c, hs, 'houses');
     const lg = [...new Set(g.map((f) => f.data?.liege || f.data?.to).filter(Boolean))].map((id) => (c.known.house(id) ? id : s.holdings?.[id]?.owner)).find((id) => c.known.house(id));
     if (!lg) return c.pick(g[0], [`${N} ${noun} answer the call`, `${N} ${noun} rally to the banners`]);
     return c.pick(g[0], [`${N} ${noun} answer ${c.hpos(lg)} call`, `${N} ${noun} rally to ${c.hs(lg)}`, `${N} ${noun} gather for ${c.hs(lg)}`]);
   },
   arrived: (g, s, c) => {
-    const hs = houseIds(c, g); const N = cap1(c.count(hs.length || g.length)); const noun = regionNoun(c, hs, 'hosts');
+    const hs = houseIds(c, g); const N = cap1(c.count(hs.length > 1 ? hs.length : g.length)); const noun = regionNoun(c, hs, 'hosts');
     const p = g.every((f) => f.place === g[0].place) ? c.pl(g[0].place) : '';
     return p ? c.pick(g[0], [`${N} ${noun} reach ${p}`, `${N} ${noun} arrive at ${p}`]) : `${N} ${noun} finish the march`;
   },
   host_joined: (g, s, c) => {
-    const hs = houseIds(c, g); const N = cap1(c.count(hs.length || g.length)); const noun = regionNoun(c, hs, 'houses');
+    const hs = houseIds(c, g); const N = cap1(c.count(hs.length > 1 ? hs.length : g.length)); const noun = regionNoun(c, hs, 'houses');
     const other = [...new Set(g.flatMap((f) => f.houses || []))].find((h) => !hs.includes(h) && c.known.house(h)); const host = other ? c.host(other) : 'the host';
     const p = g.every((f) => f.place === g[0].place) ? c.pl(g[0].place) : '';
     return c.pick(g[0], [`${N} ${noun} join ${host}${p ? ` at ${p}` : ''}`, `${N} ${noun} bring their men to ${host}${p ? ` at ${p}` : ''}`]);

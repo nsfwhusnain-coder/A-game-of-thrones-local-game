@@ -183,6 +183,8 @@ seal), `toast` (bottom-centre, 3 s), `skeleton` (loading shimmer in panels), `em
 - **Filters** (icon row): all · your house · war · court · letters · rumours.
 - Clicking a card's place flies the map there; a card's crests open the house card.
 
+*Implemented in U1–U3, N7 and N8 (D-079, D-080); the headlines' quality is measured by the suite of N10 (04 §6), not by the eye alone.*
+
 ## 7. Audience, letters and council
 
 ### 7.1 Audience panel

@@ -1310,3 +1310,15 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **The tuned model's mind prompt is not changed.** The adapter was taught the dossier without a realm block (D-078); the block is built and tested, and `"mindRealmBrief": true` in config adds it to the call (`realm: true`) for the next tuning round.
   The engine's own minds (the trees and the order in which lords are woken) read it now.
 - **Not built:** `observe` for houses other than the player's (a mind's house sees the public prior for those it has no notes of); `docs/gdd/04-ai-system.md` §5's one-line pointer.
+
+## D-084 · 2026-09-30 · The headlines suite (WP N10)
+
+- **The writer is the floor, measured every CI run.** `bench/lib/headlines.js` reuses `bundles()` of the narrate suite (twelve-game harness) on four games of its own (`bench/suites/headlines/weeks.json`: Stark, Lannister,
+  Greyjoy, Tyrell × six weeks) and writes every story with `cardOf`. Over 505 stories: scorer 100 %, headline 7.2 words on average (12 at most), no boilerplate, 5.4 distinct verbs per kind of story, 2.5 facts a card.
+- **Gates** (`GATES` in the lib): pass 100 %; mean ≤ 9 and max ≤ 12 words; boilerplate 0; the headline names a person, house or place of its story ≥ 99 % (the scorer's `who` rule); at least two verb forms for a kind seen
+  six times or more (the spec's "distinct-verb ratio ≥ 70 %" is not measurable on a mock's few weeks: a ratio of verbs to stories punishes a kind that is told often; forms per kind does not); facts a card tells ≥ 1.5.
+- **What the bench found and fixed:** a roll-up of one house's lords said "One lords take the road" (a count of houses that was one) and named only a region; now the count is of the facts when one house is behind them and
+  the house is named ("Four Lannister lords take the road across the Westerlands"; "banners" for a house's answering vassals).
+- **CI:** `tests/headlines-bench.test.js` (Stark × six weeks, about 3 s) holds every gate and determinism; the four-game run is `npm run bench -- --suite headlines` (exit code 1 if a gate fails).
+  `scripts/soak.js` already scores every card of a long game; `scripts/headlines-check.js` is the owner's live-model run and is never in CI.
+- **Not built:** a replay suite of recorded model cards (waits for the owner's recordings: `--suite narrate --record` exists for it).
