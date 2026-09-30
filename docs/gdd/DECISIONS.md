@@ -1273,3 +1273,16 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **Pins:** tier decides (news and above; a minor one only if it is the player's); a card from before the tiers keeps the old importance rule; the small life of the realm (Meanwhile) only when it touched the player's own and mattered a little.
   A battle pin takes the recent battle card of the same two houses; if none was told, the old line stands rather than nothing. The map's pin glyphs are still emoji (a map job: E-phase).
 - `modal(html, { vellum: true })` frames nothing (no border, no ✕) so a page of vellum is the whole dialog; the report and a pin's card use it. A matter's card and a confirmation keep the old frame until U8.
+
+## D-081 · 2026-09-30 · The quill, the microphone and the scribe (WP Q1)
+
+- **Owner's word:** one button at the bottom to send, a quill, no machine ideas; a small model on the CPU to mend spelling; a speaking mode. So: the bar is the input, a microphone and a quill; "Counsel" (`suggest`) is
+  gone from the UI (the server route stays, unused).
+- **The scribe is a call** (`scribe`: schema, mock, fallback, an 8 s deadline) with **a server of its own**: `models.scribe.baseUrl`, inheriting nothing of the big model's routing (`routeFor`). It is on only if config names
+  that server; on the mock provider it is the rules. It runs on the CPU (`scripts/start-scribe.ps1`: no layers offloaded, `CUDA_VISIBLE_DEVICES=-1`, refuses a port in use), so nothing about it can disturb the GPU or any other server.
+- **The rules come first and are the floor** (`public/js/shared/scribe.js`, pure, shared by browser and server): they never mend a word they do not know, never a short word toward a name, and put a name right only toward
+  a name in the player's view (`lexiconOf(view)`), so they cannot say a name the lord has not met. The model's mending is kept only if `driftOf` finds none: a number (in figures or words) changed, a name lost, the words
+  reordered or replaced (LCS of the words ≥ 85 %), the length off by more than 30–40 %, another script. A change of mind ("a tourney, no, a feast") is left to the steward: the model is told to keep it, and a rewrite that resolves it is refused.
+- **The ears run in the page, on the CPU** (WebAssembly, never WebGPU; `ui/ears-worker.js`), with the runtime vendored (`public/vendor/transformers/`, Apache-2.0, the same version as the voices' runtime) and the model from
+  `npm run fetch-ears` or, once, the hub. The recording is decoded, written down and dropped; `ears.js` has no network call (a test holds it to that). Single-threaded (the page is not cross-origin isolated): about 3.5 s for 9 s of speech.
+- **Spoken words wait in the box** for the lord to read and press the quill, rather than being sent: a misheard word must not become an order unseen.

@@ -3,6 +3,22 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — Q1: the quill, the microphone and the scribe
+
+- **One button to send.** The command bar is the box, a **microphone** and a **quill**: the quill sends the order as you wrote it (Enter does too). The sparkle "Counsel" button, which asked the
+  advisors for ideas, is gone; nothing in the bar asks a machine for anything.
+- **Your spelling is put right before the steward reads it.** At once, by rule: spacing, capitals, "teh", "banaers", "mne", a misspelt name toward a name you have met, the full stop (or the question
+  mark). Where you have set up a small model for it, that too, on the CPU and only for a moment: it mends any other misspelling and the stops of a spoken line, and its mending is thrown away if it changes a
+  number, drops a name, reorders the words or answers you. Whatever it does, you see the mended line as the order and can change it.
+- **Speaking an order.** The microphone records, a small speech model **in the page, on the CPU** writes it down (nothing leaves your machine), the scribe puts it right ("um send Roderick to Winterfell with
+  a 50 men" → "Send Rodrik to Winterfell with a 50 men."), and it waits in the box for you to read it and press the quill. Esc puts the microphone down.
+- **Nothing on the GPU.** The small model is a llama.cpp server of its own on its own port with no layers offloaded and the GPU hidden from it (`scripts/start-scribe.ps1`, refuses a port that is in use); the
+  big model is never asked. Measured on the owner's PC: about a quarter of a second a line for the small model; three and a half seconds for a nine-second recording.
+- **For the owner:** `npm run fetch-ears` (45 MB, once; or the browser fetches it on first use), then for the small model `docs/local-ai/SCRIBE.md` (three steps) and `npm run scribe:check`. Without the small
+  model everything still works on the rules alone.
+- Tests: `tests/scribe.test.js` (13: the rules never change a line that is right and put no name in that was not sent; the model's mending is checked; a dead, dropped or slow model costs nothing; the big model
+  is never asked; the route; the bar has exactly a quill and a microphone; the ears use no GPU and send the sound nowhere).
+
 ## 2026-09-30 — N7 + N8: the chronicle as cards, the maester's report, pins that say what happened
 
 - **The chronicle (H, or the strip's All)** reads as cards on oak: a headline (one to three diamonds for its weight), two lines of summary, where and when, whose it is

@@ -42,6 +42,8 @@ import { makeCommitment, COMMITMENTS, commitmentsTick } from '../public/js/engin
 import { runCall } from './ai/client.js';
 import { sampleRealm } from '../public/js/engine/realm/stats.js';
 import { realmViewFor } from '../public/js/engine/realm/view.js';
+import { scribe as scribeText, scribeOn } from './scribe.js';
+import { playerView } from './view.js';
 import { parseOrder } from './orders/parse.js';
 import { weighAudience, holdToVerdict, moodOf, moodWord } from '../public/js/shared/temperament.js';
 
@@ -196,6 +198,13 @@ export function realmView(id, opts = {}) {
   const state = loadState(id);
   return realmViewFor(state, state.meta.player, opts);
 }
+
+/** The lord's words mended for the steward (server/scribe.js): the rules, and the small model on the CPU when one is set up. */
+export function scribe(id, text, { spoken = false } = {}) {
+  const state = loadState(id);
+  return scribeText(playerView(state), text, { spoken, log: (kind, msgs, reply, info) => logLLM(id, kind, msgs, reply, info) });
+}
+export const scribeStatus = () => ({ model: scribeOn() });
 
 export function writeChronicle(id, text) { fs.writeFileSync(path.join(dir(id), 'chronicle.md'), text); }
 function appendChronicle(id, text) { fs.appendFileSync(path.join(dir(id), 'chronicle.md'), text); }

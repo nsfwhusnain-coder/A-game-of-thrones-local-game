@@ -1,0 +1,6 @@
+{
+  "_comment": "The scribe's small model (docs/local-ai/SCRIBE.md): merge this \"models\" entry into config.json. It names a llama.cpp server of its own on the CPU (start it with scripts/start-scribe.ps1), and it is the only thing that turns the small model on. Without it the plain rules mend the lord's spelling by themselves.",
+  "models": {
+    "scribe": { "baseUrl": "http://127.0.0.1:8097/v1", "deadlineSec": 8 }
+  }
+}

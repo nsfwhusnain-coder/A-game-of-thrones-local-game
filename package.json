@@ -9,6 +9,8 @@
     "check": "node scripts/check-data.js && node --experimental-vm-modules --no-warnings scripts/check-syntax.mjs && node scripts/lint-engine.js",
     "fetch-sigils": "node scripts/fetch-sigils.js",
     "fetch-voices": "node scripts/fetch-voices.js",
+    "fetch-ears": "node scripts/fetch-ears.js",
+    "scribe:check": "node scripts/scribe-check.js",
     "test": "node --test tests/*.test.js",
     "soak": "node scripts/soak.js",
     "bench": "node scripts/bench.js",

@@ -19,6 +19,8 @@ import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderShe
 import { renderDrawer, setDrawer, openDrawer, closeDrawer, drawerOpen, pickFilter, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
 import { showReport, reportOn, setReportOn } from './ui/report.js';
+import { tidy, forgetScribe } from './ui/scribe.js';
+import { makeEars, canListen } from './ui/ears.js';
 import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName, SPANS, spanOf } from './shared/world.js';
 import { project, SEASONS } from './shared/economy.js';
 import { underway, orderOutcome, STATUS_LABEL } from './shared/errands.js';
@@ -301,8 +303,35 @@ const orderInput = $('#order-input');
 orderInput.addEventListener('input', () => { orderInput.style.height = 'auto'; orderInput.style.height = Math.min(orderInput.scrollHeight, 160) + 'px'; });
 orderInput.onkeydown = (e) => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); advance(); return; }
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addOrder(orderInput.value); orderInput.value = ''; orderInput.style.height = 'auto'; }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendOrder(); }
 };
+// The quill (WP Q1): the words in the box, put right by the scribe (the plain rules at once; the small model on the CPU when one is set up, and only for a
+// moment), and set down as an order — which the steward reads next, as ever. One button sends; nothing else is asked of the lord.
+let sending = false;
+async function sendOrder() {
+  const raw = orderInput.value.trim(); if (!raw || sending) return false;
+  sending = true; const bar = $('#command-bar'); bar.classList.add('is-scribing'); orderInput.readOnly = true; $('#send-btn').setAttribute('aria-busy', 'true');
+  try { const text = await tidy(raw); orderInput.value = ''; orderInput.style.height = 'auto'; addOrder(text); }
+  finally { sending = false; bar.classList.remove('is-scribing'); orderInput.readOnly = false; $('#send-btn').removeAttribute('aria-busy'); }
+  return true;
+}
+// The microphone: what is said is written down by a small model in this page (on the CPU), mended by the scribe, and left in the box to be read and sent
+const ears = makeEars({
+  onState(state, text) {
+    const bar = $('#command-bar'); const b = $('#listen-btn');
+    bar.classList.toggle('is-listening', state === 'listening'); bar.classList.toggle('is-hearing', state === 'writing');
+    b.setAttribute('aria-pressed', String(state === 'listening')); b.setAttribute('aria-label', state === 'listening' ? 'Stop listening' : 'Speak an order'); b.classList.toggle('is-rec', state === 'listening');
+    orderInput.placeholder = state === 'listening' ? 'Listening… press the microphone again' : state === 'writing' ? (text || 'Writing it down…') : 'Command your house…';
+  },
+  async onText(text) {
+    const said = String(text || '').trim();
+    if (!said) { toast('Nothing could be made out. Try again, a little slower.', true); return; }
+    const clean = await tidy(said, { spoken: true }); const had = orderInput.value.trim();
+    orderInput.value = had ? `${had} ${clean}` : clean; orderInput.dispatchEvent(new Event('input')); orderInput.focus();
+  },
+  onError: (message) => toast(message, true),
+});
+$('#listen-btn').classList.toggle('hidden', !canListen());
 
 // ───── map picking (march orders by clicking) ─────
 app.startPick = (kind, id) => {
@@ -420,6 +449,7 @@ $('#modal').onclick = (e) => { if (e.target.id === 'modal') closeModal(); };
 document.addEventListener('keydown', (e) => {
   // Escape peels one layer at a time: the menu and the Inbox first, then a card, aiming a march, the sheet, the window, the chronicle (GDD 17 §2.5)
   if (e.key === 'Escape') {
+    if (ears.state !== 'idle') { ears.cancel(); return; }
     if (app.state && closePopovers()) return;
     if (!$('#modal').classList.contains('hidden')) return closeModal();
     if (app.picking) { app.picking = null; $('#pick-hint').classList.add('hidden'); return; }
@@ -453,18 +483,10 @@ function showErrands() {
 async function handleAction(action, el) {
   const s = app.state;
   switch (action) {
-    case 'add-order': addOrder(orderInput.value); orderInput.value = ''; break;
+    case 'add-order': return void sendOrder();
+    case 'listen': return void ears.toggle();
     case 'errands': return showErrands();
     case 'advance': return advance();
-    case 'suggest': {
-      busy(true, 'Your advisors deliberate…');
-      try {
-        const r = await api(`/games/${app.saveId}/suggest`, { body: {} });
-        modal(`<h2>Counsel of your advisors</h2><p class="muted">Click a suggestion to add it to your orders.</p>${r.suggestions.map((x) => `<div class="event" data-sugg="${esc(x)}"><div class="eb">${esc(x)}</div></div>`).join('')}`);
-        $$('[data-sugg]').forEach((el2) => el2.onclick = () => { addOrder(el2.dataset.sugg); el2.style.opacity = 0.4; });
-      } catch (e) { toast(e.message, true); } finally { busy(false); }
-      break;
-    }
     case 'undo': return chooseUndo();
     case 'settings': return showSettings();
     case 'help': return showHelp();
@@ -490,7 +512,7 @@ async function advance() {
     undecided.length > 1 ? 'Matters still await your word' : 'A matter still awaits your word',
     `${undecided.map((d) => d.title).join('; ')}. Silence is an answer too — the world will decide without you.`,
     { yes: 'Let the days pass', no: 'Hear them first' })) { openPopover('inbox'); return; }
-  const pending = orderInput.value.trim(); if (pending) { addOrder(pending); orderInput.value = ''; }
+  await sendOrder(); // (what is written in the box goes down as an order first)
   const span = 'auto'; const until = nextTurnLength(app.state);
   busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}…`, { live: true });
   try {
@@ -695,7 +717,7 @@ async function showSettings() {
     let extra = {}; try { extra = JSON.parse($('#cfg-extra').value || '{}'); } catch { toast('Extra parameters are not valid JSON', true); }
     return { provider: $('#cfg-provider').value, model: $('#cfg-model').value.trim(), baseUrl: $('#cfg-url').value.trim(), apiKey: $('#cfg-key').value, contextTokens: Number($('#cfg-ctx').value), maxTokens: Number($('#cfg-max').value), temperature: Number($('#cfg-temp').value), consolidateEvery: Number($('#cfg-cons').value), keepRecentTurns: Number($('#cfg-keep').value), timeoutSec: Number($('#cfg-timeout').value), jsonMode: $('#cfg-json').checked, promptDetail: $('#cfg-detail').value, narrator: $('#cfg-narrator').value, director: $('#cfg-director').value, minds: $('#cfg-minds').value === 'off' ? 'off' : Number($('#cfg-minds').value), thinking: $('#cfg-think').value, thinkInAudiences: $('#cfg-thinkchat').checked, thinkingBudget: Number($('#cfg-tbudget').value) || 0, reasoningEffort: $('#cfg-effort').value, stream: $('#cfg-stream').checked, extraBody: extra };
   };
-  $('#cfg-save').onclick = async () => { const r = await api('/config', { body: collect() }); $('#cfg-url').value = r.baseUrl; toast('Settings saved.'); refreshLLMStatus(); };
+  $('#cfg-save').onclick = async () => { const r = await api('/config', { body: collect() }); $('#cfg-url').value = r.baseUrl; toast('Settings saved.'); forgetScribe(); refreshLLMStatus(); };
   $('#cfg-test').onclick = async () => { await api('/config', { body: collect() }); $('#cfg-result').textContent = 'Testing…'; try { const r = await api('/llm/test', { body: {} }); $('#cfg-result').textContent = `${r.ok ? '✔' : '⚠'} Connected (${r.ms} ms, ${r.model || 'model'})\nJSON schema enforced: ${r.schema ? 'yes' : 'no — update llama.cpp, or the game falls back more often'}\n"The Wall" understood as Castle Black: ${r.prefixSafe ? 'yes' : 'no'}${r.words ? `\nHouse Stark's words: ${r.words}` : ''}${(r.routing || []).map((x) => `\n⚠ ${x}`).join('')}${r.problems?.length ? `\n${r.problems.join('; ')}` : ''}`; } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } refreshLLMStatus(); };
   $('#cfg-models').onclick = async () => { await api('/config', { body: collect() }); try { const r = await api('/models'); $('#model-list').innerHTML = r.models.map((m) => `<option value="${esc(m)}">`).join(''); $('#cfg-result').textContent = 'Models: ' + r.models.join(', '); } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } };
 }

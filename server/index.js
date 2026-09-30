@@ -110,6 +110,9 @@ route('GET', '/api/games/:id/realm', (req, p) => {
 });
 route('POST', '/api/games/:id/talk', async (req, p) => { const b = await readBody(req); return game.talk(p.id, b.character, String(b.message || '').slice(0, 4000)); });
 route('POST', '/api/games/:id/suggest', (req, p) => game.suggest(p.id));
+// The scribe: the lord's words, spelt and stopped for the steward (rules always; the small CPU model when config names one)
+route('POST', '/api/games/:id/scribe', async (req, p) => { const b = await readBody(req); return game.scribe(p.id, String(b.text || ''), { spoken: !!b.spoken }); });
+route('GET', '/api/scribe', () => game.scribeStatus());
 route('POST', '/api/games/:id/act', async (req, p) => game.act(p.id, await readBody(req)));
 route('POST', '/api/games/:id/council', async (req, p) => { const b = await readBody(req); return game.council(p.id, b.members, String(b.message || '').slice(0, 4000), { advisor: !!b.advisor }); });
 route('POST', '/api/games/:id/consolidate', (req, p) => game.consolidateNow(p.id));

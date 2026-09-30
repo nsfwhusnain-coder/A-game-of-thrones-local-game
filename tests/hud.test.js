@@ -414,7 +414,7 @@ test('the command bar survives a collapsed chronicle: it is its own bar, not ins
   if (old && drawer) assert.ok(!DOC.inside(old, drawer), 'the old #command composer is not in the drawer');
   const input = must('order-input');
   assert.ok(DOC.inside(input, bar), '#order-input is inside #command-bar');
-  for (const a of ['add-order', 'suggest']) assert.ok(DOC.under(bar).some((n) => n.attrs['data-action'] === a), `data-action="${a}" is in the command bar`);
+  for (const a of ['add-order', 'listen']) assert.ok(DOC.under(bar).some((n) => n.attrs['data-action'] === a), `data-action="${a}" is in the command bar`);
   assert.ok(DOC.under(bar).some((n) => n.attrs.id === 'orders'), 'the order chips (#orders) are in the command bar');
 });
 
