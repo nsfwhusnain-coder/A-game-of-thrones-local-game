@@ -265,6 +265,31 @@ async function probeFirstRun(browser, w, h) {
   out.focusBack = await page.evaluate(() => window.__gate.visible('#hud-top') && window.__gate.visible('#strip'));
   await page.close(); return out;
 }
+// U9 (GDD 17 §4): portraits and family trees, improved in place — the People tab opens on your own people with faces, the tree draws its lines, the ruler's plate has a hover card, the chronicle's cards carry faces.
+async function probePeople(page) {
+  const out = { people: 'n/a', tree: 'n/a', hover: 'n/a', faces: 'n/a' };
+  await page.evaluate(() => document.activeElement?.blur?.()); await page.keyboard.press('p'); await page.waitForTimeout(700);
+  const p = await page.evaluate(() => ({ sec: [...document.querySelectorAll('#people-rows .ppl-sec')].map((x) => x.dataset.sec), faces: document.querySelectorAll('#people-rows img.por').length }));
+  out.people = p.sec.includes('family') && p.faces >= 3 ? 'ok' : `FAIL ${JSON.stringify(p)}`;
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  const lord = await page.evaluate(() => { const s = window.__wc.state; return s.houses[s.meta.player].lord; });
+  await page.evaluate((id) => window.__wc.openSheet('char', id), lord); await page.waitForTimeout(400);
+  const btn = await page.$('#sheet [data-tree]'); if (btn) {
+    await btn.click(); await page.waitForTimeout(900);
+    const t = await page.evaluate(() => ({ cards: document.querySelectorAll('#tree .tm').length, imgs: document.querySelectorAll('#tree .tm img').length, d: document.querySelector('#tree .tree-links path')?.getAttribute('d')?.length || 0 }));
+    out.tree = t.cards >= 3 && t.imgs === t.cards && t.d > 20 ? 'ok' : `FAIL ${JSON.stringify(t)}`;
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    await page.evaluate(() => { document.querySelector('#modal')?.classList.add('hidden'); });
+  } else out.tree = 'FAIL: no Family tree button';
+  await closeAll(page);
+  await page.hover('#player-portrait'); await page.waitForTimeout(300);
+  const hv = await page.evaluate(() => { const c = document.querySelector('#player-card'); return { shown: !!c && getComputedStyle(c).display !== 'none', text: c?.textContent || '', mood: document.querySelector('#player-portrait')?.dataset.mood }; });
+  out.hover = hv.shown && hv.text.length > 20 && hv.mood ? 'ok' : `FAIL ${JSON.stringify(hv)}`;
+  await page.mouse.move(5, 300);
+  const hasCards = await page.evaluate(() => (window.__wc.state.history || []).some((t) => (t.events || []).some((e) => e.tier && e.tier !== 'minor' && (e.who || []).some((w) => window.__wc.state.characters[w]))));
+  if (hasCards) { await page.keyboard.press('h'); await page.waitForTimeout(900); const n = await page.evaluate(() => document.querySelectorAll('#drawer .wc-card__faces img').length); out.faces = n >= 1 ? 'ok' : 'FAIL: none'; await closeAll(page); }
+  return out;
+}
 async function measure(browser, id, w, h, turn) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.setDefaultTimeout(90000);
@@ -286,6 +311,8 @@ async function measure(browser, id, w, h, turn) {
   say('probed');
   Object.assign(res, { u4: await probeCards(page) });
   say('cards probed');
+  Object.assign(res, { u9: await probePeople(page) });
+  say('people probed');
   res.errors = errors; await page.close();
   return res;
 }
@@ -310,6 +337,10 @@ function report(cells) {
     ['"More" opens the sheet in place of a window', (c) => c.u4.more, (c) => c.u4.more === 'ok', () => 'ok'],
     ['old keys land on their tabs', (c) => `${c.u4.tabs.filter((t) => t.got === t.want).length}/${c.u4.tabs.length}`, (c) => c.u4.tabs.length === 7 && c.u4.tabs.every((t) => t.got === t.want), () => '7/7'],
     ['windows and sheets clear of the command bar', (c) => c.u4.panelsClear, (c) => c.u4.panelsClear === 'ok', () => 'ok'],
+    ['People tab opens on your family, with faces', (c) => c.u9.people, (c) => c.u9.people === 'ok', () => 'ok'],
+    ['the family tree draws its portraits and lines', (c) => c.u9.tree, (c) => c.u9.tree === 'ok', () => 'ok'],
+    ["the ruler's plate has a hover card and a ring", (c) => c.u9.hover, (c) => c.u9.hover === 'ok', () => 'ok'],
+    ["the chronicle's cards carry faces (turn 5)", (c) => c.u9.faces, (c) => c.u9.faces === 'ok' || (c.turn === 0 && c.u9.faces === 'n/a'), () => 'ok (n/a at turn 0)'],
     ['the welcome card is shown on a new game', (c) => (c.first.welcome ? 'yes' : 'NO'), (c) => c.first.welcome, () => 'yes'],
     ['coach marks, in order, each put away by its thing', (c) => (c.first.marks.join('>') === 'command>turn>realm>' ? 'in order' : c.first.marks.map((m) => m || 'none').join('>')), (c) => c.first.marks.join('>') === 'command>turn>realm>', () => 'command>turn>realm>none'],
     ['a mark stays on the screen', (c) => (c.first.slipInside ? 'ok' : 'FAIL'), (c) => c.first.slipInside, () => 'ok'],

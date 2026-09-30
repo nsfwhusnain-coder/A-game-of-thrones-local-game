@@ -1,6 +1,7 @@
 import { HOUSES } from '../data/houses.js';
 import { startIconizer, icon, hydrateIcons } from './ui/icons.js';
 import { routeKey, turnLabel } from './ui/hud.js';
+import { conditionOf } from './ui/people.js';
 import { renderChrome, drawMenu, togglePopover, closePopovers, closePopover, openPopover, isOpen, openDoor, openStripLine, openItem, loadSeen, markSeen, renderStrip, setMapModeName } from './ui/chrome.js';
 import { drawTitleMap } from './ui/titlemap.js';
 import { startMusic, setMood, setMusicHouse, musicSettings, setMusic } from './ui/music.js';
@@ -203,7 +204,12 @@ function renderPlayer() {
   // the plate holds the name and the style; a regency or an unfit ruler is one quiet mark on it, the whole line in its hover (the Realm window says the rest)
   const warn = why && !isRegent ? `${why.text} — and no one of the house is fit to rule for ${r && /lady|queen|princess/i.test(r.title || '') ? 'her' : 'him'}.` : '';
   const note = warn || line || '';
-  $('#player-name').innerHTML = `<b>${esc(face?.name || 'House ' + h.name)}</b><small>${esc(title)}</small>${note ? `<span class="regency-note${warn ? ' warn' : ''}" title="${esc(note)}">${icon(warn ? 'warn' : 'scales')}</span>` : ''}`;
+  // how the lord is: a word on the plate, a ring round the medallion, and the whole of it on hover (ui/people.js)
+  const cond = face ? conditionOf(s, face) : null; // (of whoever holds the seal: the lord, or the regent)
+  $('#player-name').innerHTML = `<b>${esc(face?.name || 'House ' + h.name)}</b><small>${esc(title)}</small>${note ? `<span class="regency-note${warn ? ' warn' : ''}" title="${esc(note)}">${icon(warn ? 'warn' : 'scales')}</span>` : ''}${cond?.word ? `<small class="cond ${cond.tone}">${esc(cond.word)}</small>` : ''}`;
+  $('#player-portrait').dataset.mood = cond?.tone || 'quiet';
+  const card = $('#player-card');
+  if (card) card.innerHTML = face ? `<span class="wc-kicker">${esc(title)}</span><b>${esc(face.name)}</b><span>House ${esc(h.name)} · age ${face.age ?? '?'}</span>${cond?.word ? `<span class="cond ${cond.tone}">${esc(cond.word)}</span>` : ''}${note ? `<span class="note">${esc(note)}</span>` : ''}<em>Click for their sheet</em>` : '';
   $('#player-name').title = note;
 }
 app.openRuler = () => { const sp = speakerFor(app.state, player().id); if (sp) openSheet('char', sp.id); };

@@ -1,0 +1,14 @@
+{
+ "note": "How many portraits and trees the UI drew before U9 (WP U9): per source file, the calls of por(), the family tree hooks. tests/people-ui.test.js holds that none has gone",
+ "por": {
+  "public/js/app.js": 1,
+  "public/js/ui/card.js": 1,
+  "public/js/ui/cards.js": 2,
+  "public/js/ui/common.js": 1,
+  "public/js/ui/drawer.js": 5,
+  "public/js/ui/windows.js": 8
+ },
+ "tree": {
+  "public/js/ui/windows.js": 3
+ }
+}

@@ -1,5 +1,5 @@
 // Side windows & detail sheets (CK3-style panels).
-import { app, $, $$, esc, fmt, placeName, getRelation, api, doVerb, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, confirmModal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
+import { app, $, $$, esc, fmt, placeName, getRelation, api, doVerb, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, closeModal, confirmModal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
 import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf, dateStr } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
 import { standing, standingWord } from '../shared/standing.js';
@@ -32,6 +32,8 @@ import { dayNumber, dateOfDay } from '../engine/time.js';
 import { renderLedger, wireLedger } from './realm.js';
 
 import { TABS, tabTarget } from './hud.js';
+import { peopleSections, conditionOf } from './people.js';
+import { treeOf, treeHtml } from './tree.js';
 
 // Two windows, each with tabs (GDD 17 §4 U4): the Realm (the State of the Realm, your house, the hosts, the treasury, the dealings of the houses) and
 // People (the household and court, the council, the shadows). What were six windows are tabs of these, unchanged inside; the old keys and the old
@@ -362,7 +364,7 @@ function shadowsHtml(s) {
 function people() {
   const s = app.state;
   const houses = [...new Set(Object.values(s.characters).map((c) => c.house))].filter((h) => s.houses[h]).sort((a, b) => s.houses[a].name.localeCompare(s.houses[b].name));
-  return `<input class="input" id="people-filter" placeholder="Search names, titles, places…" value="${esc(app.peopleFilter)}">
+  return `<input class="input" id="people-filter" placeholder="Who is who: search every name, title and place in the realm…" value="${esc(app.peopleFilter)}">
     <select id="people-house" style="margin-top:0.4rem"><option value="">All houses</option>${houses.map((h) => `<option value="${h}" ${app.peopleHouse === h ? 'selected' : ''}>${esc(s.houses[h].name)}</option>`).join('')}</select>
     <label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="people-dead" ${app.peopleDead ? 'checked' : ''}> include the dead</label>
     <div id="people-rows" style="margin-top:0.4rem"></div>`;
@@ -429,6 +431,11 @@ const wire = {
   people(body) {
     const draw = () => {
       const s = app.state; const q = app.peopleFilter.toLowerCase();
+      // no search asked: the people of your own house first (family, household, guests, bannermen); a search, a house or the dead: the whole realm's list, as before
+      if (!q && !app.peopleHouse && !app.peopleDead) {
+        const secs = peopleSections(s);
+        if (secs.length) { $('#people-rows', body).innerHTML = secs.map((x) => `<section class="ppl-sec" data-sec="${x.id}"><h4>${esc(x.title)} <span class="muted">· ${esc(x.hint)}</span></h4>${x.rows.map(({ c, role }) => charRow(c, { extra: role ? `<span class="pill role">${esc(role)}</span>` : '' })).join('')}</section>`).join('') + '<p class="muted ppl-more">Everyone else in the realm: search above, or choose a house.</p>'; return; }
+      }
       const list = Object.values(s.characters).filter((c) => (app.peopleDead || c.alive) && (!app.peopleHouse || c.house === app.peopleHouse || kinOf(s, c, app.peopleHouse)) && (!q || `${c.name} ${c.title} ${s.houses[c.house]?.name} ${whereabouts(s, c).text}`.toLowerCase().includes(q)));
       list.sort((a, b) => (b.alive - a.alive) || a.name.localeCompare(b.name));
       $('#people-rows', body).innerHTML = list.slice(0, 200).map((c) => charRow(c)).join('') || '<div class="muted">No one.</div>';
@@ -510,11 +517,12 @@ function characterSheet(id) {
   const sk = c.skills || [5, 5, 5, 5, 5, 5];
   const isRuler = id === player().lord;
   return `
-    <div class="char-hero"><img class="por" src="${por(c, 160)}" alt=""><div style="flex:1;min-width:0">
+    <div class="char-hero"><img class="por" src="${por(c, 256)}" alt="Portrait of ${esc(c.name)}"><div style="flex:1;min-width:0">
       <h2>${esc(c.name)}</h2>
       <div class="muted">${esc(c.title || c.roles.join(', '))}</div>
       <div style="margin:0.3rem 0">${sig(h, 1.3)} <a href="#" data-house="${h?.id}">House ${esc(h?.name)}</a></div>
       <div class="kv"><span class="k">Age</span><span>${c.alive ? c.age : `${c.age} (died ${c.died || '?'} AC)`}</span>
+      ${c.alive ? `<span class="k">Health</span><span class="cond ${conditionOf(s, c).tone}">${esc(conditionOf(s, c).word)}</span>` : ''}
       <span class="k">Where</span><span>${esc(whereabouts(s, c).text)}</span>
       ${c.alive && c.status !== 'free' ? `<span class="k">Status</span><span class="pill bad">${esc(c.status)}</span>` : ''}
       ${!mine && c.alive ? `<span class="k">Opinion of you</span><span>${relHtml(c.opinion || 0)}</span>` : ''}
@@ -572,18 +580,30 @@ function dispositionHtml(id) {
   return `<h4>Disposition toward you</h4><div>${pill('Overall', d)}${Object.entries(d.proposals).filter(([k]) => !(k === 'fealty' && app.state.houses[app.state.characters[id].house]?.liege === app.state.meta.player)).map(([k, x]) => pill(N[k], x)).join('')}</div><div class="muted" style="font-size:0.75rem">Hover for the reasons. Gifts, favours, threats and good arguments can change minds.</div>`;
 }
 
-function familyTree(id) {
-  const s = app.state; const c = s.characters[id];
-  const f = c.father && s.characters[c.father], m = c.mother && s.characters[c.mother];
-  const gp = [f?.father, f?.mother, m?.father, m?.mother].map((x) => x && s.characters[x]).filter(Boolean);
-  const sibs = siblingsOf(s, id); const kids = childrenOf(s, id); const spouse = c.spouse && s.characters[c.spouse];
-  const grand = kids.flatMap((k) => childrenOf(s, k.id));
-  const gen = (list, role) => list.length ? `<div class="gen">${list.map((x) => `<div class="m" data-char="${x.id}" onclick="document.querySelector('#modal').classList.add('hidden')"><img src="${por(x, 80)}"><div class="rl">${typeof role === 'function' ? role(x) : role}</div><div>${esc(x.name)}${x.alive ? '' : ' ✝'}</div></div>`).join('')}</div><div class="conn"></div>` : '';
-  modal(`<h2>The family of ${esc(c.name)}</h2><div class="tree family">
-    ${gen(gp, 'Grandparent')}${gen([f, m].filter(Boolean), (x) => (x === f ? 'Father' : 'Mother'))}
-    ${gen([c, spouse, ...sibs].filter(Boolean), (x) => (x === c ? 'Self' : x === spouse ? 'Spouse' : 'Sibling'))}
-    ${gen(kids, 'Child')}${gen(grand, 'Grandchild')}</div>`);
+function familyTree(id, { wider = false } = {}) {
+  const s = app.state; const model = treeOf(s, id, { wider }); if (!model) return;
+  modal(`<h2>The family of ${esc(model.name)}</h2>${treeHtml(model, { esc, por: (cid) => por(s.characters[cid], 96) })}`, {});
+  $('#modal-box').classList.add('is-tree');
+  requestAnimationFrame(() => drawTreeLinks($('#tree'), model));
 }
+// the lines of the tree: a parent (or the pair) down to each child, and the couples joined side by side; measured from the cards as they lie
+function drawTreeLinks(root, model) {
+  const svg = root?.querySelector('.tree-links'); if (!svg) return;
+  const box = root.getBoundingClientRect();
+  const at = (cid) => { const e = root.querySelector(`[data-tid="${CSS.escape(cid)}"]`); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left - box.left + r.width / 2, top: r.top - box.top, bottom: r.bottom - box.top, left: r.left - box.left, right: r.right - box.left, mid: r.top - box.top + r.height * 0.42 }; };
+  svg.setAttribute('width', root.scrollWidth); svg.setAttribute('height', root.scrollHeight); svg.setAttribute('viewBox', `0 0 ${root.scrollWidth} ${root.scrollHeight}`);
+  let d = ''; const byChild = new Map();
+  for (const l of model.links) { (byChild.get(l.to) || byChild.set(l.to, []).get(l.to)).push(l.from); }
+  for (const [child, parents] of byChild) {
+    const c = at(child); const ps = parents.map(at).filter(Boolean); if (!c || !ps.length) continue;
+    const px = ps.reduce((n, p) => n + p.x, 0) / ps.length; const py = Math.max(...ps.map((p) => p.bottom)); const dy = Math.max(10, (c.top - py) / 2);
+    d += `M${px.toFixed(1)} ${py.toFixed(1)} C${px.toFixed(1)} ${(py + dy).toFixed(1)} ${c.x.toFixed(1)} ${(c.top - dy).toFixed(1)} ${c.x.toFixed(1)} ${c.top.toFixed(1)} `;
+  }
+  for (const [a, b] of model.couples) { const x = at(a), y = at(b); if (!x || !y) continue; const l = x.left < y.left ? [x, y] : [y, x]; d += `M${l[0].right.toFixed(1)} ${l[0].mid.toFixed(1)} L${l[1].left.toFixed(1)} ${l[1].mid.toFixed(1)} `; }
+  svg.innerHTML = `<path d="${d}"/>`;
+}
+document.addEventListener('change', (e) => { const w = e.target.closest?.('[data-tree-wider]'); if (w) familyTree(w.dataset.treeWider, { wider: w.checked }); });
+document.addEventListener('click', (e) => { const m = e.target.closest?.('#tree .tm[data-char]'); if (m) { const id = m.dataset.char; closeModal(); openSheet('char', id); } });
 
 // a castle under siege (07 §8): how long it can hold, and for the besieger, terms or a storm
 function siegeHtml(s, hd) {
