@@ -70,3 +70,15 @@
 .chat-head .sub-b { line-height: 1.25; }
 .chat.has-log .quick-asks { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .2rem; scrollbar-width: thin; }
 .chat.has-log .quick-asks button { flex: none; white-space: nowrap; }
+
+/* the End-turn plate counts the orders in hand (ui/orders.js): bronze when all is well, ochre when one asks or needs care, madder when one cannot be done */
+.advance-btn { position: relative; }
+.advance-count { position: absolute; top: -.45rem; right: -.4rem; z-index: 2; min-width: 1.2rem; height: 1.2rem; padding: 0 .3rem; box-sizing: border-box; border-radius: .7rem; font: 700 .74rem/1.2rem var(--wc-display); letter-spacing: 0; text-align: center; color: var(--oak); background: var(--bronze-hi); box-shadow: 0 1px 3px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.advance-count[hidden] { display: none; }
+.advance-count[data-tone='warn'] { background: var(--ochre); }
+.advance-count[data-tone='bad'] { background: var(--madder-lit); color: #2a0d09; }
+/* a receipt's mark is an icon and keeps its line's colour */
+.receipt .rl .mk { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 1rem; }
+.receipt .rl .mk .ico { width: .95rem; height: .95rem; color: inherit; vertical-align: 0; }
+.receipt .rl.warn .mk, .wc-cmd .receipt .rl.warn .mk { color: var(--rubric); }
+.receipt .rl.bad .mk { color: var(--madder-ink); }

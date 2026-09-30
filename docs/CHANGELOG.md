@@ -3,6 +3,13 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-01 — F3: the command bar counts your orders
+
+- **The End-turn plate counts the orders the turn will carry out**, and its colour and tooltip say when one cannot be done ("3 orders · 1 cannot be done") or is waiting for your answer to a question — before you let the days run.
+- **Receipts use icons with words** instead of bare ✓ ⚠ ✗ characters; the newest order and its receipt are always in view; every one of the 300 test orders gets a receipt.
+- The days in "next: 7 days" are bold again (a regex had lost a backslash).
+- Not built, by your decision (Q1): the "Counsel ideas" and "Polish" buttons — the quill and the scribe are the composer. Tests: `tests/orders-ui.test.js` (5); two rows in `scripts/ui-gate.mjs`.
+
 ## 2026-10-01 — F6: matters as sealed letters, and silence that decides
 
 - **A matter is a wax seal on the map and a sealed letter when opened:** who asks (with their face and their house's wax), the situation, each answer as a plate with what it will do, how many days it waits ("The King will not wait — 6 days left"), and **Say nothing** with what your silence will do. The Inbox says how many days each matter has.
