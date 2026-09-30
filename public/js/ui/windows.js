@@ -29,8 +29,9 @@ import { FORTRESS } from '../../data/fortresses.js';
 import { COMPANIES } from '../../data/companies.js';
 import { GOALS, sideOf, scoreFor, leaderOf } from '../engine/politics/war.js';
 import { dayNumber, dateOfDay } from '../engine/time.js';
+import { renderLedger, wireLedger } from './realm.js';
 
-const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
+const TITLES = { realm: 'State of the Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
 
 // The three doors (Realm, People, Chronicle: ui/hud.js MENU) open a window on a section; until the State of the Realm (R4) and the cards
 // (U4) hold the old views as their own tabs and sections, a section is the window that used to hold it: the wars and the hosts, the
@@ -39,6 +40,7 @@ const SECTION_WINDOW = { 'realm/wars': 'military', 'realm/economy': 'economy', '
 export function openWindow(name, arg) {
   const via = SECTION_WINDOW[`${name}/${arg}`]; if (via) { name = via; arg = undefined; }
   if (app.win === name && arg === undefined) return closeWindow();
+  if (name === 'realm' && app.win !== 'realm') app.realmTab = 'ledger';
   app.win = name; app.winArg = arg; sfx('open');
   $('#window').classList.remove('hidden');
   $('#window').setAttribute('aria-hidden', 'false');
@@ -46,16 +48,25 @@ export function openWindow(name, arg) {
   $('#sheet').classList.remove('solo');
   renderWindow();
 }
-export function closeWindow() { if (app.win) sfx('close'); app.win = null; $('#window').classList.add('hidden'); $('#window').setAttribute('aria-hidden', 'true'); $('#sheet').classList.add('solo'); }
+export function closeWindow() { if (app.win) sfx('close'); app.win = null; wideWindow(false); $('#window').classList.add('hidden'); $('#window').setAttribute('aria-hidden', 'true'); $('#sheet').classList.add('solo'); }
 export function renderWindow() {
   if (!app.win || !app.state) return;
   const body = $('#win-body');
-  const fn = { realm, council, military, economy, diplomacy, intrigue, people }[app.win];
+  const fn = { realm: realmWindow, council, military, economy, diplomacy, intrigue, people }[app.win];
+  wideWindow(app.win === 'realm' && app.realmTab !== 'house');
+  $('#win-title').textContent = app.win === 'realm' && app.realmTab === 'house' ? 'Your house' : TITLES[app.win] || app.win;
   body.innerHTML = fn ? fn() : '';
   wire[app.win]?.(body);
 }
+// The ledger is a wide page (docs/gdd/19 §6.2); the windows beside it and the map's chip make room for it
+function wideWindow(on) { $('#window').classList.toggle('wide', on); document.body.classList.toggle('wide-window', on); }
 
 // ───────────── Realm ─────────────
+// The Realm door opens the State of the Realm (ui/realm.js); the house's own page, as it was, is the "Your house" tab
+function realmWindow() {
+  if (app.realmTab === 'house') return `<div class="wc-tabs realm-tabs" role="tablist"><button class="wc-tab" role="tab" data-realm-tab="ledger" aria-selected="false">State of the Realm</button><button class="wc-tab" role="tab" aria-selected="true">Your house</button></div>${realm()}`;
+  return '<div id="realm-body" class="realm-body"></div>';
+}
 function realm() {
   const s = app.state, p = s.meta.player, h = player();
   const liege = h.liege ? s.houses[h.liege] : null;
@@ -351,6 +362,11 @@ function people() {
 
 // ───────────── wiring ─────────────
 const wire = {
+  realm(body) {
+    const root = $('#realm-body', body);
+    if (root) { wireLedger(root); renderLedger(root); }
+    else $$('[data-realm-tab]', body).forEach((b) => b.onclick = () => { app.realmTab = 'ledger'; renderWindow(); });
+  },
   council(body) {
     $('#convene', body).onclick = () => { const ids = $$('.cm', body).filter((x) => x.checked).map((x) => x.value); if (!ids.length) return toast('Choose who sits at the table.', true); app.openCouncil(ids); };
   },

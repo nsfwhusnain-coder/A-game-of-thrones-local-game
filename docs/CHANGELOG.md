@@ -3,6 +3,20 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — R4 + R6: the State of the Realm
+
+- **The Realm door (R) is now a ledger of the houses**, in a wide window on the right, closed until you ask. Tabs: **Strength** (Power, Swords, Ships, Lands, People), **Economy** (Coin, Income, Food), **Lands**, **Wars**; the
+  house's own old page is the **Your house** tab, unchanged. Every figure says what it is: your own exact, **~** an estimate, **≈** a band, **≥** at least, **—** nothing known, a **?** for word older than two turns, and
+  the way it came (a raven, seen, a rumour) and how old in its hover; a house you have had no word of has no numbers. Rows are ranked as far as the bands allow (**≈1** where they overlap), sort by any header, and
+  show **All columns** on request. **3 · 6 · 12 moons** sets the window; **The house alone / With its sworn houses** sums a realm.
+- **Who is rising and who is falling**, only when two turns running say so, with a small line for each house (dashed where it is only estimated from what word reached you) and flags with their reasons: hungry, broke,
+  reeling, swollen, winning, losing. Click a house for its detail: every figure with its provenance, and five small lines (swords, coin, income, food, people) for it — for yours, the truth; for others, only what you observed.
+- **Wars, as you know them:** each with its sides and the swords each is known to have; for a war *you* are in, how it has moved over the window ("You are leading; gaining ground (+9 in 3 moons)"). Another house's war shows no score.
+- **What the realm is saying** (hunger, an empty purse, a debt falling due, a siege, unrest, a foe host near you, the strongest house rising, a war turning, the season) and **Where to focus**: the three of these about your own
+  house that have an answer you may lawfully give, each a button that only writes the order in the box for you to read and send.
+- Everything is built from what your house knows (the server's `GET /api/games/:id/realm`), so no hidden coffer, muster or score can show; a test changes all of them and checks the view does not move by a byte.
+- Tests: `tests/realm-wars.test.js` (10), `tests/realm-ui.test.js` (10: the marks, provenance, lines, sorting, the page drawn on hostile names, the wiring); the UI gate still passes at both sizes.
+
 ## 2026-09-30 — Q1: the quill, the microphone and the scribe
 
 - **One button to send.** The command bar is the box, a **microphone** and a **quill**: the quill sends the order as you wrote it (Enter does too). The sparkle "Counsel" button, which asked the

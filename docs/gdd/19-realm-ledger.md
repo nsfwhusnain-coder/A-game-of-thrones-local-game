@@ -1,6 +1,6 @@
 # 19 · The State of the Realm (the realm ledger)
 
-> Status: **R1–R3 implemented (Slice 2)** — the figures, the knowledge filter and `GET /api/games/:id/realm`, as built in
+> Status: **R1–R3 implemented (Slice 2); R4 and R6 implemented (Slice 8, D-082)** — the figures, the knowledge filter and `GET /api/games/:id/realm`, as built in
 > `public/js/engine/realm/` (see [DECISIONS](DECISIONS.md) D-068–D-071); **R4–R7 proposed**. Sections carry an
 > *Implemented in R1–R3* line where they are built, and say "as built" where the code departs from the first plan.
 > An info view, closed by default, that shows the player where the realm is going: the strengths and
@@ -323,6 +323,10 @@ The rule is one function, `direction(seriesNow, seriesThen)`, used by the table,
 - **Player-facing sameness:** the numbers shown for the player's own house equal the HUD's and the Book's (same call).
 
 ---
+
+*Implemented in R4 and R6 (Slice 8), as built in D-082: `ui/realm.js` (the window), `ui/realm-view.js` and `ui/realm-fmt.js` (the page and how a cell, a line and a word are written — pure, tested),
+`engine/realm/notes.js` (flags, words, facts), `warMomentum` in `engine/politics/war.js`, the war series in `realmStats.wars`, `game.realmFocus` for "where to focus". Departures: the window is 56 rem wide and shows the columns that fit
+(Levies, Men-at-arms, Outgoings, Debt behind "All columns" and in a house's detail); "Show" has no Neighbours; a war's note ("Riverlands: 2 holdings besieged") and the `banners_called` and `great_debt` facts are not built.*
 
 ## 6. What the window shows
 

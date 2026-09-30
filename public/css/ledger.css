@@ -1,0 +1,110 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   The State of the Realm (docs/gdd/19-realm-ledger.md §6; WP R4; mockup 06), in the look of theme.css: a ledger bound in leather with vellum pages, ink for what is known,
+   a lighter ink and a mark for what is only estimated. A wide window on the right of the screen; the map's chip and the sheets make room for it.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+#window.wide { width: min(56rem, 62vw); }
+body.wide-window { --panel-w: min(56rem, 62vw); }
+#window.wide .win-body { padding: .6rem .8rem 1rem; }
+.realm-body { container-type: inline-size; }
+
+.realm-ledger { display: flex; flex-direction: column; gap: .55rem; color: var(--bone); }
+.realm-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.realm-top .wc-kicker { color: var(--bone-dim); font-style: italic; letter-spacing: .04em; }
+.realm-ctl { display: inline-flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.realm-controls { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.realm-ledger .wc-chip { margin: 0; cursor: pointer; }
+.realm-ledger .wc-chip.wc-chip--wax { cursor: default; }
+.realm-ledger .wc-chip:not(.wc-chip--vellum):not(.wc-chip--gain):not(.wc-chip--loss):not(.wc-chip--flat):not(.wc-chip--wax) { border-right: 0; }
+.realm-select { width: auto; padding: .18rem .5rem; color: var(--bone); font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .06em; background: var(--oak-2); border: 1px solid #070403; border-radius: var(--radius-btn); }
+.realm-tabs { margin-top: .1rem; }
+.realm-tabs .wc-tab { margin: 0; }
+.realm-tabs .realm-tab-house { margin-left: auto; }
+/* the ledger's pages: vellum bound in leather (theme.css); the tabs sit on the binding */
+.realm-ledger .wc-ledger { margin-top: -.15rem; }
+.realm-ledger .wc-ledger__page { padding: .55rem .8rem .7rem; }
+
+/* who is going where */
+.realm-going-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-bottom: .45rem; }
+.realm-going-row .wc-label { color: var(--ink-soft); }
+.realm-going { border: 1px solid rgba(60, 40, 20, .4) !important; clip-path: none !important; padding: .1rem .7rem .1rem .55rem !important; background: rgba(232, 220, 192, .5) !important; }
+.realm-going--up { color: var(--verdigris-ink) !important; border-color: rgba(55, 99, 74, .55) !important; }
+.realm-going--down { color: var(--madder-ink) !important; border-color: rgba(140, 47, 37, .5) !important; }
+
+/* the table */
+.realm-table-wrap { overflow-x: auto; }
+.realm-table { table-layout: auto; }
+.realm-table th, .realm-table td { white-space: nowrap; }
+.realm-table th.c-house, .realm-table td.c-house, .realm-table th.c-rank, .realm-table td.c-rank { text-align: left; }
+.realm-table td.c-rank { color: var(--ink-soft); font-size: .95rem; width: 1.6rem; }
+.realm-table td.c-house { min-width: 9.5rem; }
+.realm-table td.c-house > img { float: left; margin: .05rem .5rem 0 0; height: 1.7rem; width: auto; }
+.realm-table.wc-table td { padding-block: .2rem; }
+.realm-table td.c-house .wc-table__note { display: block; margin-left: 2.5rem; white-space: normal; }
+.realm-table td.c-house .wc-table__house { display: block; margin-left: 2.5rem; }
+.realm-table tbody tr[data-row] { cursor: pointer; }
+.realm-table tbody tr[data-row]:hover td { background: rgba(185, 138, 46, .14); }
+.realm-table tbody tr.is-open td { background: rgba(123, 30, 23, .09); }
+.realm-table tbody tr:focus-visible { outline: .14rem solid var(--rubric); outline-offset: -.14rem; }
+.realm-sort { padding: 0; margin: 0; background: none; border: 0; cursor: pointer; font: inherit; letter-spacing: inherit; color: inherit; text-transform: inherit; }
+.realm-sort:hover, .realm-sort.is-on { color: var(--rubric); }
+.realm-sort i { font-style: normal; margin-left: .2em; }
+.rc--est, .rc--least, .rc--band { color: var(--ink-soft); }
+.rc--word { font-style: italic; color: var(--ink-soft); }
+.rc--exact { color: var(--ink-iron); font-weight: 600; }
+.rc.is-stale { opacity: .6; }
+.rc-q { font-style: normal; margin-left: .1em; color: var(--rubric); }
+.realm-table td.c-trend { text-align: right; }
+.realm-table td.c-trend .wc-spark { display: inline-block; vertical-align: middle; margin: 0 .5rem 0 0; width: 3.4rem; height: 1.4rem; }
+.realm-word { font-size: max(.62rem, 13px); }
+.realm-word.is-seems { font-style: italic; opacity: .85; }
+.realm-flag { display: inline-block; margin-left: .25rem; padding: 0 .3rem; font: 600 max(.6rem, 13px)/1.3 var(--wc-display); letter-spacing: .06em; text-transform: uppercase; color: var(--rubric); border: 1px solid rgba(123, 30, 23, .4); }
+.realm-flag--swollen, .realm-flag--winning { color: var(--verdigris-ink); border-color: rgba(55, 99, 74, .5); }
+.realm-legend { margin: .5rem 0 0; font-size: .9rem; font-style: italic; color: var(--ink-soft); white-space: normal; }
+
+/* below the table */
+.realm-lower { display: flex; flex-direction: column; gap: .8rem; }
+.realm-lower .wc-kicker { display: block; margin-bottom: .25rem; }
+.realm-wars, .realm-facts, .realm-focus { list-style: none; margin: 0; padding: 0; }
+.realm-war { padding: .3rem 0; border-bottom: 1px solid rgba(42, 29, 18, .16); }
+.realm-war:last-child { border-bottom: 0; }
+.realm-war__t b { font-family: var(--wc-serif); font-weight: 600; font-size: 1.08rem; }
+.realm-war__s { display: flex; justify-content: space-between; align-items: center; gap: .8rem; margin-top: .1rem; font-size: .98rem; }
+.realm-war__s .wc-chip { white-space: normal; }
+.realm-say { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.2rem; }
+.realm-facts li { padding: .15rem 0 .15rem 1rem; position: relative; line-height: 1.3; }
+.realm-facts li::before { content: ''; position: absolute; left: 0; top: .6em; width: .45rem; height: .45rem; background: url(../img/ui/ornaments.svg#rubric-bullet) center / 100% 100% no-repeat; }
+.realm-facts em { font-size: .92rem; }
+.realm-focus li { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; padding: .25rem 0; }
+.realm-focus .wc-btn { white-space: normal; text-align: left; height: auto; padding-block: .35rem; }
+.realm-focus .wc-btn .ico { flex: none; width: 1.1rem; height: 1.1rem; }
+
+/* one house in detail, and the five small multiples */
+.realm-detail__h { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.realm-detail__h > img { height: 2.4rem; width: auto; }
+.realm-detail__h h3 { margin: 0; font: 600 1.25rem/1.1 var(--wc-display); letter-spacing: .05em; color: var(--ink-iron); }
+.realm-detail__h .wc-btn { margin-left: auto; }
+.realm-flags { margin-top: .3rem; }
+.realm-flags .realm-flag { margin: 0 .3rem .2rem 0; }
+.realm-cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: .1rem .9rem; margin-top: .5rem; }
+.realm-cell { display: flex; justify-content: space-between; gap: .5rem; border-bottom: 1px solid rgba(42, 29, 18, .14); padding: .1rem 0; }
+.realm-multi { display: grid; grid-template-columns: repeat(5, 1fr); gap: .5rem; margin-top: .6rem; }
+.realm-multi__c { display: flex; flex-direction: column; gap: .05rem; padding: .35rem .5rem; border: 1px solid rgba(42, 29, 18, .25); background: rgba(255, 255, 255, .18); }
+.realm-multi__c b { font: 600 1.15rem/1.1 var(--wc-serif); font-variant-numeric: lining-nums; }
+.realm-multi__c .wc-spark { width: 100%; height: 1.4rem; margin: 0; }
+.realm-multi__c em { font-style: normal; font-size: .92rem; }
+.realm-body .wc-quiet { color: var(--bone-dim); }
+.realm-ledger .wc-ledger__page .wc-quiet { color: var(--ink-soft); }
+
+/* a narrow window: the columns that can be spared give way (§6.2) */
+@container (max-width: 60rem) { .realm-table-wrap:not(.all-cols) .c-opt { display: none; } }
+@container (max-width: 44rem) {
+  .realm-multi { grid-template-columns: repeat(3, 1fr); }
+  .realm-say { grid-template-columns: 1fr; }
+}
+
+/* tighter cells so the whole row — house, figures, the line and its word — fits the page */
+.realm-table th, .realm-table td { padding-inline: .32rem; }
+.realm-table td.c-house { min-width: 8.2rem; }
+.realm-table td.c-trend { padding-right: .1rem; }
+.realm-table td.c-trend .wc-spark { width: 3rem; margin-right: .3rem; }
+.realm-table td.c-trend .realm-word { padding: .1rem .7rem .1rem .4rem; }

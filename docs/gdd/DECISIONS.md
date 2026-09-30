@@ -1286,3 +1286,14 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **The ears run in the page, on the CPU** (WebAssembly, never WebGPU; `ui/ears-worker.js`), with the runtime vendored (`public/vendor/transformers/`, Apache-2.0, the same version as the voices' runtime) and the model from
   `npm run fetch-ears` or, once, the hub. The recording is decoded, written down and dropped; `ears.js` has no network call (a test holds it to that). Single-threaded (the page is not cross-origin isolated): about 3.5 s for 9 s of speech.
 - **Spoken words wait in the box** for the lord to read and press the quill, rather than being sent: a misheard word must not become an order unseen.
+
+## D-082 · 2026-09-30 · The State of the Realm as built (WP R4 + R6)
+
+- **The words are the engine's** (`engine/realm/notes.js`), made from the displayed cells and the observed series of each row and from the wars and hosts the viewer knows: a house's word is rising, falling or steady only when
+  the Power series says so on two turns running (`direction`), "seems" for a house known by reports; a flag has its reason in plain words; a war's movement is `warMomentum` of the war's score series, and only for a war the viewer's
+  own house or realm is in (`sideOf`) — the score of any other war is never read. `state.realmStats.wars` keeps each live war's score weekly (24 points), invariant 12 checks it, and an ended war is forgotten.
+- **"Where to focus" is the server's** (`game.realmFocus`, not the view function): facts about the viewer's own house that carry a verb and an order, kept only if `optionsFor` for the player's lord offers the verb — the
+  legality the minds and the order interpreter answer to — three at most. The button writes the order into the box (`toast`s that it did) and sends nothing.
+- **The window:** the Realm door opens the ledger; the old own-house page is its "Your house" tab (the portraits, the family tree and the court actions are untouched). The page is drawn by a pure function of the view (`realm-view.js`),
+  so a test runs it on hostile names; every name and line the server sent goes through `esc`. Bands are written in k (`≈ 17k–100k`), people in k or m. The lord's last choices (lens, rows, window, sort, columns) are kept in `localStorage` (`wc.ledger`), never the selected house.
+- **Not built:** `banners_called` and `great_debt` facts, a war's holdings note, the Neighbours chip, the wide-window "steps aside" behaviour of GDD 17 §2.9 (the window only moves the map's chip and the sheets), and the quiet pip on the Realm door when a word turns.
