@@ -3,6 +3,33 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — N5 + N6 + N9, and the game with the local model: every story one card, a digest, scenes by the model
+
+- **What you read now.** The week's news is told as *cards*: a headline that says what happened ("Eddard Stark raises the northern banners at
+  Winterfell", "Ser Wendel Manderly claims the champion's prize at Last Hearth"), one or two plain sentences under it, and the numbers folded
+  behind them — never the ledger's line ("Host of House Umber (150 men) is raised at Last Hearth"). One card per story: five hosts leaving for
+  Winterfell are one card, a refusal inside a muster is its own. News that reaches you late by raven or rumour is told the same way. The turn ends
+  with a **digest** of at most ninety words: the three cards that matter most (your own house's first), five more as headlines, one Meanwhile
+  sentence. The chronicle (`h`), the World log and the long memory read in the same words. Your answers to a matter read as your answer.
+- **What matters most** (N9): ranked for you — your house's own news, the first battle or the first raven from a house, a holding that changes
+  hands rank higher; a fifth tourney in a week ranks lower than the first.
+- **With the tuned local model on** (Maester-12B): the cards are always the deterministic writer's (true, instant); the model adds a *scene* — a few
+  sentences behind one witness's eyes — to the (at most three) stories that matter most, behind "Details". A whole week takes ~1.4 s of model time
+  (it took ~10 s when the model also wrote the cards, and 4 in 10 of those needed a retry). A model that stops answering costs a call its deadline
+  (90 s for an order or a lord's mind, 300 s for the narrator), never half an hour. No request is pinned to a slot any more (it hangs llama.cpp).
+  A council seats every counsellor.
+- **For the owner:** `npm run model:check` (one command: is the model in `config.json` ready — one question of every kind, timings, VRAM),
+  `npm run headlines:check` (five mock weeks told by your model, the writer's card and the model's side by side), a whole config for
+  Maester-12B (`docs/local-ai/deploy/config.maester-12b.json`), `WC_CONFIG=<file>` to keep a profile anywhere, `"logCalls": true` to keep every
+  call whole for the next fine-tune. The narrator's mode is `"narratorMode": "scenes"` (default) or `"cards"`.
+- **Also fixed** (read from a live playtest as a player): "The host now has a great host", "The Jon Snow: bound for Castle Black", "a brawl
+  breaks out" with no one named, "the Khalasar of Drogo", the King's tourney told as the champion's house; the `…` that cut engine lines mid-sentence.
+- **What the UI does today:** the feed and pins still show the old layout, now with the new words (`headline`, `summary`, the fold); the new look of
+  the feed, the digest card and the jump feed are N7 and the quiet screen U1–U3.
+- Tests: `tests/rank.test.js`, `tests/turn-cards.test.js`, `tests/leaks-n5-n9.test.js` (twin worlds: a hidden truth changed, the cards, ranks, digest and the model's
+  prompt byte for byte the same), `tests/model-glue.test.js`, the narrator tests in both modes; the soak asks every card to pass the headline scorer (4 houses × 60 turns).
+- Owner to verify: `npm start`, play three turns as Stark on the mock and read the feed; then, with your model up, `npm run model:check` and `npm run headlines:check`.
+- PR: (PR #47)
 ## 2026-09-29 — Handoff after N1–N4, U0, R1–R3: a clean start for the next lead
 
 - **Nothing changes in the game.** A new `docs/HANDOFF.md` (the previous one is in `docs/archive/`): where things stand,

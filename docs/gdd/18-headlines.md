@@ -157,6 +157,8 @@ Stories are formed as now (`cluster.js`), then **shaped**:
 
 ### 2.5 Importance, ranking and the digest
 
+*Implemented in N9 and N6 (Slice 5), as built in D-075 and D-076: `engine/facts/rank.js`, `engine/facts/digest.js`, the tiers, the digest of at most ninety words, `state.firsts`.*
+
 `importance` (1–5) stays what the engine says (`weigh()` in `log.js`: +1 own house/kin, +1 great lord). The **score** ranks
 what the *player* sees:
 
@@ -249,6 +251,8 @@ still reads a good card, because the deterministic writer is the floor and not a
     `scripts/lint-engine.js` is a line scanner and cannot see a fact's importance or a table's keys.
 
 ### 3.2 The narrator: headline + summary from facts only
+
+*Implemented in N5 (Slice 5), as built in DECISIONS D-074: the model's part is the **scene** by default (mode `scenes`: 99 % of 238 stories first time, 1.4 s a week on Maester-12B) and the whole card only as an opt-in (mode `cards`: 61 %); the sheet, the schema without `pov`, the `NAME ONLY` line, the mock and the fallback as the writer. The plan's text below is the `cards` mode.*
 
 *Input change (the main fix).* Today the model is handed the engine sentences ("`S3 [importance 4] facts f1.2, … — Days
 1–1. At Last Hearth: Host of House Umber (150 men) is raised… Jon "Greatjon" Umber answers the call with 2,000 men…`").
