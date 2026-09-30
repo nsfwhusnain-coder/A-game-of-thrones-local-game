@@ -8,5 +8,6 @@ import audience from './audience.js';
 import council from './council.js';
 import director from './director.js';
 import consolidate from './consolidate.js';
+import scribe from './scribe.js';
 
-export const CALLS = { probe, interpret, mind, narrate, audience, council, director, consolidate };
+export const CALLS = { probe, interpret, mind, narrate, audience, council, director, consolidate, scribe };

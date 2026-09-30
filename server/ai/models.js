@@ -23,6 +23,7 @@ export const CALL_DEFAULTS = {
   advisor:     { temperature: 0.7, budget: { in: 7000, out: 1200 }, deadline: 240 },
   counsel:     { temperature: 0.8, budget: { in: 4000, out: 500 }, deadline: 120 },
   polish:      { temperature: 0.4, budget: { in: 2500, out: 300 }, deadline: 60 },
+  scribe:      { temperature: 0.1, budget: { in: 700, out: 200 }, deadline: 8 },   // a small model on the CPU mends the lord's spelling before an order is sent (docs/local-ai/SCRIBE.md)
   consolidate: { temperature: 0.3, budget: { in: 8000, out: 1200 }, deadline: 300 },
 };
 
@@ -33,9 +34,11 @@ export const CALL_DEFAULTS = {
  */
 export function routeFor(cfg, kind) {
   const d = CALL_DEFAULTS[kind] || { temperature: cfg.temperature ?? 0.7, budget: { out: 600 } };
-  const all = cfg.models || {}; const r = { ...(all.default || {}), ...(all[kind] || {}) };
+  const all = cfg.models || {}; const r = all[kind]?.baseUrl ? { ...all[kind] } : { ...(all.default || {}), ...(all[kind] || {}) }; // (a call with a server of its own inherits nothing of the big model's routing)
   return {
     model: r.model || cfg.model || '',
+    // a call may name a server of its own ("models": { "scribe": { "baseUrl": "http://127.0.0.1:8097/v1" } }): the small model on the CPU is not the big one
+    ...(r.baseUrl ? { baseUrl: String(r.baseUrl), apiKey: r.apiKey ? String(r.apiKey) : '' } : {}),
     slot: cfg.pinSlots === true && Number.isInteger(r.slot) ? r.slot : null,
     temperature: typeof r.temperature === 'number' ? r.temperature : d.temperature,
     maxTokens: Number(r.maxTokens) || d.budget.out,

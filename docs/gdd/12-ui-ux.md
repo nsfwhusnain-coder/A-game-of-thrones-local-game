@@ -128,6 +128,9 @@ Contrast: all text ≥ 4.5:1 against its surface (checked by a test over compute
 `tooltip` (styled, instant after 250 ms hover, touch: tap-and-hold), `modal` (in-world confirm), `letter` (parchment,
 seal), `toast` (bottom-centre, 3 s), `skeleton` (loading shimmer in panels), `empty-state` (a line of in-world text).
 
+> **Built (Q1, 2026-09-30, D-081):** the composer is one input with a quill (send) and a microphone (speak); the spelling is put right by rule and, where set up, by a small model on the CPU
+> (`docs/local-ai/SCRIBE.md`). The "Counsel" button described below was removed at the owner's word.
+
 ## 4. The Command composer (Pax Historia's Actions panel)
 
 ```

@@ -153,7 +153,7 @@ body.has-drawer #strip { display: none; }
 .wc-cmd .errands-chip .ico { width: .9rem; height: .9rem; }
 .wc-input textarea { flex: 1; min-width: 0; align-self: center; padding: .55rem 0; resize: none; background: none; border: 0; outline: 0; color: var(--bone); font: inherit; line-height: 1.3; max-height: 9rem; caret-color: var(--gold-flat); }
 .wc-input textarea::placeholder { color: var(--bone-dim); opacity: 1; }
-.wc-cmd__row .wc-btn--icon { flex: none; height: auto; min-height: 2.45rem; }
+
 
 /* ───────────────────────────── the ruler ───────────────────────────── */
 #hud-player { position: absolute; left: auto; right: var(--hud-gap); bottom: var(--hud-gap); z-index: 12; display: flex; flex-direction: row; align-items: center; gap: .5rem; pointer-events: none; }
@@ -194,3 +194,20 @@ body:has(#window:not(.hidden)) .map-legend { right: calc(var(--panel-w) + var(--
   #command-bar { width: 24rem; }
 }
 @media (prefers-reduced-motion: reduce) { .window, .sheet { animation: none; } }
+
+/* ───────────────────────────── the quill and the microphone (WP Q1) ───────────────────────────── */
+/* one button sends — a quill in gold; beside it the microphone; nothing else is asked of the lord */
+#command-bar .wc-cmd__row { align-items: flex-end; }
+#command-bar .wc-cmd__row .wc-btn--icon { flex: none; width: 2.7rem; height: 2.7rem; min-height: 0; }
+#command-bar .wc-btn--gold .ico { color: var(--gold-flat); width: 1.65rem; height: 1.65rem; stroke-width: 1.5; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .8)); }
+#command-bar #listen-btn .ico { width: 1.4rem; height: 1.4rem; color: var(--bone); }
+#send-btn[aria-busy='true'] .ico { animation: wc-write .45s ease-in-out infinite alternate; transform-origin: 20% 90%; }
+#command-bar.is-scribing .wc-input { opacity: .75; }
+/* listening: the microphone breathes in wax while the lord speaks; hearing: the box says what is being done */
+#listen-btn.is-rec { color: var(--madder-lit); animation: wc-rec 1.4s ease-in-out infinite; }
+#command-bar #listen-btn.is-rec .ico { color: var(--madder-lit); }
+#command-bar.is-hearing .wc-input textarea::placeholder, #command-bar.is-listening .wc-input textarea::placeholder { color: var(--gold-flat); }
+@keyframes wc-write { from { transform: rotate(-9deg) translate(-1px, 1px); } to { transform: rotate(7deg) translate(1px, -1px); } }
+@keyframes wc-rec { 0%, 100% { box-shadow: inset 1px 2px 4px rgba(0, 0, 0, .7), 0 0 0 0 rgba(168, 69, 58, .55); } 50% { box-shadow: inset 1px 2px 4px rgba(0, 0, 0, .7), 0 0 0 .32rem rgba(168, 69, 58, 0); } }
+@media (prefers-reduced-motion: reduce) { #listen-btn.is-rec, #send-btn[aria-busy='true'] .ico { animation: none; } #listen-btn.is-rec { box-shadow: inset 0 0 0 .14rem var(--madder-lit); } }
+#command-bar .wc-input { min-height: 2.7rem; }

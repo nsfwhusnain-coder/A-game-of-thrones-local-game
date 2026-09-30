@@ -119,9 +119,9 @@
     <footer id="command-bar" class="wc-leather wc-cmd" role="group" aria-label="Your orders">
       <div class="wc-cmd__orders orders" id="orders"></div>
       <div class="wc-cmd__row">
-        <label class="wc-input"><i data-i="inkpot"></i><textarea id="order-input" rows="1" aria-label="Write an order to your house" placeholder="Command your house…" title="Enter adds the order; Ctrl+Enter ends the turn"></textarea></label>
-        <button class="wc-btn wc-btn--icon" data-action="suggest" aria-label="Counsel: ask your advisors for ideas" title="Counsel: ask your advisors for ideas"><i data-i="sparkle"></i></button>
-        <button class="wc-btn wc-btn--icon" data-action="add-order" aria-label="Add the order" title="Add the order (Enter)"><i data-i="plus"></i></button>
+        <label class="wc-input"><i data-i="inkpot"></i><textarea id="order-input" rows="1" aria-label="Write an order to your house" placeholder="Command your house…" title="Enter sends the order; Ctrl+Enter ends the turn"></textarea></label>
+        <button class="wc-btn wc-btn--icon" id="listen-btn" data-action="listen" aria-pressed="false" aria-label="Speak an order" title="Speak an order: press, speak, press again"><i data-i="mic"></i></button>
+        <button class="wc-btn wc-btn--icon wc-btn--gold" id="send-btn" data-action="add-order" aria-label="Send the order" title="Send the order (Enter)"><i data-i="quill"></i></button>
       </div>
     </footer>
 
