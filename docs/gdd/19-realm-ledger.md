@@ -1,6 +1,6 @@
 # 19 · The State of the Realm (the realm ledger)
 
-> Status: **R1–R3 implemented (Slice 2); R4, R5 and R6 implemented (Slice 8, D-082, D-083)** — the figures, the knowledge filter and `GET /api/games/:id/realm`, as built in
+> Status: **R1–R3 implemented (Slice 2); R4, R5, R6 and R7 implemented (Slice 8, D-082, D-083, D-085)** — the figures, the knowledge filter and `GET /api/games/:id/realm`, as built in
 > `public/js/engine/realm/` (see [DECISIONS](DECISIONS.md) D-068–D-071); **R4–R7 proposed**. Sections carry an
 > *Implemented in R1–R3* line where they are built, and say "as built" where the code departs from the first plan.
 > An info view, closed by default, that shows the player where the realm is going: the strengths and
@@ -200,8 +200,8 @@ How each figure is *derived* (all in `engine/realm/estimate.js`, pure, determini
     way it came, 2 sig. figs. (The first plan amended a believed start-of-scenario owner by known facts; the map's owner is
     public, so the count is the map's.)
   - **Swords** `≥`: hosts seen (blurred ±10 %) plus hosts reported, "and what they have not raised". With no host ever
-    heard of, a **band** from People × the rank's muster share (`MUSTER_SHARE` in `estimate.js`, ×0.4 to ×2.4), which is
-    also how **Levies** are always shown (the muster is never told) — never the truth of an unreported raise.
+    heard of, a **band** from People × the rank's muster share (`MUSTER_SHARE` in `estimate.js`, ×0.4 to ×3), which is
+    also how **Levies** are always shown (the muster is never told; the levies raised now may be none, so their band is ×0 to ×2.4 — R7) — never the truth of an unreported raise.
   - **Ships** `≥`: fleets seen or reported; else `—` (no reputation band was built).
   - **Income** `≈`: `holdingRevenue()` over the map's holdings at a fair harvest and default taxes, the mines at their
     *public base* (never the Rock's decline), plus the share of its sworn houses' rents that its rank takes; ±30 % band.
@@ -509,11 +509,14 @@ validation problem (the existing repair/fallback path).
 name was taken by the realm's top house), the flags in `minds/salience.js`, the `rising_rival` rule and the rising leader among `send_gift`'s targets in `minds/houseways.js` and `minds/options.js`, the brief in `ai/calls/council.js`
 and, behind `"mindRealmBrief": true`, in `ai/calls/mind.js`.*
 
+*Implemented in R7 (Slice 8), as built in D-085: `bench/lib/realm-audit.js` (the audit and `hideTruth`; tooling only, it reads the truth), `scripts/realm-dump.js` (the truth beside what the ledger says, and the soak),
+`tests/realm-soak.test.js` (24 moons of three games in three processes). The muster bands of §4.2 were widened by what it measured.*
+
 ## 9. Performance and determinism
 
 - `sampleRealm` runs once per turn close: a `standing()` and a `project()` for each of the 158 houses, plus sums. *As
-  built* it takes ≈ 50 ms (60–90 ms on the loaded cloud box), and the budget is raised to 60 ms (D-068); no test asserts it
-  yet (R7's soak should). An owner index inside `standing()` and `project()` is the follow-up (a prototype reached 15 ms).
+  built* it takes ≈ 50 ms (60–90 ms on the loaded cloud box), and the budget is raised to 60 ms (D-068); the soak of R7 measures it
+  every CI run (a view 4 ms, a turn's sample 20 ms on the mock; the test guards at 150 and 180 ms). An owner index inside `standing()` and `project()` is the follow-up (a prototype reached 15 ms).
 - `realmViewFor` ≤ 50 ms for the full scenario; results are memoised on `(state.meta.turn, viewer, opts)` inside the
   request only (no cache across turns, no cache in the save).
 - **No RNG draw** anywhere in `engine/realm/`: noise from `hash32(seed, viewer, subject, field, obsTurn)`. A replay

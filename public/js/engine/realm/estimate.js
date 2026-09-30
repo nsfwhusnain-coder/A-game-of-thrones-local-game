@@ -48,8 +48,13 @@ const INCOME_BAND = 0.3, ALLY_GOLD_BAND = 0.25, ALLY_OFFSET = 0.15; // the offse
 const NEWS = { crown: 0.97, paramount: 0.9, major: 0.6, city_state: 0.55, order: 0.5, company: 0.4, tribe: 0.4, exile: 0.3, minor: 0.25 };
 /** What everyone knows of a house from its rank alone (§4.2 `rumour`): the share of its people its lands usually raise. */
 const MUSTER_SHARE = { crown: 0.036, paramount: 0.066, major: 0.026, minor: 0.007, city_state: 0.04, tribe: 0.45, order: 0.01, company: 0.01, exile: 0 };
-/** How far a muster may differ from its rank's usual share: some houses call a great many, some very few (a band, never a number). */
-const MUSTER_REACH = [0.4, 2.4];
+/**
+ * How far a muster may differ from its rank's usual share: some houses call a great many, some very few (a band, never a number). The levies are
+ * those *raised now*, and a house that has called none has none: the band starts at nothing (the soak of WP R7 measured the truth below 0.4 of the usual
+ * share for one house in ten, and always for the Watch and the Golden Company, who raise none). The swords are the levies, the men-at-arms and the hosts:
+ * never below a third of the share, and a lesser house may raise up to three times it.
+ */
+const LEVY_REACH = [0, 2.4], SWORD_REACH = [0.4, 3];
 /** The coin a house is reputed to hold by its rank (the Crown's debts are the realm's gossip): all a house knows of another's coffers until a spy has counted them. */
 const WEALTH = { crown: 0, paramount: 150000, city_state: 300000, major: 30000, minor: 6000, order: 2000, company: 10000, tribe: 0, exile: 0 };
 /** Living kin a house is reputed to have, by rank: a great house's household is large, a minor lord's small. */
@@ -261,8 +266,8 @@ export function estimateOf(state, viewer, subject, ctx = realmContext(state, vie
   }
   // swords with no host ever heard of: what its lands could raise, as a band; levies always so (the muster is never told)
   const people = cells.people.v; const share = MUSTER_SHARE[h.rank] ?? 0.01;
-  if (people > 0 && share > 0 && cells.levies.mark === '—') cells.levies = band(Math.round(people * share), MUSTER_REACH, 'rumour', cells.people.age);
-  if (people > 0 && share > 0 && cells.swords.mark === '—') cells.swords = band(Math.round(people * share), MUSTER_REACH, 'rumour', cells.people.age);
+  if (people > 0 && share > 0 && cells.levies.mark === '—') cells.levies = band(Math.round(people * share), LEVY_REACH, 'rumour', cells.people.age);
+  if (people > 0 && share > 0 && cells.swords.mark === '—') cells.swords = band(Math.round(people * share), SWORD_REACH, 'rumour', cells.people.age);
   for (const c of Object.values(cells)) if (c.age === undefined) delete c.age;
   return { house: subject, kind: 'other', cells };
 }
