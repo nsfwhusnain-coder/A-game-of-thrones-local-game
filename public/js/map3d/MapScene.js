@@ -363,9 +363,34 @@ export class MapScene {
   /** Where a place of the map is on the screen, in CSS pixels: { x, y }, or null when it is behind the camera (the card beside a castle keeps to it). */
   screenOf(x, z) {
     if (!this.camera || !this.cssW) return null;
+    this.camera.updateMatrixWorld(); // (the camera may have been moved since the last frame: a plan asks where a place is before anything is drawn)
     const v = new THREE.Vector3(x, this.groundAt(x, z) + 3, z).project(this.camera);
     return v.z > 1 ? null : { x: (v.x * 0.5 + 0.5) * this.cssW, y: (-v.y * 0.5 + 0.5) * this.cssH };
   }
+  /** The camera at a place at once, with no flight (reduced motion, and the cut of a plan that would only have flown: ui/choreo.js). */
+  cutTo(pos, dist) { this.tween = null; this.goal = null; this.zoom = null; this.target.x = pos[0]; this.target.z = pos[1]; if (dist) this.dist = Math.max(LOD[3], Math.min(LOD[0], dist)); this.updateCamera(); this.clearHover(); }
+  // ── the turn told on the map (ui/choreo.js, WP E8): a holding that changed hands or state keeps its old look until the beat that tells it ──
+  /** Show `prev`'s look for the `ids` of `next`'s holdings whose news is still to come. */
+  stage(next, prev, ids) {
+    this.staged = ids.length ? { next, prev, ids: new Set(ids) } : null;
+    this.setState(this.stagedState(next));
+  }
+  stagedState(next) {
+    const st = this.staged; if (!st || !st.ids.size) return next;
+    const holdings = { ...next.holdings };
+    for (const id of st.ids) { const p = st.prev.holdings?.[id]; if (p) holdings[id] = { ...next.holdings[id], owner: p.owner, status: p.status }; }
+    return { ...next, holdings };
+  }
+  /** Tell the change of these holdings now: the map takes their new look (and its smoke, its tents) with the pulse of the news. */
+  reveal(ids) {
+    const st = this.staged; if (!st) return;
+    for (const id of ids) st.ids.delete(id);
+    this.setState(this.stagedState(st.next));
+  }
+  /** Whatever was not told is shown now: the map is never left behind the state. */
+  revealAll() { const st = this.staged; if (!st) return; this.staged = null; this.setState(st.next); }
+  /** Whether a place of the map is on the screen, with a margin (the camera does not fly to news it can already see). */
+  onScreen(pos, margin = 0.12) { const p = this.screenOf(pos[0], pos[1]); return !!p && p.x > this.cssW * margin && p.x < this.cssW * (1 - margin) && p.y > this.cssH * (margin + 0.02) && p.y < this.cssH * (1 - margin - 0.02); }
   /** Back to the whole realm (L0), framed on Westeros and the Narrow Sea. */
   home() { this.flyTo(L0_CENTRE, LOD[0]); }
   dropEta(rec) { if (rec.eta) { rec.eta.el.remove(); this.labels = this.labels.filter((l) => l !== rec.eta); rec.eta = null; } }

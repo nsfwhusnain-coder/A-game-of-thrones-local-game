@@ -6,7 +6,7 @@ import { renderChrome, drawMenu, togglePopover, closePopovers, closePopover, ope
 import { drawTitleMap } from './ui/titlemap.js';
 import { startMusic, setMood, setMusicHouse, musicSettings, setMusic } from './ui/music.js';
 import { sfx, wireSfx, sfxSettings, setSfx } from './ui/sfx.js';
-import { playTurn, prepareReveal } from './ui/playback.js';
+import { playTurn, prepareReveal, stageTurn } from './ui/playback.js';
 import { voiceSettings, setVoiceSetting, speak } from './ui/voice.js';
 import { atWar } from './shared/warfare.js';
 import { statusText, ref } from './engine/parties.js';
@@ -151,7 +151,7 @@ async function startGame(id, state) {
         onSelect: (hid) => { if (app.picking) return finishPick(hid); if (hid) openCard('holding', hid); else { closeCard(); closeSheet(); } },
         onSelectArmy: (aid) => { if (app.picking) return finishPickArmy(aid); openCard('army', aid); },
         onHover: showTooltip,
-        onActive: mapActive,
+        onActive: () => { mapActive(); if (app.reveal && !app.reveal.ctl.noFly) { app.reveal.ctl.noFly = true; app.renderStrip?.(); } }, // (the player took the camera while the news is told: no more flying until Follow)
         onPinsMore: (hidden) => showPinsMore(hidden),
         onPin: (where) => openPin(where),
         onChar: (id) => openSheet('char', id),
@@ -266,7 +266,7 @@ async function chooseUndo() {
     <div class="settings-actions"><button class="btn ghost" data-action="close-modal">Let it stand</button></div>`);
   $('#stop-here')?.addEventListener('click', async () => {
     const day = Number($('#stop-day').value); closeModal(); busy(true, `The turn is played again to day ${day}…`);
-    try { const r = await api(`/games/${app.saveId}/stop`, { body: { day } }); prepareReveal(r.turn); app.setState(r.state); busy(false); playTurn(r.turn); toast(`The days stopped on day ${day}.`); } catch (e) { toast(e.message, true); } finally { busy(false); }
+    try { const r = await api(`/games/${app.saveId}/stop`, { body: { day } }); const prevState = app.state; prepareReveal(r.turn); app.setState(r.state); stageTurn(prevState, r.state); busy(false); playTurn(r.turn); toast(`The days stopped on day ${day}.`); } catch (e) { toast(e.message, true); } finally { busy(false); }
   });
   $$('[data-undo]').forEach((b) => b.onclick = async () => {
     const n = Number(b.dataset.undo);
@@ -536,7 +536,7 @@ async function advance() {
     const r = await jump({ span, orders: app.state.orders });
     // the hosts march across the map as the replay's days go by
     if (app.map) { app.map.reelHold = true; app.map.reelF = 0; }
-    prepareReveal(r.turn); app.setState(r.state);
+    const prevState = app.state; prepareReveal(r.turn); app.setState(r.state); stageTurn(prevState, r.state);
     // the hours pass; then the news is told in order, day by day, before the report
     sfx('bell');
     const newRavens = r.state.ravens.filter((x) => !x.read).length > unreadBefore;

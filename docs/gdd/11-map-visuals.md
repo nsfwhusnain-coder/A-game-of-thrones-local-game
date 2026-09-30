@@ -247,6 +247,8 @@ For each segment ([05](05-gameplay-loop.md) §5):
    without flying (their pins pulse).
 5. The player can take the camera at any time; playback then continues without flying until they click *Follow*.
 
+*Implemented in E8 (Slice 13), as built in D-090: `ui/choreo.js` (the plan and the runner, pure), `ui/playback.js`, `MapScene.stage/reveal/revealAll/cutTo/onScreen`, the strip's Follow, `dev/playback.html`, `scripts/playback-check.mjs`. Not built: the ink-wash recolour of 0.6 s (a holding takes its new look at its beat, with the pulse of the news) and the fade of a token that appears or goes.*
+
 ## 12. Dev pages and screenshot tests
 
 Keep `public/dev/` (portraits, banners, events, sigils, atlas preview, terrain) and add:

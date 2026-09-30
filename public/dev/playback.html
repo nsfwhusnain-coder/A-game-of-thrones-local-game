@@ -1,0 +1,54 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>playback</title>
+<link rel="stylesheet" href="../css/style.css">
+<script type="importmap">{ "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #0c1016; overflow: hidden; }
+  #map-wrap { position: absolute; inset: 0; }
+  #log { position: absolute; left: 12px; top: 10px; z-index: 50; width: 26rem; max-height: 60%; overflow: auto; color: #e8dcc0; font: 13px/1.35 monospace; background: rgba(0,0,0,0.62); padding: 6px 10px; border-radius: 4px; white-space: pre-wrap; }
+  #log b { color: #f0c860; }
+</style></head>
+<body>
+<div id="map-wrap"></div><div id="log">loading…</div>
+<script type="module">
+// A canned turn told on the map (docs/gdd/11-map-visuals.md §11; WP E8): six events over five days, the plan of ui/choreo.js, and the same runner the game uses, on a real MapScene.
+// `?reduced=1` cuts instead of flying · `&speed=1` plays at the real pace (default 0.06: the page is a fixture, not a film) · `&taken=1` the player takes the camera at the second beat.
+// It reports `window.__playback = { plan, log, owners, done }` for scripts/playback-check.mjs.
+import { createInitialState } from '../js/shared/world.js';
+import { MapScene, LOD } from '../js/map3d/MapScene.js';
+import { planPlayback, runPlan, changedHoldings } from '../js/ui/choreo.js';
+const q = new URLSearchParams(location.search);
+const reduced = q.get('reduced') === '1'; const speed = Number(q.get('speed') || 0.06);
+const s = createInitialState('agot_298', 'stark', { seed: 1 });
+const WF = s.holdings.stark.pos;
+const by = (from, n) => Object.values(s.holdings).filter((h) => h.type !== 'camp').sort((a, b) => Math.hypot(a.pos[0] - from[0], a.pos[1] - from[1]) - Math.hypot(b.pos[0] - from[0], b.pos[1] - from[1]))[n];
+const inRegion = (r) => Object.values(s.holdings).find((h) => h.region === r && /castle|keep/.test(h.type));
+const near = by(WF, 2), far1 = inRegion('riverlands'), far2 = inRegion('westerlands'), far3 = inRegion('vale'), far4 = inRegion('stormlands');
+const E = (day, where, importance, headline) => ({ day, where: where.id, importance, headline, summary: 'A thing that happened, told in a line or two.', tier: importance >= 5 ? 'great' : importance >= 4 ? 'major' : importance >= 3 ? 'news' : 'minor' });
+const events = [E(1, WF && s.holdings.stark, 2, 'A feast at Winterfell'), E(2, far1, 5, 'A great battle is fought'), E(2, far2, 3, 'A raven from the south'), E(3, near, 4, 'A host gathers near Winterfell'), E(4, far3, 2, 'A small quarrel'), E(5, far4, 4, `${far4.name} falls`)];
+const before = JSON.parse(JSON.stringify(s)); const after = JSON.parse(JSON.stringify(s));
+after.holdings[far4.id].owner = 'lannister'; after.holdings[far4.id].status = 'occupied';
+const map = new MapScene(document.getElementById('map-wrap'), {});
+window.__map = map;
+await map.generate(s.holdings, (p, msg) => { document.getElementById('log').textContent = `${msg}… ${Math.round(p * 100)} %`; });
+map.setState(before);
+map.tween = null; map.dist = LOD[2] + 60; map.target.set(WF[0] + 20, 0, WF[1] + 40); map.updateCamera();
+const changed = changedHoldings(before, after); map.stage(after, before, changed);
+const seat = 'stark';
+const plan = planPlayback(events, { holdings: s.holdings, onScreen: (p) => map.onScreen(p), seat, reduced, changed, words: (e) => e.headline.length + 60 });
+const out = document.getElementById('log'); const owners = []; const log = [];
+const say = (t) => { out.innerHTML += `\n${t}`; };
+out.innerHTML = `<b>plan</b> (${reduced ? 'reduced motion: cuts' : 'flights'})\n` + plan.steps.map((st) => `${st.i}  day ${st.day}  ${String(st.importance)}  ${st.action}${st.reveal.length ? `  reveal ${st.reveal}` : ''}`).join('\n') + (plan.home ? `\nhome: ${plan.home.action}` : '') + '\n\n<b>played</b>';
+const ctl = { skip: false, noFly: false };
+const io = {
+  fly: (p, d) => map.flyTo(p, d), cut: (p, d) => map.cutTo(p, d), pulse: (p) => map.flash?.(p), home: (p, d, how) => (how === 'cut' ? map.cutTo(p, d) : map.flyTo(p, d)),
+  reveal: (ids) => { owners.push({ beat: 'before-reveal', owner: map.settlements.get(far4.id)?.owner }); map.reveal(ids); owners.push({ beat: 'after-reveal', owner: map.settlements.get(far4.id)?.owner }); },
+  show: (st, i) => { owners.push({ beat: i, owner: map.settlements.get(far4.id)?.owner }); say(`show ${i}  (${events[i].headline})`); if (q.get('taken') === '1' && i === 1) { ctl.noFly = true; say('the player takes the camera'); } },
+  wait: (ms) => new Promise((r) => setTimeout(r, ms * speed)),
+};
+const l = await runPlan(plan, ctl, io, s.holdings); log.push(...l);
+map.revealAll(); owners.push({ beat: 'end', owner: map.settlements.get(far4.id)?.owner });
+say('\n' + l.join('\n'));
+window.__playback = { plan, log, owners, done: true, far4: far4.id, reduced };
+</script>
+</body></html>
