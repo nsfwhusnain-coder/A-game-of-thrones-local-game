@@ -3,6 +3,13 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — E8: the turn told on the map
+
+- **The camera no longer chases every headline.** It flies to a place only for news of weight that is not already on your screen; for a day with several events it goes to the weightiest and only pulses the others on the map; light news never moves it. When the telling has taken it away from your realm, it goes home at the end.
+- **The map changes as the news is told:** a castle that fell keeps its old banner until the beat that says so, then takes the new one with the pulse of the news. Skip the telling and the map is at once as it is.
+- **The camera is yours:** drag or zoom while the news is told and it stops moving you (a **Follow** button on the strip gives it back to the story). With reduced motion set in your system, it cuts instead of flying.
+- Tests: `tests/choreo.test.js` (7), `scripts/playback-check.mjs` on `dev/playback.html`. **Phase E is done.**
+
 ## 2026-09-30 — E6 + E7: a map that shows what is happening, and three graphics settings
 
 - **Holdings show their state:** a burning or sacked one has a black column of smoke and embers; a besieged one a thin smoke and the besieger's camp before its walls (tents in the besieger's colours, a fire); an occupied one watch-fires on the walls; a **tourney** puts pavilions and lanterns outside the walls, a **feast** or a **wedding** lanterns, for two turns; a **battle** leaves a dust puff and stakes for two turns.
