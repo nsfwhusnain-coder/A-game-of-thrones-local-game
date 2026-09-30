@@ -1,7 +1,7 @@
 // The pin window: click a pin on the map and what happened there opens in front of you.
 // News is read and acknowledged (the pin goes); a matter awaiting your word shows its choices, or lets you answer
 // in your own words. Several things at one place are shown one after another.
-import { app, $, esc, api, modal, closeModal, sig, addOrder, placeName, detailLines } from './common.js';
+import { app, $, esc, nm, api, modal, closeModal, sig, addOrder, placeName, detailLines } from './common.js';
 import { shortDate } from './feed.js';
 import { decisionsHtml, wireDecisions } from './drawer.js';
 import { openPins } from '../shared/pins.js';
@@ -39,10 +39,10 @@ export function openPin(where) {
     // the card of the story, on vellum (mockup 04): its headline, the plain summary, and the details — the scene, the numbers — under it
     const at = e.where && s.holdings[e.where] ? placeName(s, e.where) : place;
     modal(`<div class="wc-vellum wc-pin"><div class="wc-pin__head"><span class="wc-kicker">${esc(at)}${e.date ? ` · ${esc(shortDate(e.date))}` : ''}</span>${n > 1 ? `<span class="wc-kicker">${i + 1} of ${n}</span>` : ''}</div>
-      <h2 class="wc-title">${esc(e.headline || e.title)}</h2><div class="wc-rule"></div>
-      <p class="wc-pin__sum wc-prose">${esc(e.summary ?? e.text)}</p>
-      ${e.scene ? `<p class="wc-pin__scene wc-prose">${esc(e.scene)}</p>` : ''}
-      ${detailLines(e).length ? `<ul class="wc-bullets wc-pin__facts">${detailLines(e).map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+      <h2 class="wc-title">${nm(e.headline || e.title)}</h2><div class="wc-rule"></div>
+      <p class="wc-pin__sum wc-prose">${nm(e.summary ?? e.text)}</p>
+      ${e.scene ? `<p class="wc-pin__scene wc-prose">${nm(e.scene)}</p>` : ''}
+      ${detailLines(e).length ? `<ul class="wc-bullets wc-pin__facts">${detailLines(e).map((l) => `<li>${nm(l)}</li>`).join('')}</ul>` : ''}
       ${houses.length ? `<div class="wc-pin__houses">${houses.map((h) => `<span class="wc-chip wc-chip--vellum">${sig(s.houses[h], 0.95)} ${esc(s.houses[h].name)}</span>`).join('')}</div>` : ''}
       <details class="pin-order"><summary>Give an order about this…</summary>
         <textarea class="input" id="pin-order-text" rows="2" placeholder="e.g. Send Ser Rodrik with fifty men to hunt these outlaws down."></textarea>

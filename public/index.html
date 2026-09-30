@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="css/ledger.css">
   <link rel="stylesheet" href="css/audience.css">
   <link rel="stylesheet" href="css/matters.css">
+  <link rel="stylesheet" href="css/names.css">
   <script type="importmap">
     { "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }
   </script>
@@ -108,6 +109,7 @@
     <button id="focus-exit" class="wc-btn wc-btn--quiet" data-action="focus" hidden title="Bring the bars back (F)">Focus · F</button>
     <button id="pins-more" class="wc-chip wc-chip--vellum" hidden title="More news and matters on the map: open the next"></button>
     <div id="coach" class="wc-coach-layer" aria-live="polite"></div>
+    <div class="wc-slip" id="name-card" role="tooltip" aria-hidden="true"></div>
 
     <!-- the card beside a castle or a host that was clicked on the map (ui/card.js); its "More" opens the sheet -->
     <aside id="card" class="wc-oak card hidden" role="dialog" aria-label="Detail" aria-hidden="true"></aside>

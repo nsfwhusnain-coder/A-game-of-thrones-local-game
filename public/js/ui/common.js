@@ -7,6 +7,7 @@ import { placeName, getRelation, fmt } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
 import { statusText } from '../engine/parties.js';
 import { supplyOf } from '../engine/military/supply.js';
+import { rosterOf, linkNames } from './names.js';
 
 export const app = {
   saveId: null, state: null, map: null, win: null, winArg: null, sheet: null, drawerTab: 'feed', chatWith: null, council: null,
@@ -20,6 +21,8 @@ export const foldText = (e) => [e?.scene, ...detailLines(e)].filter(Boolean).joi
 export const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export { fmt, placeName, getRelation };
+/** A plain string as markup, every name in it a link to the person (ui/names.js); what is not a name is escaped as by esc. */
+export const nm = (text) => (app.state ? linkNames(text, rosterOf(app.state), esc) : esc(text));
 
 export const REGION_NAMES = { north: 'The North', wall: 'The Wall', beyond: 'Beyond the Wall', iron_islands: 'Iron Islands', riverlands: 'Riverlands', vale: 'The Vale', westerlands: 'Westerlands', crownlands: 'Crownlands', reach: 'The Reach', stormlands: 'Stormlands', dorne: 'Dorne', essos: 'Essos' };
 export const RANK_NAMES = { crown: 'The Crown', paramount: 'Great House', major: 'Major House', minor: 'Minor House', city_state: 'Free City', order: 'Sworn Order', tribe: 'Host', exile: 'Exiles', company: 'Sellswords' };

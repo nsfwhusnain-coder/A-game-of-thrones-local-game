@@ -21,10 +21,10 @@ export const READER = { rules: 'Read by your steward', model: 'Read by your maes
 
 const markHtml = (ok, { icon }) => { const m = markOf(ok); return `<span class="mk" role="img" aria-label="${m.word}">${m.icon ? icon(m.icon, 'mk-ico') : m.glyph}</span>`; };
 
-/** One receipt line. `env`: `{ esc, icon }`. */
+/** One receipt line. `env`: `{ esc, icon, link? }` — `link(text)` writes the text with its names as links (ui/names.js), else it is escaped. */
 export function lineHtml(l, env) {
   const m = markOf(l.ok);
-  return `<div class="rl ${m.tone}" title="${env.esc(l.text)}">${markHtml(l.ok, env)}<span>${env.esc(l.text)}</span></div>`;
+  return `<div class="rl ${m.tone}" title="${env.esc(l.text)}">${markHtml(l.ok, env)}<span>${(env.link || env.esc)(l.text)}</span></div>`;
 }
 
 /** The full receipt of an order: its lines, what the lord answered, and the question's answers as chips. `env`: `{ esc, icon }`. */

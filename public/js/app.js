@@ -3,6 +3,9 @@ import { startIconizer, icon, hydrateIcons } from './ui/icons.js';
 import { routeKey, turnLabel } from './ui/hud.js';
 import { receiptHtml as receiptOf, briefHtml as briefOf, ordersSummary, ordersNote, noteTone } from './ui/orders.js';
 import { conditionOf } from './ui/people.js';
+import { nameCardOf, nameCardHtml } from './ui/names.js';
+import { placeCard } from './ui/cards.js';
+import { whereabouts } from './shared/roads.js';
 import { renderChrome, drawMenu, togglePopover, closePopovers, closePopover, openPopover, isOpen, openDoor, openStripLine, openItem, loadSeen, markSeen, renderStrip, setMapModeName } from './ui/chrome.js';
 import { drawTitleMap } from './ui/titlemap.js';
 import { startMusic, setMood, setMusicHouse, musicSettings, setMusic } from './ui/music.js';
@@ -16,7 +19,7 @@ import { briefFor } from '../data/briefs.js';
 import { LEGENDS } from './map3d/modes.js';
 import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
-import { app, $, $$, esc, fmt, api, doVerb, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, answerOrder, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
+import { app, $, $$, esc, nm, fmt, api, doVerb, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, answerOrder, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openDrawer, closeDrawer, drawerOpen, pickFilter, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin, showPinsMore } from './ui/pins.js';
@@ -289,7 +292,7 @@ async function chooseUndo() {
 // ───── orders ─────
 // An order's receipt (docs/gdd/04-ai-system.md §4.4): what the turn will do, line by line — done, done with a warning, refused and why — or the one question the steward
 // must ask, with its answers to choose from. The marks and the markup are ui/orders.js (pure, tested); a receipt is drawn with the page's escape and icons.
-const RENv = { esc, icon };
+const RENv = { esc, icon, link: nm };
 const receiptHtml = (o) => receiptOf(o, RENv);
 const receiptBrief = (o) => briefOf(o, RENv);
 function renderOrders() {
@@ -430,7 +433,26 @@ function busy(on, text, { live = false } = {}) {
 }
 
 // ───── actions ─────
+// Names in the text are links (ui/names.js): hover or focus shows who they are (face, house, title, where), Enter opens them, anything else puts the card away
+let nameTimer = null;
+function hideNameCard() { clearTimeout(nameTimer); const el = $('#name-card'); if (el) { el.classList.remove('is-on'); el.setAttribute('aria-hidden', 'true'); } }
+function showNameCard(n) {
+  const st = app.state; const el = $('#name-card'); if (!st || !el) return;
+  const card = nameCardOf(st, n.dataset.char, { whereText: (c) => whereabouts(st, c).text }); if (!card) return;
+  el.innerHTML = nameCardHtml(card, st, { esc, por, sig });
+  el.classList.add('is-on'); el.setAttribute('aria-hidden', 'false');
+  const r = n.getBoundingClientRect(); const z = el.getBoundingClientRect();
+  const p = placeCard({ x: r.right, y: r.top + r.height / 2 }, { w: z.width, h: z.height }, { w: window.innerWidth, h: window.innerHeight }, [], { gap: 10 });
+  el.style.left = p.left + 'px'; el.style.top = p.top + 'px';
+}
+document.addEventListener('mouseover', (e) => { const n = e.target.closest?.('.nm[data-char]'); if (!n) return; clearTimeout(nameTimer); nameTimer = setTimeout(() => showNameCard(n), 260); });
+document.addEventListener('mouseout', (e) => { if (e.target.closest?.('.nm')) hideNameCard(); });
+document.addEventListener('focusin', (e) => { const n = e.target.closest?.('.nm[data-char]'); if (n) showNameCard(n); });
+document.addEventListener('focusout', (e) => { if (e.target.closest?.('.nm')) hideNameCard(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideNameCard(); if ((e.key === 'Enter' || e.key === ' ') && e.target.classList?.contains('nm')) { e.preventDefault(); e.target.click(); } });
+document.addEventListener('scroll', hideNameCard, true);
 document.addEventListener('click', (e) => {
+  if (e.target.closest?.('.nm')) hideNameCard();
   const t = e.target;
   const talk = t.closest('[data-talk]'); if (talk) { e.preventDefault(); e.stopPropagation(); openChat(talk.dataset.talk); return; }
   if (!app.state) { const a = t.closest('[data-action]'); if (a) handleAction(a.dataset.action, a); return; }

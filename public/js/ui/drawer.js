@@ -1,7 +1,7 @@
 // Right drawer: chronicle feed, letters, audiences (one-on-one or council).
 import { peopleOfCard, regardOf, seatOf } from './people.js';
 import { eventArt } from './event-art.js';
-import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal, closeModal, foldText, detailLines } from './common.js';
+import { app, $, $$, esc, nm, fmt, placeName, api, toast, por, sig, player, charRow, modal, closeModal, foldText, detailLines } from './common.js';
 import { feedOf, feedIds, FILTERS, TIER_LABEL, storyOrder, shortDate, daysOf } from './feed.js';
 import { dateStr } from '../shared/world.js';
 import { orderOutcome, STATUS_LABEL } from '../shared/errands.js';
@@ -12,6 +12,7 @@ import { temperament, natureTags, moodWord } from '../shared/temperament.js';
 import { together as sameSpot } from '../engine/parties.js';
 import { outcomeChips, chipsHtml, audiencePromisesHtml } from './promises.js';
 import { matterOf, matterHtml } from './matters.js';
+import { relationOf } from './names.js';
 import { lettersOnTheWing, letterTo, landsWord } from './post.js';
 
 // The chronicle panel (GDD 17 §2.3): closed, the headline strip is its one-line form; opened (H, the strip's "All", an audience, the Inbox) it shows the
@@ -38,7 +39,7 @@ export function renderDrawer() {
 }
 
 export function eventHtml(e, compact = false) {
-  return `<div class="event imp-${e.importance}${compact ? ' compact' : ''}" ${e.where ? `data-where="${e.where}"` : ''}>${!compact || e.importance >= 4 ? eventArt(e) : ''}<div class="et">${esc(e.headline || e.title)}</div><div class="eb">${esc(e.summary ?? e.text)}</div>${foldText(e) ? `<details class="ev-more"><summary>More</summary><div>${esc(foldText(e))}</div></details>` : ''}<div class="meta">${e.date ? `${esc(e.date.replace(/, \d+ AC$/, ''))} · ` : e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
+  return `<div class="event imp-${e.importance}${compact ? ' compact' : ''}" ${e.where ? `data-where="${e.where}"` : ''}>${!compact || e.importance >= 4 ? eventArt(e) : ''}<div class="et">${nm(e.headline || e.title)}</div><div class="eb">${nm(e.summary ?? e.text)}</div>${foldText(e) ? `<details class="ev-more"><summary>More</summary><div>${esc(foldText(e))}</div></details>` : ''}<div class="meta">${e.date ? `${esc(e.date.replace(/, \d+ AC$/, ''))} · ` : e.day ? `day ${e.day} · ` : ''}${esc(e.type)}${e.where ? ' · ' + esc(placeName(app.state, e.where)) : ''}</div></div>`;
 }
 // The small life of the realm, told briefly beneath the turn's great events, grouped by where it happened
 const REGION_ORDER = ['north', 'wall', 'beyond', 'iron_islands', 'riverlands', 'vale', 'westerlands', 'crownlands', 'reach', 'stormlands', 'dorne', 'essos'];
@@ -57,7 +58,7 @@ export function meanwhileHtml(evs, open = false) {
 export function decisionsHtml(list, extra = {}) {
   const s = app.state;
   const pend = list || (s.decisions || []).filter((d) => d.status === 'pending');
-  return pend.map((d) => matterHtml(matterOf(s, d), s, { esc, por, icon }, extra)).join('');
+  return pend.map((d) => matterHtml(matterOf(s, d), s, { esc, por, icon, link: nm }, extra)).join('');
 }
 export function wireDecisions(root, { onAllDone, onDecided } = {}) {
   // saying nothing is a choice: the letter is put away and the days run (what silence does is written on it)
@@ -92,7 +93,7 @@ export function openNews(turn, idx) {
   const s = app.state; const t = s.history.find((x) => x.turn === turn); const e = t?.events?.[idx]; if (!e) return;
   if (e.where && s.holdings[e.where]) { app.map?.flyTo(s.holdings[e.where].pos, 420); app.map?.flash(s.holdings[e.where].pos); }
   modal(`<div class="pin-head"><span class="pin-place">${esc(e.where ? placeName(s, e.where) : '')}</span><span class="pin-count">${esc(t.date)}</span></div>
-    <div class="pin-body event imp-${e.importance}">${eventArt(e)}<div class="et">${esc(e.headline || e.title)}</div><div class="eb">${esc(e.summary ?? e.text)}</div>${foldText(e) ? `<div class="pin-details">${esc(foldText(e))}</div>` : ''}${recordHtml(e)}</div>
+    <div class="pin-body event imp-${e.importance}">${eventArt(e)}<div class="et">${nm(e.headline || e.title)}</div><div class="eb">${nm(e.summary ?? e.text)}</div>${foldText(e) ? `<div class="pin-details">${nm(foldText(e))}</div>` : ''}${recordHtml(e)}</div>
     <div class="report-actions"><button class="btn primary" data-action="close-modal">Close</button></div>`);
 }
 function openMeanwhile(turn) {
@@ -123,15 +124,15 @@ function cardHtml(s, t, c, fresh) {
   const late = e.heard?.via ? CAME_SHORT[e.heard.via] || 'word came' : c.rumour ? 'a rumour' : '';
   const ordered = e.orderId && (t.orders || []).find((o) => o.id === e.orderId);
   const foldParts = [
-    c.tier === 'minor' && e.summary ? `<p class="wc-card__sum">${esc(e.summary)}</p>` : '',
+    c.tier === 'minor' && e.summary ? `<p class="wc-card__sum">${nm(e.summary)}</p>` : '',
     ordered ? `<p class="story-order">${esc(s.characters[s.houses[p].lord]?.name || 'The lord')} commanded: “${esc(ordered.text.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim())}”</p>` : '',
-    e.scene ? `<p class="wc-card__scene">${esc(e.scene)}</p>` : '',
-    detailLines(e).length ? `<ul class="wc-card__facts">${detailLines(e).map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '',
+    e.scene ? `<p class="wc-card__scene">${nm(e.scene)}</p>` : '',
+    detailLines(e).length ? `<ul class="wc-card__facts">${detailLines(e).map((l) => `<li>${nm(l)}</li>`).join('')}</ul>` : '',
     recordHtml(e), heardHtml(e, date),
   ].filter(Boolean);
   return `<article class="wc-card wc-tier-${c.tier} story${hidden ? ' unrevealed' : ''}${fresh ? ' is-new' : ''}" data-news="${c.id}" tabindex="0">
-    ${c.tier === 'minor' ? '' : facesHtml(s, e)}<h3 class="wc-card__head">${esc(e.headline || e.title)}</h3>
-    ${c.tier === 'minor' ? '' : `<p class="wc-card__body">${esc(e.summary ?? e.text)}</p>`}
+    ${c.tier === 'minor' ? '' : facesHtml(s, e)}<h3 class="wc-card__head">${nm(e.headline || e.title)}</h3>
+    ${c.tier === 'minor' ? '' : `<p class="wc-card__body">${nm(e.summary ?? e.text)}</p>`}
     <div class="wc-card__meta"><span class="wc-label">${TIER_LABEL[c.tier] || ''}</span>${yours ? `<span class="wc-chip wc-chip--wax">${esc(yours)}</span>` : ''}${place || date ? `<span class="wc-card__where">${icon('pin')}${esc(date)}${place ? ` · <em>${esc(place)}</em>` : ''}</span>` : ''}${late ? `<em>${esc(late)}</em>` : ''}${foldParts.length ? `<button class="wc-card__more" data-fold aria-expanded="false" title="The numbers, the record and the scene">Details ${icon('chevronR')}</button>` : ''}</div>
     ${foldParts.length ? `<div class="wc-card__fold" hidden>${foldParts.join('')}</div>` : ''}</article>`;
 }
@@ -183,7 +184,7 @@ function renderFeed(body) {
   // a card opens on a click (the map goes to its place); Details folds out what is behind it; the small happenings open across the realm
   const th = $('.threads', body); if (th) th.ontoggle = () => { app.threadsOpen = th.open; };
   $$('[data-fold]', body).forEach((b) => b.onclick = (ev) => { ev.stopPropagation(); const fold = b.closest('.wc-card').querySelector('.wc-card__fold'); const open = fold.hidden; fold.hidden = !open; b.setAttribute('aria-expanded', String(open)); b.classList.toggle('is-open', open); });
-  $$('[data-news]', body).forEach((el) => { const go = () => { const [tn, i] = el.dataset.news.split(':').map(Number); const e = s.history.find((x) => x.turn === tn)?.events?.[i]; const h = e?.where && s.holdings[e.where]; if (h) { app.map.flyTo(h.pos, 420); app.map.flash(h.pos); } else openNews(tn, i); }; el.onclick = go; el.onkeydown = (ev) => { if (ev.key === 'Enter' && ev.target === el) go(); }; });
+  $$('[data-news]', body).forEach((el) => { const go = () => { const [tn, i] = el.dataset.news.split(':').map(Number); const e = s.history.find((x) => x.turn === tn)?.events?.[i]; const h = e?.where && s.holdings[e.where]; if (h) { app.map.flyTo(h.pos, 420); app.map.flash(h.pos); } else openNews(tn, i); }; el.onclick = (ev) => { if (!ev.target.closest('.nm')) go(); }; el.onkeydown = (ev) => { if (ev.key === 'Enter' && ev.target === el) go(); }; });
   $$('[data-meanwhile]', body).forEach((el) => el.onclick = () => openMeanwhile(Number(el.dataset.meanwhile)));
   $$('[data-feed="matters"]', body).forEach((el) => el.onclick = () => { feedState().matters = false; renderDrawer(); });
 }
@@ -212,7 +213,7 @@ function answerFailed(e, retry) {
   el.querySelector('button').onclick = () => { el.remove(); $('#pending-msg')?.remove(); retry(); };
 }
 export function ravenHtml(r) {
-  return `<div class="raven-card ${r.read ? '' : 'unread'}"><div class="from">From ${esc(r.fromName)} · ${esc(r.date)}</div>${esc(r.text)}<div style="margin-top:0.4rem;display:flex;gap:0.3rem">${r.from ? `<button class="btn small" data-talk="${r.from}">Reply</button>` : ''}<button class="btn small" data-read-aloud="${r.from || ''}" data-text="${esc(r.text)}">${icon('speaker')} Read aloud</button></div></div>`;
+  return `<div class="raven-card ${r.read ? '' : 'unread'}"><div class="from">From ${esc(r.fromName)} · ${esc(r.date)}</div>${nm(r.text)}<div style="margin-top:0.4rem;display:flex;gap:0.3rem">${r.from ? `<button class="btn small" data-talk="${r.from}">Reply</button>` : ''}<button class="btn small" data-read-aloud="${r.from || ''}" data-text="${esc(r.text)}">${icon('speaker')} Read aloud</button></div></div>`;
 }
 async function renderLetters(body) {
   const s = app.state;
@@ -245,7 +246,7 @@ function renderAudience(body) {
   const mood = s.moods?.[c.id]; const closed = !!(mood?.closed && mood.turn === s.meta.turn);
   const quick = c.house === p ? ['How many men can we field?', 'What is in the treasury, and what do we owe?', 'How full are the granaries?', 'Which of my lords can I trust?', 'What news?'] : ['What news from your lands?', 'What do you want?', 'I propose an alliance between our houses.', 'Will you trade with us?', 'I offer you 1,000 gold dragons for your friendship.', 'Swear fealty to me.'];
   body.innerHTML = `<div class="chat${log.length ? ' has-log' : ''}">
-    <div class="chat-head"><img src="${por(c, 80)}" alt=""><div style="flex:1;min-width:0"><div class="title" data-char="${c.id}">${esc(c.name)} ${sig(h, 1)}</div><div class="sub sub-t" title="${esc(c.title || '')}">${esc(c.title || '')}</div><div class="sub sub-b">${esc(placeName(s, c.loc))} · ${together ? 'in person' : `<b>by raven</b>${flying ? ` — a letter of yours ${landsWord(flying.days)}` : ''}`}${regard ? ` · <span class="regard r-${regard.tone}" title="Their opinion of you: ${(c.opinion || 0) > 0 ? '+' : ''}${c.opinion || 0}">${esc(regard.word)}</span>` : ''}</div>${temperHtml(c)}</div><button class="wc-btn wc-btn--quiet" data-action="close-chat" title="Back to the chronicle" aria-label="Back to the chronicle">${icon('chevronL')} Back</button></div>
+    <div class="chat-head"><img src="${por(c, 80)}" alt=""><div style="flex:1;min-width:0"><div class="title" data-char="${c.id}">${esc(c.name)} ${sig(h, 1)}</div><div class="sub sub-t" title="${esc(c.title || '')}">${esc(c.title || '')}</div><div class="sub sub-b">${relationOf(s, c.id) ? `<i class="rel-line">${esc(relationOf(s, c.id))}</i> · ` : ''}${esc(placeName(s, c.loc))} · ${together ? 'in person' : `<b>by raven</b>${flying ? ` — a letter of yours ${landsWord(flying.days)}` : ''}`}${regard ? ` · <span class="regard r-${regard.tone}" title="Their opinion of you: ${(c.opinion || 0) > 0 ? '+' : ''}${c.opinion || 0}">${esc(regard.word)}</span>` : ''}</div>${temperHtml(c)}</div><button class="wc-btn wc-btn--quiet" data-action="close-chat" title="Back to the chronicle" aria-label="Back to the chronicle">${icon('chevronL')} Back</button></div>
     <div class="chat-log" id="chat-log">${log.length ? log.map((m) => msgHtml(m, c)).join('') : `<div class="muted" style="font-style:italic">${esc(c.bio || '')}</div>`}</div>
     ${closed ? '' : `<div class="quick-asks">${quick.map((q) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`}
     ${closed ? `<div class="chat-closed">${esc(c.name)} will not hear you again this moon.${together ? ' The doors are shut to you.' : ' Your ravens come back unanswered.'}</div>` : `<div class="chat-input"><textarea id="chat-text" rows="3" placeholder="${together ? 'Speak…' : 'Write your letter…'}">${esc(app.chatPrefill || '')}</textarea><button class="wc-btn wc-btn--gold" id="chat-send">${together ? 'Speak' : 'Send'}</button></div>`}${audiencePromisesHtml(s, c.id, { esc })}</div>`;
@@ -295,7 +296,7 @@ function msgHtml(m, c) {
   // a reply is a small scene: what you see them do, and what they say
   const bs = beats(m.text);
   // narration reads as a novel's prose; speech is set in quotation marks
-  const body = bs.map((b) => (b.kind === 'act' ? `<p class="beat act" title="Click to hear it">${esc(b.text)}</p>` : `<p class="beat say" title="Click to hear it">“${esc(b.text.replace(/^[“"]+|[”"]+$/g, ''))}”</p>`)).join('') || esc(m.text);
+  const body = bs.map((b) => (b.kind === 'act' ? `<p class="beat act" title="Click to hear it">${nm(b.text)}</p>` : `<p class="beat say" title="Click to hear it">“${nm(b.text.replace(/^[“"]+|[”"]+$/g, ''))}”</p>`)).join('') || esc(m.text);
   return `<div class="msg npc" data-speaker="${sp?.id || ''}" data-mood="${esc(m.mood || '')}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}<button class="speak-all" title="Hear it" aria-label="Hear it">${icon('speaker')}</button></div><div class="beats">${body}</div>${chipsHtml(outcomeChips(m), { esc, icon })}</div>`;
 }
 // Voices: click a line to hear it, or the speaker icon to hear the whole reply
