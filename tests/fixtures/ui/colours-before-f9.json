@@ -1,0 +1,4 @@
+{
+ "note": "Hard-coded colours (#hex and rgb()/rgba()) in the stylesheets at the start of F9 (WP F9; docs/gdd/12-ui-ux.md section 14 item 19, all surfaces use tokens): tests/a11y-static.test.js holds that none grows. theme.css is the tokens' own file (every token is a colour there); the new sheets of F4-F9 keep to the tokens. Lower a number when a sheet is tidied.",
+ "counts": { "style.css": 340, "hud.css": 89, "chronicle.css": 22, "ledger.css": 13, "audience.css": 9, "matters.css": 27, "names.css": 6 }
+}

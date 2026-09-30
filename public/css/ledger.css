@@ -59,7 +59,7 @@ body.wide-window { --panel-w: min(56rem, 62vw); }
 .realm-word.is-seems { font-style: italic; opacity: .85; }
 .realm-flag { display: inline-block; margin-left: .25rem; padding: 0 .3rem; font: 600 max(.6rem, 13px)/1.3 var(--wc-display); letter-spacing: .06em; text-transform: uppercase; color: var(--rubric); border: 1px solid rgba(123, 30, 23, .4); }
 .realm-flag--swollen, .realm-flag--winning { color: var(--verdigris-ink); border-color: rgba(55, 99, 74, .5); }
-.realm-legend { margin: .5rem 0 0; font-size: .9rem; font-style: italic; color: var(--ink-soft); white-space: normal; }
+.realm-legend { margin: .5rem 0 0; font-size: max(.9rem, 12px); font-style: italic; color: var(--ink-soft); white-space: normal; }
 
 /* below the table */
 .realm-lower { display: flex; flex-direction: column; gap: .8rem; }
@@ -73,7 +73,7 @@ body.wide-window { --panel-w: min(56rem, 62vw); }
 .realm-say { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.2rem; }
 .realm-facts li { padding: .15rem 0 .15rem 1rem; position: relative; line-height: 1.3; }
 .realm-facts li::before { content: ''; position: absolute; left: 0; top: .6em; width: .45rem; height: .45rem; background: url(../img/ui/ornaments.svg#rubric-bullet) center / 100% 100% no-repeat; }
-.realm-facts em { font-size: .92rem; }
+.realm-facts em { font-size: max(.92rem, 12px); }
 .realm-focus li { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; padding: .25rem 0; }
 .realm-focus .wc-btn { white-space: normal; text-align: left; height: auto; padding-block: .35rem; }
 .realm-focus .wc-btn .ico { flex: none; width: 1.1rem; height: 1.1rem; }
@@ -91,7 +91,7 @@ body.wide-window { --panel-w: min(56rem, 62vw); }
 .realm-multi__c { display: flex; flex-direction: column; gap: .05rem; padding: .35rem .5rem; border: 1px solid rgba(42, 29, 18, .25); background: rgba(255, 255, 255, .18); }
 .realm-multi__c b { font: 600 1.15rem/1.1 var(--wc-serif); font-variant-numeric: lining-nums; }
 .realm-multi__c .wc-spark { width: 100%; height: 1.4rem; margin: 0; }
-.realm-multi__c em { font-style: normal; font-size: .92rem; }
+.realm-multi__c em { font-style: normal; font-size: max(.92rem, 12px); }
 .realm-body .wc-quiet { color: var(--bone-dim); }
 .realm-ledger .wc-ledger__page .wc-quiet { color: var(--ink-soft); }
 

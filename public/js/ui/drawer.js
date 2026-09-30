@@ -13,6 +13,8 @@ import { together as sameSpot } from '../engine/parties.js';
 import { outcomeChips, chipsHtml, audiencePromisesHtml } from './promises.js';
 import { matterOf, matterHtml } from './matters.js';
 import { relationOf } from './names.js';
+import { rememberOpener, restoreOpener } from './opener.js';
+import { scrollBehavior } from './motion.js';
 import { moodNow } from './looks.js';
 import { lettersOnTheWing, letterTo, landsWord } from './post.js';
 
@@ -22,12 +24,15 @@ const DRAWER_TITLE = { feed: 'Chronicle', letters: 'Letters', audience: 'Audienc
 export const drawerOpen = () => !$('#drawer').classList.contains('hidden');
 export function setDrawer(tab) { app.drawerTab = tab; renderDrawer(); }
 export function openDrawer(tab = app.drawerTab) {
+  if (!drawerOpen()) rememberOpener('drawer');
   app.drawerTab = tab; $('#drawer').classList.remove('hidden'); document.body.classList.add('has-drawer'); renderDrawer();
 }
 /** Shut the panel; what the chronicle showed is read (the strip's "N new" clears), unless `read` is false (a game just loaded). */
 export function closeDrawer({ read = true } = {}) {
   if (read && app.state && drawerOpen() && app.drawerTab === 'feed') { app.markSeen?.(feedIds(app.state)); app.renderStrip?.(); }
+  const was = drawerOpen();
   $('#drawer').classList.add('hidden'); document.body.classList.remove('has-drawer'); app.chatWith = null; app.council = null; app.drawerTab = 'feed';
+  if (was) restoreOpener('drawer');
 }
 export function renderDrawer() {
   if (!app.state || !drawerOpen()) return;
@@ -203,7 +208,7 @@ function waitStatus(who, together) {
     let p = null; try { p = await api(`/games/${app.saveId}/progress`); } catch { /* keep the last words */ }
     const sec = Math.round((Date.now() - t0) / 1000);
     const what = p?.phase === 'writing' ? (together ? `${who} speaks…` : `${who} writes the letter…`) : p?.phase === 'thinking' ? `${who} weighs the words…` : together ? `${who} considers…` : `The raven flies to ${who}…`;
-    el.innerHTML = `<i>${esc(what)}</i> <span class="muted" style="font-size:0.75rem">${sec}s</span>`;
+    el.innerHTML = `<i>${esc(what)}</i> <span class="muted" style="font-size:max(0.75rem,12px)">${sec}s</span>`;
   }, 1000);
   return () => clearInterval(iv);
 }
@@ -220,8 +225,8 @@ async function renderLetters(body) {
   const s = app.state;
   const LABEL = { 'in flight': ['underway', 'In flight'], delivered: ['done', 'Delivered'], answered: ['answered', 'Answered'] };
   const today = s.meta.date.year * 360 + (s.meta.date.month - 1) * 30 + (s.meta.date.day - 1);
-  const wing = lettersOnTheWing(s).map((l) => `<div class="errand wing" data-letter="${esc(l.id)}"><span class="ost underway">${icon('raven', 'ost-ico')} On the wing</span><div class="grow"><b>To ${esc(l.toName)}</b> <span class="muted">· sent ${esc(l.sent)} · ${esc(landsWord(l.days))}</span><div class="muted" style="font-size:0.8rem">${esc(l.text.slice(0, 140))}${l.text.length > 140 ? '…' : ''}</div></div></div>`).join('');
-  const sent = (s.post || []).filter((x) => !x.reply && x.status !== 'in flight').slice(0, 12).map((x) => { const [c, l] = LABEL[x.status] || ['', x.status]; return `<div class="errand"><span class="ost ${c}">${l}</span><div class="grow"><b>To ${esc(x.toName)}</b> <span class="muted">· sent ${esc(x.sent.replace(/, \d+ AC$/, ''))}${x.status === 'in flight' ? ` · lands in ~${Math.max(1, x.arriveDay - today)} ${x.arriveDay - today === 1 ? 'day' : 'days'}` : ''}</span><div class="muted" style="font-size:0.8rem">${esc(x.text.slice(0, 140))}${x.text.length > 140 ? '…' : ''}</div></div></div>`; }).join('');
+  const wing = lettersOnTheWing(s).map((l) => `<div class="errand wing" data-letter="${esc(l.id)}"><span class="ost underway">${icon('raven', 'ost-ico')} On the wing</span><div class="grow"><b>To ${esc(l.toName)}</b> <span class="muted">· sent ${esc(l.sent)} · ${esc(landsWord(l.days))}</span><div class="muted" style="font-size:max(0.8rem,12px)">${esc(l.text.slice(0, 140))}${l.text.length > 140 ? '…' : ''}</div></div></div>`).join('');
+  const sent = (s.post || []).filter((x) => !x.reply && x.status !== 'in flight').slice(0, 12).map((x) => { const [c, l] = LABEL[x.status] || ['', x.status]; return `<div class="errand"><span class="ost ${c}">${l}</span><div class="grow"><b>To ${esc(x.toName)}</b> <span class="muted">· sent ${esc(x.sent.replace(/, \d+ AC$/, ''))}${x.status === 'in flight' ? ` · lands in ~${Math.max(1, x.arriveDay - today)} ${x.arriveDay - today === 1 ? 'day' : 'days'}` : ''}</span><div class="muted" style="font-size:max(0.8rem,12px)">${esc(x.text.slice(0, 140))}${x.text.length > 140 ? '…' : ''}</div></div></div>`; }).join('');
   body.innerHTML = `${wing ? `<h4>On the wing</h4>${wing}` : ''}<h4${wing ? ' style="margin-top:1rem"' : ''}>Received</h4>${s.ravens.map(ravenHtml).join('') || '<p class="muted">No ravens have come.</p>'}${sent ? `<h4 style="margin-top:1rem">Sent</h4>${sent}` : ''}`;
   if (s.ravens.some((r) => !r.read)) { try { const r = await api(`/games/${app.saveId}/ravens/read`, { body: {} }); s.ravens = r.ravens; app.renderTop?.(); } catch { /* */ } }
 }
@@ -335,7 +340,7 @@ export async function playScene(msgs) {
     const { b } = all[i];
     if (playScene.token !== token || (voiced !== null && sceneToken() !== voiced)) { all.forEach(({ b: x }) => x.classList.remove('hidden-beat')); return; }
     b.classList.remove('hidden-beat'); b.classList.add('reveal');
-    b.closest('.chat-log')?.scrollTo({ top: 1e9, behavior: 'smooth' });
+    b.closest('.chat-log')?.scrollTo({ top: 1e9, behavior: scrollBehavior() });
     if (lines[i]) { b.classList.add('speaking'); await lines[i].play(voiced); b.classList.remove('speaking'); }
     else await wait(b.classList.contains('act') ? 500 + Math.min(1200, b.textContent.length * 14) : 300 + Math.min(1800, b.textContent.length * 16));
   }

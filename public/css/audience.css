@@ -30,7 +30,7 @@
 /* what a reply did: how they took it, and each thing that came of it (a promise made, a deed done) */
 .chips { display: flex; flex-wrap: wrap; gap: .3rem .4rem; margin-top: .5rem; padding-top: .45rem; border-top: 1px solid rgba(139, 109, 62, .5); }
 .chip { display: inline-flex; align-items: center; gap: .3rem; padding: .08rem .55rem .08rem .4rem; font: 600 var(--wc-min)/1.25 var(--wc-display); letter-spacing: .03em; border: 1px solid currentColor; border-radius: 1rem; background: rgba(255, 250, 235, .35); }
-.chip b { font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .78em; }
+.chip b { font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: max(.78em, 12px); }
 .chip .chip-ico { width: 1rem; height: 1rem; flex: none; color: inherit; }
 .chip-text { font: 500 var(--wc-min)/1.25 var(--wc-serif); letter-spacing: 0; color: var(--ink-iron); }
 .chip-ok { color: var(--verdigris-ink); } .chip-warn { color: #7a5518; } .chip-bad { color: var(--madder-ink); }
@@ -41,7 +41,7 @@
 .pm { display: grid; grid-template-columns: auto 1fr auto; gap: .1rem .5rem; align-items: baseline; padding: .12rem 0; color: var(--bone); }
 .pm-who { font-family: var(--wc-display); letter-spacing: .02em; white-space: nowrap; }
 .pm-what { color: var(--bone-dim); min-width: 0; overflow-wrap: anywhere; }
-.pm-when { font-family: var(--wc-display); font-size: .92em; white-space: nowrap; display: inline-flex; align-items: center; gap: .25rem; color: var(--bone-dim); }
+.pm-when { font-family: var(--wc-display); font-size: max(.92em, 12px); white-space: nowrap; display: inline-flex; align-items: center; gap: .25rem; color: var(--bone-dim); }
 .pm-when .chip-ico { width: .95rem; height: .95rem; color: inherit; }
 .pm-soon .pm-when { color: var(--ochre); } .pm-late .pm-when { color: var(--madder-lit); }
 .pm-kept .pm-when { color: var(--verdigris); } .pm-broken .pm-when { color: var(--madder-lit); }
@@ -62,7 +62,7 @@
 .chat-head .council-faces .cf { display: flex; flex-direction: column; align-items: center; gap: .05rem; width: 4.2rem; padding: .15rem; background: none; border: 1px solid transparent; border-radius: var(--radius-card); cursor: pointer; color: var(--bone); font-family: var(--wc-serif); }
 .chat-head .council-faces .cf img { width: 2.6rem; margin: 0; border-radius: 50%; }
 .chat-head .council-faces .cf b { font: 600 var(--wc-min)/1.15 var(--wc-display); color: var(--gold-flat); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-head .council-faces .cf span { font-size: .78rem; color: var(--bone-dim); line-height: 1.1; text-align: center; }
+.chat-head .council-faces .cf span { font-size: max(.78rem, 12px); color: var(--bone-dim); line-height: 1.1; text-align: center; }
 .chat-head .council-faces .cf:hover, .chat-head .council-faces .cf:focus-visible { border-color: var(--bronze); outline: none; }
 
 /* the head is two short lines (who they are, where and how they are reached) so the talk keeps the room; with a talk going the quick questions are one row, not four */
@@ -73,7 +73,7 @@
 
 /* the End-turn plate counts the orders in hand (ui/orders.js): bronze when all is well, ochre when one asks or needs care, madder when one cannot be done */
 .advance-btn { position: relative; }
-.advance-count { position: absolute; top: -.45rem; right: -.4rem; z-index: 2; min-width: 1.2rem; height: 1.2rem; padding: 0 .3rem; box-sizing: border-box; border-radius: .7rem; font: 700 .74rem/1.2rem var(--wc-display); letter-spacing: 0; text-align: center; color: var(--oak); background: var(--bronze-hi); box-shadow: 0 1px 3px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.advance-count { position: absolute; top: -.45rem; right: -.4rem; z-index: 2; min-width: 1.2rem; height: 1.2rem; padding: 0 .3rem; box-sizing: border-box; border-radius: .7rem; font: 700 max(0.75rem, 12px)/1.2rem var(--wc-display); letter-spacing: 0; text-align: center; color: var(--oak); background: var(--bronze-hi); box-shadow: 0 1px 3px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .25); }
 .advance-count[hidden] { display: none; }
 .advance-count[data-tone='warn'] { background: var(--ochre); }
 .advance-count[data-tone='bad'] { background: var(--madder-lit); color: #2a0d09; }
@@ -82,3 +82,14 @@
 .receipt .rl .mk .ico { width: .95rem; height: .95rem; color: inherit; vertical-align: 0; }
 .receipt .rl.warn .mk, .wc-cmd .receipt .rl.warn .mk { color: var(--rubric); }
 .receipt .rl.bad .mk { color: var(--madder-ink); }
+
+/* the command bar's field shows where the words will go: a ring round the whole field while the textarea has focus (12 §14 item 11) */
+#command-bar .wc-input:focus-within { box-shadow: inset 0 0 0 .14rem var(--ochre), 0 0 0 .1rem rgba(192, 138, 46, .35); border-radius: var(--radius-card); }
+
+/* long text is body text, and body text is 15px at least at the smaller sizes (12 §14 item 3): the grey second lines of rows and the hints of Settings */
+.sub, small.muted, .row .sub { font-size: max(.85rem, 15px); }
+
+/* 1024 wide (12 §13): the chronicle and the audience lie over the map's left side, and the command bar steps aside to the right of them rather than under */
+@media (max-width: 1100px) {
+  body.has-drawer #command-bar { left: calc(var(--hud-gap) * 2 + 28rem); transform: none; width: 24rem; max-width: calc(100vw - 28rem - var(--hud-gap) * 3); }
+}

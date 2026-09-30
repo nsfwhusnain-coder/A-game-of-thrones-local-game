@@ -941,12 +941,38 @@ export class MapScene {
       // Home: back to your seat (twice: the whole realm); G: go with the selected party (11 §2; F is focus mode)
       if (k === 'home') { const seat = this.state?.holdings[this.state.houses[this.state.meta.player]?.seat]; const near = seat && Math.hypot(this.target.x - seat.pos[0], this.target.z - seat.pos[1]) < 20 && Math.abs(this.dist - LOD[2]) < 40; if (seat && !near) this.flyTo(seat.pos, LOD[2]); else this.home(); return; }
       if (k === 'g') { this.follow = this.follow ? null : this.selectedArmy || null; return; }
+      // the keyboard's way round the map (F9): [ and ] step through what is on it, Enter opens the one in hand, Escape lets it go
+      if (k === '[' || k === ']') { e.preventDefault(); this.stepPlace(k === ']' ? 1 : -1); return; }
+      if (k === 'enter' && this.kbdKey && (document.activeElement === document.body || document.activeElement?.id === 'map-wrap')) { e.preventDefault(); this.openPlace(); return; }
+      if (k === 'escape' && this.kbdKey) this.clearPlace();
       if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.tween = null; this.follow = null; this.clearHover(); }
       this.keys.add(k);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
     void cv;
   }
+  // ── the keyboard's way round the map (docs/gdd/12-ui-ux.md §13; WP F9) ──
+  /** What the keys step through: matters and news first, then hosts (yours first), then holdings nearest the camera first. */
+  kbdPlaces() {
+    const kind = (l) => (l.cls.startsWith('event') ? 0 : l.cls.startsWith('army') ? 1 : l.cls.startsWith('holding') ? 2 : -1);
+    const mine = (l) => (l.cls.includes('mine') ? 0 : 1); const t = this.target || { x: 0, z: 0 };
+    const near = (l) => Math.hypot(l.pos.x - t.x, l.pos.z - t.z);
+    return this.labels.filter((l) => kind(l) >= 0 && (l.data.pin || l.data.army || l.data.holding) && l.el.isConnected)
+      .sort((a, b) => kind(a) - kind(b) || (kind(a) === 2 ? near(a) - near(b) : mine(a) - mine(b) || near(a) - near(b)));
+  }
+  kbdKeyOf(l) { return l.data.pin ? `pin:${l.data.pin}` : l.data.army ? `army:${l.data.army}` : `hold:${l.data.holding}`; }
+  /** The next (or previous) thing on the map, marked, brought into view and announced; returns what it is, or null when the map has nothing. */
+  stepPlace(dir) {
+    const list = this.kbdPlaces(); if (!list.length) return null;
+    const i = list.findIndex((l) => this.kbdKeyOf(l) === this.kbdKey); const l = list[(i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length)];
+    this.clearPlace(false); this.kbdKey = this.kbdKeyOf(l); l.el.classList.add('kbd-focus');
+    const name = l.el.title || l.el.textContent.trim() || (l.data.army && this.state?.parties?.[l.data.army]?.name) || 'a place';
+    const live = document.getElementById('map-live'); if (live) live.textContent = name;
+    if (l.shown === false || !l.sx || l.sx < 0 || l.sy < 0 || l.sx > this.cssW || l.sy > this.cssH) this.flyTo([l.pos.x, l.pos.z]);
+    return { name, key: this.kbdKey };
+  }
+  openPlace() { const l = this.labels.find((x) => this.kbdKey && this.kbdKeyOf(x) === this.kbdKey); if (l) this.labelClick(l.el); }
+  clearPlace(announce = true) { for (const l of this.labels) l.el.classList.remove('kbd-focus'); this.kbdKey = null; if (announce) { const live = document.getElementById('map-live'); if (live) live.textContent = ''; } }
   labelClick(t) {
     {
       if (t.dataset.army) { this.selectedArmy = t.dataset.army; this.h.onSelectArmy?.(t.dataset.army); this.syncArmies(); }

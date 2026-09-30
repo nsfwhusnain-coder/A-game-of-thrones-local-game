@@ -82,7 +82,7 @@ test('the same events and screen give the same plan, and the rules read no clock
 test('the wiring: the game plays turns by the plan, stages the map, and hands the camera back on Follow', () => {
   const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\r\n/g, '\n');
   const pb = rd('public/js/ui/playback.js'); const app = rd('public/js/app.js'); const map = rd('public/js/map3d/MapScene.js'); const chrome = rd('public/js/ui/chrome.js');
-  assert.match(pb, /planPlayback\(evs,/); assert.match(pb, /runPlan\(plan, ctl, io, s\.holdings\)/); assert.match(pb, /map\?\.revealAll\(\)/); assert.match(pb, /matchMedia\('\(prefers-reduced-motion: reduce\)'\)/);
+  assert.match(pb, /planPlayback\(evs,/); assert.match(pb, /runPlan\(plan, ctl, io, s\.holdings\)/); assert.match(pb, /map\?\.revealAll\(\)/); assert.match(pb, /reducedMotion\(\)/, 'the system\'s setting or the game\'s own (ui/motion.js)');
   assert.match(pb, /data-rb === 'follow'|dataset\.rb === 'follow'/); assert.match(chrome, /data-rb="follow"/);
   assert.equal((app.match(/stageTurn\(prevState, r\.state\)/g) || []).length, 2, 'both ways a turn is told stage the map');
   assert.match(app, /app\.reveal\.ctl\.noFly = true/);

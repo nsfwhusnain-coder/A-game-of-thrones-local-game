@@ -15,7 +15,7 @@
 .wc-day { display: flex; align-items: center; gap: .7rem; margin: .5rem 0 .45rem; font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .1em; color: var(--bone-dim); text-transform: uppercase; }
 .wc-day::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255, 226, 170, .28), rgba(255, 226, 170, 0)); }
 .wc-daygroup + .wc-daygroup { margin-top: .9rem; }
-.wc-chronicle .yours { margin: 0 0 .5rem; padding: .35rem .6rem; background: rgba(0, 0, 0, .25); border: 1px solid rgba(0, 0, 0, .55); border-radius: var(--radius-card); font-size: .92rem; color: var(--bone-dim); }
+.wc-chronicle .yours { margin: 0 0 .5rem; padding: .35rem .6rem; background: rgba(0, 0, 0, .25); border: 1px solid rgba(0, 0, 0, .55); border-radius: var(--radius-card); font-size: max(.92rem, 12px); color: var(--bone-dim); }
 .wc-chronicle .yours .yh { color: var(--bone); font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .08em; }
 .wc-chronicle .yours .yr.bad { color: var(--madder-lit); }
 
@@ -47,7 +47,7 @@
 /* the quiet lines, the Meanwhile and what is held back */
 .wc-quiet { margin: .3rem .1rem; font-style: italic; color: var(--bone-dim); }
 .wc-quiet--foot { margin-top: .9rem; text-align: center; }
-.wc-chronicle .news-meanwhile { margin: .5rem .15rem 0; font-size: .97rem; font-style: italic; color: var(--bone-dim); line-height: 1.3; }
+.wc-chronicle .news-meanwhile { margin: .5rem .15rem 0; font-size: max(.97rem, 15px); font-style: italic; color: var(--bone-dim); line-height: 1.3; }
 .wc-chronicle .news-more { display: inline; margin: .3rem .1rem 0; padding: 0; background: none; border: 0; cursor: pointer; color: var(--bone-dim); font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .06em; text-align: left; }
 .wc-chronicle .news-more:hover { color: var(--gold-flat); }
 .wc-chronicle .threads { margin-bottom: .6rem; border-color: rgba(0, 0, 0, .6); background: rgba(0, 0, 0, .22); color: var(--bone); }

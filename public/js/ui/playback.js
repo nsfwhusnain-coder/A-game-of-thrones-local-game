@@ -5,6 +5,7 @@ import { SPANS, spanOf } from '../shared/world.js';
 import { storyEvents, setDrawer } from './drawer.js';
 import { sfx } from './sfx.js';
 import { planPlayback, runPlan, changedHoldings } from './choreo.js';
+import { reducedMotion } from './motion.js';
 
 const wait = (ms, ctl) => new Promise((r) => { const t0 = performance.now(); const tick = () => { if (ctl.skip || ctl.next) return r(); if (ctl.paused) { requestAnimationFrame(tick); return; } if (performance.now() - t0 >= ms) return r(); requestAnimationFrame(tick); }; tick(); });
 
@@ -37,7 +38,7 @@ export async function playTurn(turn, { onDone } = {}) {
   // like a film: the camera travels to the place only for news of weight that is not already in view, the news appears at the head of the chronicle, it holds while it is read, and the map
   // changes at the beat that tells it — then on to the next (ui/choreo.js has the rules and tests them)
   const map = app.map; const s = app.state; const body = document.querySelector('#drawer-body');
-  const reduced = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } })();
+  const reduced = reducedMotion(); // the system's setting or the game's own (Settings → Display; ui/motion.js)
   const seat = s.houses[s.meta.player]?.seat; const seatPos = seat && s.holdings[seat]?.pos;
   const plan = planPlayback(evs, {
     holdings: s.holdings, onScreen: (p) => !map || map.onScreen(p), seat: seatPos ? seat : null, reduced,
