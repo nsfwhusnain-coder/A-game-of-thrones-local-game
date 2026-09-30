@@ -24,6 +24,29 @@ export function conditionOf(state, c) {
   return { word: 'in good health', tone: 'good' };
 }
 
+/**
+ * How they regard your house, in a word and a tone, from their opinion of you (−100..100): what an audience's header says instead of a signed number (12 §5). `null` for your own people
+ * and for the middling, who are neither for nor against you.
+ */
+export function regardOf(state, c) {
+  if (!c || c.house === state.meta.player) return null;
+  const o = Number(c.opinion) || 0;
+  if (o >= 60) return { word: 'trusts you', tone: 'good' };
+  if (o >= 25) return { word: 'well disposed', tone: 'good' };
+  if (o <= -60) return { word: 'hostile to you', tone: 'bad' };
+  if (o <= -25) return { word: 'wary of you', tone: 'warn' };
+  return null;
+}
+
+const SEATS = [['steward', 'Steward'], ['maester', 'Maester'], ['spymaster', 'Whisperer'], ['castellan', 'Castellan'], ['master_of_arms', 'Master-at-arms'], ['master_at_arms', 'Master-at-arms'], ['kingsguard', 'Kingsguard'], ['council', 'Counsellor']];
+/** The seat a counsellor holds, in a word, for the faces at the council table: their office, else their title, else "Counsellor". */
+export function seatOf(c) {
+  const roles = Array.isArray(c?.roles) ? c.roles : [];
+  const hit = SEATS.find(([r]) => roles.includes(r)); if (hit) return hit[1];
+  const t = String(c?.title || '').split(/[,;·]/)[0].trim();
+  return t && t.length <= 24 ? t : 'Counsellor';
+}
+
 /** What the ruler's medallion says on hover: `{ name, title, house, age, condition: { word, tone }, regency, id }`. */
 export function rulerCard(state, me = state.meta.player) {
   const h = state.houses[me]; const c = h?.lord ? state.characters[h.lord] : null;

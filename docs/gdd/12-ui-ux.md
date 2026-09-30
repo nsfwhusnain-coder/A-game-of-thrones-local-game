@@ -187,6 +187,8 @@ seal), `toast` (bottom-centre, 3 s), `skeleton` (loading shimmer in panels), `em
 
 ## 7. Audience, letters and council
 
+*Implemented in F4 (D-092): the promises, the chips, letters on the wing, the council's seats; the patience candle and *Appoint* are not built.*
+
 ### 7.1 Audience panel
 
 ```

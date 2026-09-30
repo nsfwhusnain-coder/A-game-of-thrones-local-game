@@ -11,6 +11,7 @@ import { perform } from '../actions/registry.js';
 import { commands } from '../actions/military.js';
 import { temperament } from '../../shared/temperament.js';
 import { getRelation, applyChanges, placeName } from '../../shared/world.js';
+import { SAYS } from './promise-words.js';
 import { placeOf, forces } from '../parties.js';
 import { MILES_PER_UNIT } from '../../../data/geography.js';
 
@@ -18,14 +19,14 @@ const NEAR = 40; // miles: "at Moat Cailin" includes the causeway and the camp b
 
 /** The kinds a promise can take, with what they need (08 §9.1; those the engine can act on and judge). */
 export const COMMITMENTS = {
-  march_to: { needs: ['place'], says: (s, c) => `bring ${his(s, c)} men to ${placeName(s, c.params.place)}` },
-  send_men: { needs: ['place', 'men'], says: (s, c) => `send ${Number(c.params.men).toLocaleString('en-GB')} men to ${placeName(s, c.params.place)}` },
-  attend: { needs: ['place'], says: (s, c) => `come to ${placeName(s, c.params.place)}` },
-  pay: { needs: ['gold'], says: (s, c) => `pay ${Number(c.params.gold).toLocaleString('en-GB')} dragons` },
-  release: { needs: ['captive'], says: (s, c) => `set ${s.characters[c.params.captive]?.name || 'the captive'} free` },
-  swear_fealty: { needs: [], says: (s, c) => `swear fealty to House ${s.houses[toHouse(s, c)]?.name}` },
-  join_war: { needs: [], says: (s, c) => `take up arms beside House ${s.houses[toHouse(s, c)]?.name}` },
-  stay_neutral: { needs: [], says: (s, c) => `keep out of House ${s.houses[toHouse(s, c)]?.name}'s quarrels` },
+  march_to: { needs: ['place'], says: SAYS.march_to },
+  send_men: { needs: ['place', 'men'], says: SAYS.send_men },
+  attend: { needs: ['place'], says: SAYS.attend },
+  pay: { needs: ['gold'], says: SAYS.pay },
+  release: { needs: ['captive'], says: SAYS.release },
+  swear_fealty: { needs: [], says: SAYS.swear_fealty },
+  join_war: { needs: [], says: SAYS.join_war },
+  stay_neutral: { needs: [], says: SAYS.stay_neutral },
 };
 export const COMMITMENT_KINDS = Object.keys(COMMITMENTS);
 const nameOf = (s, id) => s.characters[id]?.name || `House ${s.houses[id]?.name || id}`;

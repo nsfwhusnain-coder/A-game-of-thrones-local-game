@@ -1,5 +1,5 @@
 // Right drawer: chronicle feed, letters, audiences (one-on-one or council).
-import { peopleOfCard } from './people.js';
+import { peopleOfCard, regardOf, seatOf } from './people.js';
 import { eventArt } from './event-art.js';
 import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal, foldText, detailLines } from './common.js';
 import { feedOf, feedIds, FILTERS, TIER_LABEL, storyOrder, shortDate, daysOf } from './feed.js';
@@ -8,8 +8,10 @@ import { orderOutcome, STATUS_LABEL } from '../shared/errands.js';
 import { icon } from './icons.js';
 import { THREADS } from '../shared/plots.js';
 import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices, prepareSpeech, beginScene, sceneToken } from './voice.js';
-import { temperament, natureTags, VERDICT_LABEL, moodWord } from '../shared/temperament.js';
+import { temperament, natureTags, moodWord } from '../shared/temperament.js';
 import { together as sameSpot } from '../engine/parties.js';
+import { outcomeChips, chipsHtml, audiencePromisesHtml } from './promises.js';
+import { lettersOnTheWing, letterTo, landsWord } from './post.js';
 
 // The chronicle panel (GDD 17 §2.3): closed, the headline strip is its one-line form; opened (H, the strip's "All", an audience, the Inbox) it shows the
 // news in full, the letters, or the audience in hand. `setDrawer` chooses what it shows and refreshes it if it is open; `openDrawer` opens it.
@@ -213,14 +215,15 @@ function answerFailed(e, retry) {
   el.querySelector('button').onclick = () => { el.remove(); $('#pending-msg')?.remove(); retry(); };
 }
 export function ravenHtml(r) {
-  return `<div class="raven-card ${r.read ? '' : 'unread'}"><div class="from">From ${esc(r.fromName)} · ${esc(r.date)}</div>${esc(r.text)}<div style="margin-top:0.4rem;display:flex;gap:0.3rem">${r.from ? `<button class="btn small" data-talk="${r.from}">Reply</button>` : ''}<button class="btn small" data-read-aloud="${r.from || ''}" data-text="${esc(r.text)}">🔊 Read aloud</button></div></div>`;
+  return `<div class="raven-card ${r.read ? '' : 'unread'}"><div class="from">From ${esc(r.fromName)} · ${esc(r.date)}</div>${esc(r.text)}<div style="margin-top:0.4rem;display:flex;gap:0.3rem">${r.from ? `<button class="btn small" data-talk="${r.from}">Reply</button>` : ''}<button class="btn small" data-read-aloud="${r.from || ''}" data-text="${esc(r.text)}">${icon('speaker')} Read aloud</button></div></div>`;
 }
 async function renderLetters(body) {
   const s = app.state;
   const LABEL = { 'in flight': ['underway', 'In flight'], delivered: ['done', 'Delivered'], answered: ['answered', 'Answered'] };
   const today = s.meta.date.year * 360 + (s.meta.date.month - 1) * 30 + (s.meta.date.day - 1);
-  const sent = (s.post || []).filter((x) => !x.reply).slice(0, 12).map((x) => { const [c, l] = LABEL[x.status] || ['', x.status]; return `<div class="errand"><span class="ost ${c}">${l}</span><div class="grow"><b>To ${esc(x.toName)}</b> <span class="muted">· sent ${esc(x.sent.replace(/, \d+ AC$/, ''))}${x.status === 'in flight' ? ` · lands in ~${Math.max(1, x.arriveDay - today)} ${x.arriveDay - today === 1 ? 'day' : 'days'}` : ''}</span><div class="muted" style="font-size:0.8rem">${esc(x.text.slice(0, 140))}${x.text.length > 140 ? '…' : ''}</div></div></div>`; }).join('');
-  body.innerHTML = `<h4>Received</h4>${s.ravens.map(ravenHtml).join('') || '<p class="muted">No ravens have come.</p>'}${sent ? `<h4 style="margin-top:1rem">Sent</h4>${sent}` : ''}`;
+  const wing = lettersOnTheWing(s).map((l) => `<div class="errand wing" data-letter="${esc(l.id)}"><span class="ost underway">${icon('raven', 'ost-ico')} On the wing</span><div class="grow"><b>To ${esc(l.toName)}</b> <span class="muted">· sent ${esc(l.sent)} · ${esc(landsWord(l.days))}</span><div class="muted" style="font-size:0.8rem">${esc(l.text.slice(0, 140))}${l.text.length > 140 ? '…' : ''}</div></div></div>`).join('');
+  const sent = (s.post || []).filter((x) => !x.reply && x.status !== 'in flight').slice(0, 12).map((x) => { const [c, l] = LABEL[x.status] || ['', x.status]; return `<div class="errand"><span class="ost ${c}">${l}</span><div class="grow"><b>To ${esc(x.toName)}</b> <span class="muted">· sent ${esc(x.sent.replace(/, \d+ AC$/, ''))}${x.status === 'in flight' ? ` · lands in ~${Math.max(1, x.arriveDay - today)} ${x.arriveDay - today === 1 ? 'day' : 'days'}` : ''}</span><div class="muted" style="font-size:0.8rem">${esc(x.text.slice(0, 140))}${x.text.length > 140 ? '…' : ''}</div></div></div>`; }).join('');
+  body.innerHTML = `${wing ? `<h4>On the wing</h4>${wing}` : ''}<h4${wing ? ' style="margin-top:1rem"' : ''}>Received</h4>${s.ravens.map(ravenHtml).join('') || '<p class="muted">No ravens have come.</p>'}${sent ? `<h4 style="margin-top:1rem">Sent</h4>${sent}` : ''}`;
   if (s.ravens.some((r) => !r.read)) { try { const r = await api(`/games/${app.saveId}/ravens/read`, { body: {} }); s.ravens = r.ravens; app.renderTop?.(); } catch { /* */ } }
 }
 
@@ -241,13 +244,14 @@ function renderAudience(body) {
   const h = s.houses[c.house]; const log = s.chats[c.id] || [];
   const p = s.meta.player; const me = s.characters[player().lord];
   const together = me && sameSpot(app.state, me, c);
+  const flying = together ? null : letterTo(s, c.id); const regard = regardOf(s, c);
   const mood = s.moods?.[c.id]; const closed = !!(mood?.closed && mood.turn === s.meta.turn);
   const quick = c.house === p ? ['How many men can we field?', 'What is in the treasury, and what do we owe?', 'How full are the granaries?', 'Which of my lords can I trust?', 'What news?'] : ['What news from your lands?', 'What do you want?', 'I propose an alliance between our houses.', 'Will you trade with us?', 'I offer you 1,000 gold dragons for your friendship.', 'Swear fealty to me.'];
-  body.innerHTML = `<div class="chat">
-    <div class="chat-head"><img src="${por(c, 80)}" alt=""><div style="flex:1;min-width:0"><div class="title" style="font-family:var(--display);color:var(--gold2)" data-char="${c.id}">${esc(c.name)} ${sig(h, 1)}</div><div class="sub muted" style="font-size:0.78rem">${esc(c.title || '')} · ${esc(placeName(s, c.loc))} · ${together ? 'in person' : '<b>by raven</b>'}${c.house !== p ? ' · opinion ' + (c.opinion || 0) : ''}</div>${temperHtml(c)}</div><button class="btn small" data-action="close-chat">✕</button></div>
+  body.innerHTML = `<div class="chat${log.length ? ' has-log' : ''}">
+    <div class="chat-head"><img src="${por(c, 80)}" alt=""><div style="flex:1;min-width:0"><div class="title" data-char="${c.id}">${esc(c.name)} ${sig(h, 1)}</div><div class="sub sub-t" title="${esc(c.title || '')}">${esc(c.title || '')}</div><div class="sub sub-b">${esc(placeName(s, c.loc))} · ${together ? 'in person' : `<b>by raven</b>${flying ? ` — a letter of yours ${landsWord(flying.days)}` : ''}`}${regard ? ` · <span class="regard r-${regard.tone}" title="Their opinion of you: ${(c.opinion || 0) > 0 ? '+' : ''}${c.opinion || 0}">${esc(regard.word)}</span>` : ''}</div>${temperHtml(c)}</div><button class="wc-btn wc-btn--quiet" data-action="close-chat" title="Back to the chronicle" aria-label="Back to the chronicle">${icon('chevronL')} Back</button></div>
     <div class="chat-log" id="chat-log">${log.length ? log.map((m) => msgHtml(m, c)).join('') : `<div class="muted" style="font-style:italic">${esc(c.bio || '')}</div>`}</div>
     ${closed ? '' : `<div class="quick-asks">${quick.map((q) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`}
-    ${closed ? `<div class="chat-closed">${esc(c.name)} will not hear you again this moon.${together ? ' The doors are shut to you.' : ' Your ravens come back unanswered.'}</div>` : `<div class="chat-input"><textarea id="chat-text" rows="3" placeholder="${together ? 'Speak…' : 'Write your letter…'}">${esc(app.chatPrefill || '')}</textarea><button class="btn primary" id="chat-send">Send</button></div>`}</div>`;
+    ${closed ? `<div class="chat-closed">${esc(c.name)} will not hear you again this moon.${together ? ' The doors are shut to you.' : ' Your ravens come back unanswered.'}</div>` : `<div class="chat-input"><textarea id="chat-text" rows="3" placeholder="${together ? 'Speak…' : 'Write your letter…'}">${esc(app.chatPrefill || '')}</textarea><button class="wc-btn wc-btn--gold" id="chat-send">${together ? 'Speak' : 'Send'}</button></div>`}${audiencePromisesHtml(s, c.id, { esc })}</div>`;
   app.chatPrefill = null;
   const logEl = $('#chat-log'); logEl.scrollTop = logEl.scrollHeight;
   if (closed) return;
@@ -295,8 +299,7 @@ function msgHtml(m, c) {
   const bs = beats(m.text);
   // narration reads as a novel's prose; speech is set in quotation marks
   const body = bs.map((b) => (b.kind === 'act' ? `<p class="beat act" title="Click to hear it">${esc(b.text)}</p>` : `<p class="beat say" title="Click to hear it">“${esc(b.text.replace(/^[“"]+|[”"]+$/g, ''))}”</p>`)).join('') || esc(m.text);
-  const verdict = m.verdict && m.verdict !== 'obey' ? `<span class="verdict v-${m.verdict}">${esc(VERDICT_LABEL[m.verdict] || m.verdict)}</span>` : '';
-  return `<div class="msg npc" data-speaker="${sp?.id || ''}" data-mood="${esc(m.mood || '')}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}${verdict}<button class="speak-all" title="Hear it">🔊</button></div><div class="beats">${body}</div>${m.applied?.length ? `<div class="applied">${m.applied.map(esc).join('<br>')}</div>` : ''}</div>`;
+  return `<div class="msg npc" data-speaker="${sp?.id || ''}" data-mood="${esc(m.mood || '')}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}<button class="speak-all" title="Hear it" aria-label="Hear it">${icon('speaker')}</button></div><div class="beats">${body}</div>${chipsHtml(outcomeChips(m), { esc, icon })}</div>`;
 }
 // Voices: click a line to hear it, or the speaker icon to hear the whole reply
 export function wireVoices(root) {
@@ -345,10 +348,10 @@ function renderCouncil(body) {
   const key = 'council:' + [...ids].sort().join(',');
   const log = s.chats[key] || [];
   body.innerHTML = `<div class="chat">
-    <div class="chat-head"><div class="council-faces">${ids.map((i) => `<img src="${por(s.characters[i], 40)}" title="${esc(s.characters[i].name)}">`).join('')}</div><div style="flex:1;margin-left:0.8rem"><div class="title" style="font-family:var(--display);color:var(--gold2)">Council</div><div class="sub muted" style="font-size:0.78rem">${ids.map((i) => esc(s.characters[i].name.split(' ')[0])).join(', ')}</div></div><button class="btn small" data-action="close-chat">✕</button></div>
+    <div class="chat-head council-head"><div class="council-faces" role="list">${ids.map((i) => { const m = s.characters[i]; return `<button class="cf" role="listitem" data-char="${esc(i)}" title="${esc(m.name)}"><img src="${por(m, 64)}" alt=""><b>${esc(m.name.replace(/^(Ser|Lord|Lady|Maester|Septon|Septa)\s+/, '').split(' ')[0])}</b><span>${esc(seatOf(m))}</span></button>`; }).join('')}</div><button class="wc-btn wc-btn--quiet" data-action="close-chat" title="Back to the chronicle" aria-label="Back to the chronicle">${icon('chevronL')} Back</button></div>
     <div class="chat-log" id="chat-log">${log.length ? log.map((m) => msgHtml(m, null)).join('') : '<div class="muted" style="font-style:italic">Your counsellors take their seats. What would you put before them?</div>'}</div>
     <div class="quick-asks">${ADVISOR_ASKS(s).map((q) => `<button data-q="${esc(q)}" data-advisor="1" title="One of them answers at length">${esc(q)}</button>`).join('')}</div>
-    <div class="chat-input"><textarea id="chat-text" rows="3" placeholder="Put a question to the council…"></textarea><div class="chat-btns"><button class="btn primary" id="chat-send">Ask</button>${log.some((m) => m.role === 'npc') ? '<button class="btn ghost" id="chat-listen" title="Say nothing — let them go on among themselves">Let them talk</button>' : ''}</div></div></div>`;
+    <div class="chat-input"><textarea id="chat-text" rows="3" placeholder="Put a question to the council…"></textarea><div class="chat-btns"><button class="wc-btn wc-btn--gold" id="chat-send">Ask</button>${log.some((m) => m.role === 'npc') ? '<button class="wc-btn wc-btn--quiet" id="chat-listen" title="Say nothing — let them go on among themselves">Let them talk</button>' : ''}</div></div></div>`;
   const logEl = $('#chat-log'); logEl.scrollTop = logEl.scrollHeight;
   const send = async (text, listen = false, advisor = false) => {
     text = listen ? '' : (text ?? $('#chat-text').value).trim(); if ((!text && !listen) || app.busy) return;

@@ -3,6 +3,14 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-01 — F4: promises, chips and letters on the wing
+
+- **Promises are finally on the screen.** When a lord says yes, an audience now ends with **Promises**: what they owe you and what you owe them, in plain words, with the days left. The Realm's **Diplomacy** tab lists every promise made to or by your house, and the ones lately kept or broken.
+- **A reply wears chips** — how they took it (Agrees, Refuses, Names a price…), each promise it brought and each deed done — instead of a small label and a dashed list.
+- **Letters on the wing:** what is still flying is at the top of your Letters, soonest first, and an audience by raven tells you when your letter lands. (A promise a lord makes in a letter stays hidden until his answer reaches you.)
+- **The audience panel looks like the rest of the game** (vellum and oak, gold Send, a Back button); how they feel about you is a word, not a number; the council shows each counsellor's seat.
+- Tests: `tests/promises.test.js` (11); three rows in `scripts/ui-gate.mjs`. Also: the headline checker now knows "the royal house" (a rare CI soak failure).
+
 ## 2026-09-30 — F8: the title, the settings, the help and the end
 
 - **Settings in five tabs** — Game, Display, Graphics, Sound & voices, Model — one page at a time instead of one long scroll; the model's many parameters are under **Advanced**. Nothing was removed.

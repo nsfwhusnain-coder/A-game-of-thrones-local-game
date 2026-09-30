@@ -1,0 +1,72 @@
+/* ───────────────────────────── audiences, letters and promises (docs/gdd/12-ui-ux.md §7; WP F4) ───────────────────────────── */
+/* The audience is a page of the maester's desk: the person's face and how they are, the talk on vellum, your words on vellum, and the promises kept in oak under it. */
+.chat-head { align-items: center; gap: .7rem; padding-bottom: .6rem; border-bottom: 1px solid var(--oak-edge); }
+.chat-head img { width: 3.2rem; border-radius: var(--radius-card); border: 1px solid var(--bronze); box-shadow: var(--wc-shadow); }
+.chat-head .title { font-family: var(--wc-display); color: var(--gold-flat); letter-spacing: .03em; }
+.chat-head .sub { color: var(--bone-dim); font-size: var(--wc-min); }
+.chat-head .sub b { color: var(--bone); font-weight: 600; }
+.chat-head .regard { font-style: italic; }
+.chat-head .regard.r-good { color: var(--verdigris); } .chat-head .regard.r-warn { color: var(--ochre); } .chat-head .regard.r-bad { color: var(--madder-lit); }
+.chat-head .wc-btn { align-self: flex-start; }
+.chat .temper { font-size: var(--wc-min); }
+.chat .temper .tags { color: var(--bone-dim); }
+.chat-log { padding: .6rem 0; }
+.chat .msg { font-family: var(--wc-serif); font-size: 1.02rem; line-height: 1.4; }
+.chat .msg.player { background: var(--leather); border: 1px solid var(--oak-edge); color: var(--bone); }
+.chat .msg.npc { background: var(--vellum); color: var(--ink-iron); border: 1px solid var(--vellum-deep); box-shadow: inset 0 0 1.6rem rgba(139, 109, 62, .25), var(--wc-shadow); }
+.chat .msg .who { font-family: var(--wc-display); font-size: var(--wc-min); opacity: .8; }
+.chat .msg .speak-all { color: var(--ink-soft); display: inline-flex; }
+.chat .msg .speak-all .ico { width: 1.1rem; height: 1.1rem; }
+.chat .msg .speak-all:hover { color: var(--rubric); }
+.quick-asks button { background: var(--oak-2); border: 1px solid var(--oak-edge); color: var(--bone-dim); font-family: var(--wc-serif); font-size: var(--wc-min); padding: .18rem .65rem; border-radius: 1rem; }
+.quick-asks button:hover, .quick-asks button:focus-visible { color: var(--gold-flat); border-color: var(--bronze); outline: none; }
+.chat-input { gap: .5rem; align-items: stretch; }
+.chat-input textarea { background: var(--vellum); color: var(--ink-iron); border: 1px solid var(--vellum-deep); border-radius: var(--radius-card); font-family: var(--wc-serif); font-size: 1.05rem; box-shadow: inset 0 1px 3px rgba(60, 40, 15, .35); }
+.chat-input textarea::placeholder { color: var(--ink-soft); opacity: .8; font-style: italic; }
+.chat-input textarea:focus-visible { outline: .14rem solid var(--ochre); outline-offset: 1px; }
+.chat-input .wc-btn { align-self: stretch; height: auto; }
+.chat-btns { display: flex; flex-direction: column; gap: .3rem; }
+
+/* what a reply did: how they took it, and each thing that came of it (a promise made, a deed done) */
+.chips { display: flex; flex-wrap: wrap; gap: .3rem .4rem; margin-top: .5rem; padding-top: .45rem; border-top: 1px solid rgba(139, 109, 62, .5); }
+.chip { display: inline-flex; align-items: center; gap: .3rem; padding: .08rem .55rem .08rem .4rem; font: 600 var(--wc-min)/1.25 var(--wc-display); letter-spacing: .03em; border: 1px solid currentColor; border-radius: 1rem; background: rgba(255, 250, 235, .35); }
+.chip b { font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .78em; }
+.chip .chip-ico { width: 1rem; height: 1rem; flex: none; color: inherit; }
+.chip-text { font: 500 var(--wc-min)/1.25 var(--wc-serif); letter-spacing: 0; color: var(--ink-iron); }
+.chip-ok { color: var(--verdigris-ink); } .chip-warn { color: #7a5518; } .chip-bad { color: var(--madder-ink); }
+
+/* what they have promised you, and you them, kept in oak under the talk */
+.promises { margin-top: .6rem; padding: .45rem .1rem 0; border-top: 1px solid var(--oak-edge); font-size: var(--wc-min); }
+.pm-h { font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .1em; text-transform: uppercase; color: var(--gold-flat); margin-bottom: .2rem; }
+.pm { display: grid; grid-template-columns: auto 1fr auto; gap: .1rem .5rem; align-items: baseline; padding: .12rem 0; color: var(--bone); }
+.pm-who { font-family: var(--wc-display); letter-spacing: .02em; white-space: nowrap; }
+.pm-what { color: var(--bone-dim); min-width: 0; overflow-wrap: anywhere; }
+.pm-when { font-family: var(--wc-display); font-size: .92em; white-space: nowrap; display: inline-flex; align-items: center; gap: .25rem; color: var(--bone-dim); }
+.pm-when .chip-ico { width: .95rem; height: .95rem; color: inherit; }
+.pm-soon .pm-when { color: var(--ochre); } .pm-late .pm-when { color: var(--madder-lit); }
+.pm-kept .pm-when { color: var(--verdigris); } .pm-broken .pm-when { color: var(--madder-lit); }
+.pm-more { color: var(--bone-dim); font-style: italic; padding-top: .1rem; }
+.pm-sect { margin: .3rem 0 .5rem; } .pm-sect h5 { margin: 0 0 .15rem; font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .08em; text-transform: uppercase; opacity: .75; }
+.pm-none { font-size: var(--wc-min); }
+.pm[data-promise] .pm-who[data-char] { cursor: pointer; text-decoration: underline dotted; text-underline-offset: .18em; }
+
+/* letters on the wing */
+.errand.wing .ost { display: inline-flex; align-items: center; gap: .25rem; }
+.errand.wing .ost-ico { width: .95rem; height: .95rem; }
+@media (prefers-reduced-motion: no-preference) { .errand.wing .ost-ico { animation: wc-wing 2.6s ease-in-out infinite; } }
+@keyframes wc-wing { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+/* the council table: each counsellor's face, name and seat */
+.chat-head.council-head { align-items: flex-start; }
+.council-faces { display: flex; flex-wrap: wrap; gap: .35rem .5rem; flex: 1; min-width: 0; }
+.chat-head .council-faces .cf { display: flex; flex-direction: column; align-items: center; gap: .05rem; width: 4.2rem; padding: .15rem; background: none; border: 1px solid transparent; border-radius: var(--radius-card); cursor: pointer; color: var(--bone); font-family: var(--wc-serif); }
+.chat-head .council-faces .cf img { width: 2.6rem; margin: 0; border-radius: 50%; }
+.chat-head .council-faces .cf b { font: 600 var(--wc-min)/1.15 var(--wc-display); color: var(--gold-flat); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-head .council-faces .cf span { font-size: .78rem; color: var(--bone-dim); line-height: 1.1; text-align: center; }
+.chat-head .council-faces .cf:hover, .chat-head .council-faces .cf:focus-visible { border-color: var(--bronze); outline: none; }
+
+/* the head is two short lines (who they are, where and how they are reached) so the talk keeps the room; with a talk going the quick questions are one row, not four */
+.chat-head .sub-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-head .sub-b { line-height: 1.25; }
+.chat.has-log .quick-asks { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .2rem; scrollbar-width: thin; }
+.chat.has-log .quick-asks button { flex: none; white-space: nowrap; }
