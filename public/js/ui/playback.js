@@ -1,5 +1,5 @@
-// The turn told in the chronicle itself: the day's news arrives one event at a time in the left panel — its card
-// appears, the map flies to where it happened, the hosts march on — then the next. Pause, step or skip at the top.
+// The turn told in the chronicle itself: the day's news arrives one event at a time — its headline joins the strip (and its card the
+// chronicle, when that is open), the map flies to where it happened, the hosts march on — then the next. Pause, step or skip at the top.
 import { app, $, foldText } from './common.js';
 import { SPANS, spanOf } from '../shared/world.js';
 import { storyEvents, setDrawer } from './drawer.js';
@@ -37,6 +37,7 @@ export async function playTurn(turn, { onDone } = {}) {
     if (pos && app.map) { app.map.flyTo(pos, e.importance >= 4 ? 300 : 420); await wait(1100, ctl); }
     if (ctl.skip) break;
     rv.n = i + 1; rv.date = e.date || turn.date; rv.shown.add(idx);
+    app.renderStrip?.(); // the headline joins the strip as it is told
     const d = $('#rb-date'); if (d) d.textContent = rv.date; const c = $('#rb-count'); if (c) c.textContent = `${rv.n} / ${rv.total}`;
     const card = document.querySelector(`.story[data-news="${turn.turn}:${idx}"]`);
     if (card) { card.classList.remove('unrevealed'); card.classList.add('arrive'); setTimeout(() => card.classList.remove('arrive'), 3000); }
@@ -50,6 +51,6 @@ export async function playTurn(turn, { onDone } = {}) {
   }
   // the rest of the day's march, so every host finishes its road on screen
   if (!ctl.skip && app.map) { const f0 = app.map.reelF || 0; for (let k = 1; k <= 20; k++) { app.map.reelF = f0 + ((1 - f0) * k) / 20; await wait(40, ctl); } }
-  app.reveal = null; setDrawer('feed'); const top = document.querySelector('#drawer-body'); if (top) top.scrollTop = 0;
+  app.reveal = null; app.renderStrip?.(); setDrawer('feed'); const top = document.querySelector('#drawer-body'); if (top) top.scrollTop = 0;
   onDone?.();
 }

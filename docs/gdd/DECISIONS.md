@@ -1245,3 +1245,18 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **The council** seats every counsellor: at least `min(members, 3)` speeches (the tuned model answered with one and the other two "said nothing").
 - `docs/local-ai/deploy/config.maester-12b.json` is a whole config for Maester-12B; `npm run model:check` puts one question of every kind to the model through the
   game's own call and reports; `npm run headlines:check` tells a few mock weeks with it and prints what the writer and the model each wrote.
+
+## D-079 · 2026-09-30 · The quiet screen as built (WP U1–U3)
+
+- **The pieces.** `ui/hud.js` decides what the bar says (`vitalsOf`, `inboxOf`, `stripOf`, `turnLabel`, `routeKey`, `MENU`: pure, browser-safe, tested in node);
+  `ui/chrome.js` draws it and runs the popovers; `public/css/hud.css` places it on the desk of `theme.css`. Nothing here reads the state anywhere the old screen did not.
+- **The bar is 2.6 rem** (55 px at 1920, 39 px at 1366) because the reason for the turn sits *beside* the End-turn plate, not under it (the mockup's two-line plate made the bar 68 px).
+  The house's ribbon hangs a little below the bar, over the map; the bar's own box is what the gate measures.
+- **The strip is 27 rem wide** (the style tile's width), not the "left column ≤ 22 rem" of §4 U3: it is a foot strip 8 rem tall, not a column, and the map keeps
+  87–90 % of the screen. Closed chronicle = the strip; open = the old feed in a panel over it (the cards inside are N7's).
+- **M is the wars, not the map mode.** The old hotkeys are kept (U2: "each old hotkey still opens its content"), so the map-mode chip has no key; the chip and its list are a click.
+- **A matter no longer opens a card after the turn** (`showChoices` is gone): attention is pulled, not pushed (§1.5). The seal settles with its number; End turn still asks once when
+  matters wait; a matter opens as a card from the Inbox.
+- **Orders:** three in view, the rest behind "+N earlier"; the newest order (and any with a steward's question) shows every line of its receipt, two lines each, the whole line in its hover.
+- **No `ui: 'v3'|'v4'` switch** (§4): the old screen is replaced outright. The old markup's ids are gone (`#res-row`, `#date-box`, `#action-ring`, `#mapmodes`, `#drawer-tabs`, `#raven-badge`) and
+  a test (`tests/hud.test.js`) fails if a script still points at one, so a stale handler cannot stop the game at load.

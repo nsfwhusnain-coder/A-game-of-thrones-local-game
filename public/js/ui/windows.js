@@ -32,17 +32,21 @@ import { dayNumber, dateOfDay } from '../engine/time.js';
 
 const TITLES = { realm: 'The Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
 
+// The three doors (Realm, People, Chronicle: ui/hud.js MENU) open a window on a section; until the State of the Realm (R4) and the cards
+// (U4) hold the old views as their own tabs and sections, a section is the window that used to hold it: the wars and the hosts, the
+// treasury, the houses' dealings, the council, the shadows. Every old key still lands where it did.
+const SECTION_WINDOW = { 'realm/wars': 'military', 'realm/economy': 'economy', 'realm/houses': 'diplomacy', 'people/council': 'council', 'people/shadows': 'intrigue' };
 export function openWindow(name, arg) {
+  const via = SECTION_WINDOW[`${name}/${arg}`]; if (via) { name = via; arg = undefined; }
   if (app.win === name && arg === undefined) return closeWindow();
   app.win = name; app.winArg = arg; sfx('open');
   $('#window').classList.remove('hidden');
   $('#window').setAttribute('aria-hidden', 'false');
   $('#win-title').textContent = TITLES[name] || name;
-  $$('#action-ring button').forEach((b) => { const on = b.dataset.win === name; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
   $('#sheet').classList.remove('solo');
   renderWindow();
 }
-export function closeWindow() { if (app.win) sfx('close'); app.win = null; $('#window').classList.add('hidden'); $('#window').setAttribute('aria-hidden', 'true'); $$('#action-ring button').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); }); $('#sheet').classList.add('solo'); }
+export function closeWindow() { if (app.win) sfx('close'); app.win = null; $('#window').classList.add('hidden'); $('#window').setAttribute('aria-hidden', 'true'); $('#sheet').classList.add('solo'); }
 export function renderWindow() {
   if (!app.win || !app.state) return;
   const body = $('#win-body');
