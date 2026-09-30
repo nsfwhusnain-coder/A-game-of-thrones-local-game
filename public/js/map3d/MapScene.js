@@ -586,7 +586,7 @@ export class MapScene {
       const icon = g.decisions.length ? '⚖' : ICON[top?.type] || '❖';
       const lbl = this.addLabel(icon, [pos[0], this.groundAt(pos[0], pos[1]) + 14, pos[1]], `event pin imp${imp}${g.decisions.length ? ' asks' : ''}`, { pin: where });
       if (n > 1) lbl.el.insertAdjacentHTML('beforeend', `<b class="pin-n">${n}</b>`);
-      lbl.el.title = g.decisions.length ? `${g.decisions[0].title} — awaits your answer` : top.title;
+      lbl.el.title = g.decisions.length ? `${g.decisions[0].title} — awaits your answer` : top.headline || top.title;
       this.eventPins.push(lbl);
     }
   }

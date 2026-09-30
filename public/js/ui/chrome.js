@@ -92,7 +92,11 @@ export function renderStrip() {
   if (!app.state) return;
   const lines = stripOf(historyForStrip(), 3, app.seen || new Set());
   const fresh = lines.filter((l) => l.unread).length;
-  $('#strip-head').innerHTML = `Chronicle${fresh ? ` · <b>${fresh} new</b>` : ''}`;
+  // while a turn is told the strip is what shows it, so it carries the playback's Pause, Next and Skip (ui/playback.js reads `data-rb`)
+  const rv = app.reveal;
+  $('#strip-head').innerHTML = rv ? `${esc(String(rv.date || '').replace(/, \d+ AC$/, ''))} · ${rv.n} / ${rv.total}` : `Chronicle${fresh ? ` · <b>${fresh} new</b>` : ''}`;
+  const ctl = $('#strip-ctl'); ctl.classList.toggle('hidden', !rv); $('#strip .wc-strip__all')?.classList.toggle('hidden', !!rv);
+  if (rv) ctl.innerHTML = `<button class="wc-btn wc-btn--quiet" data-rb="pause">${rv.ctl.paused ? 'Resume' : 'Pause'}</button><button class="wc-btn wc-btn--quiet" data-rb="next" title="The next headline">Next</button><button class="wc-btn wc-btn--quiet" data-rb="skip" title="Tell the rest at once">Skip</button>`;
   $('#strip-lines').innerHTML = lines.length ? lines.map((l) => `<li><button class="wc-strip__line${l.unread ? '' : ' is-old'}" data-strip="${esc(l.id)}"${l.where ? ` data-where="${esc(l.where)}"` : ''} title="${l.where ? 'Show where it happened' : 'Read it'}">${icon(TIER_ICON[l.tier] || (l.unread ? 'tier1' : 'pip'))}<span>${esc(l.text)}</span></button></li>`).join('')
     : '<li class="wc-strip__quiet">The realm waits. Nothing has been told yet.</li>';
   app.stripIds = lines.map((l) => l.id);

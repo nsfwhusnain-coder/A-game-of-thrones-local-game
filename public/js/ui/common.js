@@ -48,12 +48,12 @@ export async function doVerb(verb, params = {}, { after, say } = {}) {
 }
 // A passing notice. The same message (or the same key, for progress) replaces its predecessor rather than
 // stacking; at most three are shown; a click dismisses one.
-export function toast(msg, err = false, key = '') {
+export function toast(msg, err = false, key = '', onClick = null) {
   const box = $('#toasts'); const id = key || msg;
   for (const old of box.children) if (old.dataset.key === id) old.remove();
   while (box.children.length >= 3) box.firstElementChild.remove();
   const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg; t.dataset.key = id;
-  t.onclick = () => t.remove();
+  t.onclick = () => { onClick?.(); t.remove(); };
   box.appendChild(t); setTimeout(() => t.remove(), err ? 8000 : 4000);
 }
 export const relClass = (v) => (v > 10 ? 'pos' : v < -10 ? 'neg' : 'neu');
@@ -100,9 +100,9 @@ export function md(text) {
 // The modal is a dialog: screen readers are told so, the page behind it is inert to the tab key, and focus
 // goes into the box and comes back to whatever opened it.
 let lastFocus = null;
-export function modal(html) {
+export function modal(html, { vellum = false } = {}) {
   const box = $('#modal-box');
-  lastFocus = document.activeElement;
+  lastFocus = document.activeElement; box.classList.toggle('is-vellum', vellum);
   box.innerHTML = `<button class="close" data-action="close-modal" aria-label="Close">✕</button>` + html;
   const wrap = $('#modal');
   wrap.classList.remove('hidden');

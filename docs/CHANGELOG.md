@@ -3,6 +3,22 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — N7 + N8: the chronicle as cards, the maester's report, pins that say what happened
+
+- **The chronicle (H, or the strip's All)** reads as cards on oak: a headline (one to three diamonds for its weight), two lines of summary, where and when, whose it is
+  ("Your house"), and **Details** — the order that led to it, the scene, the numbers, the engine's record — folded away until asked for. A minor card is its headline alone. Filters
+  sit under the title: **Only what matters** (on: news and above; off: every story the old feed showed), then one of **Mine**, **War**, **Letters**, **Rumours**. Days are grouped, newest
+  first; what you have not read carries a wax dot and "N new" in the title, and reading (closing the panel) clears them. What was held back is counted, one click from showing it.
+- **The maester's report.** When a turn has been told, a page of vellum says it once more, in under ninety words: "The week of 2nd–8th of the 8th moon" — the three things that mattered most (the first
+  numeral in gold leaf), the Meanwhile, the rest as headlines ("Also"), and what awaits your word (a click opens the letter, matter or audience). Enter or Continue closes it; a quiet turn has none;
+  Settings has "The maester's report after each turn" if you would rather not. An ending still comes first.
+- **During a turn** the strip carries Pause, Next and Skip and shows the headlines as they are told; a *great* thing is also a toast whose click flies the map there. A long jump prints each week's best
+  headline or two ("and 3 more") instead of every card.
+- **Pins** (N8): the map pins news of tier news or above and a minor thing that is yours (not "importance 2 or more"); a battle fought away from a castle is pinned under the writer's headline ("The Tully host is beaten
+  by the Lannisters at the Green Fork"), never "Lannister defeated Tully."; hover a pin for the headline; its window is the story on vellum — headline, summary, the numbers, the houses, "Give an order about this…".
+- Tests: `tests/feed.test.js` (9: which cards, in what order, the filters, the report, that the feed reads only the turn records and the player's house), `tests/pins.test.js` (6).
+- **For the owner:** play two turns, then H: cards with tiers, Details, the filters; End turn: headlines join the strip, a great one toasts, then the report; click a pin.
+
 ## 2026-09-30 — U1 + U2 + U3: the quiet screen
 
 - **What you see now.** One thin bar at the top: your house and the day (the season is a small mark by the date; there is no "Turn N"), three

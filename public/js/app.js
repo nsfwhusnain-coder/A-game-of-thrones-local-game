@@ -16,8 +16,9 @@ import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
 import { app, $, $$, esc, fmt, api, doVerb, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, answerOrder, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
-import { renderDrawer, setDrawer, openDrawer, closeDrawer, drawerOpen, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
+import { renderDrawer, setDrawer, openDrawer, closeDrawer, drawerOpen, pickFilter, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
+import { showReport, reportOn, setReportOn } from './ui/report.js';
 import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName, SPANS, spanOf } from './shared/world.js';
 import { project, SEASONS } from './shared/economy.js';
 import { underway, orderOutcome, STATUS_LABEL } from './shared/errands.js';
@@ -26,7 +27,7 @@ import { regencyLine, speakerFor, incapacity } from './shared/regency.js';
 import { standing, standingWord, epitaph } from './shared/standing.js';
 import { supplyOf } from './engine/military/supply.js';
 
-app.openChat = openChat; app.openCouncil = openCouncil;
+app.openChat = openChat; app.openCouncil = openCouncil; app.openPin = openPin;
 
 // ═════════════ Title screen ═════════════
 // the music follows your situation: war drums when you are at war, the cold theme in the North
@@ -159,7 +160,7 @@ async function startGame(id, state) {
   }
   app.map.state = null;
   app.map.setState(app.state);
-  closeWindow(); closeSheet(); closeDrawer(); closePopovers();
+  closeWindow(); closeSheet(); closeDrawer({ read: false }); closePopovers();
   renderAll();
 }
 function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); maybeShowOutcome(); }
@@ -376,7 +377,7 @@ function busy(on, text, { live = false } = {}) {
       const evs = live && prog?.events || [];
       for (; shown < evs.length; shown++) {
         const e = evs[shown];
-        $('#busy-feed').insertAdjacentHTML('beforeend', `<div class="bf-item"><div class="bf-t">${esc(e.title)}</div></div>`);
+        $('#busy-feed').insertAdjacentHTML('beforeend', `<div class="bf-item"><div class="bf-t">${esc(e.headline || e.title)}</div></div>`);
         const pos = e.where && app.state?.holdings[e.where]?.pos; if (pos && app.map) app.map.flash?.(pos);
         sfx('open');
       }
@@ -391,6 +392,7 @@ document.addEventListener('click', (e) => {
   if (!app.state) { const a = t.closest('[data-action]'); if (a) handleAction(a.dataset.action, a); return; }
   // the little popovers close on a click anywhere else (GDD 17 §2.5)
   if (!t.closest('#menu-pop, #menu-btn, #inbox, #inbox-btn, #mapmode, #modal')) closePopovers();
+  const chip = t.closest('#drawer-filters [data-feed]'); if (chip) { e.preventDefault(); return pickFilter(chip.dataset.feed); }
   const door = t.closest('[data-open]'); if (door) { e.preventDefault(); return openDoor(door.dataset.open, door.dataset.section); }
   const line = t.closest('[data-strip]'); if (line) { e.preventDefault(); return openStripLine(line.dataset.strip); }
   const item = t.closest('[data-inbox]'); if (item) { e.preventDefault(); const [kind, ...id] = item.dataset.inbox.split(':'); return openItem(kind, id.join(':')); }
@@ -506,6 +508,7 @@ async function advance() {
       // the strip has told the turn; what waits on the lord's word is on the Inbox seal, which settles as it fills (attention is pulled, not pushed: GDD 17 §1.5)
       // an ending trumps everything: it is told at once
       if (app.state.outcome && app.state.outcome.turn === app.state.meta.turn) maybeShowOutcome();
+      else if (reportOn()) showReport(r.turn.turn); // the maester's report (N7); a quiet turn has none
       if (newRavens) sfx('raven');
     } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
@@ -527,10 +530,13 @@ async function jump(body) {
       es.addEventListener('segment', (m) => {
         const seg = JSON.parse(m.data); lastDay = seg.days?.[1] || lastDay;
         feed.insertAdjacentHTML('beforeend', `<div class="bf-seg">${esc(seg.from)}${seg.to !== seg.from ? ` – ${esc(seg.to)}` : ''}</div>`);
-        for (const e of (seg.events || []).filter((x) => !x.bg).slice(0, 8)) {
-          feed.insertAdjacentHTML('beforeend', `<div class="bf-item"><div class="bf-t">${esc(e.title)}</div></div>`);
+        // a long jump prints each week's best headline or two, not every card (GDD 18 §2.6): the strip and the chronicle hold the rest
+        const told = (seg.events || []).filter((x) => !x.bg).sort((a, b) => (b.score ?? b.importance ?? 0) - (a.score ?? a.importance ?? 0));
+        for (const e of told.slice(0, 2)) {
+          feed.insertAdjacentHTML('beforeend', `<div class="bf-item"><div class="bf-t">${esc(e.headline || e.title)}</div></div>`);
           const pos = e.where && app.state?.holdings[e.where]?.pos; if (pos && app.map) app.map.flash?.(pos);
         }
+        if (told.length > 2) feed.insertAdjacentHTML('beforeend', `<div class="bf-item bf-mw"><div class="bf-x">and ${told.length - 2} more</div></div>`);
         if (seg.meanwhile) feed.insertAdjacentHTML('beforeend', `<div class="bf-item bf-mw"><div class="bf-x">${esc(seg.meanwhile)}</div></div>`);
         feed.scrollTop = feed.scrollHeight; sfx('open');
       });
@@ -615,6 +621,7 @@ async function showSettings() {
     <div class="scale-row"><label style="margin:0;white-space:nowrap" title="Refugees leaving a sacked town, carts between prosperous holdings, outriders ahead of a host, deserters slipping away, ravens carrying the letters that were really sent"><input type="checkbox" id="gfx-life"> A living map</label></div>
     <div class="scale-row"><label style="margin:0;white-space:nowrap">Graphics</label><select id="gfx-q" style="flex:1"><option value="high">High — sharpest relief, full resolution</option><option value="balanced">Balanced (recommended for laptops)</option><option value="fast">Fast — for older machines</option></select></div>
     <label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="house-theme" ${houseTheming() ? 'checked' : ''}> Colour the interface in my house's colours</label>
+    <label style="display:flex;gap:0.4rem;align-items:center" title="A page of vellum after each turn: the three things that mattered most, the Meanwhile, and what awaits your word"><input type="checkbox" id="rep-on" ${reportOn() ? 'checked' : ''}> The maester's report after each turn</label>
     <div class="settings-section"></div>
     <h4>Sound &amp; voices</h4>
     <div class="grid2">
@@ -662,6 +669,7 @@ async function showSettings() {
   const showScale = (v) => { setUiScale(v); $('#ui-scale-v').textContent = Math.round(v * 100) + '%'; };
   $('#ui-scale').oninput = (e) => showScale(Number(e.target.value));
   $('#ui-scale-reset').onclick = () => { $('#ui-scale').value = 1; showScale(1); };
+  $('#rep-on').onchange = (e) => setReportOn(e.target.checked);
   $('#house-theme').onchange = (e) => { setHouseTheming(e.target.checked); applyHouseTheme(app.state ? app.state.houses[app.state.meta.player] : HOUSES.find((x) => x.id === app.chosenHouse)); };
   $('#cfg-url').onchange = () => { if ($('#cfg-provider').value === 'mock') $('#cfg-provider').value = 'openai'; };
   $('#snd-engine').value = voiceSettings().engine; $('#snd-narrator').value = voiceSettings().narrator;

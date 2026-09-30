@@ -1,6 +1,6 @@
 // The turn told in the chronicle itself: the day's news arrives one event at a time — its headline joins the strip (and its card the
 // chronicle, when that is open), the map flies to where it happened, the hosts march on — then the next. Pause, step or skip at the top.
-import { app, $, foldText } from './common.js';
+import { app, $, foldText, toast } from './common.js';
 import { SPANS, spanOf } from '../shared/world.js';
 import { storyEvents, setDrawer } from './drawer.js';
 import { sfx } from './sfx.js';
@@ -38,6 +38,8 @@ export async function playTurn(turn, { onDone } = {}) {
     if (ctl.skip) break;
     rv.n = i + 1; rv.date = e.date || turn.date; rv.shown.add(idx);
     app.renderStrip?.(); // the headline joins the strip as it is told
+    // a great thing is also a toast (GDD 18 §2.6): its headline, and a click goes there
+    if (e.tier === 'great') toast(e.headline || e.title, false, `great:${turn.turn}:${idx}`, pos && app.map ? () => app.map.flyTo(pos, 300) : null);
     const d = $('#rb-date'); if (d) d.textContent = rv.date; const c = $('#rb-count'); if (c) c.textContent = `${rv.n} / ${rv.total}`;
     const card = document.querySelector(`.story[data-news="${turn.turn}:${idx}"]`);
     if (card) { card.classList.remove('unrevealed'); card.classList.add('arrive'); setTimeout(() => card.classList.remove('arrive'), 3000); }
