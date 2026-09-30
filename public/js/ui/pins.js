@@ -29,8 +29,7 @@ export function openPin(where) {
     const it = items[i]; const n = items.length;
     const head = `<div class="pin-head"><span class="pin-place">${esc(place)}</span>${n > 1 ? `<span class="pin-count">${i + 1} of ${n}</span>` : ''}</div>`;
     if (it.kind === 'decision') {
-      modal(`${head}<div class="pin-body">${decisionsHtml([it.d])}</div>
-        <div class="report-actions">${n > 1 ? '<button class="btn ghost" id="pin-skip">Later ›</button>' : ''}<button class="btn ghost" data-action="close-modal">Decide later</button></div>`);
+      modal(decisionsHtml([it.d], { place, pos: n > 1 ? `${i + 1} of ${n}` : '', later: n > 1 }), { vellum: true });
       wireDecisions($('#modal-box'), { onDecided: () => setTimeout(next, 150) });
       const sk = $('#pin-skip'); if (sk) sk.onclick = next;
       return;

@@ -3,11 +3,21 @@
 // Shared by the map (where to draw pins) and the pin window (what to show when one is clicked).
 
 import { placeOf } from '../engine/parties.js';
+import { dayNumber } from '../engine/time.js';
 
 // how long an unread piece of news keeps its pin, in turns
 const NEWS_TURNS = 2;
 
 export const eventKey = (turn, e, i) => e.id || `${turn}-${i}`;
+
+/**
+ * Days until the world decides a matter without the lord, or null for one with no reckoning (a save from before the days were kept). The engine lapses a matter when
+ * `today − day ≥ days` (server/game.js closeTurn).
+ */
+export const decisionDaysLeft = (s, d) => (d.day == null || d.days == null ? null : Math.max(0, d.days - (dayNumber(s.meta.date) - d.day)));
+
+/** "6 days left", "1 day left", "the last day" (0), "" when there is no reckoning. */
+export const leftWord = (n) => (n == null ? '' : n <= 0 ? 'the last day' : n === 1 ? '1 day left' : `${n} days left`);
 
 // Where a pending decision belongs on the map: where it happened, else where the asker is, else their seat, else yours
 export function decisionPlace(s, d) {

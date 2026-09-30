@@ -6,7 +6,7 @@ import { realmOf, getRelation, resolvePlaceId, fmt } from '../shared/world.js';
 import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, bannerTexture, tierOf, armyFigureCount, clothUniforms, roofTone } from './models.js';
 import { PathGrid, pathLength, pointAlong } from './pathfind.js';
 import { makeNoise } from '../map/noise.js';
-import { openPins, capPins } from '../shared/pins.js';
+import { openPins, capPins, decisionDaysLeft, leftWord } from '../shared/pins.js';
 import { forces, isForce } from '../engine/parties.js';
 import { stretch } from '../engine/movement.js';
 import { viewOfArmies, ageText } from '../engine/knowledge.js';
@@ -637,10 +637,10 @@ export class MapScene {
       const pos = g.pos || s.holdings[where]?.pos; if (!pos) continue;
       const top = g.events[0]; const n = g.events.length + g.decisions.length;
       const imp = Math.max(g.decisions.length ? 4 : 0, ...g.events.map((e) => e.importance || 2));
-      const icon = g.decisions.length ? '⚖' : ICON[top?.type] || '❖';
+      const icon = g.decisions.length ? '✉' : ICON[top?.type] || '❖'; // a matter is a sealed letter (css/matters.css)
       const lbl = this.addLabel(icon, [pos[0], this.groundAt(pos[0], pos[1]) + 14, pos[1]], `event pin imp${imp}${g.decisions.length ? ' asks' : ''}`, { pin: where });
       if (n > 1) lbl.el.insertAdjacentHTML('beforeend', `<b class="pin-n">${n}</b>`);
-      lbl.el.title = g.decisions.length ? `${g.decisions[0].title} — awaits your answer` : top.headline || top.title;
+      lbl.el.title = g.decisions.length ? `${g.decisions[0].title} — awaits your answer${decisionDaysLeft(s, g.decisions[0]) != null ? ` (${leftWord(decisionDaysLeft(s, g.decisions[0]))})` : ''}` : top.headline || top.title;
       this.eventPins.push(lbl);
     }
   }
