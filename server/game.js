@@ -782,6 +782,14 @@ export function acknowledge(id, keys) {
   return { ok: true };
 }
 
+// The welcome card has been read: it is not shown again, in this browser or another (WP U8)
+export function markWelcomed(id) {
+  const state = loadState(id);
+  state.meta.welcomed = true;
+  saveState(id, state);
+  return { ok: true };
+}
+
 export function markRavensRead(id) {
   const state = loadState(id);
   state.ravens.forEach((r) => { r.read = true; });

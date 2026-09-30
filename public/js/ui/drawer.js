@@ -6,7 +6,6 @@ import { dateStr } from '../shared/world.js';
 import { orderOutcome, STATUS_LABEL } from '../shared/errands.js';
 import { icon } from './icons.js';
 import { THREADS } from '../shared/plots.js';
-import { briefFor } from '../../data/briefs.js';
 import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices, prepareSpeech, beginScene, sceneToken } from './voice.js';
 import { temperament, natureTags, VERDICT_LABEL, moodWord } from '../shared/temperament.js';
 import { together as sameSpot } from '../engine/parties.js';
@@ -173,7 +172,8 @@ function renderFeed(body) {
     const bg = g.small;
     return `<section class="wc-daygroup">${day(g)}<div class="wc-chronicle__cards">${g.cards.map((c) => cardHtml(s, t, c, !seen.has(c.id))).join('') || quiet(g)}</div>${g.meanwhile ? `<p class="news-meanwhile">${esc(g.meanwhile)}</p>` : ''}${bg ? `<button class="news-more" data-meanwhile="${g.turn}">${bg} small happening${bg > 1 ? 's' : ''} across the realm</button>` : ''}</section>`;
   }).join('');
-  const first = `<div class="wc-card wc-tier-major"><h3 class="wc-card__head">Your situation</h3>${(() => { const b = briefFor(s.houses[s.meta.player], s); return `<p class="wc-card__body">${esc(b.situation)}</p><p class="wc-card__body"><b>Aims:</b> ${b.goals.map(esc).join(' · ')}</p>${b.levers?.length ? `<p class="wc-card__body"><b>Levers:</b> ${b.levers.map(esc).join(' · ')}</p>` : ''}`; })()}</div>`;
+  // a game not yet begun has nothing to tell: the situation is the welcome card (ui/welcome.js), which can be read again from here
+  const first = `<p class="wc-quiet">Nothing has happened yet. Write an order below and end the turn, and the days begin.</p><p class="wc-quiet"><button class="news-more" data-action="welcome">Read your situation again</button></p>`;
   body.innerHTML = bar + threadsHtml(s) + (groups.length ? blocks + (hidden && f.matters ? `<p class="wc-quiet wc-quiet--foot">${hidden} smaller ${hidden === 1 ? 'story is' : 'stories are'} held back. <button class="news-more" data-feed="matters">Show them</button></p>` : '') : first);
   // a card opens on a click (the map goes to its place); Details folds out what is behind it; the small happenings open across the realm
   const th = $('.threads', body); if (th) th.ontoggle = () => { app.threadsOpen = th.open; };

@@ -249,3 +249,37 @@ body:has(#window:not(.hidden)) .map-legend, body:has(#sheet:not(.hidden)) .map-l
 .card-actions .btn { flex: 0 1 auto; }
 .card-actions .btn.ghost:last-child { margin-left: auto; }
 @media (prefers-reduced-motion: no-preference) { .card { animation: card-in .16s ease-out; } @keyframes card-in { from { opacity: 0; transform: translateY(.3rem); } to { opacity: 1; transform: none; } } }
+
+/* ───────────────────────────── first run: the welcome card and the coach marks (WP U8; mockup 08) ───────────────────────────── */
+#modal-box.is-vellum:has(.wc-welcome) { width: min(44rem, 94vw); }
+.wc-welcome { padding: 1.3rem 2.4rem 1.4rem; text-align: left; }
+.wc-welcome__kicker { text-align: center; }
+.wc-welcome .wc-title { margin: .35rem 0 0; text-align: center; font-size: 1.75rem; }
+.wc-welcome__lord { text-align: center; font-style: italic; font-size: 1.2rem; color: var(--ink-soft); }
+.wc-welcome__situation { margin: .1rem 0 1rem; font-size: 1.22rem; line-height: 1.42; }
+.wc-welcome__line { margin: .55rem 0; font-size: 1.14rem; line-height: 1.35; }
+.wc-welcome__line .wc-kicker { display: inline-block; margin-right: .5rem; color: var(--rubric); }
+.wc-welcome__go { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.1rem; }
+.wc-welcome__note { font-style: italic; color: var(--ink-soft); font-size: 1.02rem; }
+.wc-welcome__go .wc-btn { padding-inline: 2.2rem; }
+.wc-welcome__go .ico { width: 1rem; height: 1rem; }
+.wc-coach-layer { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
+.wc-coach-layer .wc-coach { position: static; }
+.wc-coach-layer .wc-slip { max-width: 17rem; pointer-events: auto; }
+.wc-coach-layer .wc-coach__dot { z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .wc-coach__dot::after { animation: none; } }
+
+/* ───────────────────────────── focus mode, and the bars that step back (WP U8) ───────────────────────────── */
+#focus-exit { position: absolute; top: var(--hud-gap); left: 50%; transform: translateX(-50%); z-index: 12; opacity: .75; padding: .2rem .8rem; color: var(--bone); background: rgba(22, 14, 8, .82); border: 1px solid rgba(0, 0, 0, .7); box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .14); border-radius: 2px; }
+#focus-exit:hover, #focus-exit:focus-visible { opacity: 1; }
+#focus-exit[hidden], #pins-more[hidden] { display: none; }
+body.focus #hud-top, body.focus #hud-player, body.focus #strip, body.focus #mapmode, body.focus #map-legend, body.focus #drawer { visibility: hidden; opacity: 0; pointer-events: none; }
+body.focus #focus-exit { visibility: visible; }
+#hud-top, #hud-player, #strip, #mapmode { transition: opacity .25s ease-out; }
+body.map-active #hud-top, body.map-active #hud-player, body.map-active #strip, body.map-active #mapmode { opacity: .3; }
+body.idle:not(.map-active) #hud-top, body.idle:not(.map-active) #hud-player, body.idle:not(.map-active) #strip { opacity: .72; }
+@media (prefers-reduced-motion: reduce) { #hud-top, #hud-player, #strip, #mapmode { transition: none; } }
+
+/* the pins that do not fit: one bubble at the map's edge */
+#pins-more { position: absolute; right: var(--hud-gap); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 3.4rem); z-index: 9; cursor: pointer; font-weight: 700; }
+body:has(#window:not(.hidden)) #pins-more, body:has(#sheet:not(.hidden)) #pins-more { right: calc(var(--panel-w) + var(--hud-gap) * 2); }

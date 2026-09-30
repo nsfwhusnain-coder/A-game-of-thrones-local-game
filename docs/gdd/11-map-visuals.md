@@ -41,7 +41,7 @@ replaced (§5.2).
 - **Framing (fix B-29):** at L0 the camera centres on the bounding box of Westeros + the Narrow Sea, not on the atlas
   origin; the pan bounds keep ≥ 40 % of the screen on land.
 - **Zoom** toward the cursor, smoothed (lerp the distance toward a goal, keeping the point under the cursor fixed).
-  Momentum panning (existing). Keyboard: WASD/arrows pan, +/− zoom, Home = your seat, F = follow the selected party.
+  Momentum panning (existing). Keyboard: WASD/arrows pan, +/− zoom, Home = your seat, G = go with the selected party (F is focus mode, 17 §2.7).
 - **Fly-to** (playback): ease-in-out 0.9–1.4 s by distance, never faster than 1 region/second; the camera never
   moves while the player is dragging.
 
@@ -50,7 +50,7 @@ continuous level, `layerAlpha(lod, from, to)` a ±0.15 fade; the camera is clamp
 tilts 12° at L0 to 38° at L3, frames L0 on Westeros and the Narrow Sea (`L0_CENTRE`, `HOME_BOX`) and widens its pan
 bounds to the Known World from L1 down. The wheel zooms smoothly toward the cursor (the ground under it stays put);
 `flyTo` eases in and out over 0.9–1.4 s (never faster than about a region a second) and never while dragging; Home
-flies to your seat (again: the whole realm), F follows the selected party. `public/dev/map-lod.html?spot=&lod=&boxes=1`;
+flies to your seat (again: the whole realm), G goes with the selected party. `public/dev/map-lod.html?spot=&lod=&boxes=1`;
 `tests/map-lod.test.js`. The layers of the table below read `layerAlpha` as E2–E7 restyle them.
 
 ## 3. Layers and level of detail

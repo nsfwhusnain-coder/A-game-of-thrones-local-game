@@ -6,7 +6,7 @@ import { realmOf, getRelation, resolvePlaceId, fmt } from '../shared/world.js';
 import { buildSettlement, buildWall, buildBanner, buildArmy, buildForests, bannerTexture, tierOf, armyFigureCount, clothUniforms, roofTone } from './models.js';
 import { PathGrid, pathLength, pointAlong } from './pathfind.js';
 import { makeNoise } from '../map/noise.js';
-import { openPins } from '../shared/pins.js';
+import { openPins, capPins } from '../shared/pins.js';
 import { forces, isForce } from '../engine/parties.js';
 import { stretch } from '../engine/movement.js';
 import { viewOfArmies, ageText } from '../engine/knowledge.js';
@@ -28,12 +28,12 @@ const hexToRgb = (hex) => { let h = String(hex || '#888').replace('#', ''); if (
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // the camera's levels of detail, framing and pan bounds (11 §2–3): map3d/lod.js
-import { LOD, lodOf, layerAlpha, HOME_BOX, KNOWN_BOX, L0_CENTRE } from './lod.js';
+import { LOD, lodOf, layerAlpha, tokenCap, HOME_BOX, KNOWN_BOX, L0_CENTRE } from './lod.js';
 import { colorFor as modeColor, atWarWith as modeAtWar, diplomacyOf, DIPLO } from './modes.js';
 import { eyesOf } from '../engine/knowledge.js';
 import { SNOW, snowLineOf, riversFrozen } from './nature.js';
 import { placeLabels, kindOf, PRIORITY } from './labels.js';
-import { tokenOf, clusterPlates } from './tokens.js';
+import { tokenOf, clusterPlates, capTokens } from './tokens.js';
 export { LOD, lodOf, layerAlpha };
 
 export class MapScene {
@@ -585,7 +585,10 @@ export class MapScene {
     this.eventPins = [];
     const s = this.state; if (!s) return;
     const ICON = { war: '⚔', economy: '🪙', diplomacy: '✉', intrigue: '🗡', disaster: '🔥', magic: '✦', religion: '✧' };
-    for (const [where, g] of openPins(s)) {
+    const open = openPins(s); const { shown, hidden } = capPins(open, 6);
+    this.h.onPinsMore?.(hidden); // (the rest are a "+n" bubble beside the map: ui/pins.js)
+    for (const where of shown) {
+      const g = open.get(where);
       const pos = g.pos || s.holdings[where]?.pos; if (!pos) continue;
       const top = g.events[0]; const n = g.events.length + g.decisions.length;
       const imp = Math.max(g.decisions.length ? 4 : 0, ...g.events.map((e) => e.importance || 2));
@@ -746,10 +749,19 @@ export class MapScene {
       sl.key = key;
       if (sl.text !== st.text) { sl.text = st.text; sl.el.innerHTML = `<span class="flag stackflag"></span><b>${esc(st.text)}</b>`; sl.el.style.display = ''; sl.bw = sl.el.offsetWidth || 90; sl.bh = sl.el.offsetHeight || 18; sl.dy = parseFloat(getComputedStyle(sl.el).marginTop) || 0; }
       sl.el.title = st.ids.map((i) => cand[i].l.el.title || cand[i].l.el.textContent).filter(Boolean).join('\n');
-      cand.push({ id: `stack${used}`, l: sl, x: st.x, y: st.y + (sl.dy || 0), w: sl.bw, h: sl.bh, scale: 1, pri: PRIORITY.army + 1, move: true });
+      cand.push({ id: `stack${used}`, l: sl, x: st.x, y: st.y + (sl.dy || 0), w: sl.bw, h: sl.bh, scale: 1, pri: PRIORITY.army + 1, move: true, parties: st.ids.map((i) => cand[i].l.data.army) });
     }
     for (let k = used; k < this.stackPool.length; k++) if (this.stackPool[k].shown !== false) { this.stackPool[k].el.style.display = 'none'; this.stackPool[k].shown = false; this.stackPool[k].key = null; }
-    const shown = placeLabels(cand.filter((c) => !inStack.has(c.id)));
+    // no more plates than the zoom can carry (a dozen at the default one): the player's own first, then the nearest to the player's lands (WP U8; tokens.js capTokens)
+    const mine = this.state?.meta?.player; const own = Object.values(this.state?.holdings || {}).filter((x) => x.owner === mine);
+    const plateOf = (c) => {
+      const ids = c.parties || [c.l.data?.army]; let d = Infinity, men = 0, isMine = false;
+      for (const id of ids) { const a = this.state?.parties?.[id]; if (!a) continue; men += a.men || 0; isMine = isMine || a.owner === mine || a.serving === mine; for (const h of own) d = Math.min(d, Math.hypot(a.pos[0] - h.pos[0], a.pos[1] - h.pos[1])); }
+      return { id: c.id, own: isMine, d, men };
+    };
+    const platesIn = cand.filter((c) => !inStack.has(c.id) && (c.parties || (c.l.data?.army && c.l.cls.startsWith('army'))) && !/progress|retinue/.test(c.l.cls));
+    const dropped = capTokens(platesIn.map(plateOf), tokenCap(d));
+    const shown = placeLabels(cand.filter((c) => !inStack.has(c.id) && !dropped.has(c.id)));
     for (const it of cand) {
       const l = it.l, at = shown.get(it.id);
       if (!at) { if (l.shown !== false) { l.el.style.display = 'none'; l.shown = false; } continue; }
@@ -826,7 +838,7 @@ export class MapScene {
     el.addEventListener('mousedown', (e) => { if (e.detail > 1) e.preventDefault(); }); // no word-select on double click
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('wheel', (e) => {
-      e.preventDefault(); this.goal = null; this.tween = null; this.follow = null; this.clearHover();
+      e.preventDefault(); this.goal = null; this.tween = null; this.follow = null; this.clearHover(); this.h.onActive?.();
       // zoom toward the cursor, smoothed: the distance eases toward its goal, the point under the cursor stays put
       const r = el.getBoundingClientRect(); const sx = e.clientX - r.left, sy = e.clientY - r.top;
       const d = clamp((this.zoom?.d ?? this.dist) * Math.exp(e.deltaY * 0.0012), LOD[3], LOD[0]);
@@ -841,7 +853,7 @@ export class MapScene {
       const r = el.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top;
       if (drag) {
         if (!moved && Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 4) { moved = true; this.dragging = true; this.clearHover(); try { el.setPointerCapture(drag.id); } catch { /* */ } }
-        if (moved) {
+        if (moved) { this.h.onActive?.(); // (the bars step back while the map is moved, ui/welcome.js)
           const g = this.screenToGround(mx, my); const dx = drag.g.x - g.x, dz = drag.g.z - g.z;
           this.target.x += dx; this.target.z += dz; this.updateCamera(); el.style.cursor = 'grabbing';
           const now = performance.now(); if (last) { const dt = Math.max(8, now - last.t); this.velSample = { x: dx / dt * 1000, z: dz / dt * 1000 }; } last = { t: now };
@@ -880,9 +892,9 @@ export class MapScene {
     window.addEventListener('keydown', (e) => {
       if (/input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;
       const k = e.key.toLowerCase();
-      // Home: back to your seat (twice: the whole realm); F: follow the selected party (11 §2)
+      // Home: back to your seat (twice: the whole realm); G: go with the selected party (11 §2; F is focus mode)
       if (k === 'home') { const seat = this.state?.holdings[this.state.houses[this.state.meta.player]?.seat]; const near = seat && Math.hypot(this.target.x - seat.pos[0], this.target.z - seat.pos[1]) < 20 && Math.abs(this.dist - LOD[2]) < 40; if (seat && !near) this.flyTo(seat.pos, LOD[2]); else this.home(); return; }
-      if (k === 'f') { this.follow = this.follow ? null : this.selectedArmy || null; return; }
+      if (k === 'g') { this.follow = this.follow ? null : this.selectedArmy || null; return; }
       if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.tween = null; this.follow = null; this.clearHover(); }
       this.keys.add(k);
     });
@@ -955,7 +967,7 @@ export class MapScene {
       this.target.x += before.x - after.x; this.target.z += before.z - after.z;
       if (Math.abs(Z.d - this.dist) < 0.5) this.zoom = null;
     }
-    // following a party (F)
+    // following a party (G)
     if (this.follow) { const a = this.state?.parties?.[this.follow]; if (!a?.pos) this.follow = null; else { const k = 1 - Math.pow(0.05, dt); this.target.x += (a.pos[0] - this.target.x) * k; this.target.z += (a.pos[1] - this.target.z) * k; } }
     this.updateCamera();
     if (this.terrainUniforms) this.terrainUniforms.uTime.value = time;

@@ -3,6 +3,14 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — U8: a welcome, three tips that go away, focus mode, and a quieter map
+
+- **A new game opens with one page of vellum:** your situation, your aims and your levers, and **Begin**. You never see it again (the game remembers, in this browser and in the save); the chronicle offers "Read your situation again". After it, **three tips**, one at a time, each gone when you do the thing it says: write an order; end the turn; open the Realm.
+- **Press F to hide everything but the map** and the command bar; press it again (or the small "Focus" plate) to bring it all back. **Following a host moved from F to G.**
+- **The bars step back:** they fade while you drag or zoom the map, and dim after a minute of no input.
+- **A quieter map:** no more than a dozen host and fleet plates at the default zoom (fewer from far out, all of them when you come close), your own and those nearest your lands first; no more than six pins at once, matters awaiting your word first, with a "+n" bubble that opens the next.
+- Tests: `tests/firstrun.test.js` (8), the gate's first-run rows (the card once, the marks in order, never again after a reload, focus mode ≤ 6 controls) and `scripts/map-check.mjs` (tokens, overlaps, pins on four houses' opening scenes, and a crowd of thirty hosts).
+
 ## 2026-09-30 — U4: cards on the map, and two windows with tabs
 
 - **Click a castle or a host on the map and a small card opens beside it** (the holder, the garrison of your own holdings, the lands in two words, who is there, the latest news of the place, up to three things to do, and **More ▸** for the whole sheet).
