@@ -6,6 +6,9 @@
 > pans the map: 19 §6.1, [DECISIONS](DECISIONS.md) D-070). R1–R3 are built (Slice 2); the ledger's window is R4. U1–U4, U8
 > and U9 stand as written.
 
+> **Status (2026-09-30): U1, U2 and U3 are implemented** ([DECISIONS](DECISIONS.md) D-079): the bar, the three doors, the Inbox, the strip and the command bar,
+> measured by `scripts/ui-gate.mjs` (§5). U4, U8 and U9 remain. Where the built screen differs from §2 it is because the mockups and the art direction (21) were drawn after it.
+
 > Owner feedback: "The UI is very cluttered — too much information, too many panels, too many things to look at. Hide it
 > gracefully, the way big games do. Show what matters all the time; hide the rest behind a few buttons. This is an AI
 > simulation: the player watches the world and gives orders in plain words, so they should not face economy and military

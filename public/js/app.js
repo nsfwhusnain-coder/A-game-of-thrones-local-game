@@ -1,5 +1,7 @@
 import { HOUSES } from '../data/houses.js';
-import { startIconizer, icon } from './ui/icons.js';
+import { startIconizer, icon, hydrateIcons } from './ui/icons.js';
+import { routeKey, turnLabel } from './ui/hud.js';
+import { renderChrome, drawMenu, togglePopover, closePopovers, closePopover, openPopover, isOpen, openDoor, openStripLine, openItem, loadSeen, markSeen, renderStrip, setMapModeName } from './ui/chrome.js';
 import { drawTitleMap } from './ui/titlemap.js';
 import { startMusic, setMood, setMusicHouse, musicSettings, setMusic } from './ui/music.js';
 import { sfx, wireSfx, sfxSettings, setSfx } from './ui/sfx.js';
@@ -14,7 +16,7 @@ import { sigilSrc, bannerURL, loadSigilArt } from './sigils.js';
 import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
 import { app, $, $$, esc, fmt, api, doVerb, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, answerOrder, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
-import { renderDrawer, setDrawer, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
+import { renderDrawer, setDrawer, openDrawer, closeDrawer, drawerOpen, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
 import { dateStr, realmOf, realmTotals, FIGURE_LABELS, placeName, SPANS, spanOf } from './shared/world.js';
 import { project, SEASONS } from './shared/economy.js';
@@ -124,7 +126,7 @@ const LOADING_LINES = [
   'Words are wind.',
 ];
 async function startGame(id, state) {
-  app.saveId = id;
+  app.saveId = id; loadSeen();
   app.state = state || await api('/games/' + id);
   applyHouseTheme(app.state.houses[app.state.meta.player]);
   setMusicHouse(app.state.meta.player); setMood(moodFor(app.state));
@@ -157,11 +159,11 @@ async function startGame(id, state) {
   }
   app.map.state = null;
   app.map.setState(app.state);
-  closeWindow(); closeSheet(); app.chatWith = null; app.council = null;
+  closeWindow(); closeSheet(); closeDrawer(); closePopovers();
   renderAll();
 }
 function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); maybeShowOutcome(); }
-app.renderOrders = renderOrders; app.renderTop = renderTop;
+app.renderOrders = renderOrders; app.renderTop = renderTop; app.markSeen = markSeen; app.renderStrip = renderStrip;
 // the game's code changed on disk (an update): say so, rather than run a page that no longer matches the server
 (async () => {
   let mine = null; try { mine = (await api('/version')).build; } catch { return; }
@@ -173,38 +175,11 @@ app.setState = (s, opts = {}) => {
   for (const b of document.querySelectorAll('[data-action="undo"]')) b.classList.toggle('hidden', !!s.meta.settings?.ironman);
 };
 
+// The top bar (GDD 17 §2.1): chrome.js draws the crest, the three vitals, the Inbox seal and the headline strip from the tested functions of hud.js;
+// the End-turn plate says what the turn is waiting for.
 function renderTop() {
-  { const u = app.state && nextTurnLength(app.state); const el = $('#turn-until'); if (el && u) el.innerHTML = `next turn: <b>${u.days} ${u.days === 1 ? 'day' : 'days'}</b> — ${esc(u.reason)}`; }
-  const s = app.state, h = player();
-  const pr = project(s, h.id);
-  const last = h.ledger?.at(-1);
-  const trend = last ? (last.net >= 0 ? `<span class="up">▲${fmt(Math.abs(Math.round(last.net)))}</span>` : `<span class="down">▼${fmt(Math.abs(Math.round(last.net)))}</span>`) : '';
-  const tot = realmTotals(s, h.id);
-  const season = SEASONS[s.world?.season || 'summer'];
-  const food = Math.round((Number(h.figures.food.v) || 0) * 10) / 10;
-  // the hosts in the field eat from their wagons, not the granaries: their days of rations belong beside the stores (12 §5)
-  const rations = Object.values(s.parties).filter((a) => a.owner === h.id && a.kind === 'host').map((a) => ({ a, sp: supplyOf(s, a) })).filter((x) => x.sp.days != null);
-  const foodPct = Math.max(0, Math.min(100, (food / 24) * 100));
-  const net = (lo, hi) => `${lo >= 0 ? '+' : '−'}${fmt(Math.abs(lo))} … ${hi >= 0 ? '+' : '−'}${fmt(Math.abs(hi))}`;
-  const items = [
-    { ic: '🪙', k: 'Treasury', v: `${fmt(h.figures.treasury.v)}`, sub: `${net(pr.low, pr.high)} a moon`, cls: pr.high < 0 ? 'bad' : pr.low < 0 ? 'warn' : 'good', win: 'economy', tip: `Gold dragons in your coffers (${h.figures.treasury.src}, ${h.figures.treasury.asOf}).\nSteward's projection per moon: ${net(pr.low, pr.high)} — luck, harvests and loyal (or disloyal) vassals decide the real figure.${h.figures.debt?.v ? '\nDebt: ' + fmt(h.figures.debt.v) : ''}${last ? `\nLast turn: ${last.net >= 0 ? '+' : ''}${fmt(Math.round(last.net))}` : ''}` },
-    { ic: '⚔', k: 'Levies', v: `~${fmt(h.figures.levies.v)}`, sub: `realm ~${fmt(tot.levies)}`, win: 'military', tip: `Your own levies, not yet raised (${h.figures.levies.src}).${h.figures.levies.why ? `\nIt drifts, a little each day, toward what your lands can bear (~${fmt(h.figures.levies.why.bear)} at ${h.figures.levies.why.condition}% of their strength, as prosperity and unrest allow) less the ${fmt(h.figures.levies.why.raised)} men already under arms.` : ''}\nWith every sworn house, if they answer the call: ~${fmt(tot.levies)}` },
-    { ic: '🛡', k: 'Men-at-arms', v: fmt(h.figures.menAtArms.v), sub: `guard ${fmt(h.figures.guard.v)}`, win: 'military', tip: 'Standing soldiers in your pay, and your household guard.' },
-    { ic: '⛵', k: 'Ships', v: fmt(h.figures.ships.v), sub: `realm ~${fmt(tot.ships)}`, win: 'military', tip: 'Your warships, and those of your whole realm.' },
-    { ic: '🌾', k: 'Food', v: `${food} <small>moons</small>`, bar: foodPct, cls: food < 4 ? 'bad' : food < 10 ? 'warn' : 'good', win: 'economy', tip: `Moons of stores in your granaries (${h.figures.food.src}). Winter will empty them.${rations.map(({ a, sp }) => `\n${a.name}: ${sp.word === 'starving' ? 'starving' : `${Math.floor(sp.days)} days of rations`}`).join('')}` },
-    { ic: { summer: '☀', autumn: '🍂', winter: '❄', spring: '🌱' }[s.world?.season || 'summer'] || '❄', k: 'Season', v: season.label, sub: s.world?.season === 'winter' ? 'nothing grows' : s.world?.season === 'autumn' ? 'the harvest wanes' : s.world?.season === 'spring' ? 'the thaw' : 'fields are full', win: 'economy', tip: s.world?.seasonNote || season.note },
-  ];
-  $('#res-row').innerHTML = items.map((it) => `<div class="res ${it.cls || ''}" data-win-open="${it.win}" title="${esc(it.tip)}"><span class="ic">${it.ic}</span><div class="res-txt"><div class="k">${it.k}</div><div class="v">${it.v}</div>${it.bar !== undefined ? `<div class="res-bar"><i style="width:${it.bar}%"></i></div>` : `<div class="s">${it.sub || ''}</div>`}</div></div>`).join('');
-  $('#date-box').innerHTML = `${esc(dateStr(s.meta.date))}<div class="turn">Turn ${s.meta.turn}</div>`;
-  const pendingDec = (s.decisions || []).filter((d) => d.status === 'pending').length;
-  $('#date-box').insertAdjacentHTML('beforeend', pendingDec ? `<div class="turn" style="color:#ffb060">⚖ ${pendingDec} decision${pendingDec > 1 ? 's' : ''} awaiting you</div>` : '');
-  // badges on the dock: decisions waiting (Realm), wars (Military), letters (Diplomacy)
-  const atWarN = s.wars.filter((w) => w.status !== 'ended' && (w.attackers.includes(s.meta.player) || w.defenders.includes(s.meta.player))).length;
-  const badge = (win, n, cls = '') => { const b = $(`#action-ring [data-win="${win}"]`); if (!b) return; b.querySelector('.dock-badge')?.remove(); if (n) b.insertAdjacentHTML('beforeend', `<span class="dock-badge ${cls}">${n}</span>`); };
-  badge('realm', pendingDec); badge('military', atWarN ? '⚔' : 0, 'war');
-  const unread = s.ravens.filter((r) => !r.read).length;
-  badge('diplomacy', unread);
-  $('#raven-badge').textContent = unread; $('#raven-badge').classList.toggle('hidden', !unread);
+  renderChrome();
+  const el = $('#turn-until'); if (el && app.state) el.innerHTML = esc(turnLabel(app.state)).replace(/^next: (d+ days?)/, 'next: <b>$1</b>');
 }
 function renderPlayer() {
   const s = app.state; const h = player(); const r = ruler();
@@ -212,13 +187,15 @@ function renderPlayer() {
   const speaker = speakerFor(s, h.id); const why = incapacity(s, h.id);
   const isRegent = why && speaker && speaker.id !== h.lord;
   const face = isRegent ? speaker : r;
-  $('#player-banner').innerHTML = `<img src="${bannerURL(h.sigil, 80, 120)}" alt="House ${esc(h.name)}" title="House ${esc(h.name)} — ${esc(h.words)}">`;
+  const line = regencyLine(s, h.id);
+  const title = isRegent ? `Regent · ${h.title || RANK_NAMES[h.rank]}` : (h.title || RANK_NAMES[h.rank]);
   $('#player-portrait').innerHTML = face ? `<img src="${por(face, 160)}" alt="Portrait of ${esc(face.name)}">` : '';
   $('#player-portrait').setAttribute('aria-label', face ? `${face.name} — open the character sheet` : 'Your ruler');
-  const line = regencyLine(s, h.id);
-  $('#player-name').innerHTML = `${esc(face?.name || 'House ' + h.name)}<small>${esc(isRegent ? `Regent · ${h.title || RANK_NAMES[h.rank]}` : (h.title || RANK_NAMES[h.rank]))}</small>`
-    + (line ? `<div class="regency-note" title="${esc(line)}">⚖ ${esc(line)}</div>` : '')
-    + (why && !isRegent ? `<div class="regency-note warn">⚠ ${esc(why.text)} — and no one of the house is fit to rule for ${esc(r && /lady|queen|princess/i.test(r.title || '') ? 'her' : 'him')}.</div>` : '');
+  // the plate holds the name and the style; a regency or an unfit ruler is one quiet mark on it, the whole line in its hover (the Realm window says the rest)
+  const warn = why && !isRegent ? `${why.text} — and no one of the house is fit to rule for ${r && /lady|queen|princess/i.test(r.title || '') ? 'her' : 'him'}.` : '';
+  const note = warn || line || '';
+  $('#player-name').innerHTML = `<b>${esc(face?.name || 'House ' + h.name)}</b><small>${esc(title)}</small>${note ? `<span class="regency-note${warn ? ' warn' : ''}" title="${esc(note)}">${icon(warn ? 'warn' : 'scales')}</span>` : ''}`;
+  $('#player-name').title = note;
 }
 app.openRuler = () => { const sp = speakerFor(app.state, player().id); if (sp) openSheet('char', sp.id); };
 
@@ -254,7 +231,7 @@ function maybeShowOutcome() {
       <button class="btn primary" id="oc-menu">A new house</button>
     </div></div>`);
   if ($('#oc-undo')) $('#oc-undo').onclick = async () => { try { const st2 = await api(`/games/${app.saveId}/undo`, { body: { turns: 1 } }); app.setState(st2); outcomeShown = null; closeModal(); toast('The last turn has been undone.'); } catch (err) { toast(err.message, true); } };
-  $('#oc-menu').onclick = () => { closeModal(); handleAction('menu'); };
+  $('#oc-menu').onclick = () => { closeModal(); handleAction('title'); };
 }
 
 // Turning back the glass (docs/gdd/03-architecture.md §11): the server says how far back it can go — the last ten
@@ -274,7 +251,7 @@ async function chooseUndo() {
     <div class="settings-actions"><button class="btn ghost" data-action="close-modal">Let it stand</button></div>`);
   $('#stop-here')?.addEventListener('click', async () => {
     const day = Number($('#stop-day').value); closeModal(); busy(true, `The turn is played again to day ${day}…`);
-    try { const r = await api(`/games/${app.saveId}/stop`, { body: { day } }); prepareReveal(r.turn); app.setState(r.state); setDrawer('feed'); busy(false); playTurn(r.turn); toast(`The days stopped on day ${day}.`); } catch (e) { toast(e.message, true); } finally { busy(false); }
+    try { const r = await api(`/games/${app.saveId}/stop`, { body: { day } }); prepareReveal(r.turn); app.setState(r.state); busy(false); playTurn(r.turn); toast(`The days stopped on day ${day}.`); } catch (e) { toast(e.message, true); } finally { busy(false); }
   });
   $$('[data-undo]').forEach((b) => b.onclick = async () => {
     const n = Number(b.dataset.undo);
@@ -290,19 +267,29 @@ const TONE = { true: 'good', warn: 'warn', false: 'bad', ask: 'ask', story: 'sto
 const READER = { rules: 'Read by your steward', model: 'Read by your maester', replay: 'Read by your maester (recorded)', mock: 'Read by your steward', fallback: 'Your maester could not read it; your steward did' };
 function receiptHtml(o) {
   const q = o.parsed?.clarify;
-  const lines = (o.receipt || []).map((l) => `<div class="rl ${TONE[l.ok] || 'good'}"><span class="mk">${MARK[l.ok] || '✓'}</span><span>${esc(l.text)}</span></div>`).join('');
+  const lines = (o.receipt || []).map((l) => `<div class="rl ${TONE[l.ok] || 'good'}" title="${esc(l.text)}"><span class="mk">${MARK[l.ok] || '✓'}</span><span>${esc(l.text)}</span></div>`).join('');
   const chips = q?.options?.length ? `<div class="chips">${q.options.map((op, k) => `<button class="chip" data-answer="${o.id}" data-k="${k}">${esc(op.label)}</button>`).join('')}</div>` : q ? '<div class="rl story"><span class="mk"></span><span>Say it in the order’s words, and it will be read again.</span></div>' : '';
   const chosen = o.chosen ? `<div class="rl story"><span class="mk">↳</span><span>You answered: ${esc(o.chosen)}</span></div>` : '';
   return `<div class="receipt" title="${esc(READER[o.parsed?.via] || '')}">${lines}${chosen}${chips}</div>`;
+}
+// an earlier order's receipt in a line: how many of its parts were carried, and the first that was not
+function receiptBrief(o) {
+  const ls = o.receipt || []; const bad = ls.find((l) => l.ok === false || l.ok === 'warn');
+  return `<div class="receipt brief" title="${esc(ls.map((l) => l.text).join('\n'))}">${bad ? `<div class="rl ${TONE[bad.ok]}"><span class="mk">${MARK[bad.ok]}</span><span>${esc(bad.text)}</span></div>` : `<div class="rl good"><span class="mk">✓</span><span>${ls.length > 1 ? `${ls.length} parts, all understood` : 'Understood'}</span></div>`}</div>`;
 }
 function renderOrders() {
   const s = app.state;
   const moving = underway(s); const last = s.history.at(-1); const lastOut = (last?.orders || []).map((o) => orderOutcome(o, s));
   const failed = lastOut.filter((x) => x.status === 'failed').length;
   const chip = moving.length || lastOut.length ? `<button class="errands-chip" data-action="errands">${icon('hourglass', 'tg-ico')} ${moving.length} under way${lastOut.length ? ` · last turn: ${lastOut.length - failed} carried out${failed ? `, <b>${failed} failed</b>` : ''}` : ''}</button>` : '';
-  $('#orders').innerHTML = chip + s.orders.map((o, i) => {
+  // the command bar keeps the three newest orders in view, the rest one click away (GDD 17 §2.4); only the newest shows its whole receipt — and any order with a question the steward still needs answered
+  const all = !!app.ordersAll; const hidden = all ? 0 : Math.max(0, s.orders.length - 3);
+  const more = s.orders.length > 3 ? `<button class="wc-order__more" data-action="orders-more">${all ? 'Show fewer' : `+${hidden} earlier`}</button>` : '';
+  $('#orders').innerHTML = chip + more + s.orders.map((o, i) => {
+    if (i < hidden) return '';
     const st = o.status || 'queued'; const done = st !== 'queued';
-    const receipt = done || o.auto ? '' : o.parsedFor === o.text && o.receipt ? receiptHtml(o) : '<div class="receipt muted"><i>Your steward reads the order…</i></div>';
+    const asks = !!o.parsed?.clarify && !o.chosen; const full = i === s.orders.length - 1 || asks;
+    const receipt = done || o.auto ? '' : o.parsedFor === o.text && o.receipt ? (full ? receiptHtml(o) : receiptBrief(o)) : '<div class="receipt muted"><i>Your steward reads the order…</i></div>';
     return `<div class="order ${o.auto ? 'auto' : ''} st-${st}"><span class="n">${i + 1}.</span><div class="grow"><span class="t" ${done ? '' : 'contenteditable="true"'} data-oid="${o.id}">${esc(o.text)}</span>${receipt}</div><span class="ost ${st}" title="${esc((o.result || []).join('; '))}">${STATUS_LABEL[st]}</span>${done ? '' : `<button data-del-order="${o.id}" title="Remove">✕</button>`}</div>`;
   }).join('');
   $$('[data-del-order]').forEach((b) => b.onclick = () => { s.orders = s.orders.filter((o) => o.id !== b.dataset.delOrder); saveOrders(); renderOrders(); });
@@ -359,9 +346,7 @@ const showDiagnostics = () => { try { return localStorage.getItem('model-diagnos
 // live: the turn is being written — the map stays in view, and the news appears as the model writes it
 function busy(on, text, { live = false } = {}) {
   app.busy = on; $('#busy').classList.toggle('hidden', !on); $('#busy').classList.toggle('live', on && live); clearInterval(busyTimer);
-  // the day being written sits at the head of the chronicle; any other wait covers the screen
-  if (on && live && $('#drawer')) { $('#drawer').classList.remove('hidden'); $('#drawer').insertBefore($('#busy'), $('#drawer-body')); }
-  else if ($('#busy').parentElement !== document.body) document.body.appendChild($('#busy'));
+  // the days being written are a card at the map's corner (the map stays in view); any other wait covers the screen
   if (on) {
     $('#busy-text').textContent = text; const t0 = Date.now(); $('#busy-feed').innerHTML = ''; let shown = 0;
     const lines = ['Ravens take wing…', 'Lords confer in their solars…', 'Hosts march along the kingsroad…', 'Coin changes hands in the shadows…', 'The maesters scratch at their ledgers…', 'Whispers pass through the Red Keep…', 'The smallfolk bring in the harvest…'];
@@ -403,16 +388,26 @@ function busy(on, text, { live = false } = {}) {
 document.addEventListener('click', (e) => {
   const t = e.target;
   const talk = t.closest('[data-talk]'); if (talk) { e.preventDefault(); e.stopPropagation(); openChat(talk.dataset.talk); return; }
-  const win = t.closest('#action-ring [data-win]'); if (win) { if (win.dataset.win === 'chronicle') return showChronicle(); openWindow(win.dataset.win); return; }
   if (!app.state) { const a = t.closest('[data-action]'); if (a) handleAction(a.dataset.action, a); return; }
+  // the little popovers close on a click anywhere else (GDD 17 §2.5)
+  if (!t.closest('#menu-pop, #menu-btn, #inbox, #inbox-btn, #mapmode, #modal')) closePopovers();
+  const door = t.closest('[data-open]'); if (door) { e.preventDefault(); return openDoor(door.dataset.open, door.dataset.section); }
+  const line = t.closest('[data-strip]'); if (line) { e.preventDefault(); return openStripLine(line.dataset.strip); }
+  const item = t.closest('[data-inbox]'); if (item) { e.preventDefault(); const [kind, ...id] = item.dataset.inbox.split(':'); return openItem(kind, id.join(':')); }
+  if (t.closest('#mapmode-btn')) { e.preventDefault(); return togglePopover('mapmode'); }
+  const mode = t.closest('#mapmode-list [data-mode]'); if (mode) { e.preventDefault(); return setMapMode(mode.dataset.mode); }
   const hold = t.closest('[data-hold]'); if (hold && !t.closest('.lbl')) { e.preventDefault(); app.map.select(hold.dataset.hold, { fly: true }); openSheet('holding', hold.dataset.hold); return; }
   const house = t.closest('[data-house]'); if (house) { e.preventDefault(); openSheet('house', house.dataset.house); const hh = app.state.houses[house.dataset.house]; if (hh?.seat) app.map.select(hh.seat, { fly: true }); return; }
   const army = t.closest('[data-army]'); if (army && !t.closest('.lbl')) { const a = app.state.parties[army.dataset.army]; if (a) { app.map.selectedArmy = a.id; app.map.flyTo(a.pos); openSheet('army', a.id); } return; }
   const ch = t.closest('[data-char]'); if (ch && !t.closest('button')) { openSheet('char', ch.dataset.char); return; }
   const act = t.closest('[data-action]'); if (act) handleAction(act.dataset.action, act);
 });
-$('#drawer-tabs').addEventListener('click', (e) => { const tab = e.target.closest('[data-tab]')?.dataset.tab; if (tab) setDrawer(tab); });
-$('#mapmodes').onclick = (e) => { const b0 = e.target.closest('[data-mode]'); const m = b0?.dataset.mode; if (!m) return; const box = $('#mapmodes'); if (!box.classList.contains('open')) { box.classList.add('open'); return; } box.classList.remove('open'); $$('#mapmodes button').forEach((b) => b.classList.toggle('active', b.dataset.mode === m)); app.map.setMode(m); showLegend(m); };
+// one chip shows the map's mode; its list holds the others (GDD 17 §2.6), and Esc closes the list
+function setMapMode(m) {
+  const btn = $(`#mapmode-list [data-mode="${m}"]`); if (!btn || !app.map) return;
+  $$('#mapmode-list [data-mode]').forEach((b) => b.classList.toggle('active', b === btn));
+  setMapModeName(btn.textContent.trim()); closePopover('mapmode'); app.map.setMode(m); showLegend(m);
+}
 // the map's key for the mode (map3d/modes.js LEGENDS): swatches, or a line of prose; none for Realms
 function showLegend(m) {
   const L = LEGENDS[m]; const el = $('#map-legend'); if (!el) return;
@@ -421,14 +416,21 @@ function showLegend(m) {
 }
 $('#modal').onclick = (e) => { if (e.target.id === 'modal') closeModal(); };
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { if (!$('#modal').classList.contains('hidden')) return closeModal(); if (app.picking) { app.picking = null; $('#pick-hint').classList.add('hidden'); return; } if (app.sheet) return closeSheet(); if (app.win) return closeWindow(); }
+  // Escape peels one layer at a time: the menu and the Inbox first, then a card, aiming a march, the sheet, the window, the chronicle (GDD 17 §2.5)
+  if (e.key === 'Escape') {
+    if (app.state && closePopovers()) return;
+    if (!$('#modal').classList.contains('hidden')) return closeModal();
+    if (app.picking) { app.picking = null; $('#pick-hint').classList.add('hidden'); return; }
+    if (app.sheet) return closeSheet(); if (app.win) return closeWindow();
+    if (app.state && drawerOpen()) return closeDrawer();
+  }
   if (!app.state || /input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;
-  // the letters shown on the dock buttons; f stays as an old alias for diplomacy
-  const map = { r: 'realm', c: 'council', m: 'military', e: 'economy', i: 'intrigue', p: 'people', d: 'diplomacy', f: 'diplomacy' };
-  if (e.key === 'h') return showChronicle();
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) return advance();
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  // the old one-letter keys still open what they always opened; hud.js knows where each now lives
+  const to = routeKey(e.key);
+  if (to) return openDoor(to.open, to.section);
   if (e.key === '?') return showHelp();
-  if (map[e.key] && !e.ctrlKey && !e.metaKey) openWindow(map[e.key]);
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) advance();
 });
 
 // What is under way, and how last turn's orders came out — read from the same state the map and People show
@@ -461,18 +463,20 @@ async function handleAction(action, el) {
       } catch (e) { toast(e.message, true); } finally { busy(false); }
       break;
     }
-    case 'ravens': setDrawer('letters'); $('#drawer').classList.remove('hidden'); $('#drawer-open').classList.add('hidden'); break;
     case 'undo': return chooseUndo();
     case 'settings': return showSettings();
     case 'help': return showHelp();
     case 'music': { startMusic(); const on = !musicSettings().on; setMusic('on', on); toast(on ? 'Music on' : 'Music off'); return; }
-    case 'menu': app.state = null; if (app.map) app.map.state = null; closeWindow(); closeSheet(); initTitle(); break;
+    case 'menu': return togglePopover('menu');
+    case 'inbox': return togglePopover('inbox');
+    case 'chronicle': closePopovers(); return openDrawer('feed');
+    case 'close-drawer': return closeDrawer();
+    case 'orders-more': app.ordersAll = !app.ordersAll; return renderOrders();
+    case 'title': closePopovers(); closeDrawer(); app.state = null; if (app.map) app.map.state = null; closeWindow(); closeSheet(); initTitle(); break;
     case 'close-window': closeWindow(); break;
     case 'close-sheet': closeSheet(); app.map?.select(null); break;
-    case 'close-chat': app.chatWith = null; app.council = null; setDrawer('feed'); break;
+    case 'close-chat': app.chatWith = null; app.council = null; openDrawer('feed'); break;
     case 'close-modal': closeModal(); break;
-    case 'toggle-drawer': $('#drawer').classList.toggle('hidden'); $('#drawer-open').classList.toggle('hidden', !$('#drawer').classList.contains('hidden')); break;
-    case 'open-realm': openWindow('realm'); break;
     case 'open-ruler': app.openRuler(); break;
   }
 }
@@ -483,7 +487,7 @@ async function advance() {
   if (undecided.length && !await confirmModal(
     undecided.length > 1 ? 'Matters still await your word' : 'A matter still awaits your word',
     `${undecided.map((d) => d.title).join('; ')}. Silence is an answer too — the world will decide without you.`,
-    { yes: 'Let the days pass', no: 'Hear them first' })) { setDrawer('feed'); return; }
+    { yes: 'Let the days pass', no: 'Hear them first' })) { openPopover('inbox'); return; }
   const pending = orderInput.value.trim(); if (pending) { addOrder(pending); orderInput.value = ''; }
   const span = 'auto'; const until = nextTurnLength(app.state);
   busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}…`, { live: true });
@@ -492,18 +496,16 @@ async function advance() {
     const r = await jump({ span, orders: app.state.orders });
     // the hosts march across the map as the replay's days go by
     if (app.map) { app.map.reelHold = true; app.map.reelF = 0; }
-    prepareReveal(r.turn); app.setState(r.state); setDrawer('feed');
+    prepareReveal(r.turn); app.setState(r.state);
     // the hours pass; then the news is told in order, day by day, before the report
     sfx('bell');
     const newRavens = r.state.ravens.filter((x) => !x.read).length > unreadBefore;
     busy(false);
     playTurn(r.turn, { onDone: () => {
       if (app.map) { app.map.reelHold = false; app.map.reelF = 1; }
-      // a day's turn ends on your choices, if any wait on you; a longer one with the full report
-      // the chronicle has told the turn; what waits on the lord's word comes before him
-      // an ending trumps everything else waiting on the lord's word
+      // the strip has told the turn; what waits on the lord's word is on the Inbox seal, which settles as it fills (attention is pulled, not pushed: GDD 17 §1.5)
+      // an ending trumps everything: it is told at once
       if (app.state.outcome && app.state.outcome.turn === app.state.meta.turn) maybeShowOutcome();
-      else if ((app.state.decisions || []).some((d) => d.status === 'pending' && d.turn === app.state.meta.turn)) showChoices();
       if (newRavens) sfx('raven');
     } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
@@ -537,13 +539,6 @@ async function jump(body) {
     });
   } finally { stop.remove(); }
 }
-// Matters that came before you this turn, and nothing else
-function showChoices() {
-  const fresh = (app.state.decisions || []).filter((d) => d.status === 'pending' && d.turn === app.state.meta.turn);
-  if (!fresh.length) return;
-  modal(`<h2>${fresh.length > 1 ? 'Matters await your word' : 'A matter awaits your word'}</h2>${decisionsHtml(fresh)}<div class="report-actions"><button class="btn ghost" data-action="close-modal">Decide later</button></div>`);
-  wireDecisions($('#modal-box'), { onAllDone: () => closeModal() });
-}
 async function showChronicle() {
   if (!app.saveId) return;
   const r = await api(`/games/${app.saveId}/chronicle`);
@@ -571,8 +566,8 @@ async function showWorldLog() {
 const HELP_KEYS = [
   ['Ctrl / ⌘ + Enter', 'End the turn — time runs on until the next thing that matters'],
   ['Enter', 'Add what you have written as an order'],
-  ['R', 'Realm'], ['C', 'Council'], ['M', 'Military'], ['E', 'Economy'],
-  ['D', 'Diplomacy'], ['I', 'Intrigue'], ['P', 'People'], ['H', 'Chronicle'],
+  ['R', 'The Realm: your holdings, wars, wealth and the houses'], ['P', 'People: your kin, council and shadows'], ['H', 'The chronicle, in full'],
+  ['M · E · D · C · I', 'Straight to the wars, the wealth, the houses, the council or the shadows'],
   ['?', 'This page'],
   ['Esc', 'Close whatever is open; cancel a march you are aiming'],
 ];
@@ -697,7 +692,7 @@ async function showSettings() {
   $('#cfg-models').onclick = async () => { await api('/config', { body: collect() }); try { const r = await api('/models'); $('#model-list').innerHTML = r.models.map((m) => `<option value="${esc(m)}">`).join(''); $('#cfg-result').textContent = 'Models: ' + r.models.join(', '); } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } };
 }
 
-startIconizer();
+startIconizer(); hydrateIcons(); drawMenu();
 document.addEventListener('pointerdown', () => startMusic(), { once: true });
 wireVoices($('#drawer-body'));
 $$('[data-mi]').forEach((b) => b.insertAdjacentHTML('afterbegin', icon(b.dataset.mi)));

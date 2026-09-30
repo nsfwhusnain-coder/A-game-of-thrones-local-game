@@ -8,6 +8,7 @@
   <link href="/fonts/fonts.css" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/hud.css">
   <script type="importmap">
     { "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }
   </script>
@@ -33,15 +34,15 @@
           <div class="house-filters" id="house-filters"></div>
           <div id="house-grid" class="house-grid" role="listbox" aria-label="Playable houses"></div>
         </div>
-        <div class="panel" id="house-detail"><div class="empty-detail"><div class="big-sigil">🛡</div><p>Select a house to see its lands, its people and its prospects.</p></div></div>
+        <div class="panel" id="house-detail"><div class="empty-detail"><div class="big-sigil"><i data-i="shield"></i></div><p>Select a house to see its lands, its people and its prospects.</p></div></div>
         <div class="panel" id="saves-panel">
           <h2>Continue</h2>
           <div id="save-list" class="save-list"></div>
           <div class="llm-box">
             <h3>The Maester-Simulator</h3>
             <div class="llm-status" id="llm-status-title"></div>
-            <button class="btn" data-action="settings">⚙ Settings &amp; model endpoint</button>
-            <button class="btn ghost" data-action="help">? How the game is played</button>
+            <button class="btn" data-action="settings"><i data-i="chain"></i> Settings &amp; model endpoint</button>
+            <button class="btn ghost" data-action="help"><i data-i="book"></i> How the game is played</button>
           </div>
         </div>
       </div>
@@ -53,82 +54,89 @@
     <div id="map-wrap"></div>
     <div id="map-loading" class="map-loading hidden"><img id="map-loading-banner" class="loading-banner" alt=""><div class="loading-title">Westeros Chronicles</div><div class="loading-words" id="map-loading-words"></div><div class="bar"><div id="map-loading-bar"></div></div><div id="map-loading-text" class="loading-text">Unrolling the map…</div><blockquote id="map-loading-quote" class="loading-quote"></blockquote></div>
 
-    <!-- top bar: resources + date + time controls -->
-    <header id="hud-top" role="banner" aria-label="Realm at a glance">
-      <div class="res-row" id="res-row"></div>
-      <div class="hud-top-right">
-        <div class="date-box" id="date-box"></div>
-        <div class="time-controls">
-<div class="turn-until" id="turn-until" title="A turn runs until the next thing that matters — at most a moon"></div>
-          <button class="btn primary advance-btn" data-action="advance" title="End the turn: time runs on until the next thing that matters (Ctrl+Enter)">End turn ▶</button>
+    <!-- the top bar: the house and the day, three vitals; the Inbox, End turn and the menu (GDD 17 §2.1) -->
+    <header id="hud-top" role="banner" aria-label="Your house at a glance">
+      <div class="hud-left">
+        <div class="wc-oak wc-crest wc-crest--bar" id="crest"></div>
+        <div class="wc-oak wc-vitals wc-vitals--bar" id="vitals" role="group" aria-label="Coin, men and food"></div>
+      </div>
+      <div class="hud-right">
+        <button class="wc-seal wc-seal--small" id="inbox-btn" data-action="inbox" aria-haspopup="true" aria-expanded="false" aria-controls="inbox" aria-label="Letters and matters: none wait"><i data-i="raven"></i><b id="inbox-count"></b></button>
+        <div class="wc-oak wc-endturn wc-endturn--bar">
+          <button class="wc-plate advance-btn" data-action="advance" title="End the turn: time runs on until the next thing that matters (Ctrl+Enter)"><span>End turn</span><i data-i="play"></i></button>
+          <div class="wc-endturn__why" id="turn-until" title="A turn runs until the next thing that matters, at most a moon"></div>
         </div>
-        <div class="sys-btns">
-          <button class="icon-btn" data-action="ravens" title="Letters">🐦<span id="raven-badge" class="badge hidden"></span></button>
-          <button class="icon-btn" data-action="music" title="Music on/off" id="music-btn">🎵</button>
-          <button class="icon-btn" data-action="undo" title="Undo last turn">↶</button>
-          <button class="icon-btn" data-action="help" title="How to play (?)" aria-label="How to play" aria-keyshortcuts="?">?</button>
-          <button class="icon-btn" data-action="settings" title="Settings &amp; model endpoint" aria-label="Settings">⚙</button>
-          <button class="icon-btn" data-action="menu" title="Main menu">☰</button>
-        </div>
+        <button class="wc-btn wc-btn--icon" id="menu-btn" data-action="menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-pop" aria-label="Menu" title="Menu"><i data-i="menu"></i></button>
       </div>
     </header>
 
-    <!-- player identity + main action ring (CK3-style) -->
-    <div id="hud-player">
-      <div class="player-banner" id="player-banner" data-action="open-realm"></div>
-      <div class="player-card">
-        <button class="player-portrait" id="player-portrait" data-action="open-ruler"></button>
-        <div class="player-name" id="player-name"></div>
+    <!-- the menu: three doors, and the quiet things (opened by the menu button) -->
+    <nav id="menu-pop" class="wc-oak wc-menu hidden" aria-label="Menu">
+      <div class="wc-menu__head wc-label">The menu</div>
+      <div id="menu-doors"></div>
+      <div class="wc-menu__quiet">
+        <button data-action="settings" title="Settings and the model endpoint" aria-label="Settings"><i data-i="chain"></i></button>
+        <button data-action="help" title="How to play (?)" aria-label="How to play" aria-keyshortcuts="?"><i data-i="book"></i></button>
+        <button data-action="music" id="music-btn" title="Music on or off" aria-label="Music"><i data-i="music"></i></button>
+        <button data-action="undo" title="Turn back the glass" aria-label="Undo the last turn"><i data-i="undo"></i></button>
+        <button data-action="title" title="Leave this game for the title screen" aria-label="Main menu"><i data-i="castle"></i></button>
       </div>
-      <nav class="action-ring" id="action-ring" aria-label="Main menus">
-        <button data-win="realm" title="Realm (R)"><span>🏰</span><em>Realm</em></button>
-        <button data-win="council" title="Council (C)"><span>🕯</span><em>Council</em></button>
-        <button data-win="military" title="Military (M)"><span>⚔</span><em>Military</em></button>
-        <button data-win="economy" title="Economy (E)"><span>🪙</span><em>Economy</em></button>
-        <button data-win="diplomacy" title="Diplomacy (D)" aria-keyshortcuts="d"><span>🕊</span><em>Diplomacy</em></button>
-        <button data-win="intrigue" title="Intrigue (I)"><span>🗡</span><em>Intrigue</em></button>
-        <button data-win="people" title="People (P)"><span>👥</span><em>People</em></button>
-        <button data-win="chronicle" title="Chronicle (H)"><span>📜</span><em>Chronicle</em></button>
-      </nav>
+    </nav>
+
+    <!-- the Inbox: what awaits your word (letters, matters, audiences): one seal, one list -->
+    <aside id="inbox" class="wc-oak wc-inbox hidden" role="dialog" aria-label="What awaits your word">
+      <div class="wc-menu__head wc-label" id="inbox-head">Awaiting your word</div>
+      <div id="inbox-list" class="wc-inbox__list"></div>
+    </aside>
+
+    <!-- the ruler: the medallion and the name plate; a click opens the character sheet -->
+    <div id="hud-player">
+      <div class="wc-oak wc-nameplate" id="player-name"></div>
+      <div class="wc-medallion"><button class="wc-medallion__face player-portrait" id="player-portrait" data-action="open-ruler"></button><i class="wc-medallion__jewel"></i></div>
     </div>
 
-    <!-- right sliding window: realm, council, military… -->
-    <aside id="window" class="window hidden" role="region" aria-labelledby="win-title" aria-hidden="true"><div class="win-head"><h2 id="win-title"></h2><button class="win-close" data-action="close-window" aria-label="Close">✕</button></div><div class="win-body" id="win-body"></div></aside>
+    <!-- right sliding window: the realm, people, the chronicle's long book -->
+    <aside id="window" class="window hidden" role="region" aria-labelledby="win-title" aria-hidden="true"><div class="win-head"><h2 id="win-title"></h2><button class="win-close" data-action="close-window" aria-label="Close"><i data-i="close"></i></button></div><div class="win-body" id="win-body"></div></aside>
 
     <!-- floating detail sheet (character / holding / army) -->
-    <aside id="sheet" class="sheet hidden" role="region" aria-label="Detail" aria-hidden="true"><button class="win-close" data-action="close-sheet" aria-label="Close">✕</button><div id="sheet-body"></div></aside>
+    <aside id="sheet" class="sheet hidden" role="region" aria-label="Detail" aria-hidden="true"><button class="win-close" data-action="close-sheet" aria-label="Close"><i data-i="close"></i></button><div id="sheet-body"></div></aside>
 
-    <!-- the chronicle (left): events, letters, audiences — and your orders beneath -->
-    <aside id="drawer" class="drawer" role="complementary" aria-label="Chronicle, letters and audiences">
-      <nav class="drawer-tabs" id="drawer-tabs" role="tablist" aria-label="Chronicle sections">
-        <button data-tab="feed" class="active" role="tab" aria-selected="true">Chronicle</button>
-        <button data-tab="letters" role="tab" aria-selected="false">Letters <span id="letters-count"></span></button>
-        <button data-tab="audience" role="tab" aria-selected="false">Audience</button>
-        <button class="collapse" data-action="toggle-drawer" title="Hide">⟨</button>
-      </nav>
-      <div class="drawer-body" id="drawer-body" role="tabpanel" aria-live="polite"></div>
-      <!-- your orders: written here, read by your steward, carried out when the day ends -->
-    <footer id="command" class="composer">
-      <div class="orders" id="orders"></div>
-      <div class="cmd-row">
-        <textarea id="order-input" rows="2" aria-label="Write an order to your house" placeholder="Command your house… (Enter to add, Ctrl+Enter to end the day)"></textarea>
-        <button class="btn ghost" data-action="suggest" title="Counsel: ask your advisors for ideas">✨</button>
-        <button class="btn" data-action="add-order" title="Add the order (Enter)">＋</button>
+    <!-- the chronicle, opened: the news in full, and the audiences and letters (H, or the strip's "All"); closed, the strip is its one-line form -->
+    <aside id="drawer" class="wc-oak wc-chronicle drawer hidden" role="complementary" aria-label="Chronicle">
+      <div class="wc-chronicle__head"><h2 id="drawer-title">Chronicle</h2><span class="wc-label" id="drawer-sub"></span><button class="win-close" data-action="close-drawer" aria-label="Close the chronicle"><i data-i="close"></i></button></div>
+      <div class="drawer-body" id="drawer-body" role="region" aria-live="polite"></div>
+    </aside>
+
+    <!-- the headline strip: the last three things worth a line -->
+    <aside id="strip" class="wc-oak wc-strip" aria-label="The latest news">
+      <div class="wc-strip__head"><span class="wc-label" id="strip-head">Chronicle</span><button class="wc-strip__all" data-action="chronicle" title="The whole chronicle (H)">All</button></div>
+      <ul class="wc-strip__lines" id="strip-lines"></ul>
+    </aside>
+
+    <!-- the command bar: your orders, in your own words: its own bar, so it survives a closed chronicle -->
+    <footer id="command-bar" class="wc-leather wc-cmd" role="group" aria-label="Your orders">
+      <div class="wc-cmd__orders orders" id="orders"></div>
+      <div class="wc-cmd__row">
+        <label class="wc-input"><i data-i="inkpot"></i><textarea id="order-input" rows="1" aria-label="Write an order to your house" placeholder="Command your house…" title="Enter adds the order; Ctrl+Enter ends the turn"></textarea></label>
+        <button class="wc-btn wc-btn--icon" data-action="suggest" aria-label="Counsel: ask your advisors for ideas" title="Counsel: ask your advisors for ideas"><i data-i="sparkle"></i></button>
+        <button class="wc-btn wc-btn--icon" data-action="add-order" aria-label="Add the order" title="Add the order (Enter)"><i data-i="plus"></i></button>
       </div>
     </footer>
-    </aside>
-    <button id="drawer-open" class="drawer-open hidden" data-action="toggle-drawer">Chronicle ⟩</button>
 
-    <div id="mapmodes" class="mapmodes" role="group" aria-label="Map modes">
-      <button data-mode="political" class="active" data-mi="crown" title="Realms map">Realms</button>
-      <button data-mode="houses" data-mi="castle" title="Holders map">Holders</button>
-      <button data-mode="diplomacy" data-mi="dove" title="Diplomacy map">Diplomacy</button>
-      <button data-mode="knowledge" data-mi="eye" title="Knowledge map: how fresh your news is">Knowledge</button>
-      <button data-mode="war" data-mi="swords" title="War map: sieges, occupation, the land laid waste">War</button>
-      <button data-mode="economy" data-mi="coin" title="Wealth map">Wealth</button>
-      <button data-mode="prosperity" data-mi="wheat" title="Prosperity map">Prosperity</button>
-      <button data-mode="unrest" data-mi="fire" title="Unrest map">Unrest</button>
-      <button data-mode="terrain" data-mi="map" title="Terrain map">Terrain</button>
+    <!-- one map-mode chip: Realms, or the mode chosen; the others are in its list -->
+    <div id="mapmode" class="mapmode" role="group" aria-label="Map mode">
+      <button class="wc-chip mapmode-btn" id="mapmode-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="mapmode-list" title="Change what the map shows"><i data-i="map"></i><span id="mapmode-name">Realms</span></button>
+      <div id="mapmode-list" class="wc-oak wc-menu mapmode-list hidden" role="listbox" aria-label="Map modes">
+        <button data-mode="political" class="active" data-mi="crown" title="Realms map">Realms</button>
+        <button data-mode="houses" data-mi="castle" title="Holders map">Holders</button>
+        <button data-mode="diplomacy" data-mi="dove" title="Diplomacy map">Diplomacy</button>
+        <button data-mode="knowledge" data-mi="eye" title="Knowledge map: how fresh your news is">Knowledge</button>
+        <button data-mode="war" data-mi="swords" title="War map: sieges, occupation, the land laid waste">War</button>
+        <button data-mode="economy" data-mi="coin" title="Wealth map">Wealth</button>
+        <button data-mode="prosperity" data-mi="wheat" title="Prosperity map">Prosperity</button>
+        <button data-mode="unrest" data-mi="fire" title="Unrest map">Unrest</button>
+        <button data-mode="terrain" data-mi="map" title="Terrain map">Terrain</button>
+      </div>
     </div>
     <div id="map-legend" class="map-legend hidden" aria-live="polite"></div>
     <div id="pick-hint" class="pick-hint hidden"></div>
@@ -136,7 +144,7 @@
   </section>
 
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-box" id="modal-box"></div></div>
-  <div id="busy" class="busy hidden" role="status" aria-live="polite"><div class="busy-inner"><div class="raven">🐦‍⬛</div><div id="busy-text">The maesters confer…</div><div id="busy-time" class="muted"></div><div id="busy-feed" class="busy-feed"></div></div></div>
+  <div id="busy" class="busy hidden" role="status" aria-live="polite"><div class="busy-inner"><div class="raven"><i data-i="raven"></i></div><div id="busy-text">The maesters confer…</div><div id="busy-time" class="muted"></div><div id="busy-feed" class="busy-feed"></div></div></div>
   <div id="toasts" role="status" aria-live="polite"></div>
 
   <script type="module" src="js/app.js"></script>

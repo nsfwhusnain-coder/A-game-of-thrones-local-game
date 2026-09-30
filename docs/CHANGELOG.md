@@ -3,6 +3,34 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — U1 + U2 + U3: the quiet screen
+
+- **What you see now.** One thin bar at the top: your house and the day (the season is a small mark by the date; there is no "Turn N"), three
+  vitals — **Coin, Men, Food**, each with an arrow — the **Inbox** seal, **End turn** with what the turn is waiting for beside it ("next: 1 day —
+  Roose Bolton arrives at Winterfell"), and the menu. Hover a vital and it says how it is reckoned (the steward's range for Coin); click it and
+  the ledger where it is explained opens. The six tiles, the eight-button dock, the row of system icons and the three badge systems are gone.
+- **Three doors, not eight.** The menu is **Realm (R)**, **People (P)** and **Chronicle (H)**; settings, help, music, undo and the way back to the title screen are a quiet row
+  under them. The old letters still work — M the wars, E the treasury, D the houses, C the council, I the shadows — each opens where it always did.
+  Esc closes the little popovers first, then the card, the window and the chronicle, one at a time; Ctrl+Enter still ends the turn.
+- **One Inbox.** The wax seal counts what awaits your word — letters, matters, audiences — and opens a short list; a letter opens the letters, a matter
+  opens as a card, an audience opens the conversation. Nothing is pushed at you: after a turn the seal settles with its new number, and a matter no
+  longer throws a card over the map (End turn still asks once if matters wait, and "Hear them first" opens the Inbox).
+- **The headline strip.** The last three things worth a line, newest first, at the foot left, with "N new" until you read them; a click flies the map to where
+  it happened and tells it in full; **All** (or H) opens the whole chronicle over it. While a turn is told, the headlines join the strip one at a time as the
+  map goes to each place.
+- **Your orders** have their own bar at the foot, centre: the three newest orders on vellum slips, the rest behind "+N earlier", one steward's receipt in full
+  (the newest, or any order with a question for you) and the others in a line; the input, Counsel and Add beneath. The turn being written is a small card at the
+  map's corner, not a cover over it.
+- **One map-mode chip** (Realms ▾) opens the list of nine. The ruler's medallion and nameplate sit at the foot right, as before (click for the character sheet);
+  a regency or an unfit ruler is one small mark on the plate, with the whole line in its hover.
+- **Measured** (`node scripts/ui-gate.mjs --shots`, both sizes, turn 0 and turn 5): 12–15 controls (limit 20/16), the top bar 55 px at 1920 and 39 px at 1366 (56/48), the HUD
+  covers 10–13 % of the screen (15/20), no overlaps, no wrapped text in the bar, all eight old hotkeys open something, R opens the Realm in 3 ms warm, the portrait is on
+  screen, no page errors, Esc closes the menu before the window.
+- **Not yet:** the Realm and People windows, the character sheet and the chronicle's cards keep their old look until R4, U4 and N7; the welcome card and coach marks are U8.
+- **For the owner:** `node scripts/ui-gate.mjs --shots` (needs Playwright), then play a turn: the strip should fill one headline at a time, the seal should count, R/P/H and
+  M/E/D/C/I should open windows, Esc should peel one layer at a time.
+- Tests: `tests/hud.test.js` (34: the pure functions, the markup, the wiring), the gate above.
+
 ## 2026-09-30 — N5 + N6 + N9, and the game with the local model: every story one card, a digest, scenes by the model
 
 - **What you read now.** The week's news is told as *cards*: a headline that says what happened ("Eddard Stark raises the northern banners at

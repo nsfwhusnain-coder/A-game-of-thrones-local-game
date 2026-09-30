@@ -10,13 +10,21 @@ import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices, prep
 import { temperament, natureTags, VERDICT_LABEL, moodWord } from '../shared/temperament.js';
 import { together as sameSpot } from '../engine/parties.js';
 
+// The chronicle panel (GDD 17 §2.3): closed, the headline strip is its one-line form; opened (H, the strip's "All", an audience, the Inbox) it shows the
+// news in full, the letters, or the audience in hand. `setDrawer` chooses what it shows and refreshes it if it is open; `openDrawer` opens it.
+const DRAWER_TITLE = { feed: 'Chronicle', letters: 'Letters', audience: 'Audience' };
+export const drawerOpen = () => !$('#drawer').classList.contains('hidden');
 export function setDrawer(tab) { app.drawerTab = tab; renderDrawer(); }
+export function openDrawer(tab = app.drawerTab) {
+  app.drawerTab = tab; $('#drawer').classList.remove('hidden'); document.body.classList.add('has-drawer'); renderDrawer();
+  if (tab === 'feed') { app.markSeen?.(app.stripIds || []); app.renderStrip?.(); }
+}
+export function closeDrawer() { $('#drawer').classList.add('hidden'); document.body.classList.remove('has-drawer'); app.chatWith = null; app.council = null; app.drawerTab = 'feed'; }
 export function renderDrawer() {
-  if (!app.state) return;
-  $$('#drawer-tabs button[data-tab]').forEach((b) => { const on = b.dataset.tab === app.drawerTab; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
-  const unread = app.state.ravens.filter((r) => !r.read).length;
-  $('#letters-count').textContent = unread ? `(${unread})` : '';
+  if (!app.state || !drawerOpen()) return;
   const body = $('#drawer-body');
+  $('#drawer-title').textContent = app.drawerTab === 'audience' && app.council ? 'Council' : DRAWER_TITLE[app.drawerTab] || 'Chronicle';
+  $('#drawer-sub').textContent = app.drawerTab === 'feed' ? app.state.history.at(-1)?.date?.replace(/^\d+ /, '').replace(/, \d+ AC$/, '') || '' : '';
   if (app.drawerTab === 'audience') return renderAudience(body);
   if (app.drawerTab === 'letters') return renderLetters(body);
   renderFeed(body);
@@ -78,7 +86,7 @@ export function wireDecisions(root, { onAllDone, onDecided } = {}) {
 }
 const NEWS_ICON = { war: 'swords', diplomacy: 'letter', intrigue: 'dagger', economy: 'scales', court: 'crown', disaster: 'fire', religion: 'candle', magic: 'sparkle', rumor: 'speak' };
 // One event, told in full, in a window over the map
-function openNews(turn, idx) {
+export function openNews(turn, idx) {
   const s = app.state; const t = s.history.find((x) => x.turn === turn); const e = t?.events?.[idx]; if (!e) return;
   if (e.where && s.holdings[e.where]) { app.map?.flyTo(s.holdings[e.where].pos, 420); app.map?.flash(s.holdings[e.where].pos); }
   modal(`<div class="pin-head"><span class="pin-place">${esc(e.where ? placeName(s, e.where) : '')}</span><span class="pin-count">${esc(t.date)}</span></div>
@@ -138,18 +146,7 @@ function renderFeed(body) {
       ${t.meanwhile ? `<div class="news-meanwhile">${esc(t.meanwhile)}</div>` : ''}${bg ? `<div class="news-more" data-meanwhile="${t.turn}">+ ${bg} small happening${bg > 1 ? 's' : ''} across the realm</div>` : ''}</div>`; }).join('')
     : `<div class="summary"><b>${esc(s.meta.scenarioName)}</b></div>
       ${(() => { const b = briefFor(s.houses[s.meta.player], s); return `<div class="event imp-4"><div class="et">Your situation</div><div class="eb">${esc(b.situation)}</div><div class="eb" style="margin-top:0.4rem"><b>Aims:</b> ${b.goals.map(esc).join(' · ')}</div>${b.levers?.length ? `<div class="eb"><b>Levers:</b> ${b.levers.map(esc).join(' · ')}</div>` : ''}</div>`; })()}
-      <details class="event howto"${s.meta.turn === 0 ? ' open' : ''}><summary class="et">How to play</summary><div class="eb">
-      • <b>Command</b> your house in plain words in the bar at the bottom — anything a lord could do.<br>
-      • <b>Council</b> (🕯) — ask your steward, maester and master-at-arms for counsel and <i>numbers</i>. Their reports update your ledger.<br>
-      • <b>Military</b> (⚔) — call the banners; each lord answers (or doesn't) in his own time. March hosts by clicking the map.<br>
-      • <b>Economy</b> (🪙) — taxes, the ledger, and works to fund.<br>
-      • <b>Diplomacy</b> (🕊) — treat with any house; proposals open an audience.<br>
-      • Click any castle, army or person. Speak to anyone — distant lords get a raven. Each answers after their nature and mood: some bargain, some refuse, some throw you out.<br>
-      • <b>Pins</b> on the map mark news you have not read and matters awaiting your word — click one to read it or answer.<br>
-      • <b>Hold court</b> (Realm): feasts and tourneys. Send gifts, judge prisoners, declare war from a person's or house's sheet.<br>
-      • You see only what your house knows: hosts in grey are unconfirmed word — whose, and who leads them, you cannot be sure. Plant spies (Intrigue) to follow a house; march in secret or feint to fool them in turn.<br>
-      • <b>Advance ▶</b> — time passes; the world acts, the map changes.<br>
-      • Map: drag to pan, wheel to zoom, WASD to move, double-click to fly.</div></details>`);
+`);
   wireDecisions(body);
   // a place tag flies the map there; the card itself focuses its place too — the full account is already here
   const th = $('.threads', body); if (th) th.ontoggle = () => { app.threadsOpen = th.open; };
@@ -189,9 +186,8 @@ async function renderLetters(body) {
 }
 
 // ───────────── audiences ─────────────
-export function openChat(charId, prefill) { app.council = null; app.chatWith = charId; app.chatPrefill = prefill; showDrawer(); setDrawer('audience'); }
-export function openCouncil(ids) { app.chatWith = null; app.council = ids; showDrawer(); setDrawer('audience'); }
-function showDrawer() { $('#drawer').classList.remove('hidden'); $('#drawer-open').classList.add('hidden'); }
+export function openChat(charId, prefill) { app.council = null; app.chatWith = charId; app.chatPrefill = prefill; openDrawer('audience'); }
+export function openCouncil(ids) { app.chatWith = null; app.council = ids; openDrawer('audience'); }
 
 function renderAudience(body) {
   warmVoices(); // start the natural voices loading while you choose your words

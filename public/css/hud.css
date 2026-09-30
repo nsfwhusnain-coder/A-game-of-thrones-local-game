@@ -1,0 +1,196 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   The quiet screen (docs/gdd/17-ui-declutter.md, WP U1–U3), laid on the maester's desk (theme.css).
+   One thin bar at the top (the house and the day, three vitals, the Inbox seal, End turn, the menu); the headline strip
+   at the foot left; your orders in the middle of the foot; the ruler at the foot right; one map-mode chip. Everything else
+   is a page you turn to: the Realm and People windows on the right, the chronicle on the left, the menu and the Inbox as
+   little popovers. Loaded after theme.css and style.css; it places things and never repaints a material.
+   Sizes are in rem, so the screen scales exactly as the rest of the game does (a root size of min(1.1vw, 2vh): the game is
+   ~91 × 51 rem at every window size, and the bar is 2.6 rem, which is 55 px at 1920 and 39 px at 1366).
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+:root { --hud-gap: .6rem; --hud-bar: 2.6rem; --hud-min: max(.66rem, 13px); --panel-w: min(30rem, 36vw); }
+
+/* ───────────────────────────── the top bar ───────────────────────────── */
+#hud-top { position: absolute; top: var(--hud-gap); left: var(--hud-gap); right: var(--hud-gap); height: var(--hud-bar); z-index: 10; display: flex; justify-content: space-between; align-items: stretch; gap: 1rem; padding: 0; background: none; pointer-events: none; }
+#hud-top > * { pointer-events: none; }
+.hud-left, .hud-right { display: flex; align-items: stretch; gap: var(--hud-gap); min-width: 0; }
+.hud-left > *, .hud-right > * { pointer-events: auto; }
+.hud-right { align-items: center; }
+#hud-top button { font-family: inherit; }
+
+/* the crest: the house and the day; the ribbon hangs a little below the bar */
+.wc-crest--bar { height: var(--hud-bar); padding: 0 1rem 0 .5rem; gap: .65rem; }
+.wc-crest--bar .wc-ribbon { width: 2.1rem; margin: -.55rem 0 -.95rem; }
+.wc-crest--bar .wc-ribbon > img { top: .75rem; width: 1.55rem; }
+.wc-crest--bar .wc-ribbon::after { top: .5rem; width: 1.95rem; height: 2.05rem; border-width: .12rem; }
+.wc-crest--bar .wc-label { font-size: var(--hud-min); }
+.wc-crest--bar .wc-crest__date { margin-top: .12rem; font-size: max(.92rem, 14px); display: flex; align-items: center; gap: .4rem; }
+.wc-crest--bar .wc-crest__season { display: inline-flex; margin: 0; }
+.wc-crest--bar .wc-crest__season .ico { width: 1rem; height: 1rem; }
+
+/* the three vitals: what a lord glances at (Coin, Men, Food); a click opens the ledger where it is explained */
+.wc-vitals--bar { height: var(--hud-bar); padding: 0 .3rem; }
+.wc-vital { height: 100%; margin: 0; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; text-align: left; border-radius: var(--radius-btn); }
+.wc-vitals--bar .wc-vital { padding: 0 .85rem; gap: .5rem; }
+.wc-vitals--bar .wc-vital > .ico { width: 1.3rem; height: 1.3rem; }
+.wc-vitals--bar .wc-vital b { font-size: 1.12rem; white-space: nowrap; }
+.wc-vitals--bar .wc-vital b em { font-size: .72em; font-style: italic; font-weight: 500; color: var(--bone-dim); letter-spacing: 0; }
+.wc-vitals--bar .wc-vital small { margin-top: .16rem; font-size: var(--hud-min); }
+.wc-vital__txt { display: block; }
+.wc-vital:hover b { color: #fff4d6; }
+.wc-vital:hover > .ico { color: var(--gold-flat); }
+.wc-vital:focus-visible { outline: .14rem solid var(--ochre); outline-offset: -.14rem; }
+.wc-vital.is-warn b { color: var(--madder-lit); }
+.wc-vital.is-warn > .ico { color: var(--madder-lit); }
+
+/* the Inbox seal: wax when something awaits, an unstamped, quiet blot when nothing does */
+#inbox-btn { flex: none; }
+#inbox-btn .ico { width: 1.2rem; height: 1.2rem; color: var(--_on-wax); }
+#inbox-btn b { display: block; }
+#inbox-btn b:empty { display: none; }
+#inbox-btn:not(.is-empty) .ico { display: none; }
+#inbox-btn.is-empty { filter: saturate(.55) brightness(.8); }
+#inbox-btn.is-empty:hover, #inbox-btn[aria-expanded='true'] { filter: none; }
+
+/* End turn: the iron plate, and beside it what the turn is waiting for */
+.wc-endturn--bar { flex-direction: row; align-items: center; width: auto; height: var(--hud-bar); padding: 0 .8rem 0 .4rem; gap: .8rem; }
+.wc-endturn--bar .wc-plate { width: auto; min-height: 0; height: 2rem; padding: 0 1.55rem; font-size: max(.9rem, 14px); }
+.wc-endturn--bar .wc-plate .ico { width: 1rem; height: 1rem; }
+.wc-endturn--bar .wc-endturn__why { font-size: max(.8rem, 13px); text-align: left; white-space: nowrap; }
+.hud-right > #menu-btn { flex: none; height: var(--hud-bar); width: var(--hud-bar); }
+.hud-right > #menu-btn .ico { width: 1.3rem; height: 1.3rem; }
+
+/* ───────────────────────────── the little popovers ───────────────────────────── */
+#menu-pop, #inbox, #mapmode-list { z-index: 30; }
+#menu-pop { position: absolute; top: calc(var(--hud-gap) + var(--hud-bar) + .4rem); right: var(--hud-gap); width: 15.5rem; }
+#menu-pop .wc-menu__item { padding: .45rem .7rem; }
+.wc-menu__t { display: block; min-width: 0; }
+.wc-menu__t em { display: block; margin-top: .12rem; font-size: max(.85rem, 13px); font-style: italic; line-height: 1.1; color: var(--bone-dim); white-space: nowrap; }
+#menu-doors { display: block; }
+.wc-menu__quiet button { position: relative; }
+#music-btn.is-off { opacity: .55; }
+
+/* the Inbox: letters, matters and audiences awaiting the lord's word, one list */
+#inbox { position: absolute; top: calc(var(--hud-gap) + var(--hud-bar) + .4rem); right: 8rem; width: 22rem; padding: .6rem .5rem .55rem; }
+.wc-inbox__list { display: flex; flex-direction: column; }
+.wc-inbox__item { display: flex; align-items: center; gap: .7rem; width: 100%; padding: .5rem .7rem; margin: 0; text-align: left; cursor: pointer; background: none; border: 0; border-bottom: 1px solid rgba(0, 0, 0, .55); box-shadow: 0 1px 0 rgba(255, 226, 170, .07); color: var(--bone); font: inherit; }
+.wc-inbox__item:last-child { border-bottom: 0; box-shadow: none; }
+.wc-inbox__item .ico { width: 1.35rem; height: 1.35rem; color: var(--bronze-hi); flex: none; }
+.wc-inbox__t { display: block; min-width: 0; }
+.wc-inbox__t b { display: block; font: 600 1.05rem/1.15 var(--wc-serif); color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wc-inbox__t small { display: block; margin-top: .1rem; font-size: .92rem; font-style: italic; line-height: 1.2; color: var(--bone-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wc-inbox__item:hover { background: linear-gradient(90deg, rgba(214, 150, 60, .2), rgba(214, 150, 60, 0)); }
+.wc-inbox__item:hover .ico { color: var(--gold-flat); }
+.wc-inbox__more, .wc-inbox__none { padding: .45rem .8rem; font-style: italic; color: var(--bone-dim); }
+
+/* ───────────────────────────── one map-mode chip ───────────────────────────── */
+.mapmode { position: absolute; top: calc(var(--hud-gap) + var(--hud-bar) + .5rem); right: var(--hud-gap); z-index: 10; display: block; background: none; border: 0; border-radius: 0; overflow: visible; flex-direction: row; }
+.mapmode .wc-chip { padding: .3rem 1.1rem .3rem .7rem; font-size: max(.72rem, 13px); }
+.mapmode .wc-chip .ico { width: 1rem; height: 1rem; }
+.mapmode .wc-chip::after { content: ''; width: .35rem; height: .35rem; margin-left: .15rem; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: translateY(-.1rem) rotate(45deg); }
+#mapmode-list { position: absolute; top: calc(100% + .35rem); right: 0; width: 11rem; padding: .35rem .3rem; }
+#mapmode-list button { display: flex; align-items: center; gap: .55rem; width: 100%; padding: .32rem .6rem; margin: 0; text-align: left; cursor: pointer; background: none; border: 0; border-radius: var(--radius-btn); color: var(--bone); font: 500 1rem/1.1 var(--wc-serif); }
+#mapmode-list button .ico { width: 1.1rem; height: 1.1rem; color: var(--bronze-hi); flex: none; }
+#mapmode-list button:hover { color: #fff4d6; background: linear-gradient(90deg, rgba(214, 150, 60, .2), rgba(214, 150, 60, 0)); }
+#mapmode-list button.active { color: var(--gold-flat); box-shadow: inset .2rem 0 0 var(--bronze); }
+
+/* ───────────────────────────── the headline strip ───────────────────────────── */
+#strip { position: absolute; left: var(--hud-gap); bottom: var(--hud-gap); z-index: 10; width: 27rem; padding: .6rem .75rem .55rem 1rem; }
+.wc-strip__head { padding-right: .1rem; }
+.wc-strip__all { padding: 0; margin: 0; background: none; border: 0; cursor: pointer; color: var(--bone-dim); font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .1em; }
+.wc-strip__all:hover { color: var(--gold-flat); }
+.wc-strip__all::after { content: ' \25B8'; }
+.wc-strip__lines { margin-top: .4rem; }
+.wc-strip__lines li { display: block; padding: 0; }
+.wc-strip__line { display: flex; align-items: center; gap: .6rem; width: 100%; margin: 0; padding: .17rem .2rem; text-align: left; cursor: pointer; background: none; border: 0; border-radius: var(--radius-btn); color: var(--bone); font: 1rem/1.25 var(--wc-serif); }
+.wc-strip__line > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wc-strip__line .ico { flex: none; width: 1.1rem; height: 1.1rem; color: var(--gold-flat); }
+.wc-strip__line.is-old { color: var(--bone-dim); }
+.wc-strip__line.is-old .ico { color: var(--bone-dim); }
+.wc-strip__line:hover { color: #fff4d6; background: linear-gradient(90deg, rgba(214, 150, 60, .16), rgba(214, 150, 60, 0)); }
+.wc-strip__line:focus-visible { outline: .14rem solid var(--ochre); outline-offset: -.14rem; }
+.wc-strip__quiet { padding: .17rem .2rem; font-style: italic; color: var(--bone-dim); }
+body.has-drawer #strip { display: none; }
+
+/* ───────────────────────────── the chronicle, opened ───────────────────────────── */
+#drawer { position: absolute; left: var(--hud-gap); right: auto; top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 1rem); bottom: var(--hud-gap); width: 28rem; z-index: 12; }
+#drawer.hidden { display: none; }
+.wc-chronicle__head { align-items: center; padding-right: .2rem; }
+.wc-chronicle__head .win-close { margin-left: auto; padding: .1rem .3rem; color: var(--bone-dim); }
+.wc-chronicle__head .win-close .ico { width: 1.1rem; height: 1.1rem; }
+.wc-chronicle__head .win-close:hover { color: var(--gold-flat); }
+.wc-chronicle .drawer-body { padding: .2rem .3rem .2rem 0; }
+
+/* ───────────────────────────── your orders ───────────────────────────── */
+/* centred, and narrow enough to clear the strip on its left and an open window on its right */
+#command-bar { position: absolute; left: 50%; bottom: var(--hud-gap); transform: translateX(-50%); z-index: 11; width: 29.5rem; }
+#command-bar.wc-cmd { padding: .5rem .65rem .55rem; }
+.wc-cmd__orders { flex-direction: column; flex-wrap: nowrap; gap: .3rem; max-height: min(26vh, 14rem); overflow: auto; }
+.wc-cmd__orders:empty { display: none; }
+.wc-cmd .order { display: flex; gap: .55rem; align-items: flex-start; padding: .3rem .8rem .3rem .7rem; font-size: 1rem; line-height: 1.25; color: var(--ink-iron); background: url(../img/ui/vellum.jpg) 0 0 / 29rem, var(--vellum); border: 0; border-block: 1px solid rgba(60, 40, 20, .5); border-left: 1px solid rgba(60, 40, 20, .5); border-radius: 0; box-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
+.wc-cmd .order.auto { border-left-color: var(--verdigris-ink); }
+.wc-cmd .order .n { color: var(--rubric); font: 700 1rem/1.25 var(--wc-serif); }
+.wc-cmd .order .t { color: var(--ink-iron); }
+.wc-cmd .order > button { color: var(--ink-soft); padding: 0 .2rem; }
+.wc-cmd .order > button:hover { color: var(--rubric); }
+.wc-cmd .ost { color: var(--ink-soft); border-color: rgba(85, 64, 44, .45); font: 600 var(--wc-min)/1.1 var(--wc-display); letter-spacing: .08em; text-transform: none; }
+.wc-cmd .ost.done, .wc-cmd .ost.delivered, .wc-cmd .ost.answered { color: var(--verdigris-ink); border-color: rgba(55, 99, 74, .55); }
+.wc-cmd .ost.underway { color: var(--ink-soft); }
+.wc-cmd .ost.failed { color: var(--madder-ink); border-color: rgba(140, 47, 37, .5); }
+.wc-cmd .ost.delayed { color: var(--rubric); }
+.wc-cmd .receipt { font-size: .92rem; color: var(--ink-soft); margin-top: .1rem; }
+.wc-cmd .receipt .rl.good .mk { color: var(--verdigris-ink); }
+.wc-cmd .receipt .rl.warn { color: var(--rubric); }
+.wc-cmd .receipt .rl.bad, .wc-cmd .receipt .bad { color: var(--madder-ink); }
+.wc-cmd .receipt .rl.ask { color: var(--ink-iron); }
+.wc-cmd .receipt .rl.story { color: var(--ink-soft); }
+.wc-cmd .receipt.brief { opacity: .85; }
+.wc-cmd .receipt .rl:not(.ask) > span:last-child { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.wc-cmd .receipt .chip { border-color: var(--rubric); background: rgba(123, 30, 23, .07); color: var(--rubric); font-size: max(.8rem, 13px); }
+.wc-cmd .receipt .chip:hover { background: rgba(123, 30, 23, .16); color: var(--rubric); }
+.wc-order__more, .wc-cmd .errands-chip { align-self: flex-start; margin: 0; padding: .12rem .8rem .12rem .6rem; cursor: pointer; font: 600 var(--wc-min)/1.1 var(--wc-display); letter-spacing: .08em; color: var(--bone-dim); background: linear-gradient(180deg, rgba(255, 226, 170, .06), rgba(0, 0, 0, .16)), var(--oak-edge); border: 1px solid rgba(0, 0, 0, .55); border-radius: 0; box-shadow: inset 0 1px 0 rgba(255, 226, 170, .1); clip-path: polygon(0 0, 100% 0, calc(100% - .45rem) 50%, 100% 100%, 0 100%); }
+.wc-order__more:hover, .wc-cmd .errands-chip:hover { color: var(--gold-flat); }
+.wc-cmd .errands-chip b { color: var(--madder-lit); font-weight: 600; }
+.wc-cmd .errands-chip .ico { width: .9rem; height: .9rem; }
+.wc-input textarea { flex: 1; min-width: 0; align-self: center; padding: .55rem 0; resize: none; background: none; border: 0; outline: 0; color: var(--bone); font: inherit; line-height: 1.3; max-height: 9rem; caret-color: var(--gold-flat); }
+.wc-input textarea::placeholder { color: var(--bone-dim); opacity: 1; }
+.wc-cmd__row .wc-btn--icon { flex: none; height: auto; min-height: 2.45rem; }
+
+/* ───────────────────────────── the ruler ───────────────────────────── */
+#hud-player { position: absolute; left: auto; right: var(--hud-gap); bottom: var(--hud-gap); z-index: 12; display: flex; flex-direction: row; align-items: center; gap: .5rem; pointer-events: none; }
+#hud-player > * { pointer-events: auto; }
+#hud-player .wc-medallion { width: 5.6rem; height: 5.6rem; padding: .66rem; }
+#hud-player .wc-medallion::before { display: none; }
+#hud-player .wc-medallion__jewel { width: 1.05rem; height: 1.05rem; right: .2rem; bottom: .4rem; }
+#hud-player .wc-medallion__face { padding: 0; cursor: pointer; border: 0; }
+#hud-player .wc-medallion__face:focus-visible { outline: .14rem solid var(--ochre); outline-offset: .3rem; }
+#hud-player .wc-medallion__face img { transform: scale(1.3); }
+#player-name { max-width: 17rem; padding: .45rem 1rem .45rem 1.15rem; order: -1; }
+#player-name b { font-size: max(.95rem, 14px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#player-name small { font-size: max(.85rem, 13px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#player-name .regency-note { display: inline-flex; margin-left: .35rem; color: var(--ochre); vertical-align: middle; }
+#player-name .regency-note.warn { color: var(--madder-lit); }
+#player-name .regency-note .ico { width: 1rem; height: 1rem; }
+
+/* ───────────────────────────── the windows and the sheet: they open on the right, above the ruler ───────────────────────────── */
+.window { left: auto; right: var(--hud-gap); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 1.6rem); bottom: 7.6rem; width: var(--panel-w); z-index: 14; }
+.sheet, .sheet.solo { left: auto; right: calc(var(--panel-w) + var(--hud-gap) * 2); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 1.6rem); bottom: auto; width: min(26rem, 30vw); max-height: calc(100% - 15rem); z-index: 15; }
+.sheet.solo { right: var(--hud-gap); }
+body:has(#window:not(.hidden)) .mapmode, body:has(#sheet.solo:not(.hidden)) .mapmode { right: calc(var(--panel-w) + var(--hud-gap) * 2); }
+body:has(#window:not(.hidden)) .mapmode { z-index: 9; }
+.map-legend { right: var(--hud-gap); bottom: 7.6rem; }
+body:has(#window:not(.hidden)) .map-legend { right: calc(var(--panel-w) + var(--hud-gap) * 2); }
+
+/* ───────────────────────────── the day being written: a card at the map's corner ───────────────────────────── */
+.busy.live { top: calc(var(--hud-gap) + var(--hud-bar) + 1.4rem); left: var(--hud-gap); width: min(26rem, 90vw); color: var(--bone); border: 1px solid #070403; border-radius: var(--radius-card);
+  background: linear-gradient(135deg, rgba(255, 214, 150, .09), rgba(255, 214, 150, 0) 42%, rgba(0, 0, 0, .26)), url(../img/ui/oak.jpg) 0 0 / 32rem 16rem, var(--oak);
+  box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .16), inset -1px -1px 0 rgba(0, 0, 0, .55), 0 .1rem .3rem rgba(8, 5, 2, .6), 0 .7rem 1.3rem -.6rem rgba(8, 5, 2, .7); }
+.busy.live .busy-inner { color: var(--bone); font-family: var(--wc-display); letter-spacing: .06em; }
+.busy.live #busy-time { color: var(--bone-dim); }
+.busy.live .busy-feed { max-height: 40vh; }
+
+/* ───────────────────────────── a narrow window: the bar keeps what matters ───────────────────────────── */
+@media (max-width: 1100px) {
+  .wc-endturn--bar .wc-endturn__why { display: none; }
+  #command-bar { width: 24rem; }
+}
+@media (prefers-reduced-motion: reduce) { .window, .sheet { animation: none; } }

@@ -126,3 +126,8 @@ export function startIconizer(root = document.body) {
   new MutationObserver((muts) => { for (const m of muts) { if (m.type === 'characterData') iconizeNode(m.target); else for (const n of m.addedNodes) iconizeNode(n); } })
     .observe(root, { childList: true, subtree: true, characterData: true });
 }
+
+/** Fill the icon slots of the static markup (`<i data-i="crown"></i>`): index.html holds no emoji, only the name of the game's own icon. */
+export function hydrateIcons(root = document) {
+  for (const el of root.querySelectorAll('[data-i]')) { if (!el.firstChild) el.innerHTML = icon(el.dataset.i); el.classList.add('ico-slot'); }
+}
