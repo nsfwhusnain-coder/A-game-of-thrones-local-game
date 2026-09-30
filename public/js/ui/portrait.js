@@ -34,7 +34,41 @@ function houseColours(house) {
   return { main, trim, metal };
 }
 
-export function lookFor(c, house) {
+// ── the same person, at every age, in every mood, and of their family (docs/gdd/12-ui-ux.md §15.1; WP F7) ──
+/** The six ages of a face (GDD 12 §15.1 item 3): `small` 0–5, `child` 6–12, `youth` 13–17, `adult` 18–49, `elder` 50–69, `aged` 70+. */
+export const ageBand = (age) => { const a = Number(age ?? 30); return a < 6 ? 'small' : a < 13 ? 'child' : a < 18 ? 'youth' : a < 50 ? 'adult' : a < 70 ? 'elder' : 'aged'; };
+
+/** The thirteen "genes" of a face's proportions (spacing of the eyes, length of the nose, fullness of the lips, set of the jaw…), each in [−1, 1], from a person's own seed. */
+export const GENES = 13;
+export const genesOf = (id) => { const vr = rngFrom((hash(id) ^ 0x9e3779b9) >>> 0); return Array.from({ length: GENES }, () => (vr() - 0.5) * 2); };
+
+/** What a face shows of how they are toward you (the word of state.moods, ui/drawer.js temperHtml): a change to the brow and mouth, and the wide eyes of fear. */
+export const MOOD = { warm: [1, false], pleased: [1, false], composed: [0, false], uneasy: [0, true], afraid: [0, true], distrustful: [-1, false], irritated: [-1, false], angered: [-2, false], furious: [-2, false], will: [0, false] };
+export const moodOf = (word) => { const k = String(word || '').replace(/\s.*/, ''); const m = MOOD[k]; return m ? { expr: m[0], afraid: m[1] } : { expr: 0, afraid: false }; };
+
+/** The features a child may have from a parent: the nose, the ears, the freckles, the widow's peak, the pallor, the flat face. */
+export const HERITABLE = ['hawk_nose', 'big_ears', 'freckles', 'widows_peak', 'pale', 'flat_face'];
+const clamp1 = (v) => Math.max(-1, Math.min(1, v));
+/**
+ * What a child has of their parents (`parents`: their full looks, one or two): the hair colour of one (or a mix of both), the eyes of one, the skin between theirs, the heritable features
+ * (more often if both have them), and the thirteen genes of the face — each from one parent or between them, with a little of the child's own. Seeded by the child's id, so it is the same
+ * every time, for every viewer.
+ */
+export function geneticsOf(c, parents) {
+  const rg = rngFrom(hash(c.id + ':genes')); const a = parents[0], b = parents[parents.length - 1]; const from = () => parents[Math.floor(rg() * parents.length) % parents.length];
+  const hair = parents.length === 2 && rg() < 0.25 ? mix(a.hair0, b.hair0, 0.5) : from().hair0;
+  const eyes = from().eyes; const skin = mix(a.skin0, b.skin0, 0.5 + (rg() - 0.5) * 0.3);
+  const feat = HERITABLE.filter((f) => { const n = parents.filter((p) => p.feat.has(f)).length; return n && rg() < (n === 2 ? 0.85 : 0.5); });
+  const own = genesOf(c.id);
+  const genes = own.map((g, i) => { const x = a.genes[i], y = b.genes[i]; const v = rg() < 0.4 ? x : rg() < 0.5 ? y : (x + y) / 2; return clamp1(v * 0.78 + g * 0.22); });
+  return { hair, eyes, skin, feat, genes };
+}
+
+/**
+ * How a person looks. `opts`: `kin` — `{ parentsOf(c) → [father|null, mother|null], houseOf(c) → house }`, so a child resembles their parents (not those whose looks the books fix, LOOKS);
+ * `mood` — the word of their mood toward you; `marks` — the marks of the story (a scar, an eyepatch…). Pure: the same inputs give the same face.
+ */
+export function lookFor(c, house, opts = {}) {  const depth = opts.depth || 0;
   const r = rngFrom(hash(c.id + ':look'));
   const base = { ...(LOOKS[c.id] || {}), ...(c.look || {}) };
   const female = isFemale(c);
@@ -44,10 +78,15 @@ export function lookFor(c, house) {
   const title = c.title || '';
   const t = (c.traits || '').toLowerCase();
   const hl = { ...(HOUSE_LOOKS[c.house] || {}), ...(LOOK_OVERRIDES[c.id] || {}) };
+  const parents = opts.kin && depth < 2 ? (opts.kin.parentsOf(c) || []).filter(Boolean).map((p) => lookFor(p, opts.kin.houseOf?.(p) || null, { kin: opts.kin, depth: depth + 1 })) : [];
+  const gene = parents.length && !LOOKS[c.id] ? geneticsOf(c, parents) : null;
   const skins = REGION_SKIN[region] || REGION_SKIN.default;
-  const skin0 = hl.skin && !LOOKS[c.id] ? hl.skin : (c.house === 'dothraki' ? '#a8784e' : HOUSE_LOOKS[c.house]?.skin || pick(r, skins));
+  let skin0 = hl.skin && !LOOKS[c.id] ? hl.skin : (c.house === 'dothraki' ? '#a8784e' : HOUSE_LOOKS[c.house]?.skin || pick(r, skins));
   // hair
   let hair = col(base.hair, null) || (hl.hair && hl.hair !== 'bald' ? hl.hair : null) || pick(r, region === 'dorne' ? ['#15120f', '#2b1d14'] : region === 'north' ? ['#2b1d14', '#4a3222', '#15120f', '#6a3c20'] : ['#2b1d14', '#4a3222', '#6a3c20', '#8a6a3a', '#15120f', '#b8904a']);
+  if (gene && !base.hair) hair = gene.hair;
+  if (gene && !base.skin) skin0 = gene.skin;
+  const hair0 = hair;
   const explicitGrey = /white|grey|silver/.test(base.hair || '');
   if (!explicitGrey) { if (age >= 70) hair = mix(hair, '#e4e2de', 0.8); else if (age >= 48) hair = mix(hair, '#a8a49e', Math.min(0.6, (age - 44) / 45)); }
   // style
@@ -75,7 +114,8 @@ export function lookFor(c, house) {
     else beard = pick(r, ['short', 'none', 'full', 'stubble', 'short']);
     if (age > 55 && beard === 'great') beard = 'long';
   }
-  const eyes = col(base.eyes, null) || hl.eyes || pick(r, ['#4a3222', '#4a5a6a', '#3b6ea8', '#4a6a4a', '#6a5a2e']);
+  if (age < 17) beard = 'none'; // whatever the books say of his beard, a boy has none
+  const eyes = col(base.eyes, null) || gene?.eyes || hl.eyes || pick(r, ['#4a3222', '#4a5a6a', '#3b6ea8', '#4a6a4a', '#6a5a2e']);
   // build
   let build = base.build;
   if (!build) {
@@ -86,6 +126,7 @@ export function lookFor(c, house) {
     else build = female ? pick(r, ['slight', 'slight', 'average']) : pick(r, ['lean', 'average', 'average', 'broad', 'heavy']);
   }
   if (age < 13) build = 'child';
+  else if (age < 18 && !base.build) build = female ? pick(r, ['slight', 'slight', 'average']) : pick(r, ['slight', 'lean', 'lean', 'average']);
   if (age < 4) { build = 'infant'; style = age < 2 ? 'bald' : 'short'; } // a babe in arms: a round face, big eyes, a swaddling blanket, a little down of hair
   // garb
   const nw = c.house === 'nights_watch' || /night'?s watch|\bcrow\b|ranger|steward of the watch/i.test(title);
@@ -106,6 +147,9 @@ export function lookFor(c, house) {
   }
   // regalia and marks
   const feat = new Set(base.feat || []);
+  if (age < 30) feat.delete('lined'); // the lines of a face are the years': not a child's
+  for (const f of gene?.feat || []) feat.add(f);
+  for (const m of opts.marks || []) feat.add(m);
   // a reigning king or queen, not their guards, squires, justices or nicknames
   if (/^(king|queen)\b(?!'s)(?!-beyond)|^the (beggar |)king\b(?!'s)|^(king|queen) (of|in|on)\b/i.test(title) && !/queen of thorns/i.test(title)) feat.add(female ? 'tiara' : 'crown');
   if (/\bkhal\b/i.test(title) && !feat.has('bells')) feat.add('bells');
@@ -118,7 +162,10 @@ export function lookFor(c, house) {
   const skin = feat.has('pale') ? mix(skin0, '#f4ece6', 0.45) : feat.has('weathered') ? mix(skin0, '#b07858', 0.18) : feat.has('sallow') ? mix(skin0, '#c8b890', 0.3) : skin0;
   const hc = houseColours(base.dress ? HOUSE_BY_ID[base.dress] || house : house);
   const expr = /jovial|charming|merry|boisterous|kind|warm|witty|cheerful/.test(t) ? 1 : /stern|cold|grim|cruel|harsh|rigid|dour|ruthless|bitter|brooding|angry/.test(t) ? -1 : 0;
-  return { female, age, region, hair, style, beard, eyes, build, garb, feat, skin, expr, ...hc, seed: hash(c.id), bald: style === 'bald' || hair === 'bald' };
+  const mood = moodOf(opts.mood);
+  // a flush in a fury, a pallor in fear: what shows at the small size of a roundel, where a brow cannot
+  const tint = mood.expr <= -2 ? mix(skin, '#c4584a', 0.3) : mood.afraid ? mix(skin, '#eee8e0', 0.34) : skin;
+  return { female, age, band: ageBand(age), region, hair, hair0, skin0, style, beard, eyes, build, garb, feat, skin: tint, expr: Math.max(-2, Math.min(2, expr + mood.expr)), afraid: mood.afraid, mood: opts.mood || '', genes: gene?.genes || genesOf(c.id), ...hc, seed: hash(c.id), bald: style === 'bald' || hair === 'bald' };
 }
 
 // ── painting ──
@@ -138,7 +185,7 @@ function grainPattern(ctx) {
   return ctx.createPattern(grain, 'repeat');
 }
 
-const keyOf = (c, house, size) => `${c.id}|${c.alive}|${c.age}|${house?.id}|${house?.sigil?.f}|${c.title}|${c.status}|${size}|${c.look ? JSON.stringify(c.look) : ''}`;
+const keyOf = (c, house, size, opts = {}) => `${c.id}|${c.alive}|${c.age}|${house?.id}|${house?.sigil?.f}|${c.title}|${c.status}|${size}|${c.look ? JSON.stringify(c.look) : ''}|${opts.mood || ''}|${(opts.marks || []).join(',')}|${opts.kin ? (opts.kin.parentsOf(c) || []).map((p) => p?.id || '').join('+') : ''}`;
 
 // Lazy portraits for long lists: a silhouette now, the painting a moment later (painted in idle time,
 // a few at a time, so opening a window of 300 people never stalls the game).
@@ -146,14 +193,14 @@ const pending = new Map(); let pumping = false;
 // Hand-painted art wins: files in public/portraits/ named by character id replace the generated portrait
 let custom = {};
 export async function loadCustomPortraits() { try { custom = (await (await fetch('/api/portraits')).json()).portraits || {}; } catch { custom = {}; } }
-export function portraitLazy(c, house, size = 128) {
+export function portraitLazy(c, house, size = 128, opts = {}) {
   if (!c) return '';
   if (custom[c.id] && c.alive !== false) return custom[c.id];
-  const key = keyOf(c, house, size);
+  const key = keyOf(c, house, size, opts);
   if (cache.has(key)) return cache.get(key);
   const col = house?.sigil?.f && lum(house.sigil.f) < 0.8 ? house.sigil.f : house?.color || '#5a4a3a';
   const ph = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 154"><!--${key}--><defs><radialGradient id="g" cx="0.45" cy="0.35" r="0.8"><stop offset="0" stop-color="${mix(col, '#1a1612', 0.45)}"/><stop offset="1" stop-color="#0c0a08"/></radialGradient></defs><rect width="128" height="154" fill="url(#g)"/><ellipse cx="64" cy="60" rx="21" ry="28" fill="#000" opacity="0.35"/><path d="M8 156 C14 118 40 104 64 104 C88 104 114 118 120 156Z" fill="#000" opacity="0.35"/></svg>`)}`;
-  if (!pending.has(ph)) pending.set(ph, [c, house, size]);
+  if (!pending.has(ph)) pending.set(ph, [c, house, size, opts]);
   if (!pumping) { pumping = true; later(pump); }
   return ph;
 }
@@ -170,16 +217,16 @@ function pump() {
   if (pending.size) later(pump); else pumping = false;
 }
 
-export function portraitURL(c, house, size = 128) {
+export function portraitURL(c, house, size = 128, opts = {}) {
   if (!c) return '';
   if (custom[c.id] && c.alive !== false) return custom[c.id];
-  const key = keyOf(c, house, size);
+  const key = keyOf(c, house, size, opts);
   if (cache.has(key)) return cache.get(key);
   const k = Math.max(1, Math.min(3, (size * 2) / 128));
   const W = 128, H = 154;
   const cv = document.createElement('canvas'); cv.width = Math.round(W * k); cv.height = Math.round(H * k);
   const ctx = cv.getContext('2d'); ctx.scale(k, k);
-  try { paint(ctx, c, house, k); } catch (e) { console.warn('portrait', c.id, e); }
+  try { paint(ctx, c, house, k, opts); } catch (e) { console.warn('portrait', c.id, e); }
   if (c.alive && /imprisoned|captive|hostage/.test(c.status || '')) { // behind iron bars
     for (let x = 14; x < W; x += 20) { const g = ctx.createLinearGradient(x - 2.5, 0, x + 2.5, 0); g.addColorStop(0, '#1a1a1c'); g.addColorStop(0.4, '#6a6e72'); g.addColorStop(1, '#141416'); ctx.fillStyle = g; ctx.fillRect(x - 2.5, 0, 5, H); }
     ctx.fillStyle = '#2a2a2e'; ctx.fillRect(0, 20, W, 5); ctx.fillRect(0, H - 30, W, 5);
@@ -196,8 +243,8 @@ export function portraitURL(c, house, size = 128) {
   return url;
 }
 
-function paint(ctx, c, house) {
-  const L = lookFor(c, house);
+function paint(ctx, c, house, _k, opts = {}) {
+  const L = lookFor(c, house, opts);
   const r = rngFrom(L.seed);
   const W = 128, H = 154, cx = 64;
   const infant = L.build === 'infant';
@@ -217,10 +264,11 @@ function paint(ctx, c, house) {
   if (dwarf) { G.cw += 2; G.jw += 2.5; G.top -= 2; G.chinY -= 1; G.shoulder -= 12; G.neck -= 1; }
   if (L.feat.has('frog')) { G.jw += 3; G.chinY -= 3; G.mouthY -= 1; }
   // every face its own: spacing of the eyes, length of the nose, fullness of the lips, set of the jaw
-  const vr = rngFrom((L.seed ^ 0x9e3779b9) >>> 0); const j = (a) => (vr() - 0.5) * 2 * a;
+  let gi = 0; const j = (a) => L.genes[gi++] * a; // the face's proportions are its genes: a child's are their parents' (lookFor)
   G.eyeDx += j(0.9); G.eyeW += j(0.45); G.eyeY += j(1.1); G.noseY += j(1.3); G.mouthY += j(0.9);
   G.chinY += j(2); G.cw += j(1.1); G.jw += j(1.5); G.top += j(1.4);
   G.noseW = 1 + j(0.2); G.lipK = 1 + j(0.28); G.browY = j(0.9); G.tilt = j(0.035);
+  if (L.band === 'youth') { G.cw -= 1.1; G.jw -= 1.4; G.shoulder -= 4; G.neck -= 1; G.eyeW += 0.3; } // thirteen to seventeen: a narrower frame, larger eyes
 
   background(ctx, L, W, H, r);
   hairBack(ctx, L, G, r);
@@ -623,8 +671,8 @@ function greyscale(ctx, G, r) {
   ctx.restore();
 }
 function eyes(ctx, L, G, r) {
-  const { cx, eyeY } = G; const w = G.eyeW, h = L.female || L.build === 'child' ? 2.9 : 2.5;
-  const narrow = L.expr < 0 ? 0.85 : 1;
+  const { cx, eyeY } = G; const w = G.eyeW, h = (L.female || L.build === 'child' ? 2.9 : 2.5) * (L.afraid ? 1.25 : 1);
+  const narrow = L.expr <= -2 ? 0.76 : L.expr < 0 ? 0.85 : 1;
   for (const d of [-1, 1]) {
     const x = cx + d * G.eyeDx, y = eyeY;
     if (L.feat.has('eyepatch') && d < 0) continue;
@@ -660,11 +708,11 @@ function eyes(ctx, L, G, r) {
 function brows(ctx, L, G) {
   const { cx, eyeY } = G; const heavy = L.feat.has('dwarf') || L.build === 'huge' ? 1.35 : L.female ? 0.75 : 1;
   const tone = L.bald && !['bald'].includes(L.style) ? shade(L.hair, -0.1) : L.hair === 'bald' ? '#5a4a3a' : shade(L.hair, L.age > 60 ? 0.1 : -0.2);
-  const stern = L.expr < 0; const warm = L.expr > 0;
+  const stern = L.expr < 0; const warm = L.expr > 0; const fury = L.expr <= -2 ? 1.1 : 0; const worry = L.afraid ? -2.2 : 0;
   for (const d of [-1, 1]) {
     if (d > 0 && L.noBrowRight) continue;
     const x = cx + d * G.eyeDx; const y = eyeY - 6.2 + (G.browY || 0);
-    const inner = [cx + d * 3.6, y + (stern ? 1.6 : warm ? -0.4 : 0.6)], mid = [x + d * 0.5, y - (warm ? 2.4 : 2)], outer = [x + d * (G.eyeW + 2.4), y + (L.female ? 0.4 : 1.2)];
+    const inner = [cx + d * 3.6, y + (stern ? 1.6 + fury : warm ? -0.4 : 0.6) + worry], mid = [x + d * 0.5, y - (warm ? 2.4 : 2)], outer = [x + d * (G.eyeW + 2.4), y + (L.female ? 0.4 : 1.2)];
     ctx.fillStyle = rgba(tone, L.age > 70 ? 0.55 : 0.9);
     ctx.beginPath(); ctx.moveTo(inner[0], inner[1] - 0.9 * heavy); ctx.quadraticCurveTo(mid[0], mid[1] - 1.2 * heavy, outer[0], outer[1]);
     ctx.quadraticCurveTo(mid[0], mid[1] + 0.6 * heavy, inner[0], inner[1] + 0.9 * heavy); ctx.closePath(); ctx.fill();
@@ -688,7 +736,7 @@ function nose(ctx, L, G) {
 function mouth(ctx, L, G) {
   const { cx, mouthY } = G; const w = (L.female ? 5.4 : 6) * (L.feat.has('frog') ? 1.5 : 1) * (L.build === 'child' ? 0.85 : 1);
   const lip = L.feat.has('lipstick') ? '#8e2a2e' : mix(L.skin, '#a8423e', L.female ? 0.48 : 0.3);
-  const up = L.expr > 0 ? 1 : L.expr < 0 ? -0.8 : 0; const thin = (L.feat.has('pale') || L.feat.has('gaunt') ? 0.7 : 1) * (G.lipK || 1);
+  const up = L.expr >= 2 ? 1.5 : L.expr > 0 ? 1 : L.expr <= -2 ? -1.3 : L.expr < 0 ? -0.8 : 0; const thin = (L.feat.has('pale') || L.feat.has('gaunt') ? 0.7 : 1) * (G.lipK || 1);
   // philtrum
   soft(ctx, 0.8, () => { blob(ctx, cx, mouthY - 3.6, 1.4, 1.8, rgba(shade(L.skin, -0.3), 0.3)); });
   // upper lip with a cupid's bow

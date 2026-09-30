@@ -3,6 +3,13 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-01 — F7 (second part): faces over a life
+
+- **Children look like their parents**: the hair, the eyes, the skin, the family nose and ears and the very proportions of the face come from mother and father (the Stark children are auburn or dark, blue- or grey-eyed). People whom the books describe look as they did; people with no known parents are unchanged. The lord's other generated kin now have both parents, and stand under both in the Family tree.
+- **Ages**: a youth of thirteen to seventeen is slight, not built like a grown man, and a boy has no beard; the hair a person was born with is what their children inherit, however grey they grow.
+- **A scar** for some of those whose wounds healed (always the same ones); **an audience's portrait shows how they are toward you**: warm, wary, flushed with anger, pale with fear — each reply's small face too.
+- The developer page `/dev/portraits.html` shows families, eight imagined children of a couple, one person at every age, in every mood, with every mark. Tests: `tests/portrait-looks.test.js` (11). Phase F now has only F9 left.
+
 ## 2026-10-01 — F7 (first part): names are links
 
 - **Every name in the game's text is a link.** In the chronicle, the news and pin windows, letters, what people say in an audience, your orders' receipts and the matters' letters, a person's name is underlined with dots; hover it (or tab to it) for a slip with their face, house, title and where they are, click it (or press Enter) to open them. "House Stark" opens the house. A name that could be two people, or a bare first name, is left alone.
