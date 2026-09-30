@@ -383,7 +383,8 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   const oldFacts = new Map();
   const lookup = (fid) => {
     const m = /^f(\d+)\./.exec(fid); if (!m || Number(m[1]) === turn) return null;
-    if (!oldFacts.has(fid)) for (const x of readFacts(id, { from: Number(m[1]), to: Number(m[1]) })) oldFacts.set(x.id, x);
+    // one pass over the log from that turn on (the news that follows is mostly of the turns after it), not one for every fact
+    if (!oldFacts.has(fid)) for (const x of readFacts(id, { from: Number(m[1]), to: turn - 1, limit: 20000 })) oldFacts.set(x.id, x);
     return oldFacts.get(fid) || null;
   };
   let stopped = null, ran = 0;
