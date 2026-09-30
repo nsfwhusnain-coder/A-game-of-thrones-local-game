@@ -71,7 +71,7 @@ export default {
   },
   schema(ctx) {
     const one = ctx.advisor;
-    return obj({ speeches: arr(obj({ speaker: oneOf(ctx.people.map((c) => c.id)), text: str(one ? 2400 : 600) }), { min: 1, max: one ? 1 : Math.min(6, Math.max(2, ctx.people.length * 2)) }) });
+    return obj({ speeches: arr(obj({ speaker: oneOf(ctx.people.map((c) => c.id)), text: str(one ? 2400 : 600) }), { min: one ? 1 : Math.min(3, ctx.people.length), max: one ? 1 : Math.min(6, Math.max(2, ctx.people.length * 2)) }) }); // (a council in which two of three counsellors "said nothing" was what the tuned model gave when one speech was enough: each seated counsellor speaks, up to three)
   },
   prompt: (ctx) => [
     { role: 'system', content: system(ctx.state, ctx.advisor ? ADVISOR : INSTRUCTIONS) },

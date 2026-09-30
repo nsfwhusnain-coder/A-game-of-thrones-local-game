@@ -65,7 +65,8 @@ for (let t = 1; t <= turns; t++) {
   log(`- ${tr.dateFrom} → ${tr.date}${tr.until ? ` (until ${tr.until})` : ''} · ${((Date.now() - t0) / 1000).toFixed(0)}s · prompt ${u.prompt_tokens ?? '?'} (cached ${u.prompt_tokens_details?.cached_tokens ?? '?'}) · reply ${u.completion_tokens ?? '?'}${tr.salvaged ? ' · SALVAGED' : ''}`);
   if (step.orders) for (const c of tr.carried || []) log(`- carried out: ${c.order} → ${c.result.join('; ')}`);
   log(`- summary: ${tr.summary}`);
-  for (const e of tr.events.filter((e) => !e.bg)) log(`- [${e.importance}]${e.orderId ? ' ORDER' : ''} ${e.date || ''} **${e.title}** — ${e.text}${e.details ? ' ' + e.details : ''}${e.where ? ` (${e.where})` : ''}`);
+  if (tr.digest) log(`- digest (${tr.digest.words} words): ${tr.digest.text}`);
+  for (const e of tr.events.filter((e) => !e.bg)) log(`- [${e.tier || e.importance} ${e.told || ''}]${e.orderId ? ' ORDER' : ''} ${e.date || ''} **${e.headline || e.title}** — ${e.summary ?? e.text}${e.scene ? `\n  > ${e.scene}` : ''}${(Array.isArray(e.details) ? e.details : e.details ? [e.details] : []).length ? `\n  (${(Array.isArray(e.details) ? e.details : [e.details]).join(' ')})` : ''}${e.where ? ` [${e.where}]` : ''}`);
   if (s2threads(id)) log(`- threads: ${s2threads(id)}`);
   const bg = tr.events.filter((e) => e.bg); if (bg.length) log(`- meanwhile: ${bg.map((e) => e.title).join('; ')}`);
   if (tr.rejected?.length) log(`- rejected: ${tr.rejected.map((x) => `${x.change?.op} (${x.reason})`).join('; ')}`);

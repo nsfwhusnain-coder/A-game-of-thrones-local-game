@@ -67,8 +67,9 @@ export async function runCall(kind, state, args = {}, opts = {}) {
     try { r = await reply(provider, { kind, call, ctx, messages: msgs, schema, route, cfg, onProgress: opts.onProgress }); } catch (e) {
       record.attempts.push({ error: e.message }); return fall([`the model could not be reached: ${e.message}`]);
     }
-    opts.log?.(kind, msgs, r.text);
     const read = readReply(r.text, call, ctx, schema);
+    // what the log keeps of an attempt: the reply and, for the next fine-tune (docs/local-ai/RECOMMENDATIONS.md R3), what the game found wrong with it
+    opts.log?.(kind, msgs, r.text, { attempt, model: r.model, ms: r.ms, problems: read.problems, provider, route: route.model });
     record.attempts.push({ ms: r.ms, model: r.model, problems: read.problems, ...(r.fixture ? { fixture: r.fixture } : {}) });
     if (!read.problems.length) {
       const via = provider === 'mock' ? 'mock' : String(r.model || '').startsWith('replay:') ? 'replay' : r.model === 'mock' ? 'mock' : 'model';

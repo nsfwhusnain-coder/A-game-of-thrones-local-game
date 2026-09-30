@@ -1,7 +1,7 @@
 {
  "kind": "narrate",
  "note": "The Meanwhile line is held to the same words.",
- "reply": "{\"events\":[{\"story\":\"S3\",\"headline\":\"Jon Snow rides for the Wall\",\"summary\":\"Jon Snow left Winterfell for Castle Black with six men of the household.\",\"scene\":\"He did not look back at the gate. The six men with him talked of wenches in Mole's Town and of the cold, and Jon Snow let them talk.\",\"pov\":\"Jon Snow\"}],\"meanwhile\":\"Unrest rose in the wolfswood, where poachers were hanged.\"}",
+ "reply": "{\"events\":[{\"story\":\"S3\",\"headline\":\"Jon Snow rides for the Wall\",\"summary\":\"Jon Snow left Winterfell for Castle Black with six men of the household.\",\"scene\":\"He did not look back at the gate. The six men with him talked of wenches in Mole's Town and of the cold, and Jon Snow let them talk.\"}],\"meanwhile\":\"Unrest rose in the wolfswood, where poachers were hanged.\"}",
  "expect": "refuse",
  "problem": "game words"
 }

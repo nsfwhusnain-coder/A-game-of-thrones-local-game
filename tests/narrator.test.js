@@ -23,7 +23,7 @@ const { anachronismsIn } = await import('../public/data/anachronisms.js');
 const { CALLS } = await import('../server/ai/calls/index.js');
 const { runCall, readReply } = await import('../server/ai/client.js');
 const { narrateTurn } = await import('../server/narrator.js');
-const { writerEvent } = await import('../server/ai/calls/narrate.js');
+const { sceneProblems, tidyScene } = await import('../server/ai/calls/narrate.js');
 const { scoreCard } = await import('../server/ai/validate/headline.js');
 const { cardOf } = await import('../public/js/engine/facts/headline.js');
 const { clearReplayCache } = await import('../server/ai/providers/replay.js');
@@ -83,7 +83,7 @@ function fakeServer(script) {
   });
   return new Promise((resolve) => srv.listen(0, '127.0.0.1', () => resolve({ srv, seen, url: `http://127.0.0.1:${srv.address().port}/v1` })));
 }
-const cfgFor = (url) => ({ provider: 'openai', baseUrl: url, apiKey: '', model: '', temperature: 0.85, maxTokens: 6000, timeoutSec: 20, stream: false, thinking: 'off', extraBody: {} });
+const cfgFor = (url, narratorMode = 'cards') => ({ provider: 'openai', baseUrl: url, apiKey: '', model: '', temperature: 0.85, maxTokens: 6000, timeoutSec: 20, stream: false, thinking: 'off', extraBody: {}, narratorMode });
 const ADV = (name) => JSON.parse(JSON.parse(fs.readFileSync(new URL(`./fixtures/model/adversarial/narrate-${name}.json`, import.meta.url), 'utf8')).reply);
 const good = ADV('true-telling').events; // S1, S2, S3 of the fixture world, told well
 // The banners (S1, great) and Jon Snow's ride (S3, news) are what the model is asked; the feast in the Reach (S2, minor) the writer tells alone.
@@ -103,7 +103,7 @@ test('the model is asked for the top of the ranking, the writer tells the rest: 
     const ask = seen[0].messages.at(-1).content;
     assert.ok(/^S1 \[great/m.test(ask) && /^S3 \[/m.test(ask) && !/^S2 /m.test(ask), 'the sheets of the two stories asked, with their tiers; the feast is not in them');
     assert.match(ask, /DRAFT headline: Eddard Stark/); assert.match(ask, /DRAFT summary: /);
-    assert.deepEqual(seen[0].response_format.json_schema.schema.properties.events.items.required, ['story', 'headline', 'summary', 'scene', 'pov']);
+    assert.deepEqual(seen[0].response_format.json_schema.schema.properties.events.items.required, ['story', 'headline', 'summary', 'scene']);
     const told = r.cards.filter((c) => c.narrated);
     assert.equal(told.length, 3, 'every story is one card');
     assert.deepEqual(told.map((c) => c.told).sort(), ['model', 'model', 'writer']);
@@ -201,18 +201,79 @@ test('the role check: a slayer is never made the victim, in a headline the model
   const s = week(world());
   const f = emit(s, 'slain_in_battle', { actors: ['robb_stark'], houses: ['stark'], place: 'frey', on: 3, importance: 5, data: { by: 'tywin_lannister', how: 'battle' } });
   const { stories } = clusterFacts(s, [f]);
-  const call = CALLS.narrate; const ctx = call.context(s, { stories, small: [] }); const schema = call.schema(ctx);
-  const tell = (headline) => readReply(JSON.stringify({ events: [{ story: 'S1', headline, summary: 'Robb Stark fell at the Twins.', scene: '', pov: '' }], meanwhile: '' }), call, ctx, schema);
+  const call = CALLS.narrate; const ctx = call.context(s, { stories, small: [], mode: 'cards' }); const schema = call.schema(ctx);
+  const tell = (headline) => readReply(JSON.stringify({ events: [{ story: 'S1', headline, summary: 'Robb Stark fell at the Twins.', scene: '' }], meanwhile: '' }), call, ctx, schema);
   assert.deepEqual(tell('Robb Stark slain by Tywin Lannister at the Twins').problems, []);
   assert.ok(tell('Tywin Lannister slain by Robb Stark at the Twins').problems.some((p) => /roles/.test(p)));
+});
+
+// ── Mode "scenes" (the default): the writer's cards, the model's scenes for the stories that matter most ───────────────
+const SCENE = { S1: 'Eddard Stark broke the seal of the last raven and read it twice before he set it down. "Send to the Last Hearth," he told Luwin, and the old maester went out with his cane tapping the flags.', S3: 'Jon Snow tightened the girth himself, and did not look back at the gate as he rode out with six men behind him.' };
+test('scenes: the card is the writer\'s and only the scene is the model\'s, asked for the stories that matter most', async () => {
+  const { srv, seen, url } = await fakeServer([JSON.stringify({ events: [{ story: 'S1', scene: SCENE.S1 }, { story: 'S3', scene: SCENE.S3 }] })]);
+  try {
+    const { s, cards } = fixture();
+    const r = await narrateTurn(s, cards, { provider: 'openai', cfg: cfgFor(url, 'scenes') });
+    assert.equal(r.record.mode, 'scenes'); assert.deepEqual(r.record.asked, ['S1', 'S3']);
+    assert.deepEqual([r.record.stories, r.record.told, r.record.again, r.record.plain, r.record.written], [3, 2, 0, 0, 1]);
+    assert.equal(seen.length, 1);
+    assert.deepEqual(seen[0].response_format.json_schema.schema.properties.events.items.required, ['story', 'scene'], 'the model is asked for nothing else');
+    assert.equal(seen[0].response_format.json_schema.schema.required.length, 1, 'no Meanwhile either: that is the writer\'s');
+    const ask = seen[0].messages.at(-1).content;
+    assert.match(ask, /THE CARD: Eddard Stark/); assert.ok(!/DRAFT headline/.test(ask), 'the sheets show the cards as written, not as drafts');
+    const told = r.cards.filter((c) => c.narrated);
+    const w1 = told.find((c) => c.facts.length === 2);
+    assert.equal(w1.scene, SCENE.S1); assert.equal(w1.told, 'model'); assert.equal(w1.pov, 'Eddard Stark');
+    assert.equal(w1.headline, cardOf(s, storyOfCard(s, w1)).headline, 'the headline is the writer\'s');
+    assert.ok(told.every((c) => passes(s, c).pass), 'every card passes the scorer');
+    assert.equal(told.filter((c) => c.told === 'writer').length, 1, 'the feast is the writer\'s alone');
+    assert.ok(r.meanwhile && r.meanwhile !== 'Poachers were hanged in the wolfswood.', 'the Meanwhile is the writer\'s sentence');
+  } finally { srv.close(); }
+});
+
+test('scenes: a scene with an invented arrival is told again alone; told wrongly twice, the card stands with no scene at all', async () => {
+  const lie = { story: 'S3', scene: 'Jon Snow rode into Castle Black at dusk, and the black brothers came out to see him.' };
+  const { srv, seen, url } = await fakeServer([JSON.stringify({ events: [{ story: 'S1', scene: SCENE.S1 }, lie] }), JSON.stringify({ events: [lie] })]);
+  try {
+    const { s, cards } = fixture();
+    const r = await narrateTurn(s, cards, { provider: 'openai', cfg: cfgFor(url, 'scenes') });
+    assert.equal(seen.length, 2, 'told again once, not more');
+    assert.match(seen[1].messages.at(-1).content, /YOUR LAST TELLING OF S3 COULD NOT BE USED: arrival/);
+    assert.deepEqual([r.record.told, r.record.again, r.record.plain], [1, 1, 1]);
+    const jon = r.cards.find((c) => c.facts?.includes(s.facts.find((f) => f.kind === 'set_out').id));
+    assert.ok(!jon.scene && jon.told === 'writer' && jon.headline && jon.summary, 'the card without a scene is a whole card');
+    assert.ok(r.record.problems.arrival >= 1);
+  } finally { srv.close(); }
+});
+
+test('scenes: a note to the reader, a scene run on to nothing, or a foreign script is refused; whitespace is tidied', () => {
+  assert.deepEqual(sceneProblems('He rode out at dawn.'), []);
+  assert.ok(sceneProblems('He rode out.\n\n(Correction: the prompt says he stayed.)').some((p) => p.rule === 'meta'));
+  assert.ok(sceneProblems('He rode out as requested.').some((p) => p.rule === 'meta'));
+  assert.ok(sceneProblems(`He rode out.\n\n\n\n${'\n'.repeat(5)}`).some((p) => p.rule === 'meta'));
+  assert.equal(tidyScene('  A line.\n\n\n\nAnother.  \n  '), 'A line.\nAnother.');
+  const { s, args } = fixture(); const call = CALLS.narrate; const { stories } = { stories: args.stories };
+  const ctx = call.context(s, { stories, small: [], mode: 'scenes' }); const schema = call.schema(ctx);
+  const tell = (scene) => readReply(JSON.stringify({ events: [{ story: 'S3', scene }] }), call, ctx, schema);
+  assert.deepEqual(tell('Jon Snow tightened the girth himself and rode out.').problems, []);
+  assert.ok(tell('Jon Snow rode out with six men. (Note: the prompt gave no more.)').problems.some((p) => /meta/.test(p)));
+  assert.ok(tell('Jon Snow rode out with 伯 six men.').problems.some((p) => /script/.test(p)));
+});
+
+test('scenes is the default mode and cards an opt-in: config narratorMode', async () => {
+  const { modeOf } = await import('../server/ai/calls/narrate.js');
+  assert.equal(modeOf({}), 'scenes'); assert.equal(modeOf({ narratorMode: 'cards' }), 'cards'); assert.equal(modeOf({ narratorMode: 'nonsense' }), 'scenes'); assert.equal(modeOf(undefined), 'scenes');
+  const { s, cards } = fixture();
+  const r = await narrateTurn(s, cards, { provider: 'mock', cfg: {} });
+  assert.equal(r.record.mode, 'scenes'); assert.ok(r.cards.filter((c) => c.narrated).every((c) => c.told === 'writer' && !c.scene), 'the mock lends no witness: the cards are the writer\'s');
 });
 
 // ── story-matches-map (15 §2): Stark, six turns as in the audit — every telling names people where the facts put them,
 // and no one arrives anywhere without an arrival in its facts
 const MARK = 'The ravens were counted twice.';
 const INVENTED = 'at dusk, roaring for ale';
-// the first week, recorded as a model might tell it: every story true (the writer's words, and a line of colour), save one
-// whose teller has a lord ride into his journey's end a fortnight early (B-03)
+// the first week, recorded as a model might tell it (mode "scenes": a scene for each story asked): every scene true (the story's own
+// words, and a line of colour), save one whose teller has a lord ride into a place a fortnight before any fact of the story says he did (B-03)
 async function recordFirstWeek(orders) {
   process.env.WC_PROVIDER = 'mock';
   const { id } = game.newGame('agot_298', 'stark', { seed: 298 });
@@ -220,18 +281,17 @@ async function recordFirstWeek(orders) {
   const state = game.loadState(id); const byId = new Map(game.readFacts(id, { from: 1, to: 1 }).map((f) => [f.id, f]));
   const asked = new Set(t.narration.asked);
   const stories = t.narration.groups.map((g, k) => ({ id: `S${k + 1}`, facts: g.map((x) => byId.get(x)), pov: { name: '' } })).filter((st) => asked.has(st.id));
-  const setOut = (st) => st.facts.find((f) => f.kind === 'set_out' && state.holdings[f.data?.to]);
-  const liar = stories.findIndex((st) => setOut(st));
+  const actorOf = (st) => st.facts.flatMap((f) => f.actors || []).find((a) => state.characters[a]);
+  const placeOf = (st) => st.facts.map((f) => f.place).find((p) => state.holdings[p]);
+  const liar = stories.findIndex((st) => actorOf(st) && placeOf(st));
   const events = stories.map((st, k) => {
-    const e = writerEvent(state, st);
-    if (k !== liar) return { ...e, scene: `${e.summary} ${MARK}`.slice(0, 700) };
-    const f = setOut(st); const who = state.characters[f.actors[0]]?.name;
-    return { ...e, scene: `${who} rode into ${state.holdings[f.data.to].name} ${INVENTED}.` };
+    if (k !== liar) return { story: st.id, scene: `${cardOf(state, st).summary} ${MARK}`.slice(0, 700) };
+    return { story: st.id, scene: `${state.characters[actorOf(st)].name} rode into ${state.holdings[placeOf(st)].name} ${INVENTED}.` };
   });
-  fs.writeFileSync(path.join(process.env.WC_REPLAY_DIR, 'narrate', 'first-week.json'), JSON.stringify({ kind: 'narrate', fingerprint: t.narration.key, model: 'written by the test', reply: JSON.stringify({ events, meanwhile: '' }) }));
+  fs.writeFileSync(path.join(process.env.WC_REPLAY_DIR, 'narrate', 'first-week.json'), JSON.stringify({ kind: 'narrate', fingerprint: t.narration.key, model: 'written by the test', reply: JSON.stringify({ events }) }));
   clearReplayCache();
   delete process.env.WC_PROVIDER;
-  return liar >= 0;
+  return liar >= 0 && stories.length >= 1;
 }
 async function sixTurns(provider) {
   process.env.WC_PROVIDER = provider;
@@ -284,7 +344,7 @@ test('the narrate suite: sixty weeks of twelve games; the mock tells them throug
   const list = await bundles({ suites, only: ['stark', 'greyjoy'] });
   assert.equal(list.length, 15);
   const r = await runNarrateSuite(list, (state, cards) => narrateTurn(state, cards, { provider: 'mock' }));
-  assert.ok(r.stories >= 30, `${r.stories} stories`);
+  assert.ok(r.asked + r.written >= 30, `${r.asked} asked, ${r.written} written`);
   assert.equal(r.firstTry, r.stories, `the mock's telling is the writer's, and passes the validator every time: ${r.firstTry}/${r.stories} — ${r.faultLines.join('; ')}`);
   assert.match(narrateReport(r, { reader: 'mock' }), /true on the first telling/);
 });

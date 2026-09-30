@@ -9,6 +9,6 @@ export async function openaiReply({ kind, messages, schema, route, onProgress, c
     cache_prompt: true,
     ...(route.slot != null ? { id_slot: route.slot } : {}),
   };
-  const r = await chat(messages, { kind, json: true, thinking: 'off', noContinue: true, temperature: route.temperature, maxTokens: route.maxTokens, model: route.model || undefined, body, onProgress, ...(cfg ? { cfgOverride: cfg } : {}) });
+  const r = await chat(messages, { kind, json: true, thinking: 'off', noContinue: true, temperature: route.temperature, maxTokens: route.maxTokens, model: route.model || undefined, deadlineSec: route.deadlineSec, body, onProgress, ...(cfg ? { cfgOverride: cfg } : {}) });
   return { text: r.text, ms: r.ms, usage: r.usage, model: r.model, finish: r.finish };
 }

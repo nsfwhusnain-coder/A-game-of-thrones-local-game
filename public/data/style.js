@@ -9,7 +9,7 @@ export const VOICE = [
   'A line or two of speech, in character.',
   'Specific names and places, as the facts give them.',
   'Understatement and dry humour; courtesy as a weapon.',
-  'End on what it will cost, or who noticed — never on a moral.',
+  'End on a small concrete thing, or on who noticed — never on a moral, and never on a sum of what the deed will cost.',
 ];
 
 // the words that are never written (§8.2): game words, and the tired phrases of every bad fantasy novel
@@ -74,7 +74,7 @@ export const SUMMARY_MAX_CHARS = 340;
 // "King Robert rides for Winterfell" says who, what and where (20 §5.2); the ledger's line is "knights and riders under".
 export const BOILERPLATE = [
   '\\b(?:is|are) raised at\\b', '\\bsets? out from\\b', '\\banswers? the call with\\b', '\\bbegins? works at\\b',
-  '\\bcalls? up\\b[^.]*\\blevies\\b', '\\bhost of house\\b', '\\bhouse the\\b', '\\bbanners of (?!the\\b)',
+  '\\bcalls? up\\b[^.]*\\blevies\\b', '(?:^|[.!?]\\s+|\\n)host of house\\b', '\\bhouse the\\b', '\\bbanners of (?!the\\b|house\\b)',
   '\\bhouse [\\w\'’-]+ of (?:the )?[a-z]', '\\bknights and riders\\b', '\\bunder the [\\w\'’-]+ banner\\b', '\\braven received\\b',
 ];
 // The ledger's own words: a count as a suffix ("1,796 strong"), the roll-call ("the host now numbers"), and the engine's own

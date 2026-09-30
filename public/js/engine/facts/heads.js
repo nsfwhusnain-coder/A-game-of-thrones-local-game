@@ -971,7 +971,7 @@ export const SUM = {
     const reason = known || (why ? cap1(why) : '');
     return sentences(reason, why ? `${P.His} men stay at home` : `${P.His} men will stay at home`);
   },
-  muster_grew: (f, s, c) => { const d = f.data || {}; return d.total ? sentences(`The host now has ${body(d.total)}`) : ''; },
+  muster_grew: (f, s, c) => { const d = f.data || {}; return d.total ? sentences(d.total >= 6000 ? 'The host has grown into a great one' : `There are now ${body(d.total)} in the host`) : ''; },
   host_formed: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return d.men ? sentences(`${P.He} has ${body(d.men)} under ${P.him}`) : sentences(`Men gather under ${P.his} banner`); },
   host_joined: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`The host grows by ${body(d.men)}`) : ''; },
   host_split: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} are split off`) : ''; },
@@ -1104,7 +1104,7 @@ export const SUM = {
   scheme_discovered: (f) => sentences(f.data?.kind === 'spy' ? 'A spy has been at work there' : 'Someone has been plotting there'),
   feast: (f, s, c) => {
     const d = f.data || {}; const guests = (f.actors || []).slice(1).filter((id) => c.known.person(id)).slice(0, 3).map((id) => c.nm(id));
-    if (d.brawl) return sentences('Guests come to blows before the night is over');
+    if (d.brawl) { const [x, y] = (d.brawlers || []).filter((id) => c.known.person(id)); return sentences(x && y ? `${c.lordly(x)} and ${c.lordly(y)} come to blows${d.over ? ` over ${d.over}` : ''}` : 'Guests come to blows before the night is over'); }
     return guests.length ? sentences(`${list(guests)} sit at the table`) : sentences('It is a feast for the household, with no great guests');
   },
   tourney: (f) => { const d = f.data || {}; const n = say(d.guests); return sentences(n ? `${cap1(n)} houses are asked to send knights` : 'Knights are called to the lists'); },

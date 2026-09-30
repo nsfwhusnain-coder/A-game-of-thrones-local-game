@@ -96,6 +96,15 @@ export function numbersIn(text) {
   }
   return out;
 }
+/**
+ * Whether a number a telling states is the story's: one of its own (±2 %), or one of them rounded to one or two figures, as a
+ * teller does ("some three hundred" or "three hundred and fifty" for 349, "four thousand" for 3,800). Anything else is an invention.
+ */
+export function numberFits(numbers, n) {
+  if (numbers.some((x) => Math.abs(x - n) <= Math.max(1, x * 0.02))) return true;
+  const round = (x, k) => { const p = 10 ** Math.max(0, Math.floor(Math.log10(Math.abs(x))) + 1 - k); return Math.round(x / p) * p; };
+  return n >= 50 && numbers.some((x) => x >= 50 && (round(x, 1) === n || round(x, 2) === n));
+}
 /** Every number a story's facts hold: in their data, their texts and their titles. */
 export function numbersOf(facts) {
   const out = new Set();
@@ -171,7 +180,7 @@ export function checkEvent(state, ev, story, W = storyWorld(state, story)) {
   const at = story.place && state.holdings[story.place];
   for (const n of numbersIn(text)) {
     if (n <= 12 || (n >= 250 && n <= 320 && n <= (state.meta.date?.year || 298))) continue;
-    if (!W.numbers.some((x) => Math.abs(x - n) <= Math.max(1, x * 0.02))) say('numbers', `${n.toLocaleString('en-GB')} is not a number of this story`);
+    if (!numberFits(W.numbers, n)) say('numbers', `${n.toLocaleString('en-GB')} is not a number of this story`);
   }
   // the headline is a sentence of its own (it has no full stop to end it)
   for (const sentence of [ev.headline, ...sentencesOf(summary), ...sentencesOf(ev.scene)].filter(Boolean)) {

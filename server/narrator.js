@@ -12,6 +12,7 @@ import { clusterFacts } from '../public/js/engine/facts/cluster.js';
 import { cardOf, meanwhileOf } from '../public/js/engine/facts/headline.js';
 import { rankStories, byScore, TIERS } from '../public/js/engine/facts/rank.js';
 import { checkMeanwhile } from './ai/validate/headline.js';
+import { modeOf, tidyScene } from './ai/calls/narrate.js';
 
 /** Whether the narrator tells the turn (config `narrator`: "on" by default; "off" keeps the old Bard of the swarm). */
 export const narratorOn = (cfg) => !(cfg.narrator === 'off' || cfg.narrator === false);
@@ -19,6 +20,9 @@ export const narratorOn = (cfg) => !(cfg.narrator === 'off' || cfg.narrator === 
 /** How many stories the model is asked to tell: the top of the ranking (news and above); the writer tells the rest (18 §2.4 C6). */
 export const TELL_MAX = 6;
 const TELL_FROM = TIERS.indexOf('news');
+/** In mode "scenes": how many stories are given a scene, the ones that matter most (major and great only). */
+export const SCENE_MAX = 3;
+const SCENE_FROM = TIERS.indexOf('major');
 
 /**
  * Tell the turn. `cards`: the engine's cards (each bound to its fact, or to `facts` when folded). opts: { provider, cfg,
@@ -58,25 +62,26 @@ export async function narrateTurn(state, cards, { provider = 'mock', cfg, log, o
   const tally = (problems) => { record.faults = [...(record.faults || []), ...problems].slice(0, 12); for (const p of problems) { const rule = String(p).split(' — ')[0].split(': ')[1] || 'other'; record.problems[rule] = (record.problems[rule] || 0) + 1; } };
 
   // the model tells the top of the ranking; the writer tells the rest
-  const ask = byScore(ranks).filter((r) => TIERS.indexOf(r.tier) >= TELL_FROM).slice(0, TELL_MAX).map((r) => r.story).sort((a, b) => stories.indexOf(a) - stories.indexOf(b));
-  record.written = stories.length - ask.length; record.asked = ask.map((s) => s.id);
+  const mode = modeOf(cfg); record.mode = mode;
+  const ask = byScore(ranks).filter((r) => TIERS.indexOf(r.tier) >= (mode === 'scenes' ? SCENE_FROM : TELL_FROM)).slice(0, mode === 'scenes' ? SCENE_MAX : TELL_MAX).map((r) => r.story).sort((a, b) => stories.indexOf(a) - stories.indexOf(b));
+  record.written = stories.length - ask.length; record.asked = ask.map((s) => s.id); record.smallIds = smallFacts.map((f) => f.id);
   const told = new Map(); let via = 'writer'; let mw = ''; record.via = via;
   if (ask.length) {
     const rk = Object.fromEntries(ask.map((s) => [s.id, { tier: rankOf.get(s.id).tier, score: rankOf.get(s.id).score }]));
-    const first = await runCall('narrate', state, { stories: ask, small: smallFacts, ranks: rk }, { provider, cfg, log, onProgress });
+    const first = await runCall('narrate', state, { stories: ask, small: smallFacts, ranks: rk, mode }, { provider, cfg, log, onProgress });
     via = record.via = first.via;
     if (first.ctx) record.key = CALLS.narrate.fingerprint(first.ctx); // the recording a replay of this telling looks for
     tally(first.problems || []);
     if (first.via === 'fallback' || !first.value?.events) { record.plain = ask.length; via = 'fallback'; } else {
       for (const e of first.value.events) told.set(e.story, e);
-      if (first.value.meanwhile && !checkMeanwhile(state, first.value.meanwhile, smallFacts).length) mw = first.value.meanwhile;
+      if (mode === 'cards' && first.value.meanwhile && !checkMeanwhile(state, first.value.meanwhile, smallFacts).length) mw = first.value.meanwhile;
       // a story that failed (or was left out) is told again alone, with what was wrong — on a model; the mock is what it is
       for (const s of ask) {
         if (told.has(s.id)) continue;
         const reason = first.problems.filter((p) => p.startsWith(`${s.id}:`)).map((p) => p.slice(s.id.length + 2));
         if (first.via !== 'model') { record.plain++; continue; }
         record.again++;
-        const r = await runCall('narrate', state, { stories: ask, small: [], only: s.id, reason: reason.length ? reason : ['it was not told'], ranks: rk }, { provider, cfg, log, onProgress });
+        const r = await runCall('narrate', state, { stories: ask, small: [], only: s.id, reason: reason.length ? reason : ['it was not told'], ranks: rk, mode }, { provider, cfg, log, onProgress });
         if (r.via !== 'fallback' && r.value?.events?.length && !r.problems.length) told.set(s.id, r.value.events[0]); else { tally(r.problems); record.plain++; }
       }
     }
@@ -91,12 +96,14 @@ export async function narrateTurn(state, cards, { provider = 'mock', cfg, log, o
     const mine = [...new Set(s.facts.map((f) => cardOfFact.get(f.id)).filter(Boolean))];
     mine.forEach((c) => replaced.add(c));
     const order = s.facts.map((f) => f.cause?.type === 'order' && orderOf.get(f.cause.ref)).find(Boolean);
-    const headline = e?.headline || w.headline; const summary = e?.summary || w.summary;
+    // mode "scenes": the card is always the writer's, the scene the model's; mode "cards": the model's card when it passed
+    const headline = mode === 'cards' && e?.headline ? e.headline : w.headline; const summary = mode === 'cards' && e?.summary ? e.summary : w.summary;
+    const scene = tidyScene(e?.scene);
     out.push({
-      headline, summary, details: w.details, ...(e?.scene ? { scene: e.scene } : {}), ...(e?.pov ? { pov: e.pov } : {}),
+      headline, summary, details: w.details, ...(scene ? { scene, pov: s.pov?.name || '' } : {}),
       // the old names of the same words, for the surfaces not yet rewritten (title, text) and for saves that read them
       title: headline, text: summary,
-      told: e && byModel ? 'model' : 'writer', kind: w.kind, archetype: w.archetype, who: w.who, tier: r.tier, score: r.score,
+      told: e && byModel && (mode === 'cards' || scene) ? 'model' : 'writer', kind: w.kind, archetype: w.archetype, who: w.who, tier: r.tier, score: r.score,
       where: s.place, importance: s.importance, type: s.type, houses: s.houses, day: s.days[0], fact: s.facts[0].id, facts: s.facts.map((f) => f.id), narrated: true,
       // the record keeps the engine's own words, the battle report's (what decided it) among them
       record: mine.map((c) => [c.text, typeof c.details === 'string' ? c.details : ''].filter(Boolean).join(' ')).filter(Boolean),

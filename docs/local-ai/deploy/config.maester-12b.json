@@ -1,0 +1,25 @@
+{
+  "_comment": "A whole config.json for the game with Maester-12B behind the owner's llama-swap (docs/local-ai/OWNER-CHECKLIST.md). Copy it to config.json (git-ignored), or keep it anywhere and start the game with WC_CONFIG=<path>. baseUrl is the owner's llama-swap (8033); change the port if yours differs. ONE model process, two aliases: 'maester-12b' = Gemma 4 12B + the Westeros LoRA (interpret, mind, director, audience, council, consolidate); 'maester-12b:plain' = the same process with the adapter off, for narrate and the call kinds that were not tuned (letter, advisor, counsel, polish, probe). No slot is pinned (llama.cpp #28280). allowModelSwaps is only a guard: the two names are one llama-server, nothing is swapped. Then run: npm run model:check",
+  "provider": "openai",
+  "baseUrl": "http://127.0.0.1:8033/v1",
+  "model": "maester-12b",
+  "contextTokens": 65536,
+  "thinking": "off",
+  "stream": true,
+  "timeoutSec": 300,
+  "allowModelSwaps": true,
+  "narratorMode": "scenes",
+  "minds": 6,
+  "director": "light",
+  "logCalls": false,
+  "models": {
+    "default": { "model": "maester-12b", "slot": null },
+    "narrate": { "model": "maester-12b:plain", "slot": null },
+    "letter": { "model": "maester-12b:plain", "slot": null },
+    "advisor": { "model": "maester-12b:plain", "slot": null },
+    "counsel": { "model": "maester-12b:plain", "slot": null },
+    "polish": { "model": "maester-12b:plain", "slot": null },
+    "probe": { "model": "maester-12b:plain", "slot": null }
+  },
+  "deadlines": { "interpret": 90, "mind": 90, "director": 90, "narrate": 300, "audience": 180, "council": 240, "consolidate": 300 }
+}

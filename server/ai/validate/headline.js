@@ -27,7 +27,7 @@ import { roughly } from '../../../public/js/engine/facts/label.js';
 import { ROLES } from '../../../public/js/engine/facts/heads.js';
 import { hasForeignScript } from '../schema.js';
 import { BOILERPLATE, JARGON, HEADLINE_VERBS, HEADLINE_MAX_WORDS, HEADLINE_MAX_CHARS, SUMMARY_MAX_CHARS } from '../../../public/data/style.js';
-import { GAME_WORDS, MATURE, namesIn, numbersIn, storyWorld, tablesFor, words } from './narration.js';
+import { GAME_WORDS, MATURE, namesIn, numberFits, numbersIn, storyWorld, tablesFor, words } from './narration.js';
 
 /** The rule names, in the order a verdict lists them. */
 export const RULES = ['len', 'who', 'invented', 'verb', 'numbers', 'punct', 'boiler', 'roles', 'dup', 'outcome', 'script', 'anachronism', 'maturity'];
@@ -214,7 +214,7 @@ export function hasVerb(headline, ents = []) {
 
 const BP = [...BOILERPLATE, ...JARGON].map((p) => new RegExp(p, 'i'));
 
-const numberOk = (V, n) => n <= 12 || V.W.numbers.some((x) => Math.abs(x - n) <= Math.max(1, x * 0.02)) || V.rough.has(n);
+const numberOk = (V, n) => n <= 12 || numberFits(V.W.numbers, n) || V.rough.has(n);
 
 // the facts of a story that say a deed of a kind was done, for outcome verbs
 const violent = (f) => /\b(kill|slain|slay|slew|murder|assassin|duel|stab|poison|blade|sword|arrow|cut down|hanged|behead)/i.test(`${f.data?.cause || ''} ${f.data?.how || ''} ${f.text || ''}`);

@@ -35,11 +35,11 @@ export async function bundles({ suites = loadNarrateSuite(), only = null } = {})
         await game.settled(id);
         if (!g.tell.includes(n)) continue;
         const state = game.loadState(id);
-        state.facts = game.readFacts(id, { from: t.turn, to: t.turn });
+        state.facts = game.readFacts(id, { from: 1, to: t.turn }); // (news of an earlier week reaching the house now is told from its own turn's facts)
         state.meta.clock = { turn: t.turn, from: dayNumber(parseDate(t.dateFrom)) + 1, to: dayNumber(parseDate(t.date)) };
         state.orders = t.orders || [];
         const n0 = t.narration || { groups: [], small: [] };
-        const cards = [...n0.groups.map((facts) => ({ facts, text: '' })), ...(n0.small || []).map((text) => ({ bg: true, text }))];
+        const cards = [...n0.groups.map((facts) => ({ facts, text: '' })), ...(n0.smallIds?.length ? n0.smallIds.map((f) => ({ bg: true, facts: [f], text: '' })) : (n0.small || []).map((text) => ({ bg: true, text })))];
         out.push({ id: `${g.id}-w${n}`, game: g.id, house: g.house, turn: t.turn, state, cards });
       }
     }
@@ -54,7 +54,7 @@ const parseDate = (s) => { const m = String(s).match(/(\d+)\D+?(\d+)\D+?moon, (\
  * Returns { weeks, stories, firstTry, mended, plain, faults: { rule: n }, samples, ms, byGame }.
  */
 export async function runNarrateSuite(list, narrate, { judge = null } = {}) {
-  const out = { weeks: 0, stories: 0, firstTry: 0, mended: 0, plain: 0, faults: {}, faultLines: [], samples: [], ms: 0, byGame: {}, judged: [], empty: 0 };
+  const out = { weeks: 0, stories: 0, asked: 0, written: 0, firstTry: 0, mended: 0, plain: 0, faults: {}, faultLines: [], samples: [], ms: 0, byGame: {}, judged: [], empty: 0 };
   for (const b of list) {
     const t0 = Date.now();
     const r = await narrate(b.state, b.cards);
@@ -62,12 +62,14 @@ export async function runNarrateSuite(list, narrate, { judge = null } = {}) {
     const rec = r.record; out.weeks++;
     if (!rec.stories) { out.empty++; continue; }
     // failed the first telling: all of them if the call fell back; on a model, those told again; else those left plain
-    const failedFirst = rec.via === 'fallback' ? rec.stories : rec.via === 'model' ? rec.again : rec.plain;
-    const first = rec.stories - failedFirst;
-    out.stories += rec.stories; out.firstTry += first; out.mended += Math.max(0, rec.told - first); out.plain += rec.plain;
+    // (the stories the writer told without asking the model are not the model's to pass or fail)
+    const asked = rec.asked ? rec.asked.length : rec.stories;
+    const failedFirst = rec.via === 'fallback' ? asked : rec.via === 'model' ? rec.again : rec.plain;
+    const first = asked - failedFirst;
+    out.stories += asked; out.asked += asked; out.written += rec.written || 0; out.firstTry += first; out.mended += Math.max(0, rec.told - first); out.plain += rec.plain;
     for (const [k, v] of Object.entries(rec.problems || {})) out.faults[k] = (out.faults[k] || 0) + v;
     for (const f of rec.faults || []) if (out.faultLines.length < 20) out.faultLines.push(`${b.id} ${f}`);
-    const g = out.byGame[b.game] = out.byGame[b.game] || [0, 0]; g[0] += first; g[1] += rec.stories;
+    const g = out.byGame[b.game] = out.byGame[b.game] || [0, 0]; g[0] += first; g[1] += asked;
     const told = r.cards.filter((c) => c.narrated);
     if (told.length && out.samples.length < 8) out.samples.push({ week: b.id, ...pick(told) });
     if (judge) for (const c of told.slice(0, 2)) { const j = await judge(b.state, c); if (j) out.judged.push({ week: b.id, headline: c.title, ...j }); }
@@ -84,7 +86,7 @@ export function narrateReport(r, { reader }) {
   const lines = [
     `# Narrate suite — ${reader}`, '',
     `| | |`, `|---|---|`,
-    `| weeks told | ${r.weeks} (${r.stories} stories${r.empty ? `; ${r.empty} weeks had nothing to tell` : ''}) |`,
+    `| weeks told | ${r.weeks} (${r.stories} stories asked of the model${r.written ? `, ${r.written} more told by the writer alone` : ''}${r.empty ? `; ${r.empty} weeks had nothing to tell` : ''}) |`,
     `| **true on the first telling** | **${pct(r.firstTry, r.stories)}** (gate ≥ 90 %) ${firstRate >= 0.9 ? '✓' : '✗'} |`,
     `| mended by telling a story again | ${r.mended} |`,
     `| left in the engine's plain words | ${r.plain} (${pct(r.plain, r.stories)}) |`,

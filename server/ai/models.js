@@ -9,31 +9,37 @@
 //     "mind":     { "model": "gemma4-26b-a4b", "slot": 1, "temperature": 0.6 }, …
 //   }
 
-// the temperatures of 04 §2.7, and each call's token budget (§2.5): in = prompt, out = reply
+// the temperatures of 04 §2.7, and each call's token budget (§2.5): in = prompt, out = reply; `deadline` is the seconds a call may take in all
+// (retry included) before the game goes on without the model: about ten times what the tuned local model takes (docs/local-ai/RESULTS.md)
 export const CALL_DEFAULTS = {
-  probe:       { temperature: 0.2, budget: { in: 1200, out: 120 } }, // the shared primer is most of it
-  interpret:   { temperature: 0.2, budget: { in: 3000, out: 400 } },
-  mind:        { temperature: 0.6, budget: { in: 3000, out: 250 } },
-  director:    { temperature: 0.8, budget: { in: 4000, out: 300 } },
-  narrate:     { temperature: 0.85, budget: { in: 7000, out: 1600 } },
-  audience:    { temperature: 0.8, budget: { in: 6000, out: 700 } },
-  letter:      { temperature: 0.8, budget: { in: 3000, out: 400 } },
-  council:     { temperature: 0.8, budget: { in: 7000, out: 1200 } },
-  advisor:     { temperature: 0.7, budget: { in: 7000, out: 1200 } },
-  counsel:     { temperature: 0.8, budget: { in: 4000, out: 500 } },
-  polish:      { temperature: 0.4, budget: { in: 2500, out: 300 } },
-  consolidate: { temperature: 0.3, budget: { in: 8000, out: 1200 } },
+  probe:       { temperature: 0.2, budget: { in: 1200, out: 120 }, deadline: 30 }, // the shared primer is most of it
+  interpret:   { temperature: 0.2, budget: { in: 3000, out: 400 }, deadline: 90 },
+  mind:        { temperature: 0.6, budget: { in: 3000, out: 250 }, deadline: 90 },
+  director:    { temperature: 0.8, budget: { in: 4000, out: 300 }, deadline: 90 },
+  narrate:     { temperature: 0.85, budget: { in: 7000, out: 1600 }, deadline: 300 },
+  audience:    { temperature: 0.8, budget: { in: 6000, out: 700 }, deadline: 180 },
+  letter:      { temperature: 0.8, budget: { in: 3000, out: 400 }, deadline: 120 },
+  council:     { temperature: 0.8, budget: { in: 7000, out: 1200 }, deadline: 240 },
+  advisor:     { temperature: 0.7, budget: { in: 7000, out: 1200 }, deadline: 240 },
+  counsel:     { temperature: 0.8, budget: { in: 4000, out: 500 }, deadline: 120 },
+  polish:      { temperature: 0.4, budget: { in: 2500, out: 300 }, deadline: 60 },
+  consolidate: { temperature: 0.3, budget: { in: 8000, out: 1200 }, deadline: 300 },
 };
 
-/** The route for one call: { model, slot, temperature, maxTokens }. */
+/**
+ * The route for one call: { model, slot, temperature, maxTokens, deadlineSec }. A slot is pinned only when config.json says `"pinSlots": true`:
+ * two requests pinned to one llama.cpp slot livelock the server (llama.cpp #28280, measured on this game's own routing), and the game runs
+ * two minds at once. `deadlineSec` (config `deadlines: { mind: 60 }` or a route's own; 0 for none) is the whole call's limit.
+ */
 export function routeFor(cfg, kind) {
   const d = CALL_DEFAULTS[kind] || { temperature: cfg.temperature ?? 0.7, budget: { out: 600 } };
   const all = cfg.models || {}; const r = { ...(all.default || {}), ...(all[kind] || {}) };
   return {
     model: r.model || cfg.model || '',
-    slot: Number.isInteger(r.slot) ? r.slot : null,
+    slot: cfg.pinSlots === true && Number.isInteger(r.slot) ? r.slot : null,
     temperature: typeof r.temperature === 'number' ? r.temperature : d.temperature,
     maxTokens: Number(r.maxTokens) || d.budget.out,
+    deadlineSec: Number.isFinite(Number(r.deadlineSec)) ? Number(r.deadlineSec) : Number.isFinite(Number(cfg.deadlines?.[kind])) ? Number(cfg.deadlines[kind]) : d.deadline ?? 0,
   };
 }
 

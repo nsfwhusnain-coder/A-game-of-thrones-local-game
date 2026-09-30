@@ -145,3 +145,14 @@ test('the interpret call on the mock reads the suite as the rules do: the schema
   const r = await runSuite(async (s, text, house) => { const x = await runCall('interpret', s, { text, house }, { provider: 'mock' }); return readingOf(x.value, s, { house }); });
   assert.ok(r.exact / r.total >= 0.95, `exact ${r.exact}/${r.total}: ${r.misses.map((m) => m.id).join(', ')}`);
 });
+
+// R8 (docs/local-ai/RECOMMENDATIONS.md): a number in words and a company of rangers are men. The check refused "six rangers" for every
+// model tried (the retry then dropped the men), and the order was read wrong; an order that names no men still may not send any.
+test('a man sent with "six rangers" has his men; sent with none named, he has none to take', async () => {
+  const { CALLS } = await import('../server/ai/calls/index.js');
+  const s = world(); const call = CALLS.interpret;
+  const v = { actions: [{ verb: 'send_person', who: 'benjen_stark', subject: 'none', at: 'none', to: 'nights_watch', person: 'none', houses: [], men: 6, gold: 0, choice: 'none', note: '' }], clarify: { needed: false, question: '', options: [] } };
+  assert.deepEqual(call.check(v, call.context(s, { text: 'Send Benjen Stark beyond the Wall with six rangers.' })), []);
+  assert.deepEqual(call.check(v, call.context(s, { text: 'Send Waymar Royce to Craster\'s Keep with three rangers.' })).filter((p) => /no men/.test(p)), []);
+  assert.ok(call.check(v, call.context(s, { text: 'Send Benjen Stark beyond the Wall.' })).some((p) => /asks for no men/.test(p)));
+});
