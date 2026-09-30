@@ -63,7 +63,7 @@ export const HEADS = {
   a_young_lord_hunt: [['The young lord of {P} rides out to hounds', 'The young lord of {P} loves a miller\'s daughter'], 'His steward is distraught.'],
   a_quiet_week: [['A quiet week passes at {P}', 'Peace settles on {P}'], 'The steward keeps looking over his shoulder.'],
   a_bread_riot: [['A scuffle breaks out at the bakery of {P}', 'Bread is thrown in the square at {P}'], 'The baker was given a bruise and a warning.'],
-  a_tavern_song: [['A singer plays a song of war at {P}', 'A ballad is sung in a tavern at {P}'], 'The soldiers asked him to sing it again.'],
+  a_tavern_song: [['A singer plays a song of war at {P}', 'A ballad is sung in a tavern at {P}'], 'The soldiers asked for it again.'],
   a_rats_granary: [['Rats eat the barley at {P}', 'A plague of rats grips {P}'], 'The steward has sent for cats.'],
   a_ferry_sinks: [['A ferry sinks near {P}', 'A market-day ferry goes down near {P}'], 'The sheep swam, and most of the people did.'],
   a_new_septon: [['A new septon comes to {P}', 'The sept at {P} gets a young septon'], 'The smallfolk have a bet on how long it will last.'],
