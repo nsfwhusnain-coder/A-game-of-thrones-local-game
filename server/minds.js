@@ -39,7 +39,7 @@ export async function runMinds(state, { budget = 6, provider = 'mock', cfg, log,
   const decide = async (x) => {
     if (again.has(x.id)) { const r = again.get(x.id); return { x, via: r.via, verb: r.verb, params: r.params, ...(r.words ? { words: r.words } : {}) }; }
     if (!byModel) return { ...tree(state, x), via: 'mock' };
-    const r = await runCall('mind', state, { actor: x.id, known: known(x), memory: memory(x) }, { provider, cfg, log });
+    const r = await runCall('mind', state, { actor: x.id, known: known(x), memory: memory(x), realm: cfg?.mindRealmBrief === true }, { provider, cfg, log });
     const it = r.value && r.via !== 'fallback' ? intentOf(r.value, r.ctx) : null;
     if (!it) return { ...tree(state, x), via: 'fallback', problems: r.problems };
     const v = r.value;

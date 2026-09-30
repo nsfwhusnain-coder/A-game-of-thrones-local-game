@@ -12,6 +12,7 @@ import { forces } from '../../../public/js/engine/parties.js';
 import { VOICES } from '../../../public/data/voices.js';
 import { GAME_WORDS, numbersIn } from '../validate/narration.js';
 import { anachronismsIn } from '../../../public/data/anachronisms.js';
+import { realmBrief } from '../../../public/js/engine/realm/brief.js';
 
 const n = (x) => Math.round(Number(x) || 0).toLocaleString('en-GB');
 
@@ -62,6 +63,8 @@ export default {
       dossier: [
         `DATE: ${dateStr(state.meta.date)}. ${String(state.world?.season || 'summer').replace(/^./, (x) => x.toUpperCase())}.`,
         `THE LORD: ${lord?.name || 'the lord'} of House ${state.houses[p].name}.`,
+        // how the realm stands, as this house knows it: the ledger's own figures (engine/realm/brief.js), so a counsellor quotes the numbers the window shows and none the house cannot know
+        `THE STATE OF THE REALM, AS YOUR HOUSE KNOWS IT:\n${realmBrief(state, p).text}`,
         `THE COUNCIL:\n${people.map((c) => `- ${c.id}: ${c.name}${c.title ? `, ${c.title}` : ''}. ${VOICES[c.id]?.voice ? `Speaks: ${VOICES[c.id].voice}` : c.traits ? `Nature: ${c.traits}.` : ''}\n  Knows ${officeKnows(state, c).join('; ') || 'the household'}.`).join('\n')}`,
         // the house's opening (data/briefs.js): what the council has heard in the first moons — news, never what is to come
         (state.meta.date.year * 12 + state.meta.date.month) <= 298 * 12 + 12 ? `WHAT THE COUNCIL HAS HEARD: ${(briefFor(state.houses[p], state).hints || []).join('. ')}.` : null,

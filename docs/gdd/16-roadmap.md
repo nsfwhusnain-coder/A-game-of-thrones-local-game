@@ -126,7 +126,7 @@ F7, F8, F9 remain and follow U. Then E6–E8, G, H.
 
 **N7 ✅ N8 ✅** (2026-09-30, Slice 7, branch `wp/n7-n8-chronicle-cards`: the chronicle as cards with tiers, Details and filters, the maester's report, the strip's playback controls, the jump feed and the toast; pins by tier with the writer's battle headline — D-080). N10 (the bench suite, soak invariants, owner check, docs) closes Phase N.
 
-**R4 ✅ R6 ✅** (2026-09-30, Slice 8, branch `wp/r4-r6-state-of-the-realm`: the State of the Realm window, rising/falling words and flags, the movement of wars, what the realm is saying and where to focus — D-082). R5 (the minds and the council read the same numbers) and R7 (tooling and soak) remain.
+**R4 ✅ R5 ✅ R6 ✅** (2026-09-30, Slice 8, branch `wp/r4-r6-state-of-the-realm`: the State of the Realm window, rising/falling words and flags, the movement of wars, what the realm is saying and where to focus, the minds and the council reading the same numbers — D-082, D-083). R7 (tooling and soak) remains.
 `DECISIONS.md#D-059`); each package keeps its own acceptance in [18](18-headlines.md) §5.
 **Status:** R1 ✅ R2 ✅ R3 ✅ (Slice 2) — the figures, what a house learns of the others, and `GET /api/games/:id/realm`
 (`public/js/engine/realm/`, `tests/realm-stats.test.js`, `tests/realm-view.test.js`, `tests/realm-http.test.js`;

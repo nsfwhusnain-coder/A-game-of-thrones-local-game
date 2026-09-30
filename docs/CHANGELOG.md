@@ -3,7 +3,7 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
-## 2026-09-30 — R4 + R6: the State of the Realm
+## 2026-09-30 — R4 + R5 + R6: the State of the Realm, and the realm's lords reading it
 
 - **The Realm door (R) is now a ledger of the houses**, in a wide window on the right, closed until you ask. Tabs: **Strength** (Power, Swords, Ships, Lands, People), **Economy** (Coin, Income, Food), **Lands**, **Wars**; the
   house's own old page is the **Your house** tab, unchanged. Every figure says what it is: your own exact, **~** an estimate, **≈** a band, **≥** at least, **—** nothing known, a **?** for word older than two turns, and
@@ -15,7 +15,11 @@ for the player, and what the owner should verify.
 - **What the realm is saying** (hunger, an empty purse, a debt falling due, a siege, unrest, a foe host near you, the strongest house rising, a war turning, the season) and **Where to focus**: the three of these about your own
   house that have an answer you may lawfully give, each a button that only writes the order in the box for you to read and send.
 - Everything is built from what your house knows (the server's `GET /api/games/:id/realm`), so no hidden coffer, muster or score can show; a test changes all of them and checks the view does not move by a byte.
-- Tests: `tests/realm-wars.test.js` (10), `tests/realm-ui.test.js` (10: the marks, provenance, lines, sorting, the page drawn on hostile names, the wiring); the UI gate still passes at both sizes.
+- **The realm's lords and your council read the same numbers** (R5). Each AI lord's house now sees the realm with its own eyes, through the same ledger and in the same words as your window: a lord whose granaries
+  are nearly empty or who has lost holdings is woken sooner; a lord of a calm house sends a gift to the strongest house when it is rising and no friend of his; your council's dossier opens with "the state of the realm,
+  as your house knows it" (at most twelve lines), so a counsellor quotes the figures the window shows and is refused one it does not (an invented "87,000 men"). The tuned model's own prompt for a lord's mind is
+  left as it was taught; `"mindRealmBrief": true` in config adds the block to it for the next round of tuning.
+- Tests: `tests/realm-minds.test.js` (9), `tests/realm-wars.test.js` (10), `tests/realm-ui.test.js` (10: the marks, provenance, lines, sorting, the page drawn on hostile names, the wiring); the UI gate still passes at both sizes.
 
 ## 2026-09-30 — Q1: the quill, the microphone and the scribe
 

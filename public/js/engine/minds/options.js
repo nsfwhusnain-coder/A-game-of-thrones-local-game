@@ -11,6 +11,7 @@ import { MILES_PER_UNIT } from '../../../data/geography.js';
 import { dayNumber } from '../time.js';
 import { hostsKnownTo } from '../knowledge.js';
 import { canonLocked, canonAhead } from '../../shared/plots.js';
+import { realmSummary } from '../realm/brief.js';
 
 // How long a house lets pass before doing the same thing again (days): a tourney is an event of the year, a feast of
 // the season; taxes are not changed every week, nor gifts sent, nor a son sent riding off each Monday.
@@ -64,7 +65,7 @@ export function worldView(state, actorId) {
   const rel = (b) => getRelation(state, hid, b);
   const others = Object.values(state.houses).filter((h) => h.id !== hid && state.characters[h.lord]?.alive && h.seat && state.holdings[h.seat]);
   const neighbours = others.filter((h) => miles(state.holdings[h.seat].pos, home) < 420);
-  return {
+  const w = {
     state, actor, house: hid, role, me, seat, home, holdings, vassals, hosts, fleets, wars, foes: [...foesOf], foeHosts, threatened, besieged, prisoners, kinHeld, captors,
     liege: me.liege && state.houses[me.liege] ? state.houses[me.liege] : null, realm: realmOf(state, hid),
     gold: gold(me), levies: Math.round(Number(me.figures?.levies?.v) || 0), menAtArms: Math.round(Number(me.figures?.menAtArms?.v) || 0),
@@ -76,6 +77,10 @@ export function worldView(state, actorId) {
     season: state.world?.season || 'summer',
     miles, near,
   };
+  // how the realm stands, as this house sees it (engine/realm/brief.js: the ledger asked with this house's own eyes, the same figures the player's window and the council's brief use);
+  // worked out only when a tree, a trigger or a dossier reads it, since most views never do
+  let ledger; Object.defineProperty(w, 'ledger', { enumerable: false, get: () => (ledger ||= realmSummary(state, hid)) });
+  return w;
 }
 
 // the places a host of this house might be sent: its own lands, its liege's muster, the enemy's holdings in reach,
@@ -129,7 +134,7 @@ const CANDIDATES = {
   set_dues: (w) => (w.liege ? ['paying', 'late', 'withholding'].filter((x) => x !== w.dues).map((x) => ({ params: { status: x }, choice: x })) : []),
   fund_works: (w) => (w.seat ? PROJECT_TEMPLATES.filter((t) => (t.cost || 0) <= w.gold * 0.6).slice(0, 6).map((t) => ({ params: { template: t.key, holding: w.seat }, choice: t.key, target: w.seat })) : []),
   hire_men: (w) => (w.seat && w.gold >= 4000 ? [{ params: { at: w.seat, men: 200, kind: 'men-at-arms' }, target: w.seat, men: true, choice: 'men-at-arms' }] : []),
-  send_gift: (w) => [...new Set([w.liege, ...w.friends.slice(0, 2), ...w.rivals.slice(0, 1)].filter(Boolean))].map((h) => ({ params: { to: h.lord, gold: Math.max(500, Math.round(w.gold * 0.05 / 100) * 100) }, target: h.lord, gold: true })),
+  send_gift: (w) => [...new Set([w.liege, ...w.friends.slice(0, 2), ...w.rivals.slice(0, 1), ...(w.ledger.risingLeader && w.state.houses[w.ledger.risingLeader]?.lord ? [w.state.houses[w.ledger.risingLeader]] : [])].filter(Boolean))].map((h) => ({ params: { to: h.lord, gold: Math.max(500, Math.round(w.gold * 0.05 / 100) * 100) }, target: h.lord, gold: true })),
   hold_feast: (w) => (LORDSHIP(w) ? [{ params: {} }] : []),
   hold_tourney: (w) => (LORDSHIP(w) && ['crown', 'paramount', 'major'].includes(w.me.rank) ? [{ params: {} }] : []),
   // (the Wall's verdict is "take_the_black" as a choice: "wall" is a prefix of the works' "walls")

@@ -1297,3 +1297,16 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **The window:** the Realm door opens the ledger; the old own-house page is its "Your house" tab (the portraits, the family tree and the court actions are untouched). The page is drawn by a pure function of the view (`realm-view.js`),
   so a test runs it on hostile names; every name and line the server sent goes through `esc`. Bands are written in k (`≈ 17k–100k`), people in k or m. The lord's last choices (lens, rows, window, sort, columns) are kept in `localStorage` (`wc.ledger`), never the selected house.
 - **Not built:** `banners_called` and `great_debt` facts, a war's holdings note, the Neighbours chip, the wide-window "steps aside" behaviour of GDD 17 §2.9 (the window only moves the map's chip and the sheets), and the quiet pip on the Realm door when a word turns.
+
+## D-083 · 2026-09-30 · The minds and the council read the same numbers (WP R5)
+
+- **One source, the house's own eyes.** `realmSummary(state, house)` and `realmBrief(state, house)` call `realmViewFor(state, house, { scope: 'great' })`: a house with no notes of another sees it as the public prior (rank and the map),
+  its own and its sworn houses live, exactly what the estimates give it and no more; figures are written by `engine/realm/words.js`, the same functions the window uses, so the brief and the window agree word for word (a test).
+- **`w.ledger`, not `w.realm`:** `worldView` already has `realm` (the id of the house's realm's head). `ledger` is a lazy getter (about 3 ms; computed only when a trigger, a tree or a dossier reads it).
+- **Triggers:** a hungry house is woken a little sooner (+15, not a trigger), a house that has lost holdings sooner still (+20, a trigger). An empty purse is *not* one: the Crown is always in debt (its canon), and it would wake it every week.
+- **The tree:** a new calm rule `rising_rival` — no war, six thousand dragons, the strongest house rising and no friend: send it a gift — with no dice of its own (the ledger's word is the only reason, and a gift rests a season), and that house
+  joins `send_gift`'s targets only while it is the rising leader. The soak (2 houses × 30 turns) holds every invariant.
+- **The council's dossier** opens with the brief (its snapshot is updated); its existing check (a counsellor's figure must be one the dossier gives) now covers the ledger's figures too.
+- **The tuned model's mind prompt is not changed.** The adapter was taught the dossier without a realm block (D-078); the block is built and tested, and `"mindRealmBrief": true` in config adds it to the call (`realm: true`) for the next tuning round.
+  The engine's own minds (the trees and the order in which lords are woken) read it now.
+- **Not built:** `observe` for houses other than the player's (a mind's house sees the public prior for those it has no notes of); `docs/gdd/04-ai-system.md` §5's one-line pointer.
