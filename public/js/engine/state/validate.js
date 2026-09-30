@@ -135,6 +135,15 @@ export const INVARIANTS = {
         }
       }
     }
+    // the score of each war that is on: days forward, whole scores from −100 to 100
+    for (const [id, line] of Object.entries(R?.wars || {})) {
+      if (!Array.isArray(line) || line.length > 24) out.push(`12: the score series of war ${id} is not a list of at most 24`);
+      let last = -Infinity;
+      for (const p of Array.isArray(line) ? line : []) {
+        if (!Array.isArray(p) || !Number.isInteger(p[0]) || !Number.isInteger(p[1]) || Math.abs(p[1]) > 100) out.push(`12: war ${id} has a score point that is not [day, whole score in −100…100]`);
+        else if (!(p[0] > last)) out.push(`12: war ${id}'s score series does not go forward in days`); else last = p[0];
+      }
+    }
     const today = dayNumber(state.meta.date);
     for (const [house, k] of Object.entries(state.knowledge || {})) {
       for (const [subject, e] of Object.entries(k.realm || {})) {

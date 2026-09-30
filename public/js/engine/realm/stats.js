@@ -4,7 +4,7 @@
 //   state.realmStats = { v: 1, fields: FIELDS, samples: [ { day, turn, h: { stark: [ …one int per field… ] } } ], wars: {} }
 //
 // Only the viewer's own house and its sworn houses are ever read back from here (view.js); every other house is known
-// to the player by what was observed of it (estimate.js). `wars` is the room for the war-score series (WP R6).
+// to the player by what was observed of it (estimate.js). `wars` is the score of each war that is on, `{ [warId]: [[day, score], …] }`, from the attackers' side (WP R6); only a war the viewer is a party to is ever read back.
 import { FIELDS, figuresOf, holdingsIndex } from './figures.js';
 import { dayNumber } from '../time.js';
 
@@ -15,6 +15,8 @@ export const KEEP_NEW = 16;
 export const KEEP_MAX = 48;
 export const BUCKET = 28;
 
+/** How many samples of a war's score are kept (about six moons of weeks): enough for the longest window the ledger draws a war's movement over. */
+export const WAR_KEEP = 24;
 const LISTED = new Set(['crown', 'paramount', 'major', 'order', 'tribe', 'city_state', 'company', 'exile']);
 
 /**
@@ -50,6 +52,15 @@ export function sampleRealm(state) {
   while (S.length && S.at(-1).day >= day) S = S.slice(0, -1);        // a clock turned back (or the same day again): the newer word is the truth
   if (S.length && day - S.at(-1).day < WEEK) S = S.slice(0, -1);    // a short turn takes the place of the week's sample
   R.samples = thin([...S, sample]);
+  // the score of each war that is on, on the same weekly beat (a war that has ended is forgotten: its news is the chronicle's)
+  const W = R.wars = R.wars || {};
+  for (const w of state.wars || []) {
+    if (w.status === 'ended') { delete W[w.id]; continue; }
+    let line = W[w.id] || [];
+    while (line.length && line.at(-1)[0] >= day) line = line.slice(0, -1);
+    if (line.length && day - line.at(-1)[0] < WEEK) line = line.slice(0, -1);
+    W[w.id] = [...line, [day, Math.round(Number(w.score) || 0)]].slice(-WAR_KEEP);
+  }
   return sample;
 }
 
