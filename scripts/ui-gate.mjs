@@ -325,6 +325,35 @@ async function probeAudience(page) {
   await closeAll(page);
   return out;
 }
+// F6 (GDD 12 §10): a matter awaiting the lord's word is a wax seal on the map and, opened, a sealed letter on vellum that fits the screen with its answers, its days and its silence;
+// "Say nothing" puts it away. (A matter is put into the browser's own copy of the state: the question is whether the screens draw it where a player can see and reach it.)
+async function probeMatter(page) {
+  const out = { pin: 'n/a', letter: 'n/a', fits: 'n/a', silence: 'n/a' };
+  const id = await page.evaluate(() => {
+    const app = window.__wc; const s = app.state; const dn = (d) => d.year * 360 + (d.month - 1) * 30 + (d.day - 1);
+    const lord = Object.values(s.houses).find((h) => h.id !== s.meta.player && h.lord && s.characters[h.lord])?.lord;
+    s.decisions = (s.decisions || []).filter((d) => d.status !== 'pending');
+    s.decisions.push({ id: 'gate_matter', matter: 'border_quarrel', title: 'A border quarrel', text: 'Two lords claim a mill and a ford. Blood has been spilled over it. Both appeal to you for judgement.', from: lord, options: [{ label: 'Judge for the first', hint: 'The first is grateful, the second aggrieved' }, { label: 'Judge for the second', hint: 'The second is grateful, the first aggrieved' }], date: 'today', turn: s.meta.turn, day: dn(s.meta.date) - 2, days: 9, status: 'pending', lapse: [{ unrestAll: 2 }] });
+    app.map?.syncEventPins?.(); return 'gate_matter';
+  });
+  await page.waitForTimeout(400);
+  const vp = page.viewportSize();
+  out.pin = await page.evaluate(() => { const p = document.querySelector('.lbl.event.asks'); if (!p) return 'FAIL: no seal on the map'; const r = p.getBoundingClientRect(); return r.width > 0 ? 'ok' : 'FAIL: seal has no size'; });
+  await page.evaluate(async (mid) => { (await import('/js/ui/chrome.js')).openItem('matter', mid); }, id); await page.waitForTimeout(500);
+  const st = await page.evaluate(() => { const b = document.querySelector('#modal-box .wc-matter'); if (!b) return null; const r = b.getBoundingClientRect(); const opts = [...b.querySelectorAll('.dec-opt')].map((o) => { const q = o.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom]; }); const sil = b.querySelector('.dec-silence')?.getBoundingClientRect(); return { box: [r.left, r.top, r.right, r.bottom], n: opts.length, opts, clock: b.querySelector('.wc-matter__clock')?.textContent || '', line: b.querySelector('.wc-matter__silence-line')?.textContent || '', sil: sil ? [sil.left, sil.top, sil.right, sil.bottom] : null }; });
+  if (st) {
+    out.letter = st.n === 2 && /7 days left/.test(st.clock) && /unrest grows in your lands/i.test(st.line) ? 'ok' : `FAIL ${JSON.stringify({ n: st.n, clock: st.clock, line: st.line })}`;
+    const inside = (b) => b && b[0] >= 0 && b[1] >= 0 && b[2] <= vp.width && b[3] <= vp.height;
+    out.fits = inside(st.box) && st.opts.every(inside) && inside(st.sil) ? 'ok' : `FAIL ${JSON.stringify(st.box)}`;
+    await page.click('#modal-box .dec-silence'); await page.waitForTimeout(400);
+    const gone = await page.evaluate(() => document.querySelector('#modal').classList.contains('hidden') || !document.querySelector('#modal-box .wc-matter'));
+    const still = await page.evaluate(() => window.__wc.state.decisions.some((d) => d.id === 'gate_matter' && d.status === 'pending'));
+    out.silence = gone && still ? 'ok' : `FAIL closed=${gone} pending=${still}`;
+  } else out.letter = out.fits = out.silence = 'FAIL: the letter did not open';
+  await closeAll(page);
+  await page.evaluate(() => { const s = window.__wc.state; s.decisions = (s.decisions || []).filter((d) => d.id !== 'gate_matter'); window.__wc.map?.syncEventPins?.(); });
+  return out;
+}
 async function measure(browser, id, w, h, turn) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.setDefaultTimeout(90000);
@@ -350,6 +379,8 @@ async function measure(browser, id, w, h, turn) {
   say('people probed');
   Object.assign(res, { f4: await probeAudience(page) });
   say('audience probed');
+  Object.assign(res, { f6: await probeMatter(page) });
+  say('matter probed');
   res.errors = errors; await page.close();
   return res;
 }
@@ -381,6 +412,8 @@ function report(cells) {
     ['audience: promises and composer clear', (c) => `${c.f4.promises}/${c.f4.composer}`, (c) => c.f4.promises === 'ok' && c.f4.composer === 'ok', () => 'ok/ok'],
     ['audience: reply chips; Back works', (c) => `${c.f4.chips}/${c.f4.back}`, (c) => c.f4.chips === 'ok' && c.f4.back === 'ok', () => 'ok/ok'],
     ['Diplomacy tab lists the promises', (c) => c.f4.book, (c) => c.f4.book === 'ok', () => 'ok'],
+    ['matter: a seal on the map, a letter that fits', (c) => `${c.f6.pin}/${c.f6.letter}/${c.f6.fits}`, (c) => c.f6.pin === 'ok' && c.f6.letter === 'ok' && c.f6.fits === 'ok', () => 'ok/ok/ok'],
+    ['matter: Say nothing puts the letter away', (c) => c.f6.silence, (c) => c.f6.silence === 'ok', () => 'ok'],
     ['the welcome card is shown on a new game', (c) => (c.first.welcome ? 'yes' : 'NO'), (c) => c.first.welcome, () => 'yes'],
     ['coach marks, in order, each put away by its thing', (c) => (c.first.marks.join('>') === 'command>turn>realm>' ? 'in order' : c.first.marks.map((m) => m || 'none').join('>')), (c) => c.first.marks.join('>') === 'command>turn>realm>', () => 'command>turn>realm>none'],
     ['a mark stays on the screen', (c) => (c.first.slipInside ? 'ok' : 'FAIL'), (c) => c.first.slipInside, () => 'ok'],
