@@ -1,5 +1,6 @@
 // Procedural 3D models: castles, cities, towns, camps, ruins, unique landmarks, armies, fleets, trees.
 // Every settlement is built from primitives and merged by material, so ~150 settlements stay cheap.
+import { figuresFor } from './states.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { drawBanner } from '../sigils.js';
@@ -522,7 +523,9 @@ export function buildArmy(army, house) {
     g.userData.kind = 'fleet';
     return g;
   }
-  const n = armyFigureCount(army.men);
+  // a lord's retinue is three to twelve riders, the King's progress a column of about forty (11 §6.2; map3d/states.js figuresFor); a host's figures follow its men
+  const road = army.kind === 'retinue' || army.kind === 'progress' ? figuresFor(army) : null;
+  const n = road ? road.count : armyFigureCount(army.men);
   const field = house?.sigil?.f || color, charge = house?.sigil?.cc || '#ddd';
   const M = {
     tabard: new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true }),
@@ -531,7 +534,7 @@ export function buildArmy(army, house) {
     dark: mat('#3a2e24'),
     hide: mat('#4a3526'),
   };
-  const cav = /horse|cavalry|screamer|rider|knight|khalasar|dothraki/i.test(army.composition || '') ? Math.ceil(n * 0.4) : Math.floor(n * 0.15);
+  const cav = road ? (army.kind === 'retinue' ? n : road.knights) : /horse|cavalry|screamer|rider|knight|khalasar|dothraki/i.test(army.composition || '') ? Math.ceil(n * 0.4) : Math.floor(n * 0.15);
   const foot = Math.max(1, n - cav);
   const meshes = [];
   const add = (geom, m, count) => { const im = new THREE.InstancedMesh(geom, m, count); im.castShadow = true; g.add(im); meshes.push(im); return im; };

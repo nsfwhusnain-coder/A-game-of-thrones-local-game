@@ -3,6 +3,14 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — E6 + E7: a map that shows what is happening, and three graphics settings
+
+- **Holdings show their state:** a burning or sacked one has a black column of smoke and embers; a besieged one a thin smoke and the besieger's camp before its walls (tents in the besieger's colours, a fire); an occupied one watch-fires on the walls; a **tourney** puts pavilions and lanterns outside the walls, a **feast** or a **wedding** lanterns, for two turns; a **battle** leaves a dust puff and stakes for two turns.
+- **Camps and companies:** a host that has stopped is tents and a fire (more men, more tents); a lord's retinue is a few riders, the King's progress a long column. You see a camp only where your own eyes are on the host.
+- **Weather** when you look close: snow in winter in the North, rain on some autumn days.
+- **Graphics: Fast, Balanced, Beautiful** (Settings). Fast draws no smoke, glow or weather and no ambient life; Balanced and Beautiful draw more of each. The map is held to a budget of 400 draw calls at the close view (317 measured; Fast 184): drawing shadows for a narrower area than before made room for the effects.
+- Tests: `tests/map-states.test.js` (7), `scripts/map-perf.mjs` (the budget on a page of holdings in every state, in every preset), `public/dev/holdings.html` (the fixture).
+
 ## 2026-09-30 — U9: faces and family trees, better than before
 
 - **People opens on your own people:** your family (with what each is to you), your household (officers first), the guests and wards under your roof, and your bannermen — not on the whole realm in alphabetical order. The search box ("Who is who") still reaches everyone.

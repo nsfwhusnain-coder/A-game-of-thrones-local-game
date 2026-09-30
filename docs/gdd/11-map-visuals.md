@@ -187,6 +187,8 @@ the player's view (knowledge-filtered). `MapScene.syncParties(prev, next, keyfra
 | rising | torches, a mob of small figures at the gate |
 | a feast/wedding/tourney | lanterns, pavilions (tourney) outside the walls |
 
+*Implemented in E6 + E7 (Slice 12), as built in D-089: `map3d/states.js` (the rules, pure), `map3d/effects.js` (the drawing: smoke, glow, tents, pavilions, stakes, weather, in six draw calls), `MapScene.syncEffects`, `dev/holdings.html`, `scripts/map-perf.mjs`. Not built: a litter or a wheelhouse in a retinue, wagons in a column, the occupier's banner over the old owner's lowered pennant (the state does not keep the old owner), a mob and torches drawn as figures (the glow only).*
+
 ## 7. Overlays
 
 - **Battle markers:** crossed swords at the site for 12 moons (fades), with the battle's name on hover (existing landmark).

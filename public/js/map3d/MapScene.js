@@ -16,7 +16,8 @@ const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', 
 
 const GEN_VERSION = 'atlas-v4'; // v4: the painted palette's regional tints, and the river mask for winter's ice
 // Graphics quality (Settings): terrain mesh density, pixel ratio and shadows
-const QUALITY = { high: { seg: 960, dpr: 2, shadows: true }, balanced: { seg: 720, dpr: 1.5, shadows: true }, fast: { seg: 480, dpr: 1, shadows: false } };
+const QUALITY = PRESETS; // (map3d/states.js: the presets' terrain density, pixel ratio, shadows and what the living map may draw)
+export const gfxName = () => { try { const v = localStorage.getItem('gfx-quality'); return PRESETS[v] ? v : 'balanced'; } catch { return 'balanced'; } };
 export const lifeOn = () => { try { const v = localStorage.getItem('map-life'); return v === null ? (localStorage.getItem('gfx-quality') !== 'fast') : v === '1'; } catch { return true; } };
 export const gfx = () => { try { return QUALITY[localStorage.getItem('gfx-quality')] || QUALITY.balanced; } catch { return QUALITY.balanced; } };
 const LAND_Y = 55, SEA_Y = 7, WATER_LEVEL = 0.35;
@@ -29,6 +30,9 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // the camera's levels of detail, framing and pan bounds (11 §2–3): map3d/lod.js
 import { LOD, lodOf, layerAlpha, tokenCap, HOME_BOX, KNOWN_BOX, L0_CENTRE } from './lod.js';
+import { Effects } from './effects.js';
+import { dayNumber } from '../engine/time.js';
+import { PRESETS, presetOf, weatherOf } from './states.js';
 import { colorFor as modeColor, atWarWith as modeAtWar, diplomacyOf, DIPLO } from './modes.js';
 import { eyesOf } from '../engine/knowledge.js';
 import { SNOW, snowLineOf, riversFrozen } from './nature.js';
@@ -272,6 +276,7 @@ export class MapScene {
     this.syncRiders();
     this.syncLandmarks();
     this.syncLife();
+    this.syncEffects();
     if (first) this.buildPlaces();
     if (first) {
       this.drawRoads();
@@ -535,6 +540,21 @@ export class MapScene {
     if (!this.life) this.life = new LivingMap(this.scene, { groundAt: (x, z) => this.groundAt(x, z), grid: this.grid, enabled: lifeOn() });
     this.life.sync(this.state);
   }
+  // smoke over what burns, embers, watch-fires, lanterns and pavilions, tents and fires of a camp, the stakes of a field fought, the weather (map3d/effects.js; what and how many by the preset)
+  syncEffects() {
+    if (!this.state) return;
+    if (!this.effects) this.effects = new Effects(this.scene, { groundAt: (x, z) => this.groundAt(x, z), radiusOf: (id) => this.settlements.get(id)?.radius || 4, preset: gfxName() });
+    const me = this.state.meta?.player; const own = Object.values(this.state.holdings).filter((h) => h.owner === me).map((h) => h.pos);
+    // a camp is drawn only for a host the player's own eyes are on (a host known by report is unconfirmed: no tents where it is said to lie)
+    const seen = new Set([...viewOfArmies(this.state)].filter(([id, v]) => v.known === 'seen' || this.state.parties[id]?.owner === me).map(([id]) => id));
+    this.effects.sync(this.state, { own, seen });
+  }
+  /** The weather over the ground the camera looks at, from the season, the region under it and the day (states.js weatherOf): only from L2 in. */
+  updateWeather(time) {
+    if (!this.effects || time - (this.weatherAt || -9) < 0.6) return; this.weatherAt = time;
+    let region = ''; let best = Infinity; for (const h of Object.values(this.state?.holdings || {})) { const d = (h.pos[0] - this.target.x) ** 2 + (h.pos[1] - this.target.z) ** 2; if (d < best) { best = d; region = h.region || ''; } }
+    this.effects.setWeather(weatherOf({ season: this.state?.world?.season || 'summer', region, day: dayNumber(this.state.meta.date), lod: lodOf(this.dist) }));
+  }
   setLife(on) { try { localStorage.setItem('map-life', on ? '1' : '0'); } catch { /* private mode */ } this.life?.setEnabled(on); }
 
   // a march already made: a quiet solid line along the road, fading at its start
@@ -797,7 +817,8 @@ export class MapScene {
     this.scene.fog.near = this.dist * 1.6; this.scene.fog.far = this.dist * 5 + 800;
     this.waterUniforms && (this.waterUniforms.fogNear.value = this.scene.fog.near, this.waterUniforms.fogFar.value = this.scene.fog.far, this.waterUniforms.uCam.value.copy(this.camera.position));
     // shadows follow the view
-    const sd = Math.min(700, this.dist * 0.9);
+    // (no wider than the view needs: every caster inside the shadow camera is drawn twice, and the draw-call budget of 11 §10 is 400 at L2)
+    const sd = Math.min(560, this.dist * 0.62);
     this.sun.position.set(this.target.x - 520, 420, this.target.z - 300); this.sun.target.position.copy(this.target);
     const sc = this.sun.shadow.camera; sc.left = -sd; sc.right = sd; sc.top = sd; sc.bottom = -sd; sc.near = 10; sc.far = 1800; sc.updateProjectionMatrix();
     this.sun.castShadow = this.dist < 900;
@@ -1010,6 +1031,7 @@ export class MapScene {
     }
     // the realm's small life walks on, turn or no turn
     if (this.life) this.life.frame(time, Math.min(0.1, dt));
+    if (this.effects) { this.updateWeather(time); this.effects.frame(time, { camera: this.camera, height: this.renderer.domElement.height, target: this.target }); }
     // banners flutter
     clothUniforms.uTime.value = time;
     // banners turn to face the viewer, so the sigil always reads and the pole stays behind the cloth
