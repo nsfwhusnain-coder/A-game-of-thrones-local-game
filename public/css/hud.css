@@ -283,3 +283,49 @@ body.idle:not(.map-active) #hud-top, body.idle:not(.map-active) #hud-player, bod
 /* the pins that do not fit: one bubble at the map's edge */
 #pins-more { position: absolute; right: var(--hud-gap); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 3.4rem); z-index: 9; cursor: pointer; font-weight: 700; }
 body:has(#window:not(.hidden)) #pins-more, body:has(#sheet:not(.hidden)) #pins-more { right: calc(var(--panel-w) + var(--hud-gap) * 2); }
+
+/* ───────────────────────────── portraits and the people (WP U9) ───────────────────────────── */
+/* how the lord is: a ring round the medallion, a word on the plate, the whole of it on hover */
+#hud-player .wc-medallion__face[data-mood='good'] { box-shadow: 0 0 0 .18rem rgba(120, 160, 110, .7); }
+#hud-player .wc-medallion__face[data-mood='warn'] { box-shadow: 0 0 0 .18rem rgba(214, 160, 70, .85); }
+#hud-player .wc-medallion__face[data-mood='bad'] { box-shadow: 0 0 0 .18rem rgba(190, 70, 55, .9); }
+#hud-player .wc-medallion__face { border-radius: 50%; }
+.cond { font-style: italic; }
+.cond::before { content: ''; display: inline-block; width: .5rem; height: .5rem; margin-right: .35rem; border-radius: 50%; background: var(--bone-dim); vertical-align: .05em; }
+.cond.good { color: #a8d29a; } .cond.good::before { background: #7fb56f; }
+.cond.warn { color: #e8c070; } .cond.warn::before { background: #d6a046; }
+.cond.bad { color: #ec9a8a; } .cond.bad::before { background: #c9503f; }
+#player-name small.cond { display: block; font-size: max(.8rem, 12px); }
+#player-card { position: absolute; right: 0; bottom: calc(100% + .3rem); width: 15rem; z-index: 20; display: none; flex-direction: column; gap: .1rem; pointer-events: none; }
+#hud-player:hover #player-card, #hud-player:focus-within #player-card { display: flex; }
+#player-card b { font: 600 1.2rem/1.15 var(--wc-display); letter-spacing: .04em; }
+#player-card span { font-size: 1.02rem; line-height: 1.25; }
+#player-card .note { font-style: italic; color: var(--ink-soft); }
+#player-card em { margin-top: .25rem; font-size: .92rem; color: var(--ink-soft); }
+#player-card .cond.good { color: #3f6b36; } #player-card .cond.warn { color: #8a5a10; } #player-card .cond.bad { color: #8a2a1c; }
+.char-hero .por { width: 10rem; border-radius: 6px; }
+.cond.good, .kv .cond { font-style: normal; }
+.ppl-sec { margin-bottom: .9rem; }
+.ppl-sec h4 { margin: .5rem 0 .3rem; }
+.ppl-sec h4 .muted { font-weight: 400; font-size: .85em; letter-spacing: 0; text-transform: none; }
+.pill.role { flex: none; align-self: center; margin: 0 .5rem; white-space: nowrap; }
+.ppl-more { font-size: .9rem; }
+
+/* the family tree: generations with the lines between them */
+#modal-box.is-tree { width: min(72rem, 96vw); max-width: 96vw; }
+.tree-tools { display: flex; align-items: center; gap: 1.2rem; margin: -.2rem 0 .6rem; }
+.tree-wider { display: inline-flex; gap: .4rem; align-items: center; cursor: pointer; }
+.tree-hint { font-size: .9rem; }
+.tree-v2 { position: relative; gap: 2.2rem; padding: .4rem .5rem 1rem; overflow-x: auto; }
+.tree-v2 .gen { gap: 1.1rem; flex-wrap: nowrap; justify-content: center; align-items: flex-start; min-width: max-content; }
+.tree.tree-v2 .gen .tm { position: relative; z-index: 1; width: 8rem; display: flex; flex-direction: column; align-items: center; gap: .15rem; padding: .35rem .3rem .4rem; margin: 0; cursor: pointer; color: var(--bone); font: inherit; background: rgba(0, 0, 0, .3); border: 1px solid rgba(0, 0, 0, .7); border-radius: 4px; box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .1); }
+.tree.tree-v2 .gen .tm:hover { border-color: var(--gold-flat); }
+.tree.tree-v2 .gen .tm img { width: 4.6rem; height: 4.6rem; object-fit: cover; border-radius: 50%; border: 2px solid rgba(255, 226, 170, .25); }
+.tree.tree-v2 .gen .tm.self { border-color: var(--gold-flat); background: rgba(120, 90, 30, .28); }
+.tree.tree-v2 .gen .tm.self img { border-color: var(--gold-flat); }
+.tree.tree-v2 .gen .tm.wider { opacity: .78; }
+.tree.tree-v2 .gen .tm.dead img { filter: grayscale(.85); }
+.tree.tree-v2 .gen .tm .rl { font: 600 max(.66rem, 10px) var(--wc-display); letter-spacing: .05em; text-transform: uppercase; color: var(--ochre); }
+.tree.tree-v2 .gen .tm .nm { font-size: 1.02rem; line-height: 1.1; text-align: center; }
+.tree-links { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; overflow: visible; }
+.tree-links path { fill: none; stroke: rgba(214, 180, 110, .5); stroke-width: 1.6; stroke-linecap: round; }

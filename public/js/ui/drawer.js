@@ -1,4 +1,5 @@
 // Right drawer: chronicle feed, letters, audiences (one-on-one or council).
+import { peopleOfCard } from './people.js';
 import { eventArt } from './event-art.js';
 import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal, foldText, detailLines } from './common.js';
 import { feedOf, feedIds, FILTERS, TIER_LABEL, storyOrder, shortDate, daysOf } from './feed.js';
@@ -109,6 +110,11 @@ function threadsHtml(s) {
 // One story as a card of the chronicle (GDD 18 §2.6, mockup 03): its tier's rule and marks, the headline, two lines of summary, where and when, whose it is,
 // and "Details" — the order that led to it, the scene, the numbers, the engine's record — folded away until asked for. A minor card is its headline alone.
 const CAME_SHORT = { raven: 'by raven', rumour: 'a rumour', letter: 'by letter', rider: 'by rider' };
+// the faces of a story: the people its headline names (ui/people.js), small, before the headline
+function facesHtml(s, e) {
+  const ids = peopleOfCard(s, e, 2); if (!ids.length) return '';
+  return `<span class="wc-card__faces">${ids.map((id) => `<img src="${por(s.characters[id], 64)}" alt="" title="${esc(s.characters[id].name)}">`).join('')}</span>`;
+}
 function cardHtml(s, t, c, fresh) {
   const e = c.e; const p = s.meta.player;
   const hidden = app.reveal && app.reveal.turn === t.turn && !app.reveal.shown.has(c.idx);
@@ -125,7 +131,7 @@ function cardHtml(s, t, c, fresh) {
     recordHtml(e), heardHtml(e, date),
   ].filter(Boolean);
   return `<article class="wc-card wc-tier-${c.tier} story${hidden ? ' unrevealed' : ''}${fresh ? ' is-new' : ''}" data-news="${c.id}" tabindex="0">
-    <h3 class="wc-card__head">${esc(e.headline || e.title)}</h3>
+    ${c.tier === 'minor' ? '' : facesHtml(s, e)}<h3 class="wc-card__head">${esc(e.headline || e.title)}</h3>
     ${c.tier === 'minor' ? '' : `<p class="wc-card__body">${esc(e.summary ?? e.text)}</p>`}
     <div class="wc-card__meta"><span class="wc-label">${TIER_LABEL[c.tier] || ''}</span>${yours ? `<span class="wc-chip wc-chip--wax">${esc(yours)}</span>` : ''}${place || date ? `<span class="wc-card__where">${icon('pin')}${esc(date)}${place ? ` · <em>${esc(place)}</em>` : ''}</span>` : ''}${late ? `<em>${esc(late)}</em>` : ''}${foldParts.length ? `<button class="wc-card__more" data-fold aria-expanded="false" title="The numbers, the record and the scene">Details ${icon('chevronR')}</button>` : ''}</div>
     ${foldParts.length ? `<div class="wc-card__fold" hidden>${foldParts.join('')}</div>` : ''}</article>`;

@@ -3,6 +3,14 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — U9: faces and family trees, better than before
+
+- **People opens on your own people:** your family (with what each is to you), your household (officers first), the guests and wards under your roof, and your bannermen — not on the whole realm in alphabetical order. The search box ("Who is who") still reaches everyone.
+- **The family tree is a real tree:** portraits, the couples joined, a line from each pair of parents down to each child, the dead greyed, you in gold. **Wider family** adds uncles, aunts and cousins. Everything the old tree showed is still there (a test checks it for five houses).
+- **How your lord is** is on the plate under their name ("in good health", "wounded", "ailing"…), as a ring round the medallion, and in a hover card (name, title, age, condition, the regency). The character sheet shows the portrait larger and the same word.
+- **The chronicle's cards carry the faces** of the people they name.
+- Tests: `tests/people-ui.test.js` (8), and four new rows in the UI gate. **Phase U is done.**
+
 ## 2026-09-30 — U8: a welcome, three tips that go away, focus mode, and a quieter map
 
 - **A new game opens with one page of vellum:** your situation, your aims and your levers, and **Begin**. You never see it again (the game remembers, in this browser and in the save); the chronicle offers "Read your situation again". After it, **three tips**, one at a time, each gone when you do the thing it says: write an order; end the turn; open the Realm.

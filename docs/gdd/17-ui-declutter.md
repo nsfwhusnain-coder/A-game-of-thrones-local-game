@@ -6,8 +6,8 @@
 > pans the map: 19 §6.1, [DECISIONS](DECISIONS.md) D-070). R1–R3 are built (Slice 2); the ledger's window is R4. U1–U4, U8
 > and U9 stand as written.
 
-> **Status (2026-09-30): U1, U2, U3, U4 and U8 are implemented** ([DECISIONS](DECISIONS.md) D-079, D-086, D-087): the bar, the three doors, the Inbox, the strip and the command bar, the cards on the map and the two windows with tabs,
-> measured by `scripts/ui-gate.mjs` (§5) and `scripts/map-check.mjs`. U9 remains. Where the built screen differs from §2 it is because the mockups and the art direction (21) were drawn after it.
+> **Status (2026-09-30): U1, U2, U3, U4, U8 and U9 are implemented** ([DECISIONS](DECISIONS.md) D-079, D-086, D-087, D-088): the bar, the three doors, the Inbox, the strip and the command bar, the cards on the map and the two windows with tabs,
+> measured by `scripts/ui-gate.mjs` (§5) and `scripts/map-check.mjs`; the gate table of §5 is green at both sizes. U5–U7 are superseded by the State of the Realm (19). Where the built screen differs from §2 it is because the mockups and the art direction (21) were drawn after it.
 
 > Owner feedback: "The UI is very cluttered — too much information, too many panels, too many things to look at. Hide it
 > gracefully, the way big games do. Show what matters all the time; hide the rest behind a few buttons. This is an AI
