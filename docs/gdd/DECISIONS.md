@@ -1322,3 +1322,22 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **CI:** `tests/headlines-bench.test.js` (Stark × six weeks, about 3 s) holds every gate and determinism; the four-game run is `npm run bench -- --suite headlines` (exit code 1 if a gate fails).
   `scripts/soak.js` already scores every card of a long game; `scripts/headlines-check.js` is the owner's live-model run and is never in CI.
 - **Not built:** a replay suite of recorded model cards (waits for the owner's recordings: `--suite narrate --record` exists for it).
+
+## D-085 · 2026-09-30 · The realm audit and soak (WP R7)
+
+- **What is held.** `bench/lib/realm-audit.js` reads the truth (`figuresOf`) and holds every cell of the ledger to it: the viewer's own exact; a sworn house within ±5.5 % (+1.5 on the 0–100 scales); a fresh (this turn's or last turn's news)
+  seen figure within ±10 %, a reported or rumoured one within ±25 %; a `—` cell with no number, a cell with no way of learning it with none, a rumour never a coffer as a number, each mark one its way of learning may give; a band well
+  formed and holding the truth for at least 85 % of fresh bands; an "at least" not more than 60 % over the truth. An old figure (news of more than a turn ago) is shown with its age and held to no bound: it says it is old.
+- **Silence.** `hideTruth` changes, in a copy, what the viewer cannot know (the coffers, muster and debts of houses that are neither its own, its sworn houses nor their vassals; unseen hosts; a secret loan between strangers; the score
+  of wars it is no part of and their series; the truth series of the others), a seeded random subset each moon; the ledger (every lens and row set), the council's brief and the lords' summary must not move by one byte. The check has teeth:
+  the viewer's own coffers and a sworn house's move it. Vassals of a friend are left out of the hidden coffers because an ally's own income is made of its vassals' muster (a real dependence that moved a sworn figure in the first run).
+- **The soak.** `tests/realm-soak.test.js` plays 24 moons of Stark (seed 7), Lannister (11) and Tyrell (23) on the mock in three processes (`scripts/realm-dump.js --soak --json`; about 100 s wall clock in all) and asserts the above over about
+  58,000 cells a game; the audit itself is first tested on a tampered view (each rule has a case that must fail). `npm run realm:soak -- --house tyrell --seed 5 --turns 12` runs any other game and prints the report.
+- **What it found and changed.** (1) The rumour band of **levies** was ×0.4 to ×2.4 of what a house's lands usually raise, and held the truth for only 80 % of houses: the levies raised *now* are none for a house that has called none (always, for
+  the Night's Watch and the Golden Company), and one in ten houses had under 0.4 of the usual share. Now ×0 to ×2.4 (96 % hold). The **swords** band is ×0.4 to ×3 (92 %; minor houses may raise up to three times the share). The council's snapshot moved
+  by that (its strongest-house line). (2) Nothing else broke: power and income bands hold 96–99 %, no leak in 72 moons.
+- **A known limit, not a fault.** An "at least" can overstate a moon or two after a battle (the host bled) and when a host has merged into another: knowledge.js keeps a report of a host that no longer exists until someone sees the empty
+  field (six turns), so two reports may stand for one body of men (measured: Frey's muster at +52 % in a moon). The mark says "at least what was reported" and the age says how old; the bound is 60 %, to catch a broken sum.
+- **The dump.** `node scripts/realm-dump.js --play stark --turns 12` (a new mock game) or `--game <id>` (a save) prints, for every house and figure, the truth, what the ledger shows, how it came, how old it is and the error; `--audit` adds the
+  report. Dev only: it shows what the game hides, so it is never imported by the game.
+- **Not built:** a per-figure check of the *movement* words (rising, falling) against the truth's trend — they follow the ledger's own series by construction (R6's tests).

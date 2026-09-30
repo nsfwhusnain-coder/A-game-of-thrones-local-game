@@ -3,6 +3,16 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — R7: the realm's figures are held to the truth
+
+- **A tool for the owner:** `node scripts/realm-dump.js --play stark --turns 12` (or `--game <id>` for a save) prints every house's figures as they are and as your ledger shows them, how each came, how old it is and how far
+  off it is; `--audit` checks them all against their bounds. It shows what the game hides: use it to judge the estimates, not while playing.
+- **The estimates were measured over 24 moons of three games and hold:** your own figures exactly; a sworn house's within 5 %; what you see within 10 %, what a rider reports within 25 %, while the news is fresh; bands that hold the truth for
+  92–99 % of houses; nothing given for "nothing known"; and no leak: each moon the game changes what your house cannot know (coffers, musters, secret debts, wars it is no part of) and the ledger, the council's brief and the lords' summary do not move by one byte.
+- **One estimate was widened.** The "≈" for a house's levies (the muster raised now) missed the truth for one house in five, always for the Night's Watch and the Golden Company, who raise none: it now starts at nothing. A house with no host
+  heard of shows its swords as ≈0.4 to ≈3 times what its lands usually raise (was 2.4).
+- `npm test` runs the soak (about 100 s, three games at once); `npm run realm:soak` runs any other game.
+
 ## 2026-09-30 — N10: the headlines are measured
 
 - **A group of one house's lords names the house.** "Four Lannister lords take the road across the Westerlands", "Three Stark banners rally to the Crown" — not "One lords take the road" or a region alone. Found by the new

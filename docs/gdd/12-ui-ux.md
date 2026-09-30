@@ -241,6 +241,8 @@ Opens with **L** or from the strip/crest. Tabs: **Realm** (standing, ambitions, 
 long chronicle, filterable). Each tab: a summary header of ≤ 4 figures with meaning, then lists. Meters appear only
 here, always with words.
 
+*The realm's figures (the State of the Realm window, R4–R7) are 19; the Book's tabs above stay as they are (the "Your house" tab of the ledger is this Realm tab).*
+
 ## 10. Matters (sealed letters)
 
 A pin on the map (a wax-sealed letter, pulsing gently) and a count on the Jump button. Opening shows a parchment letter:

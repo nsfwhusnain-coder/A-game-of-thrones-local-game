@@ -17,6 +17,8 @@
     "playtest": "node scripts/playtest.js",
     "model:check": "node scripts/model-check.js",
     "headlines:check": "node scripts/headlines-check.js",
+    "realm:dump": "node scripts/realm-dump.js",
+    "realm:soak": "node scripts/realm-dump.js --soak",
     "balance": "node scripts/balance-sim.js",
     "fetch-music": "node scripts/fetch-music.js",
     "serve": "node server/index.js",
