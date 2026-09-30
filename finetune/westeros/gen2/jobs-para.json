@@ -1,0 +1,1 @@
+[ { "name": "paraphrase-gold", "script": "paraphrase.mjs", "args": ["--variants", "8", "--conc", "8", "--out", "C:/wc-ai/finetune/pool-extra/interpret-para.jsonl"] } ]

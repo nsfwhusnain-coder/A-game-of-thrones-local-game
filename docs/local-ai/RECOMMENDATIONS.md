@@ -54,3 +54,40 @@ when the server misbehaves.
 The 2026-09-27 table ([04 §11.2](../gdd/04-ai-system.md)) predates the schema pipeline: Gemma read orders better and Qwen "failed"
 on three hand-written prompts. On the game's own suites Qwen3.6 is ahead on interpret (91.7 % against 84.7 %, p = 0.003). The default
 model should be chosen from the final table in [FINDINGS](FINDINGS.md), not from that one.
+
+## R2 — measured (added 2026-10-01)
+
+The two prompt edits ([`patches/R2-interpret-choices-and-dont-overask.patch`](patches/R2-interpret-choices-and-dont-overask.patch), applies cleanly to `255b302`) were measured on the untuned Gemma 4 12B: **272 → 277 of 300** orders
+(McNemar p = 0.30) and **108 → 109 of the 125 unseen orders** — inside the noise (±2–5). They are cheap and harmless, but the fine-tuned model
+([MAESTER-12B.md](MAESTER-12B.md)) already asks far less (clarify rate 6 % → 2.5 %), so do not expect more from them.
+
+## R7 — The mind matcher rejects valid answers (and what that hides)
+
+`intentOf` in `server/ai/calls/mind.js` compares the model's `target`/`host`/`leader`/`choice` with the engine's options and treats a filled field on a verb that takes none
+(a tax has no target, a feast no leader) as a *different option*. Result on the untuned 12B: **19 of 123 minds fall back to the engine's picker**, and the suite scores the picker's choice (which is in character 94 % of the time), not the model's. A tolerant
+matcher ([`patches/R7-mind-matcher-tolerant.patch`](patches/R7-mind-matcher-tolerant.patch), one line) cut fallbacks to 4 — but in-character fell from 89.4 % to 85.4 %, because the model's real picks
+(a feast during a siege, with a prisoner) were previously rejected and rescued by the fallback. The honest reading: the untuned model's true mind quality is ~85 %, at the gate. **Maester-12B fixes the picks rather than the matcher**
+(fallbacks 16 → 2–4 *and* in character 86 → 89 %); if you adopt the tolerant matcher, keep the suite's `mind → fallback` count in view so the hiding stops.
+
+## R8 — Accept number words in the men-count check (every model fails two orders because of it)
+
+`server/ai/calls/interpret.js` (`check()`, the `send_person` men-count line) accepts `men > 0` only when the text around the person's name has a digit or one of a short list of nouns. "Send Benjen Stark beyond the Wall with **six rangers**"
+and "Send Waymar Royce to Craster's Keep with **three rangers**" have neither, so the check rejects the correct reading, the retry drops the men (`men: 0`) and the order scores wrong. Every model tested, tuned or not, misses both.
+[`patches/R8-men-count-number-words.patch`](patches/R8-men-count-number-words.patch) adds number words and a few nouns. **Verified:** with the patch the untuned 12B scores 110 of 125 unseen orders (107–108 without it) and a tuned adapter (p3M) 113 (111–112 without) — +2 orders for every model.
+
+## R9 — Per-call adapter selection needs no game code (only `allowModelSwaps`)
+
+Serve the adapter unmerged (`--lora`) and give each call the alias it needs in `game-routing.json`. llama-swap v252's `filters.setParamsByID` turns two aliases of one model entry into two `lora` scales
+(1 = tuned, 0 = identical to the untuned model, verified). The game refuses routes to different model names unless `"allowModelSwaps": true` (`server/ai/models.js:47`), which here is only a guard — nothing is swapped.
+A route-level `extraBody` in `routeFor` would make this independent of llama-swap; not needed today.
+
+## R10 — Put the recipient in the dossier
+
+"Send a raven to Winterfell" / "to the Eyrie" needs a person id the dossier often does not list (only "YOUR PEOPLE" appear). The untuned model fails first-try and is rescued by the retry; the tuned model
+sometimes answers confidently with a wrong id. List each great seat's lord and the seat's usual correspondent next to `PLACES OFTEN NAMED` (`Winterfell [stark|winterfell] — Lord Eddard Stark [eddard_stark]`). Note the engine's Arryn lord is the boy Robert
+while the game's own gold orders send "the Eyrie" to **Lady Lysa** — decide which is meant and make dossier, gold orders and validators agree.
+
+## R11 — Score the final action, not the first try
+
+The untuned model often fails a check and is rescued by the game's retry; the tuned model answers first try. Suites that count first-try validity alone mislead in both directions. `bench` already scores the final reading; keep
+that, and log retries per call kind (R3) so a regression in "needed a retry" is visible even when the final answer is right.

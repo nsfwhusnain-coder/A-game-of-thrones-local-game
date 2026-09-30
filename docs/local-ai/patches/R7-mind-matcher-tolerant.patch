@@ -1,0 +1,12 @@
+--- a/server/ai/calls/mind.js
++++ b/server/ai/calls/mind.js
+@@ -140,7 +140,8 @@
+  */
+ export function intentOf(v, ctx) {
+   if (!v || v.verb === HOLD) return v?.verb === HOLD ? { verb: HOLD, params: {} } : null;
+-  const same = (want, got) => !want || want === 'none' || want === got;
++  // a field the option does not have (a tax has no target, a feast no leader) may be filled or left "none": it is not a different option
++  const same = (want, got) => !want || want === 'none' || got == null || want === got;
+   const leader = v.leader === 'self' ? ctx.actor.id : v.leader;
+   const p = ctx.picks.find((x) => x.verb === v.verb && same(v.target, x.target) && same(v.host, x.host) && same(leader, x.leader) && same(v.choice, x.choice));
+   if (!p) return null;

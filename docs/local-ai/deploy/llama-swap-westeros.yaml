@@ -1,0 +1,40 @@
+# Westeros Chronicles — entries to ADD to C:/llamaswap/config.yaml (models: block) and to the `gpu` group members.
+# Nothing here has been applied to the live config. Requirements verified on this PC (2026-09-29):
+#   * llama-server b11242 (official win-cuda-13.4 build kept at C:/wc-ai/bin/llama-b11242): the 12B (model_type gemma4_unified) and MTP need it;
+#     the owner's C:/llamacpp build (5266f24) is not tested with the 12B.  --no-mmap is gone in b11242: use `--load-mode none`.
+#   * keep total VRAM after load <= ~10.7 GB (12B: 8.7 GB, with MTP 9.3 GB) — above that, ANY other GPU program halves decode speed until restart.
+#   * do NOT add --min-p / other sampler flags (tested: no benefit, narrate got worse); do NOT pin slots (id_slot) — the game's routing must send slot:null.
+# Copy the model files to C:/models/gemma4/ first (they are in C:/wc-ai/models/gemma4/):
+#   gemma-4-12B-it-qat-UD-Q4_K_XL.gguf (6.7 GB), mtp-gemma-4-12B-it.gguf (0.25 GB)
+
+  "westeros-gemma12":
+    name: "Gemma 4 12B QAT (Westeros, plain)"
+    description: "Gemma 4 12B dense QAT UD-Q4_K_XL fully on the GPU (8.7 GB), 2 unpinned slots over one 64k pool. ~55 tok/s."
+    aliases: ["gemma12"]
+    cmd: >
+      C:/wc-ai/bin/llama-b11242/llama-server.exe --host 0.0.0.0 --port ${PORT}
+      -m C:/models/gemma4/gemma-4-12B-it-qat-UD-Q4_K_XL.gguf
+      -c 65536 -ngl 99 -fa on -ctk q8_0 -ctv q8_0
+      -ub 1024 -b 2048 --parallel 2 --kv-unified -cram 4096 --load-mode none
+      --jinja --temp 1.0 --top-p 0.95 --top-k 64 --min-p 0.0
+      --cont-batching --metrics -t 6 -tb 12
+    ttl: 1800
+    capabilities: { in: ["text"], out: ["text"], context: 65536 }
+
+  "westeros-gemma12-mtp":
+    name: "Gemma 4 12B QAT + MTP (Westeros, fast)"
+    description: "Same, plus the MTP drafter (n-max 3): ~95 tok/s, 9.3 GB VRAM. Quality sanity-checked (interpret 90 %, mind 85.7 % on samples)."
+    aliases: ["gemma12-fast"]
+    cmd: >
+      C:/wc-ai/bin/llama-b11242/llama-server.exe --host 0.0.0.0 --port ${PORT}
+      -m C:/models/gemma4/gemma-4-12B-it-qat-UD-Q4_K_XL.gguf
+      -c 65536 -ngl 99 -fa on -ctk q8_0 -ctv q8_0
+      -ub 1024 -b 2048 --parallel 2 --kv-unified -cram 4096 --load-mode none
+      --jinja --temp 1.0 --top-p 0.95 --top-k 64 --min-p 0.0
+      --cont-batching --metrics -t 6 -tb 12
+      --spec-type draft-mtp --spec-draft-model C:/models/gemma4/mtp-gemma-4-12B-it.gguf --spec-draft-n-max 3
+    ttl: 1800
+    capabilities: { in: ["text"], out: ["text"], context: 65536 }
+
+# group entry:  gpu:  members: [ ..., "westeros-gemma12", "westeros-gemma12-mtp" ]
+# TUNED variants (LoRA) are added below once the fine-tune is evaluated.

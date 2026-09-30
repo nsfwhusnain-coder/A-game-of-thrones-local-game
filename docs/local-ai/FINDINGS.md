@@ -1,5 +1,21 @@
 # Findings — 2026-09-29 (first snapshot)
 
+> **Update 2026-10-01 — the model question is settled; this snapshot is kept for the record.** The recommended local model is now **Maester-12B**
+> (Gemma 4 12B QAT + a LoRA fine-tuned for this game; one model, two aliases of one process). What it can do: [MAESTER-12B.md](MAESTER-12B.md); every number: [RESULTS.md](RESULTS.md);
+> the one-page summary: [REPORT.md](REPORT.md). Where the model needs to improve is logged in [MODEL-WISHLIST.md](MODEL-WISHLIST.md).
+>
+> | on the game's own suites (255b302) | untuned 12B | **Maester-12B** |
+> |---|---|---|
+> | interpret, 125 orders no training row was built from | 107.7 of 125 (86.2 %) | **110 of 125 (88.0 %)** |
+> | mind in character / needed the game's fallback | 86.2 % / 16 | **89.4 % / 2** |
+> | council first try (of 15) | 8 | **13** |
+> | narrate first try | 84.0 % | 80.7 % (so narrate runs untuned) |
+> | stray foreign-script tokens, all suites | 22 | **3** |
+> | decode | 55 tok/s (95 with MTP) | 43 tok/s (**75 with MTP**), 9.7 GB VRAM |
+>
+> Still true below: the slot-pinning hang (§1) and the VRAM cliff (§2). **Wrong below:** §7's "Fine-tuning on this PC works" — it does not for these models on 12 GB (Gemma 4's unquantised per-layer embeddings push a 4-bit E4B run to
+> ~13.7 GB and Windows spills to RAM; ~63 h). The 12B was trained on Kaggle (2 × Tesla T4, free) and evaluated here. The checklist at the end is superseded by [REPORT.md](REPORT.md).
+
 Everything here was measured on the owner's PC against the game's own suites at commit `e3a8a36` (see [README](README.md)). Where a
 number is still being produced it says **pending**.
 
@@ -115,13 +131,13 @@ the Gemma 4 MTP drafters are 0.25 GB files; Qwen3.6 has an MTP build.
 Set aside on size or speed: GLM-5.3-Flash (321 B parameters), Inkling-Small (264 B), Qwen3.8-Flash-Next (125 B-A6B), Mistral Small 4
 (119 B-A6B), Muse-Glimmer-30B (dense 29.6 B — too slow on this card). Stretch: Nemotron-3.5-Lightning-30B-A3B, Ternary-Bonsai-2-27B.
 
-## 7. Fine-tuning on this PC works
+## 7. Fine-tuning on this PC works (SUPERSEDED — it does not; see the update at the top and [TRAINING.md](TRAINING.md))
 
 Unsloth runs natively on Windows on the RTX 5070 (torch 2.12.1+cu132 sees compute capability 12.0; unsloth 2026.9.12, trl 0.24,
 peft 0.21, bitsandbytes 0.50.2): no WSL needed. Gemma 4 E4B QLoRA needs about 10 GB; the 26B-A4B MoE needs more than 40 GB
 (rented GPU). It must never run while the model server is up (§2).
 
-## Checklist (updated as it is done)
+## Checklist (frozen at the first snapshot; the final state is in [REPORT.md](REPORT.md))
 
 - [x] Baselines: interpret and hold-out for Qwen3.6 (256k) and Gemma 26B; mind for Gemma
 - [ ] Baselines: mind and narrate for Qwen3.6; narrate for Gemma; 12-turn playtest
