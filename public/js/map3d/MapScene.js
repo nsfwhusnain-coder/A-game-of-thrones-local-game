@@ -355,6 +355,12 @@ export class MapScene {
     this.tween = { from: { x: this.target.x, z: this.target.z, d: this.dist }, to, t: 0, dur }; this.clearHover();
     this.goal = null; this.zoom = null;
   }
+  /** Where a place of the map is on the screen, in CSS pixels: { x, y }, or null when it is behind the camera (the card beside a castle keeps to it). */
+  screenOf(x, z) {
+    if (!this.camera || !this.cssW) return null;
+    const v = new THREE.Vector3(x, this.groundAt(x, z) + 3, z).project(this.camera);
+    return v.z > 1 ? null : { x: (v.x * 0.5 + 0.5) * this.cssW, y: (-v.y * 0.5 + 0.5) * this.cssH };
+  }
   /** Back to the whole realm (L0), framed on Westeros and the Narrow Sea. */
   home() { this.flyTo(L0_CENTRE, LOD[0]); }
   dropEta(rec) { if (rec.eta) { rec.eta.el.remove(); this.labels = this.labels.filter((l) => l !== rec.eta); rec.eta = null; } }

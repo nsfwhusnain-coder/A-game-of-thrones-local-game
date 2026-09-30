@@ -24,49 +24,56 @@ import { musterOf } from '../engine/military/muster.js';
 import { supplyOf, supplyText, provinceOf } from '../engine/military/supply.js';
 import { STANDING } from '../engine/military/battle.js';
 import { hullsOf, capacityOf, carriedOf, aboardOf } from '../engine/military/naval.js';
-import { TERMS, fortOf, siegeView } from '../engine/military/siege.js';
+import { TERMS, fortOf, siegeView, garrisonOf } from '../engine/military/siege.js';
 import { FORTRESS } from '../../data/fortresses.js';
 import { COMPANIES } from '../../data/companies.js';
 import { GOALS, sideOf, scoreFor, leaderOf } from '../engine/politics/war.js';
 import { dayNumber, dateOfDay } from '../engine/time.js';
 import { renderLedger, wireLedger } from './realm.js';
 
-const TITLES = { realm: 'State of the Realm', council: 'Council', military: 'Military', economy: 'Treasury & Economy', diplomacy: 'Diplomacy', intrigue: 'Intrigue', people: 'People of the Realm' };
+import { TABS, tabTarget } from './hud.js';
 
-// The three doors (Realm, People, Chronicle: ui/hud.js MENU) open a window on a section; until the State of the Realm (R4) and the cards
-// (U4) hold the old views as their own tabs and sections, a section is the window that used to hold it: the wars and the hosts, the
-// treasury, the houses' dealings, the council, the shadows. Every old key still lands where it did.
-const SECTION_WINDOW = { 'realm/wars': 'military', 'realm/economy': 'economy', 'realm/houses': 'diplomacy', 'people/council': 'council', 'people/shadows': 'intrigue' };
+// Two windows, each with tabs (GDD 17 §4 U4): the Realm (the State of the Realm, your house, the hosts, the treasury, the dealings of the houses) and
+// People (the household and court, the council, the shadows). What were six windows are tabs of these, unchanged inside; the old keys and the old
+// window names still land where they did (ui/hud.js tabTarget). The map's cards (ui/card.js) take the reading of one castle or host; these are
+// for the reading of the realm. A window is one panel: opening a sheet or a card puts it away, and the sheet says how to come back.
+const TITLES = { realm: 'Realm', people: 'People' };
+const VIEWS = { 'realm/ledger': realmWindow, 'realm/house': realm, 'realm/hosts': military, 'realm/coin': economy, 'realm/courts': diplomacy, 'people/people': people, 'people/council': council, 'people/shadows': intrigue };
+const WIRES = { 'realm/ledger': null, 'realm/hosts': 'military', 'realm/coin': 'economy', 'people/people': 'people', 'people/council': 'council', 'people/shadows': 'intrigue' };
+const tabLabel = (door, tab) => TABS[door]?.find((t) => t.id === tab)?.label || '';
 export function openWindow(name, arg) {
-  const via = SECTION_WINDOW[`${name}/${arg}`]; if (via) { name = via; arg = undefined; }
-  if (app.win === name && arg === undefined) return closeWindow();
-  if (name === 'realm' && app.win !== 'realm') app.realmTab = 'ledger';
-  app.win = name; app.winArg = arg; sfx('open');
+  const { door, tab } = tabTarget(name, arg);
+  if (app.win === door && (tab == null || app.tab === tab)) return closeWindow();
+  app.closeCard?.(); if (app.sheet) closeSheet();
+  app.back = null;
+  const first = app.win !== door;
+  app.win = door; app.tab = tab || (first ? TABS[door][0].id : app.tab); app.winArg = arg; sfx('open');
   $('#window').classList.remove('hidden');
   $('#window').setAttribute('aria-hidden', 'false');
-  $('#win-title').textContent = TITLES[name] || name;
-  $('#sheet').classList.remove('solo');
   renderWindow();
 }
-export function closeWindow() { if (app.win) sfx('close'); app.win = null; wideWindow(false); $('#window').classList.add('hidden'); $('#window').setAttribute('aria-hidden', 'true'); $('#sheet').classList.add('solo'); }
+export function closeWindow(quiet = false) { if (app.win && !quiet) sfx('close'); app.win = null; wideWindow(false); $('#window').classList.add('hidden'); $('#window').setAttribute('aria-hidden', 'true'); }
 export function renderWindow() {
   if (!app.win || !app.state) return;
-  const body = $('#win-body');
-  const fn = { realm: realmWindow, council, military, economy, diplomacy, intrigue, people }[app.win];
-  wideWindow(app.win === 'realm' && app.realmTab !== 'house');
-  $('#win-title').textContent = app.win === 'realm' && app.realmTab === 'house' ? 'Your house' : TITLES[app.win] || app.win;
-  body.innerHTML = fn ? fn() : '';
-  wire[app.win]?.(body);
+  const body = $('#win-body'); const key = `${app.win}/${app.tab}`;
+  wideWindow(key === 'realm/ledger');
+  $('#win-title').textContent = TITLES[app.win] || app.win;
+  const tabs = `<div class="wc-tabs win-tabs" role="tablist" aria-label="${TITLES[app.win]}">${TABS[app.win].map((t) => `<button class="wc-tab" role="tab" data-win-tab="${t.id}" aria-selected="${t.id === app.tab}" title="${esc(t.hint)}">${esc(t.label)}</button>`).join('')}</div>`;
+  body.innerHTML = `${tabs}<div class="tab-body" id="tab-body" data-tab="${app.tab}">${(VIEWS[key] || (() => ''))()}</div>`;
+  const inner = $('#tab-body', body);
+  if (key === 'realm/ledger') { const root = $('#realm-body', inner); if (root) { wireLedger(root); renderLedger(root); } }
+  else if (WIRES[key]) wire[WIRES[key]]?.(inner);
 }
 // The ledger is a wide page (docs/gdd/19 §6.2); the windows beside it and the map's chip make room for it
 function wideWindow(on) { $('#window').classList.toggle('wide', on); document.body.classList.toggle('wide-window', on); }
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-win-tab]'); if (!t || !app.win) return;
+  if (app.tab !== t.dataset.winTab) { app.tab = t.dataset.winTab; sfx('open'); renderWindow(); }
+});
 
 // ───────────── Realm ─────────────
 // The Realm door opens the State of the Realm (ui/realm.js); the house's own page, as it was, is the "Your house" tab
-function realmWindow() {
-  if (app.realmTab === 'house') return `<div class="wc-tabs realm-tabs" role="tablist"><button class="wc-tab" role="tab" data-realm-tab="ledger" aria-selected="false">State of the Realm</button><button class="wc-tab" role="tab" aria-selected="true">Your house</button></div>${realm()}`;
-  return '<div id="realm-body" class="realm-body"></div>';
-}
+function realmWindow() { return '<div id="realm-body" class="realm-body"></div>'; }
 function realm() {
   const s = app.state, p = s.meta.player, h = player();
   const liege = h.liege ? s.houses[h.liege] : null;
@@ -294,7 +301,7 @@ function economy() {
     <div class="section"><h4>Works & projects</h4>${(() => { const act = projs.filter((x) => x.status === 'active'); if (!act.length) return ''; const left = act.reduce((a, x) => a + (x.remaining || 0), 0); const perMoon = act.reduce((a, x) => a + (x.perMonth || 0), 0); return `<div class="muted" style="font-size:0.85rem;margin-bottom:0.4rem">Committed: <b style="color:var(--gold2)">${fmt(Math.round(left))}</b> dragons still to spend on ${act.length} work${act.length > 1 ? 's' : ''} — about ${fmt(Math.round(perMoon))} a moon.</div>`; })()}${projs.filter((x) => x.status === 'active').map((x) => `<div class="proj"><div style="display:flex;justify-content:space-between"><b>${esc(x.name)}</b><button class="btn small danger" data-cancel-proj="${x.id}">Cancel</button></div><div class="muted" style="font-size:0.78rem">${fmt(Math.round(x.cost - x.remaining))} / ${fmt(x.cost)} gd · ${Math.round(x.monthsLeft * 10) / 10} moons left</div>${meter(100 - (x.monthsLeft / x.months) * 100)}</div>`).join('') || '<div class="muted" style="font-size:0.85rem">Nothing under way.</div>'}
       ${projs.filter((x) => x.status === 'complete').slice(-3).map((x) => `<div class="muted" style="font-size:0.8rem">✓ ${esc(x.name)}</div>`).join('')}
       <h4 style="margin-top:0.8rem">Fund new works</h4>
-      <label>At</label><select id="proj-hold">${holdings.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>
+      <label>At</label><select id="proj-hold">${holdings.map((x) => `<option value="${x.id}"${x.id === app.projHold ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
       <div class="tpl-grid" style="margin-top:0.4rem">${PROJECT_TEMPLATES.map((t) => `<div class="tpl" data-proj="${t.key}"><b>${t.icon} ${esc(t.name)}</b><div class="c">${fmt(t.cost)} gd · ${t.months} moons</div><div class="c">${esc(t.desc)}</div></div>`).join('')}</div></div>
     <div class="section"><h4>What your lands yield</h4><div>${Object.entries(res).filter(([, v]) => v > 0.2).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span class="pill" title="${esc(RESOURCES[k]?.desc || '')}">${RESOURCES[k]?.icon || ''} ${esc(RESOURCES[k]?.name || k)} ${v >= 4 ? '●●●' : v >= 1.5 ? '●●' : '●'}</span>`).join('')}</div></div>`;
 }
@@ -362,11 +369,6 @@ function people() {
 
 // ───────────── wiring ─────────────
 const wire = {
-  realm(body) {
-    const root = $('#realm-body', body);
-    if (root) { wireLedger(root); renderLedger(root); }
-    else $$('[data-realm-tab]', body).forEach((b) => b.onclick = () => { app.realmTab = 'ledger'; renderWindow(); });
-  },
   council(body) {
     $('#convene', body).onclick = () => { const ids = $$('.cm', body).filter((x) => x.checked).map((x) => x.value); if (!ids.length) return toast('Choose who sits at the table.', true); app.openCouncil(ids); };
   },
@@ -462,18 +464,25 @@ document.addEventListener('click', (e) => {
 });
 
 // ═════════════ Detail sheets ═════════════
+// A sheet is the whole of one castle, host, lord or house, and takes the window's place (one panel at a time: the map stays the screen); it says where
+// it came from and a click takes the lord back there. Closing it (Esc, the cross) puts nothing back.
 export function openSheet(kind, id) {
+  app.closeCard?.();
+  if (app.win) { app.back = { win: app.win, tab: app.tab }; closeWindow(true); }
   app.sheet = { kind, id };
-  const el = $('#sheet'); el.classList.remove('hidden'); el.setAttribute('aria-hidden', 'false'); el.classList.toggle('solo', !app.win);
+  const el = $('#sheet'); el.classList.remove('hidden'); el.setAttribute('aria-hidden', 'false'); el.classList.add('solo');
   renderSheet();
 }
-export function closeSheet() { app.sheet = null; $('#sheet').classList.add('hidden'); $('#sheet').setAttribute('aria-hidden', 'true'); }
+export function closeSheet() { app.sheet = null; app.back = null; $('#sheet').classList.add('hidden'); $('#sheet').setAttribute('aria-hidden', 'true'); }
+function backFromSheet() { const b = app.back; if (!b) return; closeSheet(); openWindow(b.win, b.tab); }
+document.addEventListener('click', (e) => { if (e.target.closest('[data-sheet-back]')) backFromSheet(); });
 export function renderSheet() {
   if (!app.sheet || !app.state) return;
   const { kind, id } = app.sheet;
   const html = kind === 'char' ? characterSheet(id) : kind === 'holding' ? holdingSheet(id) : kind === 'army' ? armySheet(id) : kind === 'house' ? houseSheet(id) : '';
   if (!html) return closeSheet();
-  $('#sheet-body').innerHTML = html;
+  const back = app.back ? `<button class="btn ghost small sheet-back" data-sheet-back title="Back to where you were">← ${esc(tabLabel(app.back.win, app.back.tab))}</button>` : '';
+  $('#sheet-body').innerHTML = back + html;
   $$('[data-march]', $('#sheet-body')).forEach((b) => b.onclick = () => app.startPick('march', b.dataset.march));
   $$('[data-tree]', $('#sheet-body')).forEach((b) => b.onclick = () => familyTree(b.dataset.tree));
 }
@@ -616,7 +625,7 @@ function holdingSheet(id) {
       <div class="s"><div class="k">Unrest</div><div class="v">${Math.round(hd.unrest)}</div>${meter(hd.unrest, '#d0604a')}</div>
       <div class="s"><div class="k">Walls</div><div class="v">${'■'.repeat(fortOf(s, hd))}${'□'.repeat(Math.max(0, 6 - fortOf(s, hd)))}</div></div>
       <div class="s"><div class="k">Status</div><div class="v" style="font-size:0.9rem">${esc(hd.status)}</div></div>
-      <div class="s"><div class="k">Garrison</div><div class="v">${hd.garrison != null ? '~' + fmt(hd.garrison) : '?'}</div></div>
+      <div class="s"><div class="k">Garrison</div><div class="v">${mine ? '~' + fmt(garrisonOf(s, hd)) : hd.garrison != null ? '~' + fmt(hd.garrison) : '?'}</div></div>
     </div>
     ${siegeHtml(s, hd)}
     <div>${Object.entries(hd.resources || {}).filter(([, v]) => v >= 0.3).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span class="pill" title="${esc(RESOURCES[k]?.desc || '')}">${RESOURCES[k]?.icon || ''} ${esc(RESOURCES[k]?.name || k)} ${v >= 2 ? '●●●' : v >= 1 ? '●●' : '●'}</span>`).join('')}</div>

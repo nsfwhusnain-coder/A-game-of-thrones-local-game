@@ -1341,3 +1341,20 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **The dump.** `node scripts/realm-dump.js --play stark --turns 12` (a new mock game) or `--game <id>` (a save) prints, for every house and figure, the truth, what the ledger shows, how it came, how old it is and the error; `--audit` adds the
   report. Dev only: it shows what the game hides, so it is never imported by the game.
 - **Not built:** a per-figure check of the *movement* words (rising, falling) against the truth's trend — they follow the ledger's own series by construction (R6's tests).
+
+## D-086 · 2026-09-30 · Cards on the map, and two windows with tabs (WP U4)
+
+- **A click on a castle or a host opens a card beside it** (`ui/cards.js`, `ui/card.js`; mockup 07): the holder (a chip: click it for the lord's sheet), the garrison (your own holdings only, as your castellan reckons it: `garrisonOf`; another house's is not shown at all),
+  the lands in two words ("Prosperous · restless"), who is there, the newest news of the place within six turns, and at most three things to do, then **More ▸** for the whole sheet. Your seat: Hold court · Call banners · Works; another house's castle:
+  Send a raven (or Send a host here). A host of yours: March to… · Give orders…; a host only reported is "unconfirmed" and gives the report and nothing else. Every action is a hook the game already answered (`data-talk`, `data-order-tpl`, `data-march`, `data-court`,
+  and a new `data-open-tab` that opens a tab and presses its button: "Call banners" opens Hosts and the banners form; "Works" opens Treasury with the holding chosen). The card is placed by a pure function (`placeCard`): beside the object (to its right, then left, then above and
+  below), a fifth of its own width clear of the object so a castle's name is not covered, and clear of the top bar, the strip, the chronicle, the command bar, the ruler, the map-mode button and the menus; it follows the object as the camera moves and waits (hidden) while it is off screen.
+  Characters, houses and pins keep their sheets and windows (the portrait's hover card is U9).
+- **Two windows, with tabs** (`hud.js` `TABS`): **Realm** = Ledger (the State of the Realm; "Your house" is no longer a mode of the ledger but its own tab, **House**) · House · Hosts (old Military) · Treasury (old Economy) · Diplomacy;
+  **People** = Family & court · Council · Shadows (old Intrigue). What each held is unchanged inside; the old keys `m e d c i` and the old window names (`openWindow('military')`, `data-win-open="economy"`) land on their tabs (`tabTarget`).
+  A test holds that no `doVerb`/`courtAct` verb and no `data-` hook the UI offered before U4 (a list taken from the sources at the start, `tests/fixtures/ui/hooks-before-u4.json`) has gone from its sources: "no action lost", permanently.
+- **Departure from the plan: one panel at a time, not "window + sheet ≤ 45 %".** The wide ledger alone is 62 % of the screen, so no two panels can share it; instead a card, a sheet and a window put one another away (a sheet opened from a window takes its place and shows **← Hosts** to go back;
+  Esc peels the card, then the sheet, then the window and puts nothing back). The gate (`scripts/ui-gate.mjs`) now clicks a castle on the real map and checks the card opens, keeps clear of the bars at both sizes, closes on Esc first, "More" opens the sheet in a window's place,
+  the seven keys land on their tabs, and no window or sheet covers the command bar.
+- **A fault found on the way:** the castle sheet said "Garrison ?" for your own seat; it now says the castellan's figure.
+- **Not built:** cards for lords and houses (U9's hover card); the map's own hover tooltip is unchanged.

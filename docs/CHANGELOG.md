@@ -3,6 +3,16 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — U4: cards on the map, and two windows with tabs
+
+- **Click a castle or a host on the map and a small card opens beside it** (the holder, the garrison of your own holdings, the lands in two words, who is there, the latest news of the place, up to three things to do, and **More ▸** for the whole sheet).
+  It keeps beside its castle as you move the map, never covers the top bar, the strip, the command bar or your portrait, and Esc puts it away. Your seat offers **Hold court · Call banners · Works**; another house's castle **Send a raven** or **Send a host here**;
+  your host **March to… · Give orders…**. A host you have only heard of is "unconfirmed" and gives what was reported and nothing else.
+- **Six windows became two, with tabs.** **Realm**: Ledger (the State of the Realm) · House · Hosts · Treasury · Diplomacy. **People**: Family & court · Council · Shadows. Everything each held is still there; the keys R P H M E D C I still open what they opened.
+- **One panel at a time.** Opening a sheet (a lord, a house, the whole castle) takes a window's place and shows **← Hosts** (or wherever you were) to go back; Esc closes the card, then the sheet, then the window.
+- Fixed: the castle sheet said "Garrison ?" for your own seat.
+- Tests: `tests/cards.test.js` (9: what the cards say and do not, the placement never over the bars at both sizes, the tabs, and that no verb or hook the screen offered before has gone), the gate's new rows.
+
 ## 2026-09-30 — R7: the realm's figures are held to the truth
 
 - **A tool for the owner:** `node scripts/realm-dump.js --play stark --turns 12` (or `--game <id>` for a save) prints every house's figures as they are and as your ledger shows them, how each came, how old it is and how far

@@ -23,7 +23,7 @@ export function ledgerHtml(v, q, e) {
   env = e; try { return draw(v, q); } finally { env = null; }
 }
 function draw(v, q) {
-  const lensTabs = LENSES.map((l) => `<button class="wc-tab" role="tab" data-lens="${l}" aria-selected="${q.lens === l}">${LENS_LABEL[l]}</button>`).join('') + `<button class="wc-tab realm-tab-house" role="tab" data-lens="house" aria-selected="false" title="Your own house, in full">Your house</button>`;
+  const lensTabs = LENSES.map((l) => `<button class="wc-tab" role="tab" data-lens="${l}" aria-selected="${q.lens === l}">${LENS_LABEL[l]}</button>`).join('') ;
   const chips = (list, on, attr, label) => list.map((x) => `<button class="wc-chip${on(x) ? ' is-on' : ''}" data-${attr}="${x}" aria-pressed="${on(x)}">${label(x)}</button>`).join('');
   const body = q.lens === 'wars' ? warsPage(v, q) : tablePage(v, q);
   return `<div class="realm-ledger">

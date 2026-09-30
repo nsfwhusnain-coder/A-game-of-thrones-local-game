@@ -32,7 +32,7 @@ export async function renderLedger(root) {
 function onClick(e, root) {
   const q = ask(); const t = e.target;
   const lens = t.closest('[data-lens]');
-  if (lens) { if (lens.dataset.lens === 'house') { app.realmTab = 'house'; import('./windows.js').then((w) => w.renderWindow()); return; } q.lens = lens.dataset.lens; q.house = null; remember(); return void renderLedger(root); }
+  if (lens) { q.lens = lens.dataset.lens; q.house = null; remember(); return void renderLedger(root); }
   if (t.closest('[data-cols]')) { q.cols = !q.cols; remember(); return void renderLedger(root); }
   const moons = t.closest('[data-moons]'); if (moons) { q.moons = Number(moons.dataset.moons); remember(); return void renderLedger(root); }
   const realm = t.closest('[data-realm]'); if (realm) { q.realm = realm.dataset.realm === 'true'; remember(); return void renderLedger(root); }

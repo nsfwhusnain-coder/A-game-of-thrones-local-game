@@ -196,6 +196,41 @@ async function probes(page) {
   }
   return out;
 }
+// U4 (GDD 17 §4): a click on a castle opens a card beside it, clear of the bars, the strip, the command bar and the ruler; Escape closes it first; "More" opens the sheet
+// in the window's place; the old keys land on their tabs; a window or a sheet never covers the command bar.
+const KEEP = ['#hud-top .hud-left', '#hud-top .hud-right', '#strip', '#command-bar', '#hud-player'];
+async function probeCards(page) {
+  const out = { cardOpens: false, cardClear: 'n/a', cardEsc: 'n/a', more: 'n/a', tabs: [], panelsClear: 'n/a' };
+  const rects = (sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e || e.classList.contains('hidden')) return null; const r = e.getBoundingClientRect(); return r.width ? [r.left, r.top, r.right, r.bottom] : null; }, sel);
+  const hit = (a, b) => a && b && a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
+  const seat = await page.evaluate(() => { const s = window.__wc.state; const h = s.holdings[s.houses[s.meta.player].seat]; const p = window.__wc.map.screenOf(h.pos[0], h.pos[1]); return p ? { id: h.id, x: p.x, y: p.y } : null; });
+  if (seat) {
+    await page.evaluate(() => document.activeElement?.blur?.());
+    await page.mouse.click(seat.x, seat.y); await page.waitForTimeout(500);
+    const card = await rects('#card'); out.cardOpens = !!card;
+    if (card) {
+      const bad = []; for (const k of KEEP) if (hit(card, await rects(k))) bad.push(k);
+      const vp = page.viewportSize(); if (card[0] < 0 || card[1] < 0 || card[2] > vp.width || card[3] > vp.height) bad.push('the screen');
+      out.cardClear = bad.length ? 'FAIL: ' + bad.join(', ') : 'ok';
+      const more = await page.$('#card [data-card-more]'); if (more) { await more.click(); await page.waitForTimeout(400); const st = await page.evaluate(() => ({ sheet: window.__gate.visible('#sheet'), win: window.__gate.visible('#window'), card: window.__gate.visible('#card') })); out.more = st.sheet && !st.card && !st.win ? 'ok' : 'FAIL ' + JSON.stringify(st); await page.keyboard.press('Escape'); await page.waitForTimeout(150); }
+      await page.mouse.click(seat.x, seat.y); await page.waitForTimeout(400);
+      await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+      out.cardEsc = (await rects('#card')) ? 'FAIL: card still open' : 'ok';
+    }
+  }
+  // the old keys land on their tabs, and what opens never covers the command bar
+  const land = { r: 'realm/ledger', m: 'realm/hosts', e: 'realm/coin', d: 'realm/courts', c: 'people/council', i: 'people/shadows', p: 'people/people' };
+  let bad = [];
+  for (const [k, want] of Object.entries(land)) {
+    await page.evaluate(() => document.activeElement?.blur?.()); await page.keyboard.press(k); await page.waitForTimeout(350);
+    const got = await page.evaluate(() => window.__wc.win + '/' + window.__wc.tab); out.tabs.push({ key: k, want, got });
+    const win = await rects('#window'); if (hit(win, await rects('#command-bar'))) bad.push('window over the command bar (' + k + ')');
+    await page.keyboard.press('Escape'); await page.waitForTimeout(120);
+  }
+  if (seat) { await page.evaluate((id) => window.__wc.openSheet('holding', id), seat.id); await page.waitForTimeout(300); const sh = await rects('#sheet'); if (hit(sh, await rects('#command-bar'))) bad.push('sheet over the command bar'); if (await rects('#window')) bad.push('window and sheet together'); await page.keyboard.press('Escape'); await page.waitForTimeout(150); }
+  out.panelsClear = bad.length ? 'FAIL: ' + bad.join('; ') : 'ok';
+  return out;
+}
 async function measure(browser, id, w, h, turn) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.setDefaultTimeout(90000);
@@ -215,6 +250,8 @@ async function measure(browser, id, w, h, turn) {
   const res = judge(snap, w, h, turn);
   Object.assign(res, await probes(page));
   say('probed');
+  Object.assign(res, { u4: await probeCards(page) });
+  say('cards probed');
   res.errors = errors; await page.close();
   return res;
 }
@@ -233,6 +270,12 @@ function report(cells) {
     ['old hotkeys that open something', (c) => `${c.keys.filter((k) => k.opened).length}/8`, (c) => c.keys.filter((k) => k.opened).length === GATE.hotkeys, () => 'r p h m e d c i: 8/8'],
     ["ruler's portrait on screen", (c) => (c.portrait ? 'yes' : 'NO'), (c) => c.portrait, () => 'yes'],
     ['uncaught page errors', (c) => c.errors.length, (c) => c.errors.length === 0, () => '0'],
+    ['a click on a castle opens its card', (c) => (c.u4.cardOpens ? 'yes' : 'NO'), (c) => c.u4.cardOpens, () => 'yes'],
+    ['the card keeps clear of bars, strip, ruler', (c) => c.u4.cardClear, (c) => c.u4.cardClear === 'ok', () => 'ok'],
+    ['Escape closes the card first', (c) => c.u4.cardEsc, (c) => c.u4.cardEsc === 'ok', () => 'ok'],
+    ['"More" opens the sheet in place of a window', (c) => c.u4.more, (c) => c.u4.more === 'ok', () => 'ok'],
+    ['old keys land on their tabs', (c) => `${c.u4.tabs.filter((t) => t.got === t.want).length}/${c.u4.tabs.length}`, (c) => c.u4.tabs.length === 7 && c.u4.tabs.every((t) => t.got === t.want), () => '7/7'],
+    ['windows and sheets clear of the command bar', (c) => c.u4.panelsClear, (c) => c.u4.panelsClear === 'ok', () => 'ok'],
     ['Escape closes the menu first', (c) => c.escape, (c) => c.escape === 'n/a' || c.escape === 'ok', () => 'ok (n/a: no #menu-pop)'],
   ];
   const cols = cells.map((c) => `${c.w}x${c.h} t${c.turn}`);

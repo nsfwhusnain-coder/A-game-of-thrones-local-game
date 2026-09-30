@@ -6,8 +6,8 @@
 > pans the map: 19 §6.1, [DECISIONS](DECISIONS.md) D-070). R1–R3 are built (Slice 2); the ledger's window is R4. U1–U4, U8
 > and U9 stand as written.
 
-> **Status (2026-09-30): U1, U2 and U3 are implemented** ([DECISIONS](DECISIONS.md) D-079): the bar, the three doors, the Inbox, the strip and the command bar,
-> measured by `scripts/ui-gate.mjs` (§5). U4, U8 and U9 remain. Where the built screen differs from §2 it is because the mockups and the art direction (21) were drawn after it.
+> **Status (2026-09-30): U1, U2, U3 and U4 are implemented** ([DECISIONS](DECISIONS.md) D-079, D-086): the bar, the three doors, the Inbox, the strip and the command bar, the cards on the map and the two windows with tabs,
+> measured by `scripts/ui-gate.mjs` (§5). U8 and U9 remain. Where the built screen differs from §2 it is because the mockups and the art direction (21) were drawn after it.
 
 > Owner feedback: "The UI is very cluttered — too much information, too many panels, too many things to look at. Hide it
 > gracefully, the way big games do. Show what matters all the time; hide the rest behind a few buttons. This is an AI
@@ -430,6 +430,8 @@ CLAUDE.md) attached to the PR; a `docs/CHANGELOG.md` entry; the branch is `wp/u<
   and `doVerb` call site is still reachable); Playwright: click a castle → card, click a host → card, Esc closes;
   window + sheet never overlap the command bar at 1366 (bounding boxes).
 - **Depends on**: U2.
+
+*Implemented in U4 (Slice 9), as built in D-086: `ui/cards.js` (the cards' logic, pure), `ui/card.js` (on the screen, beside the object, kept clear of the bars), `ui/hud.js` `TABS`/`tabTarget`, `ui/windows.js` (two windows with tabs; a sheet takes a window's place and says the way back), `MapScene.screenOf`; `tests/cards.test.js`; the gate's U4 rows.*
 
 ### U5 · Trend history (`state.trends`)
 - **Scope**: `public/js/engine/state/trends.js` (pure `recordTrends(state)` and `sampleKnown(series, asOf)`), called from

@@ -79,8 +79,39 @@ export const MENU = [
   { id: 'people', key: 'p', label: 'People', hint: 'Family, court and guests', icon: 'weirwood' },
   { id: 'chronicle', key: 'h', label: 'Chronicle', hint: 'All that has happened', icon: 'scroll' },
 ];
-// the old hotkeys, which keep working: they land on the section of a door (until the ledger's tabs of R4 take them over)
+// the old hotkeys, which keep working: they land on the section of a door, which is a tab of its window (TABS)
 const KEYS = { r: { open: 'realm' }, p: { open: 'people' }, h: { open: 'chronicle' }, m: { open: 'realm', section: 'wars' }, e: { open: 'realm', section: 'economy' }, d: { open: 'realm', section: 'houses' }, c: { open: 'people', section: 'council' }, i: { open: 'people', section: 'shadows' } };
+/**
+ * The tabs of the two windows (GDD 17 §4 U4): what used to be six windows is two — the Realm (the ledger, your house, the hosts, the treasury, the
+ * dealings of the houses) and People (the household and court, the council, the shadows) — each old window a tab, with everything it held.
+ */
+export const TABS = {
+  realm: [
+    { id: 'ledger', label: 'Ledger', hint: 'The State of the Realm: every house, as your house knows it' },
+    { id: 'house', label: 'House', hint: 'Your house: court, holdings and vassals' },
+    { id: 'hosts', label: 'Hosts', hint: 'Levies, hosts and fleets, companies' },
+    { id: 'coin', label: 'Treasury', hint: "The moon's accounts, taxes, trade and works" },
+    { id: 'courts', label: 'Diplomacy', hint: 'Wars, pacts and the great powers' },
+  ],
+  people: [
+    { id: 'people', label: 'Family & court', hint: 'Everyone of note' },
+    { id: 'council', label: 'Council', hint: 'Your counsellors' },
+    { id: 'shadows', label: 'Shadows', hint: 'Schemes, spies and threats' },
+  ],
+};
+/** The tab a section (a key's, or an old window's name) lands on. */
+const SECTION_TAB = { wars: 'hosts', economy: 'coin', houses: 'courts', council: 'council', shadows: 'shadows', military: 'hosts', diplomacy: 'courts', intrigue: 'shadows' };
+const OLD_WINDOWS = { military: ['realm', 'hosts'], economy: ['realm', 'coin'], diplomacy: ['realm', 'courts'], council: ['people', 'council'], intrigue: ['people', 'shadows'] };
+/**
+ * Where `openWindow(name, arg)` goes: `{ door, tab }`; `tab` is null when the door alone was asked for (which keeps the tab it is on, or the first). `name` is a
+ * door ('realm', 'people'), or the name of an old window ('military'…); `arg` a section ('wars'…) or a tab's own id.
+ */
+export function tabTarget(name, arg) {
+  const old = OLD_WINDOWS[name]; if (old) return { door: old[0], tab: old[1] };
+  const door = TABS[name] ? name : 'realm';
+  const want = arg == null ? null : TABS[door].some((t) => t.id === arg) ? arg : SECTION_TAB[arg] && TABS[door].some((t) => t.id === SECTION_TAB[arg]) ? SECTION_TAB[arg] : null;
+  return { door, tab: want };
+}
 /** Where a key goes: { open, section? }, or null for every key that is not a door's (the map's own w a s, the arrows, Enter, Escape…). */
 export function routeKey(key) {
   const k = String(key || '');
