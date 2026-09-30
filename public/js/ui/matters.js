@@ -75,12 +75,12 @@ export function matterOf(s, d) {
  * "Say nothing" is a choice too: it puts the letter away and lets the days run.
  */
 export function matterHtml(m, s, env, extra = {}) {
-  const { esc, por, icon } = env; const who = m.asker.id ? s.characters[m.asker.id] : null;
+  const { esc, por, icon } = env; const link = env.link || esc; const who = m.asker.id ? s.characters[m.asker.id] : null;
   const from = who ? `<img class="wc-matter__face" src="${esc(por(who, 64))}" alt="">` : '';
   return `<div class="decision wc-matter wc-vellum" data-dec="${esc(m.id)}" data-left="${esc(m.tone)}">
     <div class="wc-matter__head"><span class="wc-seal wc-seal--small wc-matter__seal"${m.wax ? ` style="--wax:${esc(m.wax)}"` : ''} aria-hidden="true">${icon('seal', 'wc-matter__ico')}</span>${from}<div class="wc-matter__from"><span class="wc-kicker">${m.asker.id ? `From ${esc(m.asker.name)}` : 'A matter for your word'}${m.date ? ` · ${esc(m.date)}` : ''}</span>${m.asker.title ? `<span class="wc-matter__sub">${esc(m.asker.title)}</span>` : ''}</div>${extra.pos ? `<span class="wc-kicker wc-matter__pos">${esc(extra.place || '')}${extra.place ? ' · ' : ''}${esc(extra.pos)}</span>` : ''}</div>
     <h3 class="dec-title wc-title">${esc(m.title)}</h3><div class="wc-rule"></div>
-    <p class="eb wc-prose">${esc(m.gist)}</p>${m.rest ? `<details class="wc-matter__more"><summary>More</summary><p class="wc-prose">${esc(m.rest)}</p></details>` : ''}
+    <p class="eb wc-prose">${link(m.gist)}</p>${m.rest ? `<details class="wc-matter__more"><summary>More</summary><p class="wc-prose">${link(m.rest)}</p></details>` : ''}
     ${m.clock ? `<div class="wc-matter__clock is-${esc(m.tone)}" data-days="${m.daysLeft}">${icon('hourglass', 'wc-matter__ico')}<span>${esc(m.clock)}</span></div>` : ''}
     <div class="dec-opts wc-matter__opts">${m.options.map((o) => `<button class="wc-btn dec-opt" data-dec-id="${esc(m.id)}" data-opt="${o.i}" title="${esc(o.hint)}"><span class="dec-label">${esc(o.label)}</span>${o.hint ? `<small class="dec-hint">${esc(o.hint)}</small>` : ''}</button>`).join('')}</div>
     <div class="wc-matter__silence is-${esc(m.silence.tone)}"><button class="wc-btn wc-btn--quiet dec-silence" title="Put the letter away; it waits${m.left ? ` (${esc(m.left)})` : ''}">Say nothing</button><span class="wc-matter__silence-line">${esc(m.silence.line)}.</span>${extra.later ? '<button class="wc-btn wc-btn--quiet wc-matter__later" id="pin-skip" title="Come back to this one after the next">Later ›</button>' : ''}</div>

@@ -375,6 +375,40 @@ async function probeOrders(page) {
   for (let i = 0; i < 30; i++) { const n = await page.evaluate(async () => (await (await fetch('/api/games/' + window.__wc.saveId)).json()).orders?.length ?? -1); if (n === 0) break; await page.waitForTimeout(200); }
   return out;
 }
+// F7 (GDD 12 §15.3): a name in the game's text is a link — a card on hover, the person's sheet on a click or on Enter — and an audience says what the person is to you.
+// (A line naming one of the lord's family is put into an audience in the browser's own copy of the state.)
+async function probeNames(page) {
+  const out = { link: 'n/a', hover: 'n/a', open: 'n/a', key: 'n/a', rel: 'n/a' };
+  const kin = await page.evaluate(() => {
+    const app = window.__wc; const s = app.state; const lord = s.characters[s.houses[s.meta.player].lord];
+    const x = lord.spouse && s.characters[lord.spouse]?.name.includes(' ') ? s.characters[lord.spouse] : Object.values(s.characters).find((c) => c.house === s.meta.player && c.id !== lord.id && c.alive && c.name.includes(' '));
+    const other = Object.values(s.characters).find((c) => c.alive && c.house !== s.meta.player && c.loc && c.id !== x.id);
+    s.chats[other.id] = [{ role: 'npc', text: '*He looks up from the letter.* "' + x.name + ' speaks well of you, my lord."', date: 'today', turn: s.meta.turn, applied: [] }];
+    s.chats[x.id] = [{ role: 'npc', text: '*A nod.* "My lord."', date: 'today', turn: s.meta.turn, applied: [] }];
+    return { x: x.id, name: x.name, other: other.id };
+  });
+  await page.evaluate((id) => window.__wc.openChat(id), kin.other); await page.waitForTimeout(700);
+  const vp = page.viewportSize(); const n = await page.$('#drawer .msg.npc .nm[data-char]');
+  out.link = n ? 'ok' : 'FAIL: the name is not a link';
+  if (n) {
+    await n.hover(); await page.waitForTimeout(600);
+    const c = await page.evaluate(() => { const e = document.querySelector('#name-card'); const r = e.getBoundingClientRect(); return { on: e.classList.contains('is-on'), text: e.textContent, box: [r.left, r.top, r.right, r.bottom] }; });
+    out.hover = c.on && c.text.includes(kin.name.split(' ').at(-1)) && c.box[0] >= 0 && c.box[1] >= 0 && c.box[2] <= vp.width && c.box[3] <= vp.height ? 'ok' : `FAIL ${JSON.stringify(c)}`;
+    await page.mouse.move(5, 300); await page.waitForTimeout(200);
+    await n.click(); await page.waitForTimeout(600);
+    out.open = await page.evaluate((id) => (window.__wc.sheet?.id === id ? 'ok' : `FAIL sheet=${JSON.stringify(window.__wc.sheet)}`), kin.x);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200); await page.evaluate(() => window.__wc.closeSheet?.());
+    // the keyboard: focus the link and press Enter
+    await page.evaluate((id) => window.__wc.openChat(id), kin.other); await page.waitForTimeout(500);
+    await page.focus('#drawer .msg.npc .nm[data-char]'); await page.keyboard.press('Enter'); await page.waitForTimeout(600);
+    out.key = await page.evaluate((id) => (window.__wc.sheet?.id === id ? 'ok' : `FAIL sheet=${JSON.stringify(window.__wc.sheet)}`), kin.x);
+  }
+  await closeAll(page);
+  await page.evaluate((id) => window.__wc.openChat(id), kin.x); await page.waitForTimeout(500);
+  out.rel = await page.evaluate(() => { const r = document.querySelector('#drawer .chat-head .rel-line'); return r && /^your /.test(r.textContent) ? 'ok' : `FAIL ${r?.textContent || 'no line'}`; });
+  await closeAll(page);
+  return out;
+}
 async function measure(browser, id, w, h, turn) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.setDefaultTimeout(90000);
@@ -404,6 +438,8 @@ async function measure(browser, id, w, h, turn) {
   say('matter probed');
   Object.assign(res, { f3: await probeOrders(page) });
   say('orders probed');
+  Object.assign(res, { f7: await probeNames(page) });
+  say('names probed');
   res.errors = errors; await page.close();
   return res;
 }
@@ -439,6 +475,9 @@ function report(cells) {
     ['matter: Say nothing puts the letter away', (c) => c.f6.silence, (c) => c.f6.silence === 'ok', () => 'ok'],
     ['orders: a receipt with icon marks, a count', (c) => `${c.f3.receipt}/${c.f3.marks}/${c.f3.badge}`, (c) => c.f3.receipt === 'ok' && c.f3.marks === 'ok' && c.f3.badge === 'ok', () => 'ok/ok/ok'],
     ['orders: the command bar stays on the screen', (c) => c.f3.clear, (c) => c.f3.clear === 'ok', () => 'ok'],
+    ['names: a link, a card on hover', (c) => `${c.f7.link}/${c.f7.hover}`, (c) => c.f7.link === 'ok' && c.f7.hover === 'ok', () => 'ok/ok'],
+    ['names: click and Enter open the person', (c) => `${c.f7.open}/${c.f7.key}`, (c) => c.f7.open === 'ok' && c.f7.key === 'ok', () => 'ok/ok'],
+    ['audience: what they are to you', (c) => c.f7.rel, (c) => c.f7.rel === 'ok', () => 'ok'],
     ['the welcome card is shown on a new game', (c) => (c.first.welcome ? 'yes' : 'NO'), (c) => c.first.welcome, () => 'yes'],
     ['coach marks, in order, each put away by its thing', (c) => (c.first.marks.join('>') === 'command>turn>realm>' ? 'in order' : c.first.marks.map((m) => m || 'none').join('>')), (c) => c.first.marks.join('>') === 'command>turn>realm>', () => 'command>turn>realm>none'],
     ['a mark stays on the screen', (c) => (c.first.slipInside ? 'ok' : 'FAIL'), (c) => c.first.slipInside, () => 'ok'],

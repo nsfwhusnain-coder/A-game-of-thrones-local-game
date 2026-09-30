@@ -369,6 +369,8 @@ character and house card):
 
 ### 15.3 Who is who
 
+*Implemented in F7 part 1 (D-095): names are links with a hover card, "who is this" in audiences, the house sheet's Family tree button; §14 items 23 and 24 are tests. The house cards for unknown houses and the People browser are U9's.*
+
 - **Names are links.** In chronicle cards, letters, receipts and audience scenes, every roster name is a link (dotted
   underline) that shows a hover card (portrait, name, house crest, one line: title and where they are) and opens the
   full card on click. The narrator validator already finds these names (04 §6.4); reuse its matcher.

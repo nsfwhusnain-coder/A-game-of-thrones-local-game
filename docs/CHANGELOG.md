@@ -3,6 +3,13 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-01 — F7 (first part): names are links
+
+- **Every name in the game's text is a link.** In the chronicle, the news and pin windows, letters, what people say in an audience, your orders' receipts and the matters' letters, a person's name is underlined with dots; hover it (or tab to it) for a slip with their face, house, title and where they are, click it (or press Enter) to open them. "House Stark" opens the house. A name that could be two people, or a bare first name, is left alone.
+- **An audience says what the person is to you** ("your wife", "your bannerman", "your liege").
+- **The house sheet has a Family tree button** (the head of the house's tree); every house opens a tree (tested for all of them).
+- Tests: `tests/names.test.js` (8); three rows in `scripts/ui-gate.mjs`.
+
 ## 2026-10-01 — F3: the command bar counts your orders
 
 - **The End-turn plate counts the orders the turn will carry out**, and its colour and tooltip say when one cannot be done ("3 orders · 1 cannot be done") or is waiting for your answer to a question — before you let the days run.

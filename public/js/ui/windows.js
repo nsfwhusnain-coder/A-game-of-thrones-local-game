@@ -755,7 +755,7 @@ function houseSheet(id) {
     ${!mine ? `<div class="kv" style="margin-top:0.5rem"><span class="k">Relation</span><span>${relHtml(getRelation(s, p, id))}</span>${liege && liege.id === p ? `<span class="k">Obligations</span><span>${obligationPills(h)}</span>` : ''}</div>` : ''}
     <div class="stat-grid"><div class="s"><div class="k">${mine ? '' : 'Rumoured '}levies</div><div class="v">~${fmt(tot.levies)}</div></div><div class="s"><div class="k">Men-at-arms</div><div class="v">~${fmt(tot.menAtArms)}</div></div><div class="s"><div class="k">Ships</div><div class="v">~${fmt(tot.ships)}</div></div></div>
     ${lord ? `<h4>Lord</h4>${charRow(lord)}` : ''}
-    <h4>Members</h4>${members.filter((c) => c.id !== h.lord).slice(0, 14).map((c) => charRow(c, { showHouse: false })).join('') || '<div class="muted">No one known.</div>'}
+    <h4>Members${(lord || members[0]) ? `<button class="btn small" data-tree="${(lord || members[0]).id}" style="float:right">Family tree</button>` : ''}</h4>${members.filter((c) => c.id !== h.lord).slice(0, 14).map((c) => charRow(c, { showHouse: false })).join('') || '<div class="muted">No one known.</div>'}
     ${vas.length ? `<h4>Vassals</h4>${vas.map((v) => houseRow(s.houses[v])).join('')}` : ''}
     ${!mine ? `<hr><div class="row-actions">
       ${lord?.alive ? `<button class="btn primary" data-talk="${lord.id}">✉ Treat with ${esc(lord.name.split(' ')[0])}</button>` : ''}

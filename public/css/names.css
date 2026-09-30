@@ -1,0 +1,20 @@
+/* ───────────────────────────── names are links (ui/names.js; docs/gdd/12-ui-ux.md §15.3; WP F7) ───────────────────────────── */
+.nm { text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: .2em; cursor: pointer; border-radius: 2px; }
+.nm:hover, .nm:focus-visible { text-decoration-style: solid; color: var(--rubric); background: rgba(123, 30, 23, .08); outline: none; }
+.wc-oak .nm:hover, .wc-oak .nm:focus-visible, #drawer .nm:hover, #drawer .nm:focus-visible { color: var(--gold-flat); background: rgba(216, 180, 92, .1); }
+.wc-vellum .nm:hover, .wc-vellum .nm:focus-visible, .msg.npc .nm:hover { color: var(--rubric); }
+.nm:focus-visible { outline: .12rem solid var(--ochre); outline-offset: .05rem; }
+/* who they are, on hover or focus: a slip beside the name */
+#name-card { position: fixed; left: 0; top: 0; z-index: 70; display: none; gap: .7rem; width: 17.5rem; padding: .6rem .8rem; pointer-events: none; }
+#name-card.is-on { display: flex; }
+#name-card .nc-face img { display: block; width: 3.1rem; height: 3.8rem; object-fit: cover; border-radius: var(--radius-card); border: 1px solid var(--vellum-deep); box-shadow: 0 1px 3px rgba(42, 29, 18, .4); }
+#name-card .nc-text { display: flex; flex-direction: column; gap: .05rem; min-width: 0; }
+#name-card b { font: 600 1.1rem/1.15 var(--wc-display); letter-spacing: .03em; color: var(--ink-iron); }
+#name-card .nc-house { display: flex; align-items: center; gap: .3rem; font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .06em; color: var(--ink-soft); }
+#name-card .nc-house .sig { width: 1rem; }
+#name-card .nc-title { font: italic 1rem/1.25 var(--wc-serif); color: var(--ink-soft); }
+#name-card .nc-where { font: 1rem/1.25 var(--wc-serif); color: var(--ink-iron); }
+/* "who is this" in the head of an audience: what they are to you */
+.chat-head .rel-line { color: var(--gold-flat); font-style: italic; }
+/* on the vellum of a reply or a letter the hover is ink-red, not gold (the drawer's own rule above is for its oak) */
+#drawer .msg.npc .nm:hover, #drawer .msg.npc .nm:focus-visible, #drawer .raven-card .nm:hover, #drawer .raven-card .nm:focus-visible { color: var(--rubric); background: rgba(123, 30, 23, .1); }

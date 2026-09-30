@@ -118,7 +118,7 @@ test('the letter keeps the hooks the answering code knows, escapes what it is gi
 
 test('the wiring: the drawer draws the letter, the pin window and the Inbox open it on vellum, the map pin is a seal that knows the days, and saying nothing puts it away', () => {
   const drawer = rd('public/js/ui/drawer.js'); const pins = rd('public/js/ui/pins.js'); const chrome = rd('public/js/ui/chrome.js'); const map = rd('public/js/map3d/MapScene.js'); const css = rd('public/css/matters.css'); const html = rd('public/index.html');
-  assert.match(drawer, /matterHtml\(matterOf\(s, d\), s, \{ esc, por, icon \}, extra\)/); assert.match(drawer, /\.dec-silence/); assert.doesNotMatch(drawer, /<span class="tick">✓<\/span>/); assert.doesNotMatch(drawer, /dec-icon">⚖/);
+  assert.match(drawer, /matterHtml\(matterOf\(s, d\), s, \{ esc, por, icon, link: nm \}, extra\)/); assert.match(drawer, /\.dec-silence/); assert.doesNotMatch(drawer, /<span class="tick">✓<\/span>/); assert.doesNotMatch(drawer, /dec-icon">⚖/);
   assert.match(pins, /decisionsHtml\(\[it\.d\], \{ place, pos:/); assert.match(pins, /\{ vellum: true \}/); assert.match(chrome, /modal\(decisionsHtml\(\[d\]\), \{ vellum: true \}\)/); assert.match(chrome, /inboxHint/); assert.match(chrome, /leftWord\(decisionDaysLeft\(app\.state, i\)\)/);
   assert.match(map, /g\.decisions\.length \? '✉'/); assert.match(map, /leftWord\(decisionDaysLeft\(s, g\.decisions\[0\]\)\)/);
   assert.match(html, /css\/matters\.css/); assert.match(css, /\.lbl\.event\.asks/); assert.match(css, /prefers-reduced-motion: reduce\) \{ \.lbl\.event\.asks \{ animation: none/); assert.match(css, /wc-seal-ask/); assert.match(css, /\.wc-matter__silence/);
