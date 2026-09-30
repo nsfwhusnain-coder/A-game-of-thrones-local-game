@@ -3,6 +3,14 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-09-30 — F8: the title, the settings, the help and the end
+
+- **Settings in five tabs** — Game, Display, Graphics, Sound & voices, Model — one page at a time instead of one long scroll; the model's many parameters are under **Advanced**. Nothing was removed.
+- **The title screen** is oak and gold like the rest of the game, and the scenario is one line rather than an essay; **Begin** is the gold plate; loading says how far it has got ("Unrolling the map… 62 %").
+- **The help page** is rewritten for the game as it is now (the command bar, the card on a click, the three doors, the ledger's marks, F and G, Esc) with every key listed.
+- **The end of the tale** is a page of vellum: what happened, the campaign's ledger, and play on, undo, or a new house.
+- Tests: `tests/title-settings.test.js` (5).
+
 ## 2026-09-30 — E8: the turn told on the map
 
 - **The camera no longer chases every headline.** It flies to a place only for news of weight that is not already on your screen; for a day with several events it goes to the weightiest and only pulses the others on the map; light news never moves it. When the telling has taken it away from your realm, it goes home at the end.
