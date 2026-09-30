@@ -3,6 +3,12 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-01 — F6: matters as sealed letters, and silence that decides
+
+- **A matter is a wax seal on the map and a sealed letter when opened:** who asks (with their face and their house's wax), the situation, each answer as a plate with what it will do, how many days it waits ("The King will not wait — 6 days left"), and **Say nothing** with what your silence will do. The Inbox says how many days each matter has.
+- **Fix: ignoring a petition used to cost nothing.** Every petition's template says what silence decides (a house cooler, unrest, a festering quarrel), but the game dropped it; now it is applied when the matter lapses, and the letter says so before you choose.
+- Tests: `tests/matters-ui.test.js` (6); two rows in `scripts/ui-gate.mjs`.
+
 ## 2026-10-01 — F4: promises, chips and letters on the wing
 
 - **Promises are finally on the screen.** When a lord says yes, an audience now ends with **Promises**: what they owe you and what you owe them, in plain words, with the days left. The Realm's **Diplomacy** tab lists every promise made to or by your house, and the ones lately kept or broken.

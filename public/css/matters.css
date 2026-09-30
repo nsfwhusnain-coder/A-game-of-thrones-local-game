@@ -1,0 +1,53 @@
+/* ───────────────────────────── matters as sealed letters (docs/gdd/12-ui-ux.md §10; WP F6) ───────────────────────────── */
+/* A matter that awaits the lord's word is a letter under a wax seal: on the map a pulsing seal, opened a page of vellum — who asks, the situation, what each answer will do,
+   what silence will do, and how long there is. */
+#modal-box.is-vellum:has(.wc-matter) { width: min(36rem, 94vw); }
+.wc-matter { position: relative; padding: 1.1rem 1.5rem 1rem; max-height: 92vh; overflow-y: auto; }
+.wc-matter__head { display: flex; align-items: center; gap: .7rem; }
+.wc-matter__seal { flex: none; }
+.wc-matter__seal .wc-matter__ico { width: 1.25rem; height: 1.25rem; color: var(--_on-wax); }
+.wc-matter__face { width: 2.7rem; height: 2.7rem; object-fit: cover; border-radius: var(--radius-card); border: 1px solid var(--vellum-deep); box-shadow: 0 1px 3px rgba(42, 29, 18, .35); flex: none; }
+.wc-matter__from { display: flex; flex-direction: column; min-width: 0; }
+.wc-matter__sub { font: italic .95rem/1.2 var(--wc-serif); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wc-matter__pos { margin-left: auto; text-align: right; white-space: nowrap; }
+.wc-matter .dec-title { margin-top: .7rem; font-size: 1.4rem; }
+.wc-matter .eb { font-size: 1.1rem; line-height: 1.45; color: var(--ink-iron); }
+.wc-matter__more { margin-top: .4rem; } .wc-matter__more summary, .wc-matter .dec-own summary { cursor: pointer; font: 600 var(--wc-min)/1.3 var(--wc-display); letter-spacing: .08em; color: var(--ink-soft); }
+.wc-matter__more p { margin-top: .3rem; font-size: 1.05rem; line-height: 1.45; }
+.wc-matter__clock { display: flex; align-items: center; gap: .4rem; margin: .8rem 0 .1rem; font: 600 var(--wc-min)/1.2 var(--wc-display); letter-spacing: .06em; color: var(--ink-soft); }
+.wc-matter__clock .wc-matter__ico { width: 1rem; height: 1rem; }
+.wc-matter__clock.is-soon { color: #7a5518; } .wc-matter__clock.is-late { color: var(--madder-ink); }
+.wc-matter__opts { display: flex; flex-direction: column; gap: .45rem; margin: .7rem 0 .8rem; }
+.wc-matter .dec-opt { display: block; width: 100%; height: auto; min-height: 0; padding: .5rem 1.5rem; text-align: left; white-space: normal; }
+.wc-matter .dec-opt .dec-label { display: block; font: 600 1.02rem/1.25 var(--wc-display); letter-spacing: .03em; }
+.wc-matter .dec-opt small { display: block; margin-top: .1rem; color: var(--bone-dim); font: italic .95rem/1.25 var(--wc-serif); letter-spacing: 0; }
+.wc-matter .dec-opt.chosen { color: var(--gold-flat); }
+/* silence is an answer too */
+.wc-matter__silence { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem .7rem; padding-top: .6rem; border-top: 1px dashed rgba(60, 40, 20, .5); }
+.wc-matter__silence .wc-btn--quiet { color: var(--ink-soft); text-shadow: none; padding-inline: .3rem; }
+.wc-matter__silence .wc-btn--quiet:hover { color: var(--rubric); }
+.wc-matter__silence-line { flex: 1; min-width: 12rem; font: italic 1rem/1.3 var(--wc-serif); color: var(--ink-soft); }
+.wc-matter__silence.is-bad .wc-matter__silence-line { color: var(--madder-ink); }
+.wc-matter .wc-matter__later { margin-left: auto; }
+.wc-matter .dec-own { margin-top: .7rem; display: block; }
+.wc-matter .dec-own textarea { width: 100%; margin: .4rem 0; box-sizing: border-box; color: var(--ink-iron); background: rgba(255, 255, 255, .35); border: 1px solid rgba(60, 40, 20, .4); font: 1rem/1.35 var(--wc-serif); }
+.wc-matter .dec-own .dec-custom { display: block; margin-left: auto; }
+.wc-matter .dec-done { color: var(--ink-iron); }
+.wc-matter .dec-done .tick { background: var(--verdigris-ink); color: var(--vellum); }
+.wc-matter .dec-done .tick .ico { width: 1.2rem; height: 1.2rem; color: inherit; }
+
+/* on the map a matter is a wax seal, and it pulses gently (not at all with reduced motion) */
+.lbl.event.asks {
+  width: 2.1rem; height: 2.1rem; border: 0; color: var(--bone, #e9dfc8);
+  background: radial-gradient(circle at 32% 26%, rgba(255, 240, 225, .3), rgba(255, 240, 225, 0) 36%), radial-gradient(circle at 70% 78%, rgba(0, 0, 0, .5), rgba(0, 0, 0, 0) 60%), var(--wax, #7b1e17);
+  border-radius: 54% 46% 50% 50% / 47% 55% 45% 53%;
+  box-shadow: inset .05rem .08rem .1rem rgba(255, 232, 214, .3), inset -.12rem -.14rem .22rem rgba(0, 0, 0, .5), 0 .14rem .3rem rgba(6, 3, 1, .8);
+  animation: wc-seal-ask 2.8s ease-out infinite;
+}
+.lbl.event.asks .ico { width: 1.15rem; height: 1.15rem; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .6)); }
+@keyframes wc-seal-ask {
+  0% { box-shadow: inset .05rem .08rem .1rem rgba(255, 232, 214, .3), inset -.12rem -.14rem .22rem rgba(0, 0, 0, .5), 0 .14rem .3rem rgba(6, 3, 1, .8), 0 0 0 0 rgba(216, 180, 92, .55); }
+  70% { box-shadow: inset .05rem .08rem .1rem rgba(255, 232, 214, .3), inset -.12rem -.14rem .22rem rgba(0, 0, 0, .5), 0 .14rem .3rem rgba(6, 3, 1, .8), 0 0 0 .75rem rgba(216, 180, 92, 0); }
+  100% { box-shadow: inset .05rem .08rem .1rem rgba(255, 232, 214, .3), inset -.12rem -.14rem .22rem rgba(0, 0, 0, .5), 0 .14rem .3rem rgba(6, 3, 1, .8), 0 0 0 0 rgba(216, 180, 92, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .lbl.event.asks { animation: none; } }

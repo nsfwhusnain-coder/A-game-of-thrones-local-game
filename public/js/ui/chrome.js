@@ -5,6 +5,7 @@
 import { app, $, esc, fmt, player, modal, closeModal } from './common.js';
 import { icon } from './icons.js';
 import { vitalsOf, inboxOf, stripOf, seasonOf, MENU } from './hud.js';
+import { decisionDaysLeft, leftWord } from '../shared/pins.js';
 import { ordinal, MONTHS } from '../engine/time.js';
 import { sigilSrc } from '../sigils.js';
 import { openWindow } from './windows.js';
@@ -41,9 +42,11 @@ export function renderInboxSeal() {
 
 // ───────────── the Inbox ─────────────
 const KIND = { letter: ['raven', 'A raven'], matter: ['seal', 'A matter'], audience: ['speak', 'An audience'] };
+// a matter says how long it waits; a letter or an audience says what it is about
+const inboxHint = (i) => { const left = i.kind === 'matter' ? leftWord(decisionDaysLeft(app.state, i)) : ''; const t = i.text ? String(i.text).slice(0, left ? 70 : 90) : KIND[i.kind][1]; return left ? `${left} · ${t}` : t; };
 export function renderInbox() {
   const { items } = inboxOf(app.state, app.state.meta.player);
-  $('#inbox-list').innerHTML = items.length ? items.slice(0, 8).map((i) => `<button class="wc-inbox__item" data-inbox="${i.kind}:${esc(i.id)}">${icon(KIND[i.kind][0])}<span class="wc-inbox__t"><b>${esc(i.title)}</b><small>${esc(i.text ? String(i.text).slice(0, 90) : KIND[i.kind][1])}</small></span></button>`).join('') + (items.length > 8 ? `<div class="wc-inbox__more">and ${items.length - 8} more…</div>` : '')
+  $('#inbox-list').innerHTML = items.length ? items.slice(0, 8).map((i) => `<button class="wc-inbox__item" data-inbox="${i.kind}:${esc(i.id)}">${icon(KIND[i.kind][0])}<span class="wc-inbox__t"><b>${esc(i.title)}</b><small>${esc(inboxHint(i))}</small></span></button>`).join('') + (items.length > 8 ? `<div class="wc-inbox__more">and ${items.length - 8} more…</div>` : '')
     : '<p class="wc-inbox__none">No ravens wait, and no matter presses.</p>';
 }
 export async function openItem(kind, id) {
@@ -51,7 +54,7 @@ export async function openItem(kind, id) {
   if (kind === 'letter') return openDrawer('letters');
   if (kind === 'audience') return openChat(id);
   const d = (app.state.decisions || []).find((x) => x.id === id); if (!d) return;
-  modal(`<h2>A matter awaits your word</h2>${decisionsHtml([d])}<div class="report-actions"><button class="btn ghost" data-action="close-modal">Decide later</button></div>`);
+  modal(decisionsHtml([d]), { vellum: true });
   wireDecisions($('#modal-box'), { onAllDone: () => closeModal() });
 }
 

@@ -247,6 +247,8 @@ here, always with words.
 
 ## 10. Matters (sealed letters)
 
+*Implemented in F6 (D-093); the Interpreter's receipt for an answer in the lord's own words is F3's.*
+
 A pin on the map (a wax-sealed letter, pulsing gently) and a count on the Jump button. Opening shows a parchment letter:
 who asks, the situation (≤ 3 sentences), options as large buttons with a one-line hint each ("Answer the call — ~2,500
 men march for Riverrun; Lord Hoster is pleased"), *Answer in my own words* (a text field → the Interpreter, with a

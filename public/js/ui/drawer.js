@@ -1,7 +1,7 @@
 // Right drawer: chronicle feed, letters, audiences (one-on-one or council).
 import { peopleOfCard, regardOf, seatOf } from './people.js';
 import { eventArt } from './event-art.js';
-import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal, foldText, detailLines } from './common.js';
+import { app, $, $$, esc, fmt, placeName, api, toast, por, sig, player, charRow, modal, closeModal, foldText, detailLines } from './common.js';
 import { feedOf, feedIds, FILTERS, TIER_LABEL, storyOrder, shortDate, daysOf } from './feed.js';
 import { dateStr } from '../shared/world.js';
 import { orderOutcome, STATUS_LABEL } from '../shared/errands.js';
@@ -11,6 +11,7 @@ import { beats, speak, speakBeats, stopSpeaking, voiceSettings, warmVoices, prep
 import { temperament, natureTags, moodWord } from '../shared/temperament.js';
 import { together as sameSpot } from '../engine/parties.js';
 import { outcomeChips, chipsHtml, audiencePromisesHtml } from './promises.js';
+import { matterOf, matterHtml } from './matters.js';
 import { lettersOnTheWing, letterTo, landsWord } from './post.js';
 
 // The chronicle panel (GDD 17 §2.3): closed, the headline strip is its one-line form; opened (H, the strip's "All", an audience, the Inbox) it shows the
@@ -53,18 +54,14 @@ export function meanwhileHtml(evs, open = false) {
   return `<details class="meanwhile"${open ? ' open' : ''}><summary>Meanwhile, across the realm <span class="muted">(${bg.length})</span></summary>${regions.map((r) => `<div class="mw-region"><div class="mw-title">${esc(REGION_TITLE[r] || 'Elsewhere')}</div>${groups.get(r).map((e) => `<div class="mw-item${e.mine ? ' mine' : ''}" ${e.where ? `data-where="${e.where}"` : ''}><b>${esc(e.title)}.</b> ${esc(e.text)}</div>`).join('')}</div>`).join('')}</details>`;
 }
 
-export function decisionsHtml(list) {
+export function decisionsHtml(list, extra = {}) {
   const s = app.state;
   const pend = list || (s.decisions || []).filter((d) => d.status === 'pending');
-  return pend.map((d) => {
-    const who = d.from ? s.characters[d.from] : null;
-    return `<div class="decision" data-dec="${d.id}"><div class="dec-head">${who ? `<img src="${por(who, 64)}" alt="">` : '<span class="dec-icon">⚖</span>'}<div><div class="dec-title">${esc(d.title)}</div><div class="muted" style="font-size:0.75rem">${who ? esc(who.name) + ' · ' : ''}${esc(d.date)}</div></div></div>
-      <div class="eb">${esc(d.text)}</div>
-      <div class="dec-opts">${d.options.map((o, i) => `<button class="btn dec-opt" data-dec-id="${d.id}" data-opt="${i}" title="${esc(o.hint || '')}">${esc(o.label)}${o.hint ? `<small>${esc(o.hint)}</small>` : ''}</button>`).join('')}</div>
-      <div class="dec-own"><textarea class="input dec-note" rows="2" placeholder="Or write your own answer here (the button wakes when you do) — or add conditions to a choice above…"></textarea><button class="btn small dec-custom" data-dec-id="${d.id}" disabled title="Write your answer in the box first">Answer in my own words</button></div></div>`;
-  }).join('');
+  return pend.map((d) => matterHtml(matterOf(s, d), s, { esc, por, icon }, extra)).join('');
 }
 export function wireDecisions(root, { onAllDone, onDecided } = {}) {
+  // saying nothing is a choice: the letter is put away and the days run (what silence does is written on it)
+  $$('.dec-silence', root).forEach((b) => b.onclick = () => { const card = b.closest('.decision'); const left = card?.querySelector('.wc-matter__clock')?.dataset.days; closeModal(); toast(left != null && left !== '' ? `You say nothing. The matter waits ${Number(left) <= 0 ? 'no longer than today' : `${left} more ${Number(left) === 1 ? 'day' : 'days'}`}.` : 'You say nothing. The matter waits.'); });
   $$('.dec-note', root).forEach((t) => t.oninput = () => { const b = t.parentElement.querySelector('.dec-custom'); if (b) b.disabled = !t.value.trim(); });
   $$('.dec-opt, .dec-custom', root).forEach((b) => b.onclick = async () => {
     const card = b.closest('.decision'); if (card.classList.contains('busy')) return;
@@ -78,7 +75,7 @@ export function wireDecisions(root, { onAllDone, onDecided } = {}) {
       const label = own ? note.trim() : b.childNodes[0]?.textContent || b.textContent;
       const title = card.querySelector('.dec-title')?.textContent || '';
       card.classList.remove('busy'); card.classList.add('decided');
-      card.innerHTML = `<div class="dec-done"><span class="tick">✓</span><div><div class="dec-title">${esc(title)}</div><div>You chose <b>${esc(label)}</b>.${r.effects?.length ? ` <span class="muted">${esc(r.effects.join(' · '))}</span>` : ' <span class="muted">Your word goes out; the realm will answer.</span>'}</div></div></div>`;
+      card.innerHTML = `<div class="dec-done"><span class="tick">${icon('check')}</span><div><div class="dec-title">${esc(title)}</div><div>You chose <b>${esc(label)}</b>.${r.effects?.length ? ` <span class="muted">${esc(r.effects.join(' · '))}</span>` : ' <span class="muted">Your word goes out; the realm will answer.</span>'}</div></div></div>`;
       setTimeout(() => {
         card.classList.add('folding');
         setTimeout(() => {
