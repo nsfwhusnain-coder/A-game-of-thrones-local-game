@@ -32,7 +32,7 @@ import { regencyLine, speakerFor, incapacity } from './shared/regency.js';
 import { standing, standingWord, epitaph } from './shared/standing.js';
 import { supplyOf } from './engine/military/supply.js';
 
-app.openChat = openChat; app.openCouncil = openCouncil; app.openPin = openPin; app.openSheet = openSheet; app.openCard = openCard; app.coachDone = coachDone; app.renderWindow = renderWindow;
+app.openChat = openChat; app.openCouncil = openCouncil; app.openPin = openPin; app.openSheet = openSheet; app.openCard = openCard; app.maybeShowOutcome = () => maybeShowOutcome(); app.coachDone = coachDone; app.renderWindow = renderWindow;
 
 // ═════════════ Title screen ═════════════
 // the music follows your situation: war drums when you are at war, the cold theme in the North
@@ -49,7 +49,8 @@ async function initTitle() {
   $('#title-screen').classList.remove('hidden'); $('#game-screen').classList.add('hidden');
   await loadSigilArt();
   const scenarios = await api('/scenarios');
-  $('#scenario-list').innerHTML = scenarios.map((s) => `<div class="scenario-card"><h3>${esc(s.name)}</h3><div class="words">${esc(s.subtitle)}</div><p>${esc(s.description)}</p></div>`).join('');
+  // one scenario: a line under the title, not an essay (its situation is told for the house chosen, on the right, and again in the welcome)
+  $('#scenario-list').innerHTML = scenarios.map((s) => `<p class="scenario-line"><b>${esc(s.name)}</b> — <i>${esc(s.subtitle)}</i></p>`).join('');
   const filters = [['great', 'Great Houses'], ['north', 'North'], ['riverlands', 'Riverlands'], ['vale', 'Vale'], ['westerlands', 'West'], ['reach', 'Reach'], ['stormlands', 'Stormlands'], ['dorne', 'Dorne'], ['crownlands', 'Crownlands'], ['iron_islands', 'Iron Islands'], ['wall', 'Wall & Beyond'], ['essos', 'Essos'], ['all', 'All']];
   $('#house-filters').innerHTML = filters.map(([k, n]) => `<button data-f="${k}" class="${k === app.houseFilter ? 'active' : ''}">${n}</button>`).join('');
   $('#house-filters').onclick = (e) => { const f = e.target.dataset.f; if (!f) return; app.houseFilter = f; $$('#house-filters button').forEach((b) => b.classList.toggle('active', b.dataset.f === f)); renderHouseGrid(); };
@@ -87,7 +88,7 @@ function renderHouseDetail() {
   const blurb = { crown: 'You sit the Iron Throne. Command the paramounts, tax the realm — and pay its crushing debts.', paramount: 'Rule a kingdom of the Seven. Your bannermen are many, and each has his own mind.', major: 'A great bannerman. Your liege needs you — perhaps more than you need him.', minor: 'A small house with big ambitions. Every alliance matters.', city_state: 'A Free City of merchants and intrigue.', order: 'Hold the Wall with too few men and too little bread.', tribe: 'Lead a host beyond the reach of kings.', exile: 'A crown without a kingdom. You have a name — and little else.', company: 'Sellswords for hire. Gold buys loyalty — until it doesn\'t.' }[h.rank] || '';
   $('#house-detail').innerHTML = `
     <div class="detail-hero"><img class="banner" src="${bannerURL(h.sigil, 80, 120)}" alt=""><div><h2>House ${esc(h.name)}</h2><div class="words">${esc(h.words ? '“' + h.words + '”' : '')}</div><div class="muted">${RANK_NAMES[h.rank] || ''} · ${REGION_NAMES[h.region] || h.region}</div></div></div>
-    ${lord ? `<div class="lord-card"><img src="${portraitURL({ ...lord, alive: true }, h, 160)}" alt=""><div style="flex:1;min-width:0"><div class="lc-k">You will play as</div><div class="lc-name">${esc(lord.name)}</div><div class="lc-title">${esc(lord.title || '')}</div><div class="lc-traits">${esc(lord.traits || '')}</div></div><div class="begin-box"><button class="btn primary" id="begin">Begin ▶</button><label class="ironman" title="An ironman chronicle is written once: there is no undoing a turn."><input type="checkbox" id="ironman"> Ironman</label><label class="ironman" title="How hard the story pulls toward the books: Canon keeps its great events on their course unless you change them; Loose keeps only the pillars; Sandbox keeps none."><select id="gravity"><option value="canon">Canon story</option><option value="loose">Loose canon</option><option value="sandbox">Sandbox</option></select></label><label class="ironman" title="How the chronicle tells the cruelty of the books: as the books do, without relish; or summarised."><select id="maturity"><option value="book">Book content</option><option value="restrained">Restrained</option></select></label></div></div>` : '<div class="begin-box"><button class="btn primary" id="begin">Begin ▶</button><label class="ironman" title="An ironman chronicle is written once: there is no undoing a turn."><input type="checkbox" id="ironman"> Ironman</label><label class="ironman" title="How hard the story pulls toward the books: Canon keeps its great events on their course unless you change them; Loose keeps only the pillars; Sandbox keeps none."><select id="gravity"><option value="canon">Canon story</option><option value="loose">Loose canon</option><option value="sandbox">Sandbox</option></select></label><label class="ironman" title="How the chronicle tells the cruelty of the books: as the books do, without relish; or summarised."><select id="maturity"><option value="book">Book content</option><option value="restrained">Restrained</option></select></label></div>'}
+    ${lord ? `<div class="lord-card"><img src="${portraitURL({ ...lord, alive: true }, h, 160)}" alt=""><div style="flex:1;min-width:0"><div class="lc-k">You will play as</div><div class="lc-name">${esc(lord.name)}</div><div class="lc-title">${esc(lord.title || '')}</div><div class="lc-traits">${esc(lord.traits || '')}</div></div><div class="begin-box"><button class="wc-btn wc-btn--gold" id="begin">Begin ▶</button><label class="ironman" title="An ironman chronicle is written once: there is no undoing a turn."><input type="checkbox" id="ironman"> Ironman</label><label class="ironman" title="How hard the story pulls toward the books: Canon keeps its great events on their course unless you change them; Loose keeps only the pillars; Sandbox keeps none."><select id="gravity"><option value="canon">Canon story</option><option value="loose">Loose canon</option><option value="sandbox">Sandbox</option></select></label><label class="ironman" title="How the chronicle tells the cruelty of the books: as the books do, without relish; or summarised."><select id="maturity"><option value="book">Book content</option><option value="restrained">Restrained</option></select></label></div></div>` : '<div class="begin-box"><button class="wc-btn wc-btn--gold" id="begin">Begin ▶</button><label class="ironman" title="An ironman chronicle is written once: there is no undoing a turn."><input type="checkbox" id="ironman"> Ironman</label><label class="ironman" title="How hard the story pulls toward the books: Canon keeps its great events on their course unless you change them; Loose keeps only the pillars; Sandbox keeps none."><select id="gravity"><option value="canon">Canon story</option><option value="loose">Loose canon</option><option value="sandbox">Sandbox</option></select></label><label class="ironman" title="How the chronicle tells the cruelty of the books: as the books do, without relish; or summarised."><select id="maturity"><option value="book">Book content</option><option value="restrained">Restrained</option></select></label></div>'}
     ${(() => { const b = briefFor(h, { houses: Object.fromEntries(HOUSES.map((x) => [x.id, x])) }); return `<p style="line-height:1.45">${esc(b.situation)}</p><div class="grid2"><div><h4>Strengths</h4>${b.strengths.map((x) => `<div style="font-size:0.88rem">✦ ${esc(x)}</div>`).join('')}</div><div><h4>Weaknesses</h4>${b.weaknesses.map((x) => `<div style="font-size:0.88rem">✧ ${esc(x)}</div>`).join('')}</div></div>${b.levers?.length ? `<div style="font-size:0.88rem;margin-top:0.35rem"><b>Levers:</b> ${b.levers.map(esc).join(' · ')}</div>` : ''}`; })()}
     <div class="kv"><span class="k">Seat</span><span>${esc(h.seat || '— (landless)')}</span><span class="k">Liege</span><span>${liege ? esc(liege.name) : 'None'}</span><span class="k">Vassals</span><span>${vassals.length ? vassals.length + ' houses' : '—'}</span></div>
     ${people.length ? `<h4>Your people</h4><div class="portrait-row">${people.map((c) => `<div class="p" title="${esc(c.title)}"><img src="${portraitURL({ ...c, alive: true }, h, 96)}"><div>${esc(c.name.replace(/^(Ser|Maester|Lord|Lady|Grand Maester) /, '').split(' ')[0])}</div></div>`).join('')}</div>` : ''}`;
@@ -156,7 +157,7 @@ async function startGame(id, state) {
         onPin: (where) => openPin(where),
         onChar: (id) => openSheet('char', id),
       });
-      await app.map.generate(app.state.holdings, (p, msg) => { $('#map-loading-bar').style.width = Math.round(p * 100) + '%'; $('#map-loading-text').textContent = msg + '…'; });
+      await app.map.generate(app.state.holdings, (p, msg) => { $('#map-loading-bar').style.width = Math.round(p * 100) + '%'; $('#map-loading-text').textContent = `${msg}… ${Math.round(p * 100)} %`; }); // (a real progress line: "Unrolling the map… 62 %")
     } catch (e) {
       console.error(e); app.map = null;
       $('#map-loading-text').innerHTML = `The map failed to load: ${esc(e.message)}<br><small>Check that WebGL is enabled in your browser (opera://settings → System → hardware acceleration). Press F12 → Console for details.</small>`;
@@ -225,9 +226,11 @@ function maybeShowOutcome() {
   const h = player();
   const row = (k, v) => `<div class="k">${k}</div><div>${v}</div>`;
   const st = e.standing;
-  modal(`<div class="outcome ${o.victory ? 'win' : 'loss'}">
+  modal(`<div class="wc-vellum wc-outcome ${o.victory ? 'win' : 'loss'}" role="document">
+    <div class="wc-kicker wc-outcome__kicker">${o.victory ? 'The tale is told' : 'The tale ends'}</div>
     <img class="outcome-banner" src="${bannerURL(h.sigil, 90, 135)}" alt="">
-    <h2>${esc(o.title)}</h2>
+    <h2 class="wc-title">${esc(o.title)}</h2>
+    <div class="wc-rule"></div>
     <p class="outcome-text">${esc(o.text)}</p>
     <div class="kv outcome-ledger">
       ${row('Ended', esc(o.date))}
@@ -240,11 +243,11 @@ function maybeShowOutcome() {
       ${row('Standing', `<b>${st.score}</b> / 100 — ${esc(standingWord(st))}`)}
     </div>
     <p class="muted" style="font-size:0.85rem">The world does not stop. You may play on, undo the turn, or begin again with another house.</p>
-    <div class="report-actions">
-      <button class="btn ghost" data-action="close-modal">Play on</button>
-      ${app.state.meta.settings?.ironman ? '' : '<button class="btn" id="oc-undo">Undo the turn</button>'}
-      <button class="btn primary" id="oc-menu">A new house</button>
-    </div></div>`);
+    <div class="wc-outcome__go">
+      <button class="wc-btn wc-btn--quiet" data-action="close-modal">Play on</button>
+      ${app.state.meta.settings?.ironman ? '' : '<button class="wc-btn" id="oc-undo">Undo the turn</button>'}
+      <button class="wc-btn wc-btn--gold" id="oc-menu">A new house</button>
+    </div></div>`, { vellum: true });
   if ($('#oc-undo')) $('#oc-undo').onclick = async () => { try { const st2 = await api(`/games/${app.saveId}/undo`, { body: { turns: 1 } }); app.setState(st2); outcomeShown = null; closeModal(); toast('The last turn has been undone.'); } catch (err) { toast(err.message, true); } };
   $('#oc-menu').onclick = () => { closeModal(); handleAction('title'); };
 }
@@ -608,61 +611,73 @@ async function showWorldLog() {
 // There was no in-game guidance of any kind: every control had to be discovered by clicking. This is the
 // one page that explains the loop, the keys, and what the engine decides versus what the story decides.
 const HELP_KEYS = [
-  ['Ctrl / ⌘ + Enter', 'End the turn — time runs on until the next thing that matters'],
+  ['Ctrl / ⌘ + Enter', 'End the turn: time runs on until the next thing that matters'],
   ['Enter', 'Add what you have written as an order'],
-  ['R', 'The Realm: your holdings, wars, wealth and the houses'], ['P', 'People: your kin, council and shadows'], ['H', 'The chronicle, in full'],
-  ['M · E · D · C · I', 'Straight to the wars, the wealth, the houses, the council or the shadows'],
-  ['F', 'Focus: hide everything but the map and the command bar; again to bring them back'], ['G', 'Go with the selected host (the map follows it)'],
+  ['R', 'The Realm: the ledger, your house, hosts, treasury, diplomacy'], ['P', 'People: family and court, council, shadows'], ['H', 'The chronicle, in full'],
+  ['M · E · D · C · I', 'Straight to hosts, treasury, diplomacy, council, shadows'],
+  ['F', 'Focus: only the map and the command bar; again to bring the rest back'], ['G', 'Go with the selected host (the map follows it)'],
+  ['W A S D · arrows', 'Move the map; + and − (or the wheel) zoom; Home returns to your seat'],
   ['?', 'This page'],
-  ['Esc', 'Close whatever is open; cancel a march you are aiming'],
+  ['Esc', 'Close whatever is on top: a card, a sheet, a window; stop aiming a march'],
 ];
 function showHelp() {
-  modal(`<h2>How the game is played</h2>
-    <div class="help-cols">
+  modal(`<div class="wc-vellum wc-help" role="document">
+    <div class="wc-kicker wc-help__kicker">The maester's notes</div>
+    <h2 class="wc-title">How the game is played</h2>
+    <div class="wc-rule"></div>
+    <div class="wc-help__cols">
       <div>
         <h4>The loop</h4>
-        <p>Time is stopped until you end the turn. Write orders in plain words at the foot of the chronicle —
-        <i>“Send Jory to Moat Cailin with fifty men”</i>, <i>“Call the banners of the North to Winterfell”</i> —
-        and your steward reads each one back to you before it happens. Then end the turn. The engine carries out
-        your orders, marches the hosts, fights the battles and settles the books; the model tells the story that
-        grows around them.</p>
+        <p>Time is stopped until you end the turn. Write orders in plain words in the command bar at the foot of the screen — <i>“Send Jory to Moat Cailin with fifty men”</i>, <i>“Call the banners of the North to Winterfell”</i> — or speak them with the microphone; the quill sends. Your steward reads each one back with a receipt before it happens. Then end the turn: the engine marches the hosts, fights the battles and settles the books, and the maester tells you what happened.</p>
         <h4>A turn is not a fixed length</h4>
-        <p>It runs until the next thing that matters to you: a host arrives, an answer lands, an enemy draws near,
-        works are finished. At most a moon. The bar by <b>End turn</b> says what it is waiting for.</p>
+        <p>It runs until the next thing that matters to you: a host arrives, an answer lands, an enemy draws near, works are finished; at most a moon. The line by <b>End turn</b> says what it is waiting for.</p>
         <h4>Who decides what</h4>
-        <p>The <b>engine</b> owns the numbers and the physics — gold, food, distances, battle odds, sieges,
-        succession, regency. The <b>story model</b> owns what people say and do. It cannot empty your treasury,
-        move your people, or declare your wars. If something must truly happen, it happens in the engine.</p>
+        <p>The <b>engine</b> owns the numbers and the physics: gold, food, distances, battles, sieges, succession. The <b>story model</b> owns what people say and how it is told. It cannot empty your treasury or declare your wars; if something must truly happen, the engine does it, and the chronicle is told from what the engine did.</p>
+        <h4>The screen</h4>
+        <p>The map is the screen. <b>Click a castle or a host</b> and a card opens beside it — its holder, what is there, what you may do — with <i>More</i> for everything. Three doors in the menu: the <b>Realm</b> (the ledger of every house as your house knows it, your house, your hosts, the treasury, diplomacy), <b>People</b> (your family and court, the council, the shadows) and the <b>Chronicle</b>. What waits on your word is on the seal beside End turn.</p>
       </div>
       <div>
         <h4>Things new players miss</h4>
-        <ul style="line-height:1.5">
-          <li>Click a host, then <b>March</b>, then click anywhere on the map — including an enemy host.</li>
-          <li>You can speak with <i>anyone</i> alive, anywhere. If they are far away it becomes a letter, and the answer takes days to come back.</li>
-          <li>Silence is an answer. A decision left unanswered lapses, and the world chooses for you.</li>
-          <li>The <b>Chronicle</b> file is the game's long memory. You may edit it by hand to correct or steer the tale.</li>
-          <li>The <b>standing of your house</b> (Realm window) is what the campaign is finally scored on.</li>
+        <ul>
+          <li>Click a host, then <b>March to…</b>, then click the place on the map — an enemy host too.</li>
+          <li>You can speak with <i>anyone</i> alive, anywhere. If they are far away it becomes a letter, and the answer takes days.</li>
+          <li>Silence is an answer: a matter left unanswered lapses, and the world chooses for you.</li>
+          <li>A figure marked <b>~</b> is an estimate, <b>≈</b> a band, <b>≥</b> at least, <b>—</b> nothing known: the ledger shows only what your house has learned.</li>
           <li>Sieges cost the besieger. Camps sicken; a long siege can break the host outside the walls.</li>
+          <li>Settings has a Graphics tab: <b>Fast</b> for an older machine.</li>
         </ul>
         <h4>Keys</h4>
         <div class="kv help-keys">${HELP_KEYS.map(([k, v]) => `<span class="k"><kbd>${esc(k)}</kbd></span><span>${esc(v)}</span>`).join('')}</div>
       </div>
     </div>
-    <div class="settings-actions"><button class="btn primary" data-action="close-modal">Back to the realm</button></div>`);
+    <div class="wc-help__go"><button class="wc-btn wc-btn--gold" data-action="close-modal">Back to the realm</button></div>
+  </div>`, { vellum: true });
 }
 
 async function showSettings() {
   const c = await api('/config');
   const presets = [['llama.cpp', 'http://localhost:8080/v1'], ['LM Studio', 'http://localhost:1234/v1'], ['Ollama', 'http://localhost:11434/v1'], ['KoboldCpp', 'http://localhost:5001/v1'], ['text-gen-webui', 'http://localhost:5000/v1'], ['vLLM', 'http://localhost:8000/v1']];
   modal(`<h2>Settings</h2>
-    <h4>Display</h4>
+    <div class="wc-tabs set-tabs" role="tablist" aria-label="Settings"><button class="wc-tab" role="tab" data-set-tab="game" aria-selected="false" aria-controls="set-game" id="settab-game">Game</button><button class="wc-tab" role="tab" data-set-tab="display" aria-selected="false" aria-controls="set-display" id="settab-display">Display</button><button class="wc-tab" role="tab" data-set-tab="graphics" aria-selected="false" aria-controls="set-graphics" id="settab-graphics">Graphics</button><button class="wc-tab" role="tab" data-set-tab="sound" aria-selected="false" aria-controls="set-sound" id="settab-sound">Sound &amp; voices</button><button class="wc-tab" role="tab" data-set-tab="model" aria-selected="false" aria-controls="set-model" id="settab-model">Model</button></div>
+    <section class="set-panel" id="set-game" data-set-panel="game" role="tabpanel" aria-labelledby="settab-game" hidden>
+    <label style="display:flex;gap:0.4rem;align-items:center" title="A page of vellum after each turn: the three things that mattered most, the Meanwhile, and what awaits your word"><input type="checkbox" id="rep-on" ${reportOn() ? 'checked' : ''}> The maester's report after each turn</label>
+      <div class="grid2">
+      <div><label>World detail per turn</label><select id="cfg-detail"><option value="full">Full — every house & person (best with big context & fast GPU)</option><option value="lean">Lean — only what matters to you (much faster on laptops)</option></select></div>
+      <div><label>A director keeps the realm eventful</label><select id="cfg-director"><option value="light">Light — a new thread at most once a fortnight, when the weeks run quiet</option><option value="lively">Lively — up to two a week</option><option value="off">Off — only when a whole week passes with nothing of note</option></select><small class="muted">The director chooses among grounded beginnings (a hedge knight seeking service, outlaws on a road, a quarrel over a mill); the game makes them happen.</small></div>
+      <div><label>Who tells the turn</label><select id="cfg-narrator"><option value="on">The chronicler — the week's stories told from what truly happened, and checked against it</option><option value="off">The old bard — free prose, lightly checked</option></select><small class="muted">A story the chronicler tells wrongly is told again once, then left in the plain words of the record.</small></div>
+      <div><label>How many lords think each week</label><select id="cfg-minds"><option value="3">Three — fastest</option><option value="6">Six — the realm feels alive</option><option value="10">Ten — busiest, slowest</option><option value="off">None — the old Hand moves the realm</option></select><small class="muted">The rest act by their house's ways when something presses them.</small></div>
+      </div>
+    </section>
+    <section class="set-panel" id="set-display" data-set-panel="display" role="tabpanel" aria-labelledby="settab-display" hidden>
     <div class="scale-row"><label style="margin:0;white-space:nowrap">Interface size</label><input type="range" id="ui-scale" min="0.6" max="1.8" step="0.05" value="${uiScale()}"><span id="ui-scale-v" style="width:3.5rem;text-align:right">${Math.round(uiScale() * 100)}%</span><button class="btn small" id="ui-scale-reset">Reset</button></div>
+    <label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="house-theme" ${houseTheming() ? 'checked' : ''}> Colour the interface in my house's colours</label>
+    </section>
+    <section class="set-panel" id="set-graphics" data-set-panel="graphics" role="tabpanel" aria-labelledby="settab-graphics" hidden>
     <div class="scale-row"><label style="margin:0;white-space:nowrap" title="Refugees leaving a sacked town, carts between prosperous holdings, outriders ahead of a host, deserters slipping away, ravens carrying the letters that were really sent"><input type="checkbox" id="gfx-life"> A living map</label></div>
     <div class="scale-row"><label style="margin:0;white-space:nowrap">Graphics</label><select id="gfx-q" style="flex:1"><option value="high">Beautiful — sharpest relief, smoke, weather, full resolution</option><option value="balanced">Balanced — recommended for laptops</option><option value="fast">Fast — for older machines: no ambient life, almost no effects</option></select></div>
-    <label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="house-theme" ${houseTheming() ? 'checked' : ''}> Colour the interface in my house's colours</label>
-    <label style="display:flex;gap:0.4rem;align-items:center" title="A page of vellum after each turn: the three things that mattered most, the Meanwhile, and what awaits your word"><input type="checkbox" id="rep-on" ${reportOn() ? 'checked' : ''}> The maester's report after each turn</label>
-    <div class="settings-section"></div>
-    <h4>Sound &amp; voices</h4>
+      <p class="muted" style="font-size:0.85rem">Fast draws no smoke, glow or weather and no ambient life; Beautiful draws the most. The map changes when it next loads.</p>
+    </section>
+    <section class="set-panel" id="set-sound" data-set-panel="sound" role="tabpanel" aria-labelledby="settab-sound" hidden>
     <div class="grid2">
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-music" ${musicSettings().on ? 'checked' : ''}> Music</label><input type="range" id="snd-mvol" min="0" max="1" step="0.05" value="${musicSettings().volume}" style="width:100%"></div>
       <div><label>Character voices</label><select id="snd-engine"><option value="neural">Natural voices (runs in your browser; ~90 MB once)</option><option value="browser">Your system's voices</option><option value="server">Local voice server (Kokoro, Piper, XTTS…)</option><option value="off">Off</option></select><input type="range" id="snd-vvol" min="0" max="1" step="0.05" value="${voiceSettings().volume}" style="width:100%"></div>
@@ -675,8 +690,8 @@ async function showSettings() {
       <div><label>Character voices</label><div class="muted" style="font-size:0.82rem">Every character has a voice of their own. To change one, open their sheet and choose under <i>Nature → Voice</i>.</div></div>
       <p class="muted" style="grid-column:1/-1;font-size:0.78rem;margin:0">Every character has a voice of their own. The main cast are shaped by hand (Tywin deep and slow, Robert booming, Arya quick and young); everyone else by sex, age and homeland. Drop your own music into <code>public/music/</code> to replace the score.</p>
     </div>
-    <div class="settings-section"></div>
-    <h4>Model endpoint</h4>
+    </section>
+    <section class="set-panel" id="set-model" data-set-panel="model" role="tabpanel" aria-labelledby="settab-model" hidden>
     <p class="muted" style="font-size:0.9rem">Any OpenAI-compatible server works (llama.cpp's <code>llama-server</code>, LM Studio, Ollama…). The simulator juggles hundreds of names and must answer in JSON, so larger instruct models do best. Set the context window to what your server was started with (e.g. <code>-c 262144</code> → 262144).</p>
     <div class="grid2">
       <div><label>Provider</label><select id="cfg-provider"><option value="openai">OpenAI-compatible (local server)</option><option value="mock">Mock (no model, for testing)</option><option value="relay">Relay (you or another app writes the replies — see README)</option></select></div>
@@ -686,13 +701,12 @@ async function showSettings() {
       <div><label>Context window (tokens)</label><input class="input" id="cfg-ctx" type="number" value="${c.contextTokens}"></div>
       <div><label>Max response tokens</label><input class="input" id="cfg-max" type="number" value="${c.maxTokens}"></div>
       <div><label>Temperature</label><input class="input" id="cfg-temp" type="number" step="0.05" value="${c.temperature}"></div>
+    </div>
+      <details class="set-adv"><summary>Advanced</summary>
+      <div class="grid2">
       <div><label>Consolidate memory every N turns</label><input class="input" id="cfg-cons" type="number" value="${c.consolidateEvery}"></div>
       <div><label>Recent turns kept verbatim</label><input class="input" id="cfg-keep" type="number" value="${c.keepRecentTurns}"></div>
       <div><label>Request timeout (seconds)</label><input class="input" id="cfg-timeout" type="number" value="${c.timeoutSec}"></div>
-      <div><label>World detail per turn</label><select id="cfg-detail"><option value="full">Full — every house & person (best with big context & fast GPU)</option><option value="lean">Lean — only what matters to you (much faster on laptops)</option></select></div>
-      <div><label>A director keeps the realm eventful</label><select id="cfg-director"><option value="light">Light — a new thread at most once a fortnight, when the weeks run quiet</option><option value="lively">Lively — up to two a week</option><option value="off">Off — only when a whole week passes with nothing of note</option></select><small class="muted">The director chooses among grounded beginnings (a hedge knight seeking service, outlaws on a road, a quarrel over a mill); the game makes them happen.</small></div>
-      <div><label>Who tells the turn</label><select id="cfg-narrator"><option value="on">The chronicler — the week's stories told from what truly happened, and checked against it</option><option value="off">The old bard — free prose, lightly checked</option></select><small class="muted">A story the chronicler tells wrongly is told again once, then left in the plain words of the record.</small></div>
-      <div><label>How many lords think each week</label><select id="cfg-minds"><option value="3">Three — fastest</option><option value="6">Six — the realm feels alive</option><option value="10">Ten — busiest, slowest</option><option value="off">None — the old Hand moves the realm</option></select><small class="muted">The rest act by their house's ways when something presses them.</small></div>
       <div><label>Thinking (reasoning models such as Qwen3)</label><select id="cfg-think"><option value="auto">Server default</option><option value="on">On — deeper, slower turns</option><option value="off">Off — fast turns</option></select></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-thinkchat" ${c.thinkInAudiences ? 'checked' : ''}> Also think in audiences &amp; councils (slower replies)</label></div>
       <div><label>Thinking budget (extra tokens)</label><input class="input" id="cfg-tbudget" type="number" value="${c.thinkingBudget ?? 6000}"></div>
@@ -701,9 +715,15 @@ async function showSettings() {
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-diag" ${showDiagnostics() ? 'checked' : ''}> Show model diagnostics while the turn is written (tokens, cache, speed)</label></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="cfg-json" ${c.jsonMode ? 'checked' : ''}> Force JSON mode (response_format)</label></div>
       <div style="grid-column:1/-1"><label>Extra request parameters (JSON, e.g. {"top_p":0.9,"min_p":0.05})</label><input class="input" id="cfg-extra" value="${esc(JSON.stringify(c.extraBody || {}))}"></div>
-    </div>
+      </div></details>
+    </section>
     <div class="settings-actions"><button class="btn primary" id="cfg-save">Save</button><button class="btn" id="cfg-test">Test connection</button><button class="btn ghost" id="cfg-models">Fetch models</button></div>
     <div id="cfg-result" class="muted" style="margin-top:0.6rem;white-space:pre-wrap;font-size:0.85rem"></div>`);
+  // the tabs: one panel at a time, the last one asked for is remembered
+  const setTab = (id) => { for (const el of $$('[data-set-panel]')) el.hidden = el.dataset.setPanel !== id; for (const t of $$('[data-set-tab]')) t.setAttribute('aria-selected', String(t.dataset.setTab === id)); try { localStorage.setItem('wc.settings.tab', id); } catch { /* */ } };
+  $$('[data-set-tab]').forEach((t) => { t.onclick = () => setTab(t.dataset.setTab); });
+  const lastTab = (() => { try { return localStorage.getItem('wc.settings.tab'); } catch { return null; } })();
+  setTab(lastTab && $('#set-' + lastTab) ? lastTab : 'game');
   $('#cfg-provider').value = c.provider; $('#cfg-detail').value = c.promptDetail || 'full'; $('#cfg-narrator').value = c.narrator === 'off' || c.narrator === false ? 'off' : 'on'; $('#cfg-director').value = ['off', 'lively'].includes(c.director) ? c.director : 'light'; $('#cfg-minds').value = String(c.minds ?? 6); $('#cfg-think').value = c.thinking || 'auto'; $('#cfg-effort').value = c.reasoningEffort ?? 'low';
   const showScale = (v) => { setUiScale(v); $('#ui-scale-v').textContent = Math.round(v * 100) + '%'; };
   $('#ui-scale').oninput = (e) => showScale(Number(e.target.value));
