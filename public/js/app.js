@@ -1,6 +1,7 @@
 import { HOUSES } from '../data/houses.js';
 import { startIconizer, icon, hydrateIcons } from './ui/icons.js';
 import { routeKey, turnLabel } from './ui/hud.js';
+import { receiptHtml as receiptOf, briefHtml as briefOf, ordersSummary, ordersNote, noteTone } from './ui/orders.js';
 import { conditionOf } from './ui/people.js';
 import { renderChrome, drawMenu, togglePopover, closePopovers, closePopover, openPopover, isOpen, openDoor, openStripLine, openItem, loadSeen, markSeen, renderStrip, setMapModeName } from './ui/chrome.js';
 import { drawTitleMap } from './ui/titlemap.js';
@@ -190,7 +191,15 @@ app.setState = (s, opts = {}) => {
 // the End-turn plate says what the turn is waiting for.
 function renderTop() {
   renderChrome();
-  const el = $('#turn-until'); if (el && app.state) el.innerHTML = esc(turnLabel(app.state)).replace(/^next: (d+ days?)/, 'next: <b>$1</b>');
+  const el = $('#turn-until'); if (el && app.state) el.innerHTML = esc(turnLabel(app.state)).replace(/^next: (\d+ days?)/, 'next: <b>$1</b>');
+  renderTurnNote();
+}
+// The End-turn plate counts the orders the turn will carry out, and says which cannot be done or ask a question, so the lord knows before the days run (ui/orders.js)
+function renderTurnNote() {
+  const s = app.state; const btn = $('.advance-btn'); if (!btn || !s) return;
+  const sum = ordersSummary(s.orders); const note = ordersNote(sum);
+  const c = $('.advance-count', btn); if (c) { c.hidden = !sum.total; c.textContent = sum.total || ''; c.dataset.tone = noteTone(sum); }
+  btn.title = note || 'End the turn (Ctrl+Enter)'; btn.setAttribute('aria-label', note ? `End turn — ${note}` : 'End turn');
 }
 function renderPlayer() {
   const s = app.state; const h = player(); const r = ruler();
@@ -278,23 +287,11 @@ async function chooseUndo() {
 }
 
 // ───── orders ─────
-// An order's receipt (docs/gdd/04-ai-system.md §4.4): what the turn will do, line by line — ✓ done, ⚠ done with a
-// warning, ✗ refused and why — or the one question the steward must ask, with its answers to choose from.
-const MARK = { true: '✓', warn: '⚠', false: '✗', ask: '?', story: '·' };
-const TONE = { true: 'good', warn: 'warn', false: 'bad', ask: 'ask', story: 'story' };
-const READER = { rules: 'Read by your steward', model: 'Read by your maester', replay: 'Read by your maester (recorded)', mock: 'Read by your steward', fallback: 'Your maester could not read it; your steward did' };
-function receiptHtml(o) {
-  const q = o.parsed?.clarify;
-  const lines = (o.receipt || []).map((l) => `<div class="rl ${TONE[l.ok] || 'good'}" title="${esc(l.text)}"><span class="mk">${MARK[l.ok] || '✓'}</span><span>${esc(l.text)}</span></div>`).join('');
-  const chips = q?.options?.length ? `<div class="chips">${q.options.map((op, k) => `<button class="chip" data-answer="${o.id}" data-k="${k}">${esc(op.label)}</button>`).join('')}</div>` : q ? '<div class="rl story"><span class="mk"></span><span>Say it in the order’s words, and it will be read again.</span></div>' : '';
-  const chosen = o.chosen ? `<div class="rl story"><span class="mk">↳</span><span>You answered: ${esc(o.chosen)}</span></div>` : '';
-  return `<div class="receipt" title="${esc(READER[o.parsed?.via] || '')}">${lines}${chosen}${chips}</div>`;
-}
-// an earlier order's receipt in a line: how many of its parts were carried, and the first that was not
-function receiptBrief(o) {
-  const ls = o.receipt || []; const bad = ls.find((l) => l.ok === false || l.ok === 'warn');
-  return `<div class="receipt brief" title="${esc(ls.map((l) => l.text).join('\n'))}">${bad ? `<div class="rl ${TONE[bad.ok]}"><span class="mk">${MARK[bad.ok]}</span><span>${esc(bad.text)}</span></div>` : `<div class="rl good"><span class="mk">✓</span><span>${ls.length > 1 ? `${ls.length} parts, all understood` : 'Understood'}</span></div>`}</div>`;
-}
+// An order's receipt (docs/gdd/04-ai-system.md §4.4): what the turn will do, line by line — done, done with a warning, refused and why — or the one question the steward
+// must ask, with its answers to choose from. The marks and the markup are ui/orders.js (pure, tested); a receipt is drawn with the page's escape and icons.
+const RENv = { esc, icon };
+const receiptHtml = (o) => receiptOf(o, RENv);
+const receiptBrief = (o) => briefOf(o, RENv);
 function renderOrders() {
   const s = app.state;
   const moving = underway(s); const last = s.history.at(-1); const lastOut = (last?.orders || []).map((o) => orderOutcome(o, s));
@@ -313,6 +310,9 @@ function renderOrders() {
   $$('[data-del-order]').forEach((b) => b.onclick = () => { s.orders = s.orders.filter((o) => o.id !== b.dataset.delOrder); saveOrders(); renderOrders(); });
   $$('[data-answer]').forEach((b) => b.onclick = () => { b.disabled = true; answerOrder(b.dataset.answer, Number(b.dataset.k)); });
   $$('.order .t').forEach((el) => el.onblur = () => { const o = s.orders.find((x) => x.id === el.dataset.oid); if (o && o.text !== el.textContent.trim()) { o.text = el.textContent.trim(); saveOrders(); renderOrders(); } });
+  // the newest order (and its receipt) is the one to see: when one is added the list is scrolled to it
+  const list = $('#orders'); if (list && s.orders.length >= (renderOrders.seen || 0)) list.scrollTop = list.scrollHeight; renderOrders.seen = s.orders.length;
+  renderTurnNote();
 }
 const orderInput = $('#order-input');
 orderInput.addEventListener('input', () => { orderInput.style.height = 'auto'; orderInput.style.height = Math.min(orderInput.scrollHeight, 160) + 'px'; });

@@ -354,6 +354,27 @@ async function probeMatter(page) {
   await page.evaluate(() => { const s = window.__wc.state; s.decisions = (s.decisions || []).filter((d) => d.id !== 'gate_matter'); window.__wc.map?.syncEventPins?.(); });
   return out;
 }
+// F3 (GDD 12 §4, §14 items 9 and 11): an order written with the quill is read and gets a receipt whose marks are icons with words; the End-turn plate counts the orders and says when
+// one cannot be done; the bar stays clear of the map's furniture and the orders are put away again (real typing and clicks).
+async function probeOrders(page) {
+  const out = { receipt: 'n/a', marks: 'n/a', badge: 'n/a', clear: 'n/a' };
+  await page.evaluate(() => document.activeElement?.blur?.());
+  await page.fill('#order-input', 'Spend sixty million dragons on the Iron Throne.'); await page.click('#send-btn');
+  try { await page.waitForSelector('#orders .order .receipt .rl', { timeout: 20000 }); } catch { /* reported below */ }
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(() => { const lines = [...document.querySelectorAll('#orders .order .receipt .rl')]; const b = document.querySelector('.advance-count'); const btn = document.querySelector('.advance-btn'); return { n: lines.length, marks: lines.map((l) => { const m = l.querySelector('.mk'); return { svg: !!m?.querySelector('svg'), label: m?.getAttribute('aria-label') || '', text: m?.textContent || '' }; }), badge: b && !b.hidden ? b.textContent : '', tone: b?.dataset.tone || '', title: btn?.title || '', label: btn?.getAttribute('aria-label') || '', bad: /[\u2713\u2717\u26A0]/.test(document.querySelector('#orders')?.textContent || '') }; });
+  out.receipt = r.n >= 1 ? 'ok' : 'FAIL: no receipt';
+  out.marks = r.marks.length && r.marks.every((m) => (m.svg && m.label) || m.text) && !r.bad ? 'ok' : `FAIL ${JSON.stringify(r.marks)} bare=${r.bad}`;
+  out.badge = r.badge === '1' && r.tone === 'bad' && /cannot be done/.test(r.title) && r.title.length <= 60 && /End turn/.test(r.label) ? 'ok' : `FAIL ${JSON.stringify({ b: r.badge, t: r.tone, title: r.title, label: r.label })}`;
+  const box = (sel) => page.evaluate((q) => { const e = document.querySelector(q); if (!e) return null; const x = e.getBoundingClientRect(); return [x.left, x.top, x.right, x.bottom]; }, sel);
+  const vp = page.viewportSize(); const bar = await box('#command-bar'); const ord = await box('#orders');
+  out.clear = bar && bar[3] <= vp.height && bar[0] >= 0 && bar[2] <= vp.width && (!ord || (ord[0] >= 0 && ord[2] <= vp.width)) ? 'ok' : `FAIL ${JSON.stringify({ bar, ord })}`;
+  for (let i = 0; i < 6; i++) { const d = await page.$('[data-del-order]'); if (!d) break; await d.click(); await page.waitForTimeout(150); }
+  const left = await page.evaluate(() => window.__wc.state.orders.length); if (left) out.receipt += ` (${left} orders left)`;
+  // the save is debounced: wait until the server holds no orders either, or the next page would load them back
+  for (let i = 0; i < 30; i++) { const n = await page.evaluate(async () => (await (await fetch('/api/games/' + window.__wc.saveId)).json()).orders?.length ?? -1); if (n === 0) break; await page.waitForTimeout(200); }
+  return out;
+}
 async function measure(browser, id, w, h, turn) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.setDefaultTimeout(90000);
@@ -381,6 +402,8 @@ async function measure(browser, id, w, h, turn) {
   say('audience probed');
   Object.assign(res, { f6: await probeMatter(page) });
   say('matter probed');
+  Object.assign(res, { f3: await probeOrders(page) });
+  say('orders probed');
   res.errors = errors; await page.close();
   return res;
 }
@@ -414,6 +437,8 @@ function report(cells) {
     ['Diplomacy tab lists the promises', (c) => c.f4.book, (c) => c.f4.book === 'ok', () => 'ok'],
     ['matter: a seal on the map, a letter that fits', (c) => `${c.f6.pin}/${c.f6.letter}/${c.f6.fits}`, (c) => c.f6.pin === 'ok' && c.f6.letter === 'ok' && c.f6.fits === 'ok', () => 'ok/ok/ok'],
     ['matter: Say nothing puts the letter away', (c) => c.f6.silence, (c) => c.f6.silence === 'ok', () => 'ok'],
+    ['orders: a receipt with icon marks, a count', (c) => `${c.f3.receipt}/${c.f3.marks}/${c.f3.badge}`, (c) => c.f3.receipt === 'ok' && c.f3.marks === 'ok' && c.f3.badge === 'ok', () => 'ok/ok/ok'],
+    ['orders: the command bar stays on the screen', (c) => c.f3.clear, (c) => c.f3.clear === 'ok', () => 'ok'],
     ['the welcome card is shown on a new game', (c) => (c.first.welcome ? 'yes' : 'NO'), (c) => c.first.welcome, () => 'yes'],
     ['coach marks, in order, each put away by its thing', (c) => (c.first.marks.join('>') === 'command>turn>realm>' ? 'in order' : c.first.marks.map((m) => m || 'none').join('>')), (c) => c.first.marks.join('>') === 'command>turn>realm>', () => 'command>turn>realm>none'],
     ['a mark stays on the screen', (c) => (c.first.slipInside ? 'ok' : 'FAIL'), (c) => c.first.slipInside, () => 'ok'],

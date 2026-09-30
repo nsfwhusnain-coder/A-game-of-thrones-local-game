@@ -133,6 +133,8 @@ seal), `toast` (bottom-centre, 3 s), `skeleton` (loading shimmer in panels), `em
 
 ## 4. The Command composer (Pax Historia's Actions panel)
 
+*Implemented as the command bar of U1–U3 and Q1 and finished in F3 (D-094): receipts, the steward's question as chips, the quill and the scribe, the count on the End-turn plate. Counsel ideas and Polish of the sketch below are not built, by the owner's decision; the sketch is otherwise superseded.*
+
 ```
 ┌ Commands for the jump ─────────────────────────────── ✕ ┐
 │ ┌──────────────────────────────────────────────────────┐ │
