@@ -322,6 +322,8 @@ remove or hide them.
 
 ### 15.1 Portraits
 
+*Items 2–6 implemented in F7 (D-096): resemblance, the six ages, marks (a scar), mood in audiences, consistency (seeded by id); item 7's generator script is left for H. Item 1 (a face wherever a person appears) was U9's and is checked by §14 item 21.*
+
 Keep the painter; improve:
 
 1. **Everywhere a person appears, their face appears:** chronicle cards (the POV and the main actor as small roundels),

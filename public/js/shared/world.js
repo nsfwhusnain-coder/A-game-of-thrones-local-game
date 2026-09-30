@@ -274,7 +274,11 @@ export function generateKin(state, houseId, { female = false, age = 14 } = {}) {
   const traits = [TRAIT_POOL[Math.floor(random() * TRAIT_POOL.length)]].join(', ');
   const year = state.meta?.date?.year || 298;
   const c = { id, name: `${first} ${surname}`, house: houseId, title: '', age, born: year - age, loc: h.seat || houseId, roles: ['family'], traits, bio: `${female ? 'Daughter' : 'Son'} of House ${h.name}${lord ? `, kin to ${lord.name}` : ''}.`, alive: true, status: 'free', opinion: 0, loyalty: 60, memories: [], generated: true, sex: female ? 'f' : 'm', skills: deriveSkills({ roles: ['family'], traits, age }) };
-  if (lord && lord.age - age >= 16) c[isFemale(lord) ? 'mother' : 'father'] = lord.id;
+  if (lord && lord.age - age >= 16) {
+    c[isFemale(lord) ? 'mother' : 'father'] = lord.id;
+    // the other parent is the lord's spouse, if there is one old enough (so the child takes after both: ui/portrait.js)
+    const mate = lord.spouse && state.characters[lord.spouse]; if (mate && mate.age - age >= 16 && isFemale(mate) !== isFemale(lord)) c[isFemale(mate) ? 'mother' : 'father'] = mate.id;
+  }
   state.characters[id] = c;
   return c;
 }

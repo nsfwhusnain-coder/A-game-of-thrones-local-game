@@ -1,17 +1,50 @@
 <!doctype html><meta charset="utf-8"><title>Portraits</title>
-<style>body{background:#15120f;color:#ddd;font:11px serif;margin:8px}#g{display:flex;flex-wrap:wrap;gap:6px}figure{margin:0;text-align:center}img{display:block}</style>
+<style>body{background:#15120f;color:#ddd;font:11px serif;margin:8px}#g{display:flex;flex-wrap:wrap;gap:6px}figure{margin:0;text-align:center}img{display:block}h3{flex-basis:100%;margin:10px 0 2px;font:600 13px serif;color:#d8b45c;letter-spacing:.06em}</style>
 <div id="g"></div>
 <script type="module">
-import { portraitURL } from '../js/ui/portrait.js';
+// Portraits, and what the painter does with a face (docs/gdd/12-ui-ux.md §15.1; WP F7). Modes:
+//   (none)                     the roster, `from`/`n`/`size`/`ids` as before
+//   ?family=stark              each couple of a house with their children, eldest first: a child resembles both parents
+//   ?kids=eddard_stark,catelyn_stark   the two as parents of eight children who are not in the books (their looks are all inherited)
+//   ?ages=eddard_stark         one person at 2, 5, 9, 15, 30, 55 and 75 — the six ages of a face
+//   ?moods=catelyn_stark       one person composed, warm, wary, angry, furious, afraid (what an audience shows)
+//   ?marks=eddard_stark        one person bare, scarred, with an eyepatch, burned
+import { portraitURL, lookFor, ageBand } from '../js/ui/portrait.js';
 import { HOUSES } from '../data/houses.js';
 import { CHARACTERS } from '../data/characters.js';
-import { ANCESTORS } from '../data/families.js';
+import { ANCESTORS, PARENTS } from '../data/families.js';
 const H = Object.fromEntries(HOUSES.map((h) => [h.id, h]));
-const q = new URLSearchParams(location.search);
-let list = [...CHARACTERS, ...ANCESTORS];
-if (q.get('ids')) { const s = q.get('ids').split(','); list = s.map((id) => list.find((c) => c.id === id)).filter(Boolean); }
-const from = Number(q.get('from') || 0), n = Number(q.get('n') || 40);
+const ALL = [...CHARACTERS, ...ANCESTORS]; const byId = Object.fromEntries(ALL.map((c) => [c.id, c]));
+const parentIds = (c) => PARENTS[c.id] || [c.father, c.mother];
+const kin = { parentsOf: (c) => parentIds(c).map((x) => byId[x] || null), houseOf: (c) => H[c.house] || null };
+const q = new URLSearchParams(location.search); const size = Number(q.get('size') || 128);
 const t0 = performance.now();
-for (const c of list.slice(from, from + n)) { const f = document.createElement('figure'); f.innerHTML = `<img style="width:${q.get("size")||128}px" src="${portraitURL(c, H[c.house], Number(q.get("size") || 128))}"><figcaption>${c.name}</figcaption>`; g.append(f); }
+const fig = (c, label, opts = {}) => { const f = document.createElement('figure'); f.innerHTML = `<img style="width:${size}px" src="${portraitURL(c, H[c.house], size, { kin, ...opts })}"><figcaption>${label}</figcaption>`; return f; };
+const head = (t) => { const h = document.createElement('h3'); h.textContent = t; g.append(h); };
+const need = (id) => byId[id] || (document.title = 'no such person: ' + id, null);
+
+if (q.get('family')) {
+  const house = q.get('family'); const folk = ALL.filter((c) => c.house === house && c.age != null);
+  const couples = new Map(); for (const c of folk) { const [fa, mo] = parentIds(c); if (fa && mo) { const k = `${fa}+${mo}`; (couples.get(k) || couples.set(k, []).get(k)).push(c); } }
+  for (const [k, kids] of couples) { const [f, m] = k.split('+').map((x) => byId[x]); head(`${f?.name || '?'} & ${m?.name || '?'}`); for (const p of [f, m]) if (p) g.append(fig(p, `${p.name} (${p.age ?? '—'})`)); for (const c of kids.sort((a, b) => (b.age ?? 0) - (a.age ?? 0))) g.append(fig(c, `${c.name} (${c.age})`)); }
+} else if (q.get('kids')) {
+  const [fa, mo] = q.get('kids').split(',').map(need); head(`${fa?.name} & ${mo?.name}: eight children who are not in the books`);
+  for (const p of [fa, mo]) if (p) g.append(fig(p, p.name));
+  for (let i = 0; i < 8; i++) { const c = { id: `imagined_${fa.id}_${mo.id}_${i}`, name: `child ${i + 1}`, house: fa.house, sex: i % 2 ? 'f' : 'm', age: 20 - (i % 3) * 3, alive: true, roles: [], traits: '', father: fa.id, mother: mo.id }; PARENTS[c.id] = [fa.id, mo.id]; byId[c.id] = c; g.append(fig(c, `${c.sex === 'f' ? 'daughter' : 'son'} ${i + 1} (${c.age})`)); }
+} else if (q.get('ages') && need(q.get('ages'))) {
+  const c = byId[q.get('ages')]; head(`${c.name} at every age`);
+  for (const age of [2, 5, 9, 15, 30, 55, 75]) g.append(fig({ ...c, age }, `${age} — ${ageBand(age)}`));
+} else if (q.get('moods') && need(q.get('moods'))) {
+  const c = byId[q.get('moods')]; head(`${c.name}, toward you`);
+  for (const m of ['composed', 'warm', 'distrustful', 'angered', 'furious', 'afraid']) g.append(fig(c, m, { mood: m }));
+} else if (q.get('marks') && need(q.get('marks'))) {
+  const c = byId[q.get('marks')]; head(`${c.name}, and what the story has left`);
+  for (const m of [[], ['scar'], ['eyepatch'], ['burned']]) g.append(fig(c, m.join(', ') || 'unmarked', { marks: m }));
+} else {
+  let list = ALL;
+  if (q.get('ids')) { const s = q.get('ids').split(','); list = s.map((id) => list.find((c) => c.id === id)).filter(Boolean); }
+  const from = Number(q.get('from') || 0), n = Number(q.get('n') || 40);
+  for (const c of list.slice(from, from + n)) g.append(fig(c, c.name));
+}
 document.title = 'done ' + Math.round(performance.now() - t0) + 'ms';
 </script>

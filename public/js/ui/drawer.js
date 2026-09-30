@@ -13,6 +13,7 @@ import { together as sameSpot } from '../engine/parties.js';
 import { outcomeChips, chipsHtml, audiencePromisesHtml } from './promises.js';
 import { matterOf, matterHtml } from './matters.js';
 import { relationOf } from './names.js';
+import { moodNow } from './looks.js';
 import { lettersOnTheWing, letterTo, landsWord } from './post.js';
 
 // The chronicle panel (GDD 17 §2.3): closed, the headline strip is its one-line form; opened (H, the strip's "All", an audience, the Inbox) it shows the
@@ -246,7 +247,7 @@ function renderAudience(body) {
   const mood = s.moods?.[c.id]; const closed = !!(mood?.closed && mood.turn === s.meta.turn);
   const quick = c.house === p ? ['How many men can we field?', 'What is in the treasury, and what do we owe?', 'How full are the granaries?', 'Which of my lords can I trust?', 'What news?'] : ['What news from your lands?', 'What do you want?', 'I propose an alliance between our houses.', 'Will you trade with us?', 'I offer you 1,000 gold dragons for your friendship.', 'Swear fealty to me.'];
   body.innerHTML = `<div class="chat${log.length ? ' has-log' : ''}">
-    <div class="chat-head"><img src="${por(c, 80)}" alt=""><div style="flex:1;min-width:0"><div class="title" data-char="${c.id}">${esc(c.name)} ${sig(h, 1)}</div><div class="sub sub-t" title="${esc(c.title || '')}">${esc(c.title || '')}</div><div class="sub sub-b">${relationOf(s, c.id) ? `<i class="rel-line">${esc(relationOf(s, c.id))}</i> · ` : ''}${esc(placeName(s, c.loc))} · ${together ? 'in person' : `<b>by raven</b>${flying ? ` — a letter of yours ${landsWord(flying.days)}` : ''}`}${regard ? ` · <span class="regard r-${regard.tone}" title="Their opinion of you: ${(c.opinion || 0) > 0 ? '+' : ''}${c.opinion || 0}">${esc(regard.word)}</span>` : ''}</div>${temperHtml(c)}</div><button class="wc-btn wc-btn--quiet" data-action="close-chat" title="Back to the chronicle" aria-label="Back to the chronicle">${icon('chevronL')} Back</button></div>
+    <div class="chat-head"><img src="${por(c, 80, { mood: moodNow(s, c.id) })}" alt=""><div style="flex:1;min-width:0"><div class="title" data-char="${c.id}">${esc(c.name)} ${sig(h, 1)}</div><div class="sub sub-t" title="${esc(c.title || '')}">${esc(c.title || '')}</div><div class="sub sub-b">${relationOf(s, c.id) ? `<i class="rel-line">${esc(relationOf(s, c.id))}</i> · ` : ''}${esc(placeName(s, c.loc))} · ${together ? 'in person' : `<b>by raven</b>${flying ? ` — a letter of yours ${landsWord(flying.days)}` : ''}`}${regard ? ` · <span class="regard r-${regard.tone}" title="Their opinion of you: ${(c.opinion || 0) > 0 ? '+' : ''}${c.opinion || 0}">${esc(regard.word)}</span>` : ''}</div>${temperHtml(c)}</div><button class="wc-btn wc-btn--quiet" data-action="close-chat" title="Back to the chronicle" aria-label="Back to the chronicle">${icon('chevronL')} Back</button></div>
     <div class="chat-log" id="chat-log">${log.length ? log.map((m) => msgHtml(m, c)).join('') : `<div class="muted" style="font-style:italic">${esc(c.bio || '')}</div>`}</div>
     ${closed ? '' : `<div class="quick-asks">${quick.map((q) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`}
     ${closed ? `<div class="chat-closed">${esc(c.name)} will not hear you again this moon.${together ? ' The doors are shut to you.' : ' Your ravens come back unanswered.'}</div>` : `<div class="chat-input"><textarea id="chat-text" rows="3" placeholder="${together ? 'Speak…' : 'Write your letter…'}">${esc(app.chatPrefill || '')}</textarea><button class="wc-btn wc-btn--gold" id="chat-send">${together ? 'Speak' : 'Send'}</button></div>`}${audiencePromisesHtml(s, c.id, { esc })}</div>`;
@@ -297,7 +298,7 @@ function msgHtml(m, c) {
   const bs = beats(m.text);
   // narration reads as a novel's prose; speech is set in quotation marks
   const body = bs.map((b) => (b.kind === 'act' ? `<p class="beat act" title="Click to hear it">${nm(b.text)}</p>` : `<p class="beat say" title="Click to hear it">“${nm(b.text.replace(/^[“"]+|[”"]+$/g, ''))}”</p>`)).join('') || esc(m.text);
-  return `<div class="msg npc" data-speaker="${sp?.id || ''}" data-mood="${esc(m.mood || '')}"><div class="who"><img src="${por(sp, 40)}">${esc(sp?.name || '')} · ${esc(m.date || '')}<button class="speak-all" title="Hear it" aria-label="Hear it">${icon('speaker')}</button></div><div class="beats">${body}</div>${chipsHtml(outcomeChips(m), { esc, icon })}</div>`;
+  return `<div class="msg npc" data-speaker="${sp?.id || ''}" data-mood="${esc(m.mood || '')}"><div class="who"><img src="${por(sp, 40, { mood: m.mood || '' })}">${esc(sp?.name || '')} · ${esc(m.date || '')}<button class="speak-all" title="Hear it" aria-label="Hear it">${icon('speaker')}</button></div><div class="beats">${body}</div>${chipsHtml(outcomeChips(m), { esc, icon })}</div>`;
 }
 // Voices: click a line to hear it, or the speaker icon to hear the whole reply
 export function wireVoices(root) {

@@ -8,6 +8,7 @@ import { whereabouts } from '../shared/roads.js';
 import { statusText } from '../engine/parties.js';
 import { supplyOf } from '../engine/military/supply.js';
 import { rosterOf, linkNames } from './names.js';
+import { lookOpts } from './looks.js';
 
 export const app = {
   saveId: null, state: null, map: null, win: null, winArg: null, sheet: null, drawerTab: 'feed', chatWith: null, council: null,
@@ -63,7 +64,8 @@ export const relClass = (v) => (v > 10 ? 'pos' : v < -10 ? 'neg' : 'neu');
 export const relHtml = (v) => `<span class="rel ${relClass(v)}">${v > 0 ? '+' : ''}${v}</span>`;
 export const sig = (house, size = 1.7) => (house ? `<img class="sig" src="${sigilSrc(house, 48)}" style="width:${size}rem" alt="">` : '');
 export const banner = (house, w = 60, h = 90) => (house ? bannerURL(house.sigil, w, h) : '');
-export const por = (c, size = 96) => (c ? portraitLazy(c, app.state?.houses[c.house], size) : '');
+/** A person's face: their parents' features, the marks the story has left, and (when asked) their mood toward the lord — ui/looks.js. */
+export const por = (c, size = 96, extra = {}) => (c ? portraitLazy(c, app.state?.houses[c.house], size, lookOpts(app.state, c, extra)) : '');
 export const player = () => app.state.houses[app.state.meta.player];
 export const ruler = () => app.state.characters[player().lord];
 export const meter = (v, color = 'var(--gold)', max = 100) => `<div class="meter"><div style="width:${Math.max(0, Math.min(100, (v / max) * 100))}%;background:${color}"></div></div>`;
