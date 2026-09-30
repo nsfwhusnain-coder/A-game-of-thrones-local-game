@@ -1,0 +1,19 @@
+--- a/server/ai/calls/interpret.js
++++ b/server/ai/calls/interpret.js
+@@ -160,6 +160,7 @@
+ - Men go with someone only if the order asks for men; a number of men is the number the order gives.
+ - An order that asks for nothing these actions do (a speech, a prayer, a hope, a word of comfort) has no actions: the chronicle tells it.
+ - If the order must be done but cannot be read without one missing thing (who should go, where, how much), ask one short question in "clarify", with up to four answers to choose from, and give no actions.
++- Ask only when the missing thing has no sensible default. If the lord has one host, or only one person fits, or the missing detail is optional (a leader, a name for the host, "all" meant by a levy), do not ask: take the obvious reading and act.
+ - Fields an action does not use: "none", [], 0 or "".`;
+ 
+ export default {
+@@ -228,7 +229,7 @@
+     const hint = [p.verbs.length ? `verbs ${p.verbs.join(', ')}` : null, p.people.length ? `people ${p.people.join(', ')}` : null, p.places.length ? `places ${p.places.join(', ')}` : null, p.houses.length ? `houses ${p.houses.join(', ')}` : null, p.hosts.length ? `hosts ${p.hosts.join(', ')}` : null, p.numbers.length ? `numbers ${p.numbers.join(', ')}` : null, p.days ? `within ${p.days} days` : null].filter(Boolean).join('; ');
+     return [
+       { role: 'system', content: system(null, `${INSTRUCTIONS}\n\nEXAMPLES (another house: ${ctx.examples.who})\n${ctx.examples.items.map(([order, acts]) => `ORDER: "${order}"\n${shown(acts)}`).join('\n')}`) },
+-      { role: 'user', content: `${ctx.dossier}\nACTIONS ALLOWED:\n${ctx.verbs.map((v) => `- ${v}: ${MEANS[v]}`).join('\n')}\nTHE PRE-PARSE FOUND: ${hint || 'nothing it could read'}\nORDER: "${ctx.text.replace(/"/g, "'")}"${ctx.addressee ? `\n(said to ${ctx.addressee}, one of your people, in person)` : ''}\nTurn the order into actions.` },
++      { role: 'user', content: `${ctx.dossier}\nACTIONS ALLOWED:\n${ctx.verbs.map((v) => `- ${v}: ${MEANS[v]}${CHOICE_OF[v] ? ` — [choice] is one of: ${CHOICE_OF[v].join(' | ')}` : ''}`).join('\n')}\nTHE PRE-PARSE FOUND: ${hint || 'nothing it could read'}\nORDER: "${ctx.text.replace(/"/g, "'")}"${ctx.addressee ? `\n(said to ${ctx.addressee}, one of your people, in person)` : ''}\nTurn the order into actions.` },
+     ];
+   },
+   // what the schema cannot say: an action with what its verb cannot do without, a choice that is not that verb's, a

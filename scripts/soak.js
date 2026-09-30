@@ -14,6 +14,7 @@ process.env.WC_SAVES = fs.mkdtempSync(path.join(os.tmpdir(), 'wc-soak-'));
 const game = await import('../server/game.js');
 const { validate } = await import('../public/js/engine/state/validate.js');
 const { KINDS } = await import('../public/js/engine/facts/kinds.js');
+const { scoreCard } = await import('../server/ai/validate/headline.js');
 
 const TURNS = Number(args.turns || 200);
 const HOUSES = String(args.houses || 'stark,lannister,tully,greyjoy,martell,tyrell').split(',');
@@ -46,6 +47,8 @@ for (const house of HOUSES) {
   const { id } = game.newGame('agot_298', house, { seed });
   log(`- ${house}: seed ${seed}`);
   const times = []; let first = null;
+  // the headlines (18 §5 N6): every card the narrator or the writer tells passes the scorer, and how many facts a card holds
+  const factsById = new Map(); let cardsTold = 0, factsTold = 0, cardFaults = 0;
   for (let t = 1; t <= TURNS; t++) {
     const orders = play(id, t);
     const a = Date.now();
@@ -54,6 +57,14 @@ for (const house of HOUSES) {
     const unbacked = turn.events.filter((e) => !e.fact && !e.story && !e.orderId);
     if (unbacked.length) { broken += unbacked.length; log(`- ${house} turn ${t}: ${unbacked.length} card(s) with no fact behind them — ${unbacked.slice(0, 3).map((e) => e.title).join('; ')}`, true); }
     const s = game.loadState(id);
+    for (const f of game.readFacts(id, { from: t, to: t })) factsById.set(f.id, f);
+    for (const e of turn.events.filter((x) => x.narrated && !x.bg)) {
+      const fs_ = (e.facts || []).map((x) => factsById.get(x)).filter(Boolean); if (!fs_.length) continue;
+      cardsTold++; factsTold += fs_.length;
+      const r = scoreCard({ headline: e.headline, summary: e.summary }, { facts: fs_, actors: [...new Set(fs_.flatMap((f) => f.actors || []))], houses: e.houses, place: e.where }, s);
+      if (!r.pass && args.debug) console.log("   ", JSON.stringify(fs_.map((f) => ({ kind: f.kind, data: f.data, place: f.place, houses: f.houses }))).slice(0, 600), JSON.stringify(Object.values(s.parties).filter((p) => fs_.some((f) => f.data?.party === p.id)).map((p) => [p.id, p.name])));
+      if (!r.pass) { broken++; cardFaults++; log(`- ${house} turn ${t}: a card fails the scorer [${r.faults}] (${r.detail.map((d) => d.text).join("; ")}) — "${e.headline}" / "${e.summary}"`, true); }
+    }
     const problems = validate(s);
     if (problems.length) { broken += problems.length; if (!first) first = { t, problems }; log(`- ${house} turn ${t} (${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}): ${problems.length} broken — ${problems.slice(0, 5).join('; ')}`, true); }
     if (s.outcome) { log(`- ${house}: the tale ended on turn ${t} (${s.outcome.title})`); break; }
@@ -75,7 +86,7 @@ for (const house of HOUSES) {
   if (days >= 60 && perMoon < 5) { broken++; log(`- ${house}: only ${perMoon.toFixed(1)} journeys a moon (09 §3 wants at least 5)`, true); }
   const avg = times.reduce((x, y) => x + y, 0) / times.length; const max = Math.max(...times);
   summary.push({ house, journeys: perMoon, turns: times.length, date: `${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}`, avg, max, size, parties: Object.keys(s.parties).length, first, facts: facts.length, logSize });
-  log(`- ${house}: ${times.length} turns to ${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}, ${Math.round(avg)} ms a turn (max ${max}), save ${(size / 1024).toFixed(0)} KB, ${facts.length} facts (${(logSize / 1024).toFixed(0)} KB), ${Object.keys(s.parties).length} parties, ${perMoon.toFixed(1)} journeys a moon${first ? `, FIRST BROKEN ON TURN ${first.t}` : ', every invariant held'}`);
+  log(`- ${house}: ${times.length} turns to ${s.meta.date.day}/${s.meta.date.month}/${s.meta.date.year}, ${Math.round(avg)} ms a turn (max ${max}), save ${(size / 1024).toFixed(0)} KB, ${facts.length} facts (${(logSize / 1024).toFixed(0)} KB), ${Object.keys(s.parties).length} parties, ${perMoon.toFixed(1)} journeys a moon, ${(cardsTold / Math.max(1, times.length)).toFixed(1)} cards a turn of ${(factsTold / Math.max(1, cardsTold)).toFixed(1)} facts${cardFaults ? `, ${cardFaults} FAIL THE SCORER` : ''}${first ? `, FIRST BROKEN ON TURN ${first.t}` : ', every invariant held'}`);
 }
 log(`\n| house | turns | reached | ms/turn | max ms | save | facts | parties | invariants |\n|---|---|---|---|---|---|---|---|---|`);
 for (const x of summary) log(`| ${x.house} | ${x.turns} | ${x.date} | ${Math.round(x.avg)} | ${x.max} | ${(x.size / 1024).toFixed(0)} KB | ${x.facts} (${(x.logSize / 1024).toFixed(0)} KB) | ${x.parties} | ${x.first ? `broken on turn ${x.first.t}` : 'held'} |`);

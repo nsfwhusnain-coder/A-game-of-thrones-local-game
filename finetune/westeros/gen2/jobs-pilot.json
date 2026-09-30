@@ -1,0 +1,9 @@
+[
+  { "name": "pilot-mind-suite",   "args": ["--kind","mind","--gen","suite","--n","24","--k","3","--conc","4","--seed","21000","--out","C:/wc-ai/finetune/pool-pilot/mind-suite.jsonl"] },
+  { "name": "pilot-mind-natural", "args": ["--kind","mind","--gen","natural","--games","6","--turns","4","--perTurn","2","--n","24","--k","3","--conc","4","--seed","31000","--out","C:/wc-ai/finetune/pool-pilot/mind-natural.jsonl"] },
+  { "name": "pilot-narrate",      "args": ["--kind","narrate","--games","6","--turns","4","--n","16","--k","3","--conc","4","--seed","41000","--out","C:/wc-ai/finetune/pool-pilot/narrate.jsonl"] },
+  { "name": "pilot-audience",     "args": ["--kind","audience","--games","6","--turns","3","--n","20","--k","3","--conc","4","--seed","51000","--out","C:/wc-ai/finetune/pool-pilot/audience.jsonl"] },
+  { "name": "pilot-council",      "args": ["--kind","council","--games","6","--turns","3","--n","20","--k","3","--conc","4","--seed","61000","--out","C:/wc-ai/finetune/pool-pilot/council.jsonl"] },
+  { "name": "pilot-director",     "args": ["--kind","director","--games","8","--turns","6","--n","16","--k","3","--conc","4","--seed","71000","--out","C:/wc-ai/finetune/pool-pilot/director.jsonl"] },
+  { "name": "pilot-consolidate",  "args": ["--kind","consolidate","--games","6","--turns","8","--n","8","--k","3","--conc","4","--seed","81000","--out","C:/wc-ai/finetune/pool-pilot/consolidate.jsonl"] }
+]

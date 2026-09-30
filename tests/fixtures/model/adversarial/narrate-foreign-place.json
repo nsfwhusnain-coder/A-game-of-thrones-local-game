@@ -1,7 +1,7 @@
 {
  "kind": "narrate",
  "note": "A castle the story never goes near.",
- "reply": "{\"events\": [{\"story\": \"S2\", \"headline\": \"Lord Tyrell feasts the Reach at Highgarden\", \"line\": \"Mace Tyrell held a feast at Highgarden for the lords of the Reach.\", \"scene\": \"From Highgarden the lords went on to Casterly Rock, where the lions waited.\", \"pov\": \"a serving girl at Highgarden\"}], \"meanwhile\": \"Poachers were hanged in the wolfswood.\"}",
+ "reply": "{\"events\":[{\"story\":\"S2\",\"headline\":\"Lord Tyrell feasts the Reach at Highgarden\",\"summary\":\"Mace Tyrell held a feast at Highgarden for the lords of the Reach.\",\"scene\":\"From Highgarden the lords went on to Casterly Rock, where the lions waited.\"}],\"meanwhile\":\"Poachers were hanged in the wolfswood.\"}",
  "expect": "refuse",
  "problem": "places"
 }

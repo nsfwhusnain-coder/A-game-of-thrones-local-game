@@ -39,7 +39,9 @@ export function houseLabel(state, houseId) {
   if (isHouse(h)) { const { base } = partsOf(h); return base ? `House ${base}` : 'a house'; }
   const name = String(h.name || '').trim();
   if (!name) return titled(houseId) || 'a house';
-  // a free city is its own name ("Braavos"); an order, a tribe or a company is "the …", whatever the data called it
+  // a free city is its own name ("Braavos"); an order, a tribe or a company is "the …", whatever the data called it; and a ledger's
+  // "Khalasar of Drogo" is "the Dothraki" (the people's own word, from its id), never a name with a person's in it
+  if (h.rank !== 'city_state' && / of /.test(name) && titled(houseId)) return `the ${titled(houseId)}`;
   if (h.rank === 'city_state') return /^the\s+/i.test(name) ? `the ${noThe(name)}` : name;
   return `the ${noThe(name)}`;
 }
@@ -118,6 +120,8 @@ function partyName(state, party) {
   // a name of its own: "The City Watch" is "the City Watch"; "Robb's Northmen" needs no article
   if (/^the\s+/i.test(name)) return `the ${noThe(name)}`;
   if (/^[A-Z][\w-]*['’]s?\s/.test(name)) return name;
+  // "Benjen Stark's company", and a lone rider's party is named for the rider ("Jon Snow"): a person's name takes no article
+  if (/^(?:[A-Z][\w'’-]*\s+)+[A-Z][\w-]*['’]s\b/.test(name) || Object.values(state?.characters || {}).some((c) => c.name === name)) return name;
   return `the ${name}`;
 }
 

@@ -1,7 +1,7 @@
 // The pin window: click a pin on the map and what happened there opens in front of you.
 // News is read and acknowledged (the pin goes); a matter awaiting your word shows its choices, or lets you answer
 // in your own words. Several things at one place are shown one after another.
-import { app, $, esc, api, modal, closeModal, sig, addOrder, placeName } from './common.js';
+import { app, $, esc, api, modal, closeModal, sig, addOrder, placeName, foldText } from './common.js';
 import { eventArt } from './event-art.js';
 import { decisionsHtml, wireDecisions } from './drawer.js';
 import { openPins } from '../shared/pins.js';
@@ -38,8 +38,8 @@ export function openPin(where) {
     const e = it.e; const s = app.state;
     const houses = (e.houses || []).filter((h) => s.houses[h]).slice(0, 4);
     modal(`${head}<div class="pin-body event imp-${e.importance} pin-event">${eventArt(e)}
-        <div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div>
-        ${e.details ? `<div class="pin-details">${esc(e.details)}</div>` : ''}
+        <div class="et">${esc(e.headline || e.title)}</div><div class="eb">${esc(e.summary ?? e.text)}</div>
+        ${foldText(e) ? `<div class="pin-details">${esc(foldText(e))}</div>` : ''}
         <div class="meta">${houses.map((h) => sig(s.houses[h], 1.1)).join('')} ${esc(e.date || '')}${e.day ? ` · day ${e.day}` : ''} · ${esc(e.type || '')}${e.where && s.holdings[e.where] ? ' · ' + esc(placeName(s, e.where)) : ''}</div></div>
       <details class="pin-order"><summary>Give an order about this…</summary>
         <textarea class="input" id="pin-order-text" rows="2" placeholder="e.g. Send Ser Rodrik with fifty men to hunt these outlaws down."></textarea>

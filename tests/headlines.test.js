@@ -31,7 +31,13 @@ import fs from 'node:fs';
 process.env.WC_PROVIDER = 'mock';
 const { createInitialState } = await import('../public/js/shared/world.js');
 const { KINDS } = await import('../public/js/engine/facts/kinds.js');
-const { plainEvent } = await import('../server/ai/calls/narrate.js');
+const { cardOf: writerCard } = await import('../public/js/engine/facts/headline.js');
+const { sentencesOf } = await import('../server/ai/validate/narration.js');
+// The telling the game gave before N5, kept here as the evidence the scorer was measured against (`plainEvent` and `herald` of
+// server/ai/calls/narrate.js, dropped when the mock and the fallback became the writer's card)
+const oldClip = (t, n) => { const x = String(t || '').replace(/\s+/g, ' ').trim(); if (x.length <= n) return x; const cut = x.slice(0, n - 1); return (cut.slice(0, Math.max(cut.lastIndexOf(' '), n * 0.6)) || cut).replace(/[,;:—–-]+$/, '') + '…'; };
+const oldHerald = (t) => { const x = String(t).replace(/\s+/g, ' ').trim().replace(/[.…]+$/, ''); if (x.length <= 70) return x; const head = x.split(/:|;| — | – /)[0].trim(); return head.length >= 12 && head.length <= 70 ? head : oldClip(x, 70); };
+const oldPlainEvent = (st) => { const top = [...st.facts].sort((a, b) => b.importance - a.importance)[0]; return { headline: oldHerald(top.title || sentencesOf(top.text)[0] || top.text), line: oldClip(top.text, 200) }; };
 const STYLE = await import('../public/data/style.js');
 const { scoreCard } = await import('../server/ai/validate/headline.js'); // (new in N1)
 
@@ -267,20 +273,22 @@ test('H3: a headline names who — a story with no one in it is named by its pla
   assert.ok(!faultsOf('The Starks march to war', 'g-battle-04').includes('who'), 'a house that is');
 });
 
-// ── Regression evidence: what the game says today ────────────────────────────────────────────────────────────────────
-test('regression evidence: the current mock\'s telling (plainEvent) scores under half on the golden set', () => {
-  // N3 flips this: the writer's cardOf must pass ≥ 98 % (target 100 %); N5 drops plainEvent with the old mock
-  const hist = {}; let passing = 0;
+// ── Regression evidence: what the game said before N5, and what it says now ─────────────────────────────────────────
+test("regression evidence: the telling the game gave before N5 scored under half on the golden set, and the mock's now (the writer's card) passes it", () => {
+  // N5 flipped this: the mock and the fallback are the writer's cardOf, which must pass ≥ 98 % (target 100 %)
+  const hist = {}; let passing = 0; let nowPassing = 0;
   for (const g of GOLDEN) {
     const facts = g.facts.map((f) => ({ ...f, day: 1 }));
     const story = { id: 'S1', facts, actors: [...new Set(facts.flatMap((f) => f.actors))], houses: [...new Set(facts.flatMap((f) => f.houses))], place: facts.find((f) => f.place)?.place || null, days: [1, 1], importance: Math.max(...facts.map((f) => f.importance)), pov: null };
-    const e = plainEvent(state, story);
+    const e = oldPlainEvent(story);
     const r = scoreCard({ headline: e.headline, summary: e.line }, g, state);
     if (r.pass) passing++; for (const f of r.faults) hist[f] = (hist[f] || 0) + 1;
+    const w = writerCard(state, story); if (scoreCard({ headline: w.headline, summary: w.summary }, g, state).pass) nowPassing++;
   }
   const rate = passing / GOLDEN.length;
-  console.log(`\nthe mock's telling today: ${passing}/${GOLDEN.length} pass (${Math.round(rate * 100)} %); faults ${Object.entries(hist).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}`);
-  assert.ok(rate < 0.5, `${Math.round(rate * 100)} % of the mock's cards already pass: the scorer is too lenient`);
+  console.log(`\nthe telling before N5: ${passing}/${GOLDEN.length} pass (${Math.round(rate * 100)} %); faults ${Object.entries(hist).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; the writer's: ${nowPassing}/${GOLDEN.length}`);
+  assert.ok(rate < 0.5, `${Math.round(rate * 100)} % of the old telling's cards pass: the scorer is too lenient`);
+  assert.ok(nowPassing / GOLDEN.length >= 0.98, `the mock's telling passes ${nowPassing}/${GOLDEN.length}`);
 });
 
 // ── Review round: the holes an adversarial reader found in the scorer (WP N1) ────────────────────────────────────────

@@ -1,7 +1,7 @@
 {
  "kind": "narrate",
  "note": "The audit's B-12: a lord seen acting at Winterfell who is at Casterly Rock.",
- "reply": "{\"events\": [{\"story\": \"S1\", \"headline\": \"Lord Stark calls the banners of the North\", \"line\": \"Eddard Stark called his bannermen to Winterfell, and the Greatjon answered first, with 3,800 men.\", \"scene\": \"Tywin Lannister watched the ravens go up from the gallery, and said nothing.\", \"pov\": \"Maester Luwin\"}], \"meanwhile\": \"Poachers were hanged in the wolfswood.\"}",
+ "reply": "{\"events\":[{\"story\":\"S1\",\"headline\":\"Lord Stark calls the banners of the North\",\"summary\":\"Eddard Stark called his bannermen to Winterfell, and the Greatjon answered first, with 3,800 men.\",\"scene\":\"Tywin Lannister watched the ravens go up from the gallery, and said nothing.\"}],\"meanwhile\":\"Poachers were hanged in the wolfswood.\"}",
  "expect": "refuse",
  "problem": "names"
 }

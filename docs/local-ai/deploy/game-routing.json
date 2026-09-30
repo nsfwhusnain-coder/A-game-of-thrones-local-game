@@ -1,0 +1,14 @@
+{
+  "_comment": "Merge into the game's config.json (git-ignored). ONE model process, two aliases: 'maester-12b' = Gemma 4 12B + the Westeros LoRA (interpret, mind, director, audience, council, consolidate); 'maester-12b:plain' = the same process with the adapter off (identical to the untuned 12B) for narrate and for the call kinds that were not tuned or measured. Every call unpinned (slot: null) — pinning two requests to one llama.cpp slot livelocks the server (llama.cpp #28280). allowModelSwaps is only a guard here: the two names are aliases of one llama-server, nothing is swapped.",
+  "allowModelSwaps": true,
+  "models": {
+    "default":  { "model": "maester-12b",       "slot": null },
+    "narrate":  { "model": "maester-12b:plain", "slot": null },
+    "letter":   { "model": "maester-12b:plain", "slot": null },
+    "advisor":  { "model": "maester-12b:plain", "slot": null },
+    "counsel":  { "model": "maester-12b:plain", "slot": null },
+    "polish":   { "model": "maester-12b:plain", "slot": null },
+    "probe":    { "model": "maester-12b:plain", "slot": null }
+  },
+  "contextTokens": 65536
+}

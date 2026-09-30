@@ -1,7 +1,7 @@
 {
  "kind": "narrate",
  "note": "The audit's B-03: the story has the Greatjon answer and set out; the telling has him ride into Winterfell.",
- "reply": "{\"events\": [{\"story\": \"S1\", \"headline\": \"Lord Stark calls the banners of the North\", \"line\": \"Eddard Stark called his bannermen to Winterfell, and the Greatjon answered first, with 3,800 men.\", \"scene\": \"The Greatjon rode into Winterfell at dusk with his host behind him, roaring for ale.\", \"pov\": \"Maester Luwin\"}], \"meanwhile\": \"Poachers were hanged in the wolfswood.\"}",
+ "reply": "{\"events\":[{\"story\":\"S1\",\"headline\":\"Lord Stark calls the banners of the North\",\"summary\":\"Eddard Stark called his bannermen to Winterfell, and the Greatjon answered first, with 3,800 men.\",\"scene\":\"The Greatjon rode into Winterfell at dusk with his host behind him, roaring for ale.\"}],\"meanwhile\":\"Poachers were hanged in the wolfswood.\"}",
  "expect": "refuse",
  "problem": "arrival"
 }

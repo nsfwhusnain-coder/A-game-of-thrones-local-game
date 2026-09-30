@@ -9,6 +9,8 @@ import { dateStr, dayNumber } from '../../../public/js/shared/world.js';
 import { dateOfDay } from '../../../public/js/engine/time.js';
 import { promiseText } from '../../../public/js/engine/politics/commitments.js';
 import { GAME_WORDS } from '../validate/narration.js';
+import { shapeCard, firstSentence } from '../../../public/js/engine/facts/digest.js';
+import { TIERS } from '../../../public/js/engine/facts/rank.js';
 import { anachronismsIn } from '../../../public/data/anachronisms.js';
 
 export const INSTRUCTIONS = `YOUR TASK
@@ -34,6 +36,21 @@ export function openNow(state) {
 /** The engine's own words for what happened: the facts of note, dated, at most `max`. */
 export function whatHappened(facts, max = 24) {
   return facts.filter((f) => (f.importance ?? 1) >= 3 && f.kind !== 'ledger').slice(-max).map((f) => `- **${dateStr(dateOfDay(f.day))}** — ${clean(f.title && f.text && !f.text.startsWith(f.title) ? `${f.title}: ${f.text}` : f.text || f.title)}`).join('\n');
+}
+
+/**
+ * What happened, as the player read it: the cards of the turns folded — news and above, a headline and the first sentence of
+ * its summary, dated, at most `max` (the newest) — in the words of the chronicle, never the ledger's lines (18 §2.6).
+ */
+export function toldHappenings(turns, max = 24) {
+  const rows = [];
+  for (const t of turns || []) for (const e of t.events || []) {
+    if (e.bg) continue;
+    const c = shapeCard(e); if (!c.headline || TIERS.indexOf(c.tier) < TIERS.indexOf('news')) continue;
+    const line = firstSentence(c.summary); const head = c.headline.replace(/[.!?…]+$/, '');
+    rows.push(`- **${e.date || t.date}** — ${head}.${line && line.replace(/[.!?…]+$/, '') !== head ? ` ${line}` : ''}`);
+  }
+  return rows.slice(-max).join('\n');
 }
 
 // every name the dossier gives: the people, houses and places of the facts and of what is open

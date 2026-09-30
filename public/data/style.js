@@ -9,7 +9,7 @@ export const VOICE = [
   'A line or two of speech, in character.',
   'Specific names and places, as the facts give them.',
   'Understatement and dry humour; courtesy as a weapon.',
-  'End on what it will cost, or who noticed — never on a moral.',
+  'End on a small concrete thing, or on who noticed — never on a moral, and never on a sum of what the deed will cost.',
 ];
 
 // the words that are never written (§8.2): game words, and the tired phrases of every bad fantasy novel
@@ -23,17 +23,36 @@ export const FORBIDDEN = [
 // (the one case-sensitive word: "op", an engine op, is not "Op" in a name)
 export const FORBIDDEN_EXACT = ['\\bops?\\b'];
 
-export const HEADLINE = 'a herald\'s cry about a person, at most 70 letters ("Lord Umber marches the banners south"; never "The March" or "Winds of War")';
+export const HEADLINE = 'the news in one short line: who did what, to whom, where, at most twelve words ("Lady Hornwood refuses Stark\'s summons", "Robb Stark slain by Tywin Lannister at the Green Fork"); the present for what is happening, a bare participle when the one it happened to is the news; no numbers but a round word, no brackets, dashes or colons; never "The March" or "Winds of War"';
+/** What the summary under a headline is (18 §2.3): plain, short, and not the headline again. */
+export const SUMMARY = 'one to three plain sentences in the simple past: what happened, then how or why if the story says; no scene-setting, no adjective the facts do not hold, no numbers but words ("some three hundred", never "300")';
+/** What the model is told never to write: the ledger's phrases, which the engine's log lines are made of (18 §1.3). */
+export const ANTI_PATTERNS = [
+  'Host of House X sets out from Y (~40 days)', 'House X calls up 9,977 levies at Y', 'House The Free Folk …', 'Baratheon of King\'s Landing …',
+  'X begins works at Y: charter a market & fair', 'The host now numbers 896', 'X answers the call with 2,000 men', '1,796 strong', 'leaves X with 30 knights and riders under the Y banner',
+];
 
 // few-shot examples (§8.4): each of one house, used only when the player is of another
 export const EXAMPLES = [
-  { house: 'tarly', headline: 'Lord Tarly hangs the Dornish raiders at the Mander ford', line: 'Randyll Tarly caught three hundred raiders at the ford at dawn and hanged their captain from the mill.', scene: 'The mist had not lifted when the first of them came up out of the water, and Tarly\'s bowmen were waiting in the reeds where they had lain two nights. Afterwards the miller\'s boy counted the horses. "Forty-one," he told his father, who told him to stop counting and fetch the rope. Lord Tarly did not stay to watch; he never did.', pov: 'the miller\'s boy' },
-  { house: 'frey', headline: 'Lord Walder raises the toll at the Twins again', line: 'Walder Frey doubled the toll on the Green Fork crossing, and three merchants turned back to the ford.', scene: 'The serving girl brought the ledger up to the old man\'s chair, and he did not look at it. "Double," he said. "They can swim, if they like." By noon the wagons stood a mile back along the causeway, and a Tully knight was shouting at the gate. Lord Walder had himself carried to the window to hear it better.', pov: 'a serving girl at the Twins' },
-  { house: 'manderly', headline: 'Lord Wyman launches a war galley at White Harbor', line: 'Wyman Manderly launched the first of four new war galleys from the shipyards below the New Castle.', scene: 'The hull went down the slip slow as a fat man into a bath, and the crowd on the quay cheered as if it had been a fast one. Lord Wyman, carried down in a litter, had a cup of Arbor red poured over the prow and another poured for himself. "The North has never had a fleet," he told the shipwright. "It has never been this close to needing one."', pov: 'the shipwright\'s apprentice' },
-  { house: 'greyjoy', headline: 'Ironborn reavers burn a fishing village on the Stony Shore', line: 'Three longships from Pyke burned a fishing village on the Stony Shore and took its boats.', scene: 'They came in with the tide and the smoke was up before the bell was. A boy who hid in the nets said afterwards that the reavers sang while they worked, a song about a god who lived under the sea. By evening the longships were black specks going west, and the village had one boat left, which had a hole in it.', pov: 'a boy of the village' },
+  { house: 'tarly', headline: 'Lord Tarly hangs the Dornish raiders at the Mander ford', summary: 'Randyll Tarly caught three hundred raiders at the ford at dawn and hanged their captain from the mill.', scene: 'The mist had not lifted when the first of them came up out of the water, and Tarly\'s bowmen were waiting in the reeds where they had lain two nights. Afterwards the miller\'s boy counted the horses. "Forty-one," he told his father, who told him to stop counting and fetch the rope. Lord Tarly did not stay to watch; he never did.', pov: 'the miller\'s boy' },
+  { house: 'frey', headline: 'Lord Walder raises the toll at the Twins again', summary: 'Walder Frey doubled the toll on the Green Fork crossing, and three merchants turned back to the ford.', scene: 'The serving girl brought the ledger up to the old man\'s chair, and he did not look at it. "Double," he said. "They can swim, if they like." By noon the wagons stood a mile back along the causeway, and a Tully knight was shouting at the gate. Lord Walder had himself carried to the window to hear it better.', pov: 'a serving girl at the Twins' },
+  { house: 'manderly', headline: 'Lord Wyman launches a war galley at White Harbor', summary: 'Wyman Manderly launched the first of four new war galleys from the shipyards below the New Castle.', scene: 'The hull went down the slip slow as a fat man into a bath, and the crowd on the quay cheered as if it had been a fast one. Lord Wyman, carried down in a litter, had a cup of Arbor red poured over the prow and another poured for himself. "The North has never had a fleet," he told the shipwright. "It has never been this close to needing one."', pov: 'the shipwright\'s apprentice' },
+  { house: 'greyjoy', headline: 'Ironborn reavers burn a fishing village on the Stony Shore', summary: 'Three longships from Pyke burned a fishing village on the Stony Shore and took its boats.', scene: 'They came in with the tide and the smoke was up before the bell was. A boy who hid in the nets said afterwards that the reavers sang while they worked, a song about a god who lived under the sea. By evening the longships were black specks going west, and the village had one boat left, which had a hole in it.', pov: 'a boy of the village' },
 ];
 /** The example for a player of `house`: the first of another house. */
 export const exampleFor = (house) => EXAMPLES.find((e) => e.house !== house) || EXAMPLES[0];
+
+// Six headline + summary pairs, one of each kind of story the narrator meets most (18 §3.2): a battle, a death, a march of
+// many, a refusal, a wedding, a harvest. Invented for the prompt; they say how a headline and its summary are worded, and
+// what they are not: they never happened, and the model is told so.
+export const PAIRS = [
+  { kind: 'battle', headline: 'Lord Tarly beats the Dornish raiders at the Mander ford', summary: 'Randyll Tarly\'s bowmen met the raiders in the reeds at dawn. Most of the Dornish were killed or taken, and the rest fled south.' },
+  { kind: 'death', headline: 'Lord Bracken dies at Stone Hedge', summary: 'The old lord died of a wasting sickness, in his own bed. His son takes the seat.' },
+  { kind: 'march', headline: 'Six Reach lords ride for Highgarden', summary: 'Tarly, Rowan and Hightower were the first to leave, and the Florents have the longest road. All are bound to feast with Lord Tyrell.' },
+  { kind: 'refusal', headline: 'Lord Blackwood refuses the Tullys\' summons', summary: 'Tytos Blackwood will keep his men at home. The bad blood between his house and the Brackens is older than the summons.' },
+  { kind: 'wedding', headline: 'Lord Tyrell weds his son to a Redwyne', summary: 'The wedding was held in the Sept of Highgarden before half the Reach. The two houses have long been allies, and are now kin.' },
+  { kind: 'harvest', headline: 'A poor harvest hungers the Stormlands', summary: 'The rains came early and much of the barley rotted in the fields. The granaries of the castles will be tested before spring.' },
+];
 
 // mature content (§8.5): the setting's paragraph, carried by every prompt that tells or speaks
 export const MATURITY = {
@@ -55,7 +74,7 @@ export const SUMMARY_MAX_CHARS = 340;
 // "King Robert rides for Winterfell" says who, what and where (20 §5.2); the ledger's line is "knights and riders under".
 export const BOILERPLATE = [
   '\\b(?:is|are) raised at\\b', '\\bsets? out from\\b', '\\banswers? the call with\\b', '\\bbegins? works at\\b',
-  '\\bcalls? up\\b[^.]*\\blevies\\b', '\\bhost of house\\b', '\\bhouse the\\b', '\\bbanners of (?!the\\b)',
+  '\\bcalls? up\\b[^.]*\\blevies\\b', '(?:^|[.!?]\\s+|\\n)host of house\\b', '\\bhouse the\\b', '\\bbanners of (?!the\\b|house\\b)',
   '\\bhouse [\\w\'’-]+ of (?:the )?[a-z]', '\\bknights and riders\\b', '\\bunder the [\\w\'’-]+ banner\\b', '\\braven received\\b',
 ];
 // The ledger's own words: a count as a suffix ("1,796 strong"), the roll-call ("the host now numbers"), and the engine's own

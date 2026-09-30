@@ -1,7 +1,7 @@
 {
  "kind": "narrate",
  "note": "The Qwen leak (B-27) in a scene.",
- "reply": "{\"events\": [{\"story\": \"S3\", \"headline\": \"Jon Snow rides for the Wall\", \"line\": \"Jon Snow left Winterfell for Castle Black with six men of the household.\", \"scene\": \"Jon Snow rode north with \\u516d men.\", \"pov\": \"Jon Snow\"}], \"meanwhile\": \"Poachers were hanged in the wolfswood.\"}",
+ "reply": "{\"events\":[{\"story\":\"S3\",\"headline\":\"Jon Snow rides for the Wall\",\"summary\":\"Jon Snow left Winterfell for Castle Black with six men of the household.\",\"scene\":\"Jon Snow rode north with 六 men.\"}],\"meanwhile\":\"Poachers were hanged in the wolfswood.\"}",
  "expect": "refuse",
  "problem": "script"
 }

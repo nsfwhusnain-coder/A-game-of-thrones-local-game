@@ -1162,3 +1162,86 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - Open: a minor lord under a regent (Robert Arryn) is named as the subject; naming the regent (Lysa Arryn) may read
   better — left for N5/N6 with the owner's eye.
 
+## D-074 · 2026-09-30 · Narrator v3 as built (WP N5): the writer's cards, the model's scenes
+
+- **Departure from 18 §3.2.** The plan had the model say every card better than the writer's draft. Measured on the tuned local model
+  (Maester-12B, `maester-12b:plain`; 60 weeks of 12 seeded games, `npm run bench -- --suite narrate --mode cards`): **61 %** of 151 stories
+  passed the game's own validator first time (39 mended by a retelling, 20 left to the writer; 9.7 s a week). Asked only for a *scene*
+  (`--mode scenes`): **99 %** of 238 stories first time, 1.4 s a week. So the narrator has two modes, config `narratorMode`:
+  `"scenes"` (**the default**: every headline and summary is the deterministic writer's, always true, instant; the model writes a scene
+  of two to four sentences, behind one witness's eyes, for at most **3** stories of tier major or great) and `"cards"` (the model also
+  says the card and the Meanwhile sentence, for the **6** best stories of tier news and above; an opt-in for a model tuned for it).
+  The scene shows behind "Details"; a card without one is a whole card.
+- **The floor is the writer.** The mock and the fallback are `cardOf`, so CI runs the whole path and a dead or wrong model leaves
+  cards that read well. A story told wrongly is told again alone, once, with what was wrong; told wrongly twice, the writer's card
+  stands (no scene). `told` on a card says who wrote its words: `'model'` (a scene, or in cards mode the card) or `'writer'`.
+- **The prompt** (story sheet per story: WHO, WHY/HOW, COUNTS in cards mode, THE CARD or a DRAFT, `NAME ONLY` — the names the validator
+  allows, in the herald's forms — and POV) has no "who is where" line (it made the model name the castles its people live in) and no
+  `pov` field in the schema (a length-limited free string degenerated into "The Twinsfffff"); the scene's witness is the clusterer's.
+  The style bible's last line no longer asks scenes to end on "what it will cost" (every scene did). Snapshot: `tests/__snapshots__/prompts/narrate.txt`.
+- **Checks on a model's telling:** the names/arrivals/places/numbers of `validate/narration.js`; in cards mode also `scoreCard` and a
+  headline not used twice; in both a scene must not be a note to the reader ("(Correction: …)", "as requested") or run on to nothing
+  (`sceneProblems`). Numbers may be a rounding to one or two figures of a story's own ("some three hundred" for 349, "four thousand" for
+  3,800: `numberFits`); ledger phrases are refused where they are ledger ("Host of House Umber (…)" opening a line), not where they are English
+  ("the host of House Stark", "the banners of House Stark").
+- **Record** (per week, summed per turn): `mode`, `asked` (the story ids put to the model), `smallIds`, `told` (asked and answered),
+  `again`, `plain` (asked and the writer stands after a failure), `written` (never asked). `told + plain + written = stories`. The bench
+  scores "true on the first telling" over the stories *asked*.
+
+## D-075 · 2026-09-30 · The card in the turn record, and the digest (WP N6)
+
+- A card is `{ headline, summary, details: [strings], scene?, pov?, tier, score, kind, archetype, who, told, … }`; `title` and `text` stay as
+  aliases of the headline and the summary, so every surface not yet rewritten (and every old save) still reads them. **`details` is a list**
+  (it was a string): `shapeCard` (`engine/facts/digest.js`) makes any card into this shape — an old card's string becomes one line — and the
+  UI reads it through `foldText`. A story's card carries the engine's own lines as `record` ("the numbers are one click from the prose").
+- **The digest** replaces the turn's `summary` (which keeps its name, holding the digest's text, for the world log, the bench and the
+  playtest): `{ top: [{ id, headline, line }] (≤ 3, the best cards by score, each a headline and the first whole sentence of its summary), also: [{ id, headline }]
+  (≤ 5), meanwhile (one sentence), words, text }`, at most **90 words**, built from whole pieces (a sentence that will not fit is left out, never cut),
+  by the engine from the cards, so it can never contradict them.
+- **Old saves** are read in the new shape at the view (`server/view.js` `viewTurn`): every card shaped, a digest made if the turn has none.
+  Nothing on disk is rewritten, and the old turns keep their old words.
+- **Late news** (a raven, a rumour from an earlier turn reaching the house now) is told from the fact log (`lookup`), in the same words as the
+  rest; a fact of an earlier turn is no longer a raw engine card (B-32). A card whose facts are all small news, and a small news card, are
+  told by the writer too and shown in the Meanwhile (`tier: 'meanwhile'`, `bg: true`).
+- **The chronicle** (`chronicle.md`), **the consolidated "What happened"** and **the world log** are written from the cards (headline — first
+  sentence), never from the engine's lines (`toldHappenings`); the lord's answered matters are told as his answer ("Eddard Stark settles the
+  matter of a grievance at court — He chose to grant him a small honour"); the succession card is the writer's.
+- `state.firsts` (`{ key: turn }`, the ranking's memory, D-076) lives in the save, comes back with an undo, and is stripped from what the
+  browser is sent (`playerView`, `hiddenTruths`).
+
+## D-076 · 2026-09-30 · Ranking as built (WP N9)
+
+- `engine/facts/rank.js`: score = importance + 1 the house's own (its houses, its kin — a wife, a child, a parent — or its people are in the
+  story) + 0.5 at a holding it owns or where its hosts stand (40 miles) + 1 the first of its kind this chronicle (only news of weight 3 or more has a first:
+  `battle`, `slain_in_battle`, a raven from a house) + 0.5 a standing thing changes (a holding fell, an office, war or peace, a house's end) − 1 for each card of
+  one archetype beyond the second, heaviest first. Tiers: great ≥ 6.5, major ≥ 5, news ≥ 3.5, minor ≥ 2, meanwhile below.
+- Calibrated on the six recorded Stark turns: the muster leads turn 1 (great); a tourney or feast leads turns 3–5; no story of weight 4 is ever the
+  Meanwhile. (18 §4's "turn 4 → the tourney, turn 5 → the feast" is a major, not a great: not every week has a great card.)
+
+## D-077 · 2026-09-30 · The writer and the scorer agree (found by the soak, 4 houses × 60 turns)
+
+- A call to arms says against whom from the fact's own word (`data.against`, set when the levies are raised in an open, not cold, war);
+  the writer no longer reads the state's war list for it (D-073 said it did): what the house has not been told it may not read.
+- A host is named after the place it was raised at ("the host of Casterly Rock"): naming a held host admits that place (`storyWorld`). "Takes the
+  Blacktyde host to sea" is no holding taken (the place before "host", "army", "men"…); "a prisoner escapes" claims no capture.
+- The Dothraki are "the Dothraki" (their ledger name is "Khalasar of Drogo"); a person's party ("Jon Snow", "Benjen Stark's company") takes no
+  article. A feast that ends in a brawl names the two who came to blows and what over (`data.brawlers`, `data.over`); a host that grows says so in words.
+- The soak (`scripts/soak.js`) now asks that every card the narrator or writer tells passes `scoreCard`, and prints cards a turn and facts a card
+  (5.7 and 1.3 on the Stark game of 40 turns; N4's target of 1.5 facts a card is not met by the small news: the news alone is above it).
+
+## D-078 · 2026-09-30 · The game and the local model (docs/local-ai)
+
+- **Merged** `wp/local-ai-findings` (the tuned model's measurements, deploy files, patches, the fine-tuning pipeline) into the default branch's
+  history, so the game's builder reads it there. Permission: the owner allowed the live local model for this work (2026-09-30); it is
+  run as a private llama-swap on its own port and never touches the owner's.
+- **No slot is pinned** unless config says `"pinSlots": true` (llama.cpp #28280: two requests pinned to one slot livelock the server; the game runs
+  two minds at once) — R1. **Every call has a total deadline** (`CALL_DEFAULTS[kind].deadline`: probe 30 s, interpret/mind/director 90, letter/counsel 120, audience
+  180, council/advisor 240, narrate/consolidate 300; config `deadlines`, or a route's `deadlineSec`; 0 = none) over the whole exchange and its retries, not the
+  idle socket — R5. `WC_CONFIG` names the config file. `logCalls: true` keeps every attempt whole in `saves/<id>/llm-calls.jsonl` (prompt, reply, what the
+  checks said) — the next fine-tune's data (R3). The men-count check accepts number words and companies of rangers (R8, +2 orders on the suite for every model).
+- **Not applied:** R2 (the interpret prompt's choice words and "do not over-ask": measured inside the noise on the untuned model, and the adapter is trained
+  on the old prompt), R7 (the tolerant mind matcher: it lowered in-character from 89 % to 85 % by hiding what the fallback had been rescuing), R10 (the seat's lord in the
+  interpret dossier: a prompt change, left for the next fine-tune; logged in `MODEL-WISHLIST.md`). The interpret and mind prompts are unchanged.
+- **The council** seats every counsellor: at least `min(members, 3)` speeches (the tuned model answered with one and the other two "said nothing").
+- `docs/local-ai/deploy/config.maester-12b.json` is a whole config for Maester-12B; `npm run model:check` puts one question of every kind to the model through the
+  game's own call and reports; `npm run headlines:check` tells a few mock weeks with it and prints what the writer and the model each wrote.

@@ -1,7 +1,7 @@
 {
  "kind": "narrate",
- "note": "A number the facts do not hold: 4,000 men for the Greatjon's 3,800.",
- "reply": "{\"events\": [{\"story\": \"S1\", \"headline\": \"Lord Stark calls the banners of the North\", \"line\": \"Eddard Stark called his bannermen, and the Greatjon answered with four thousand men.\", \"scene\": \"The ravens went up from the maester's turret before the bells rang for the morning meal. By the second evening a rider from the Last Hearth was steaming in the yard. \\\"Three thousand eight hundred,\\\" he told Maester Luwin, \\\"and my lord says he will be the first there, and the loudest.\\\" Lord Eddard heard it in silence; he was thinking of the King in King's Landing.\", \"pov\": \"Maester Luwin\"}], \"meanwhile\": \"Poachers were hanged in the wolfswood.\"}",
+ "note": "A number the facts do not hold: 6,000 men for the Greatjon's 3,800 (four thousand would be a rounding, and is allowed).",
+ "reply": "{\"events\":[{\"story\":\"S1\",\"headline\":\"Lord Stark calls the banners of the North\",\"summary\":\"Eddard Stark called his bannermen, and the Greatjon answered with six thousand men.\",\"scene\":\"The ravens went up from the maester's turret before the bells rang for the morning meal. By the second evening a rider from the Last Hearth was steaming in the yard. \\\"Three thousand eight hundred,\\\" he told Maester Luwin, \\\"and my lord says he will be the first there, and the loudest.\\\" Lord Eddard heard it in silence; he was thinking of the King in King's Landing.\"}],\"meanwhile\":\"Poachers were hanged in the wolfswood.\"}",
  "expect": "refuse",
  "problem": "numbers"
 }

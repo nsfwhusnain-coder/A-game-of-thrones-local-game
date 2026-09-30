@@ -14,6 +14,9 @@ export const app = {
 };
 
 export const $ = (s, el = document) => el.querySelector(s);
+/** A card's fold (18 §2.1): `details` is a list of lines (a card from before the headlines has one string); with the model's scene, one paragraph. */
+export const detailLines = (e) => (Array.isArray(e?.details) ? e.details : e?.details ? [String(e.details)] : []);
+export const foldText = (e) => [e?.scene, ...detailLines(e)].filter(Boolean).join(' ');
 export const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export { fmt, placeName, getRelation };

@@ -73,7 +73,7 @@ Answer.
      }
     }
    },
-   "minItems": 1,
+   "minItems": 3,
    "maxItems": 6
   }
  }

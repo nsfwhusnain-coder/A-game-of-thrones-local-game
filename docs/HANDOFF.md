@@ -17,6 +17,7 @@ end of E5, is [`archive/HANDOFF-2026-09-E5.md`](archive/HANDOFF-2026-09-E5.md)).
 - **What the player sees today:** the bug fixes of SB. Everything else is the ground under the next packages: the new
   look is a style tile (`/dev/style.html`), the writer is not yet called by the narrator, the ledger has no window yet.
   That is deliberate — each of those becomes visible in one piece (U1–U3, N5–N7, R4) rather than half at a time.
+- **Update 2026-09-30:** N5+N6+N9 and the game-with-the-local-model work are on branch `wp/n5-n6-n9-narrator-v3` (PR #47; D-074…D-078, CHANGELOG 2026-09-30). The owner allowed the live local model for this work; the model notes are in `docs/local-ai/` (merged) and the checks are `npm run model:check` and `npm run headlines:check`. The default branch below lists the state before that merge.
 - **Next, in this order** (§6 has the detail): **U1–U3 the quiet screen** (its failing tests are written, on branch
   `wp/u1-u3-quiet-screen`), **N5+N6+N9** narrator v3, the card in the turn record, ranking and the digest (fresh start),
   then N7+N8 (the feed and pins), R4+R6 (the State of the Realm window), R5, U4+U8, U9, N10, R7; then E6–E8, F, G, H.

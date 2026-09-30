@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on
 
 // Plain http(s) request: Node's fetch() aborts responses whose headers take >5 minutes,
 // which kills long generations on slow local models. This honours our own timeout instead.
-function httpJson(method, url, body, headers, timeoutMs) {
+// `deadlineMs` is a hard limit on the whole exchange, whatever the socket is doing (a server that keeps a connection warm with pings never
+// trips the idle timeout): the game promises never to hang on the model (docs/gdd/04-ai-system.md §14)
+function httpJson(method, url, body, headers, timeoutMs, deadlineMs = 0) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const lib = u.protocol === 'https:' ? https : http;
@@ -19,6 +21,8 @@ function httpJson(method, url, body, headers, timeoutMs) {
       res.on('error', reject);
     });
     req.setTimeout(timeoutMs, () => req.destroy(Object.assign(new Error(`The model took longer than ${Math.round(timeoutMs / 1000)}s (raise the timeout in Settings)`), { name: 'AbortError' })));
+    const dl = deadlineMs > 0 ? setTimeout(() => req.destroy(Object.assign(new Error(`The model did not answer within ${Math.round(deadlineMs / 1000)}s: the game goes on without it`), { name: 'AbortError', deadline: true })), deadlineMs) : null;
+    req.on('close', () => clearTimeout(dl));
     req.on('error', (e) => reject(e.code === 'ECONNREFUSED' ? Object.assign(new Error('connection refused'), { cause: e }) : e));
     if (data) req.write(data);
     req.end();
@@ -26,7 +30,7 @@ function httpJson(method, url, body, headers, timeoutMs) {
 }
 
 // Streaming variant (Server-Sent Events): calls onEvent(json) for every data line, resolves when the stream ends.
-function httpStream(url, body, headers, timeoutMs, onEvent) {
+function httpStream(url, body, headers, timeoutMs, onEvent, deadlineMs = 0) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const lib = u.protocol === 'https:' ? https : http;
@@ -49,13 +53,16 @@ function httpStream(url, body, headers, timeoutMs, onEvent) {
       res.on('error', reject);
     });
     req.setTimeout(timeoutMs, () => req.destroy(Object.assign(new Error(`The model took longer than ${Math.round(timeoutMs / 1000)}s (raise the timeout in Settings)`), { name: 'AbortError' })));
+    const dl = deadlineMs > 0 ? setTimeout(() => req.destroy(Object.assign(new Error(`The model did not answer within ${Math.round(deadlineMs / 1000)}s: the game goes on without it`), { name: 'AbortError', deadline: true })), deadlineMs) : null;
+    req.on('close', () => clearTimeout(dl));
     req.on('error', (e) => reject(e.code === 'ECONNREFUSED' ? Object.assign(new Error('connection refused'), { cause: e }) : e));
     req.write(data); req.end();
   });
 }
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CONFIG_PATH = path.join(ROOT, 'config.json');
+// config.json in the game's folder, or the file WC_CONFIG names (a profile kept elsewhere: the live model's, the mock's)
+const configPath = () => (process.env.WC_CONFIG ? path.resolve(process.env.WC_CONFIG) : path.join(ROOT, 'config.json'));
 
 export const DEFAULT_CONFIG = {
   provider: 'openai',                 // 'openai' (any OpenAI-compatible server) | 'mock' (offline test mode)
@@ -85,7 +92,7 @@ export const DEFAULT_CONFIG = {
 };
 
 export function loadConfig() {
-  let c; try { c = { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) }; } catch { c = { ...DEFAULT_CONFIG }; }
+  let c; try { c = { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(configPath(), 'utf8')) }; } catch { c = { ...DEFAULT_CONFIG }; }
   if (process.env.WC_PROVIDER) c.provider = process.env.WC_PROVIDER; // tests run the real server on the mock model
   return c;
 }
@@ -101,7 +108,7 @@ export function normalizeBaseUrl(u) {
 export function saveConfig(cfg) {
   if (cfg.baseUrl !== undefined) cfg = { ...cfg, baseUrl: normalizeBaseUrl(cfg.baseUrl) };
   const merged = { ...loadConfig(), ...cfg };
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2));
+  fs.writeFileSync(configPath(), JSON.stringify(merged, null, 2));
   return merged;
 }
 
@@ -126,6 +133,8 @@ export async function chat(messages, opts = {}) {
   const answerTokens = Math.round((opts.maxTokens ?? cfg.maxTokens) * spanK);
   const maxTokens = answerTokens + (thinking === 'off' ? 0 : Number(cfg.thinkingBudget) || 0);
   const t0 = Date.now();
+  // a call's own deadline (server/ai/models.js) is over the whole of it: the retry and the continuations share it
+  opts = { ...opts, deadlineAt: opts.deadlineSec > 0 ? t0 + opts.deadlineSec * 1000 : 0 };
   let r = await rawChat(messages, cfg, { ...opts, thinking, maxTokens }, t0);
   // Out of room while still thinking: nothing usable came out. Try again without the thinking.
   if (r.finish === 'length' && !/[{"]/.test(r.content) && thinking !== 'off') {
@@ -183,6 +192,8 @@ async function rawChatOnce(messages, cfg, opts, t0) {
     ...(opts.body || {}), // a call's own fields: response_format json_schema, id_slot, cache_prompt (server/ai/)
   };
   const headers = cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {};
+  // what is left of the call's deadline (at least a second, so an exchange that is nearly out of time still gets a fair start)
+  const left = opts.deadlineAt ? Math.max(1000, opts.deadlineAt - Date.now()) : 0;
   if (body.stream) {
     let content = '', reasoning = '', finish = null, usage = null, model = null, n = 0, lastReport = 0;
     const res = await httpStream(url, body, headers, cfg.timeoutSec * 1000, (ev) => {
@@ -205,7 +216,7 @@ async function rawChatOnce(messages, cfg, opts, t0) {
         const inThink = (reasoning && !content) || (/<think>/i.test(content) && !/<\/think>/i.test(content));
         opts.onProgress({ ...(opts.streamText && !inThink ? { text: content } : {}), phase: inThink ? 'thinking' : 'writing', thinkTokens: Math.round((reasoning.length + (content.match(/<think>[\s\S]*?(<\/think>|$)/i)?.[0].length || 0)) / 3.6), tokens: Math.round(content.replace(/<think>[\s\S]*?(<\/think>|$)/i, '').length / 3.6), ms: now - t0 });
       }
-    });
+    }, left);
     if (!res.ok) {
       // some servers reject streaming or the extra fields: fall back to a plain request once
       if (/stream|chat_template_kwargs|stream_options/i.test(res.text || '') || res.status === 400) return rawChatOnce(messages, { ...cfg, stream: false, extraBody: cfg.extraBody }, { ...opts, thinking: opts.thinking === 'auto' ? 'auto' : opts.thinking, noKwargs: true }, t0);
@@ -216,7 +227,7 @@ async function rawChatOnce(messages, cfg, opts, t0) {
   }
   if (opts.noKwargs) delete body.chat_template_kwargs;
   delete body.stream_options; delete body.return_progress;
-  const res = await httpJson('POST', url, body, headers, cfg.timeoutSec * 1000);
+  const res = await httpJson('POST', url, body, headers, cfg.timeoutSec * 1000, left);
   if (!res.ok) throw new Error(`LLM server returned ${res.status}: ${res.text.slice(0, 500)}`);
   const data = JSON.parse(res.text);
   const msg = data.choices?.[0]?.message || {};

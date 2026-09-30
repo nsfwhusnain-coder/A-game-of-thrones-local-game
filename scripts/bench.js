@@ -27,6 +27,7 @@
 // The narrate suite (04 §13): sixty weeks of twelve seeded games, told by the narrator and held to their facts
 //   npm run bench -- --suite narrate                      # true on the first telling (the 90 % gate), faults by rule
 //   npm run bench -- --suite narrate --judge              # and a judge's score for the voice (the 3.8 gate)
+//   npm run bench -- --suite narrate --mode cards         # the model also says the card (default: the writer's cards, the model's scenes)
 //   npm run bench -- --suite narrate --record tests/fixtures/model/narrate
 import fs from 'node:fs';
 import path from 'node:path';
@@ -41,7 +42,7 @@ if (args.suite === 'mind') { await mindBench(); process.exit(0); }
 if (args.suite === 'narrate') { await narrateBench(); process.exit(0); }
 async function narrateBench() {
   const { loadConfig } = await import('../server/llm.js');
-  const cfg = { ...loadConfig(), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.provider ? { provider: args.provider } : {}), ...(args.mock ? { provider: 'mock' } : {}) };
+  const cfg = { ...loadConfig(), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.provider ? { provider: args.provider } : {}), ...(args.mock ? { provider: 'mock' } : {}), ...(args.mode ? { narratorMode: args.mode } : {}) };
   const { bundles, runNarrateSuite, narrateReport, JUDGE, judgeSchema } = await import('../bench/lib/narrate.js');
   const { narrateTurn } = await import('../server/narrator.js');
   const { openaiReply } = await import('../server/ai/providers/openai.js');

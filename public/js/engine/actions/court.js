@@ -30,14 +30,15 @@ function feast(state, house, cause) {
   const ch = [];
   for (const v of vas) { if (state.plotting?.[v.id]) state.plotting[v.id].pressure = Math.max(0, state.plotting[v.id].pressure - 8); const l = state.characters[v.lord]; ch.push({ op: 'relation', a: house, b: v.id, delta: 4, reason: 'feasted at your table' }, { op: 'character', id: l.id, loyalty: clamp((l.loyalty ?? 60) + 4, -100, 100) }); }
   if (me.seat) ch.push({ op: 'holding', id: me.seat, unrest: clamp((state.holdings[me.seat].unrest || 0) - 4, 0, 100) });
-  let incident = '';
+  let incident = ''; let brawlers = null; let over = null;
   if (vas.length >= 2 && random() < 0.25) {
     const [a, b] = shuffle(vas);
     ch.push({ op: 'relation', a: a.id, b: b.id, delta: -10, reason: 'a brawl at your feast' });
-    incident = ` At the high table, ${state.characters[a.lord].name} and ${state.characters[b.lord].name} came to blows over ${pick(['an old boundary', 'a toast to the wrong king', 'a daughter', 'a horse race', 'precedence at table'])}.`;
+    over = pick(['an old boundary', 'a toast to the wrong king', 'a daughter', 'a horse race', 'precedence at table']); brawlers = [a.lord, b.lord];
+    incident = ` At the high table, ${state.characters[a.lord].name} and ${state.characters[b.lord].name} came to blows over ${over}.`;
   }
   applyChanges(state, ch, { source: 'Your feast', cause });
-  emit(state, 'feast', { actors: [me.lord, ...vas.map((v) => v.lord)], houses: [house, ...vas.map((v) => v.id)], place: me.seat || null, data: { cost, brawl: !!incident }, cause, text: `${lordOf(state, house)?.name || `House ${me.name}`} ${vas.length ? `feasts ${vas.length} sworn lord${vas.length === 1 ? '' : 's'} at` : 'holds a feast for the household at'} ${state.holdings[me.seat]?.name || 'the seat'}.${incident}` });
+  emit(state, 'feast', { actors: [me.lord, ...vas.map((v) => v.lord)], houses: [house, ...vas.map((v) => v.id)], place: me.seat || null, data: { cost, brawl: !!incident, ...(brawlers ? { brawlers, over } : {}) }, cause, text: `${lordOf(state, house)?.name || `House ${me.name}`} ${vas.length ? `feasts ${vas.length} sworn lord${vas.length === 1 ? '' : 's'} at` : 'holds a feast for the household at'} ${state.holdings[me.seat]?.name || 'the seat'}.${incident}` });
   return { text: `Hold a great feast at ${state.holdings[me.seat]?.name || 'my seat'} for my bannermen.`, note: `[Already done: the feast cost ${cost} dragons; each sworn lord's loyalty +4.${incident} Narrate the feast — who came, who did not, what was said in drink.]`, summary: `The feast is held (${cost.toLocaleString('en-US')} dragons). Your lords are glad of it.${incident}` };
 }
 

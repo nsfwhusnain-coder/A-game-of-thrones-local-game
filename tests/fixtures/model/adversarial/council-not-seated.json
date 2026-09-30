@@ -1,7 +1,7 @@
 {
  "kind": "council",
  "note": "A counsellor who is not at the table cannot speak: the speaker enum holds only those seated.",
- "reply": "{\"speeches\": [{\"speaker\": \"tywin_lannister\", \"text\": \"Surrender.\"}, {\"speaker\": \"luwin\", \"text\": \"No.\"}]}",
+ "reply": "{\"speeches\":[{\"speaker\":\"tywin_lannister\",\"text\":\"Surrender.\"},{\"speaker\":\"luwin\",\"text\":\"No.\"},{\"speaker\":\"vayon_poole\",\"text\":\"The stores will bear it, my lord.\"}]}",
  "expect": "refuse",
  "problem": "allowed values"
 }

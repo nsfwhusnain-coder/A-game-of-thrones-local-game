@@ -33,7 +33,7 @@ const cfgFor = (url, extra = {}) => ({ provider: 'openai', baseUrl: url, apiKey:
 test('the request is grammar-constrained, thinking off, routed to its model and slot', async () => {
   const { srv, seen, url } = await fakeServer(['{"place":"the_wall","words":"Winter is Coming"}']);
   try {
-    const cfg = cfgFor(url, { models: { default: { model: 'gemma4-26b-a4b' }, probe: { slot: 1 } } });
+    const cfg = cfgFor(url, { pinSlots: true, models: { default: { model: 'gemma4-26b-a4b' }, probe: { slot: 1 } } });
     const r = await runCall('probe', world(), {}, { cfg });
     assert.equal(r.via, 'model'); assert.equal(r.value.place, 'nights_watch', 'the alias was canonicalised');
     const body = seen[0];
@@ -83,4 +83,27 @@ test('calls of one jump on different models are a problem unless swaps are allow
   assert.deepEqual(routingProblems({ ...mixed, allowModelSwaps: true }), []);
   assert.equal(routeFor(mixed, 'narrate').model, 'qwen3.6-35b-a3b'); assert.equal(routeFor(mixed, 'mind').model, 'gemma4-26b-a4b');
   assert.equal(routeFor(mixed, 'mind').temperature, 0.6, 'the GDD temperature when the config says none');
+});
+
+test('no slot is pinned unless the owner asks, and a server that never answers costs the call its deadline, not half an hour', async () => {
+  // llama.cpp livelocks with two requests pinned to one slot (#28280): the game sends id_slot only when config.json says pinSlots
+  const { srv, seen, url } = await fakeServer(['{"place":"the_wall","words":"Winter is Coming"}']);
+  try {
+    const cfg = cfgFor(url, { models: { default: { model: 'x' }, probe: { slot: 1 } } });
+    assert.equal(routeFor(cfg, 'probe').slot, null); assert.equal(routeFor({ ...cfg, pinSlots: true }, 'probe').slot, 1);
+    await runCall('probe', world(), {}, { cfg });
+    assert.ok(!('id_slot' in seen[0]), 'no id_slot on the wire');
+  } finally { srv.close(); }
+  // the deadlines of the calls: a tuned local model needs seconds, so ninety is a hung server
+  assert.equal(routeFor({}, 'interpret').deadlineSec, 90); assert.equal(routeFor({}, 'narrate').deadlineSec, 300);
+  assert.equal(routeFor({ deadlines: { mind: 20 } }, 'mind').deadlineSec, 20); assert.equal(routeFor({ models: { mind: { deadlineSec: 0 } } }, 'mind').deadlineSec, 0, '0 is no limit');
+  // a server that answers its headers and then keeps the socket warm with pings for ever: the idle timeout never fires
+  const hang = http.createServer((req, res) => { req.resume(); res.writeHead(200, { 'Content-Type': 'text/event-stream' }); const iv = setInterval(() => res.write(': ping\n\n'), 100); req.on('close', () => clearInterval(iv)); res.on('close', () => clearInterval(iv)); });
+  await new Promise((r) => hang.listen(0, '127.0.0.1', r));
+  try {
+    const t0 = Date.now();
+    const r = await runCall('probe', world(), {}, { cfg: cfgFor(`http://127.0.0.1:${hang.address().port}/v1`, { timeoutSec: 60, deadlines: { probe: 1 } }) });
+    assert.equal(r.via, 'fallback'); assert.ok(r.problems.some((p) => /did not answer within 1s/.test(p)), r.problems.join('; '));
+    assert.ok(Date.now() - t0 < 6000, `the call gave up in ${Date.now() - t0} ms`);
+  } finally { hang.closeAllConnections?.(); hang.close(); }
 });

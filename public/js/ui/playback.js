@@ -1,6 +1,6 @@
 // The turn told in the chronicle itself: the day's news arrives one event at a time in the left panel — its card
 // appears, the map flies to where it happened, the hosts march on — then the next. Pause, step or skip at the top.
-import { app, $ } from './common.js';
+import { app, $, foldText } from './common.js';
 import { SPANS, spanOf } from '../shared/world.js';
 import { storyEvents, setDrawer } from './drawer.js';
 import { sfx } from './sfx.js';
@@ -44,7 +44,7 @@ export async function playTurn(turn, { onDone } = {}) {
     if (pos && app.map) app.map.flash?.(pos);
     if (app.map) app.map.reelF = span > 3 ? Math.min(1, (e.day || 1) / span) : (i + 1) / (evs.length + 1);
     sfx(e.importance >= 4 && e.type === 'war' ? 'horn' : 'open');
-    const words = (e.title || '').length + (e.text || '').length + (e.details || '').length * 0.5;
+    const words = (e.headline || e.title || '').length + (e.summary ?? e.text ?? '').length + foldText(e).length * 0.5;
     ctl.next = false;
     await wait(Math.max(3000, Math.min(4800, 2400 + words * 9)), ctl);
   }

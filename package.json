@@ -13,6 +13,8 @@
     "soak": "node scripts/soak.js",
     "bench": "node scripts/bench.js",
     "playtest": "node scripts/playtest.js",
+    "model:check": "node scripts/model-check.js",
+    "headlines:check": "node scripts/headlines-check.js",
     "balance": "node scripts/balance-sim.js",
     "fetch-music": "node scripts/fetch-music.js",
     "serve": "node server/index.js",

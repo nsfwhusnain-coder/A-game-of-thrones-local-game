@@ -956,10 +956,9 @@ export const SUM = {
   levies_called: (f, s, c) => {
     const d = f.data || {}; const to = c.dest(d.muster); const n = (d.vassals || []).length;
     if (n) return sentences(`${cap1(count(n))} sworn houses are told to bring their men${to ? ` to ${to}` : ''}`);
-    const h = (f.houses || [])[0]; const war = (s.wars || []).find((w) => w.status !== 'ended' && [...(w.attackers || []), ...(w.defenders || [])].includes(h));
-    const other = war ? ((war.attackers || []).includes(h) ? war.defenders : war.attackers) || [] : [];
-    const foe = other.find((x) => c.known.house(x));
-    const why = war ? (foe ? `It is for the war with ${c.hs(foe)}` : 'They mean war') : 'Nothing yet says against whom';
+    // against whom is the fact's own word (`data.against`, set when the call is made in an open war), never the state's: what the house has not been told it may not read
+    const foe = c.known.house(d.against) ? d.against : null;
+    const why = foe ? `It is for the war with ${c.hs(foe)}` : 'Nothing yet says against whom';
     return sentences(d.men ? `The call is for ${body(d.men)}` : 'The banners are called', why);
   },
   call_answered: (f, s, c) => {
@@ -972,7 +971,7 @@ export const SUM = {
     const reason = known || (why ? cap1(why) : '');
     return sentences(reason, why ? `${P.His} men stay at home` : `${P.His} men will stay at home`);
   },
-  muster_grew: (f, s, c) => { const d = f.data || {}; return d.total ? sentences(`The host now has ${body(d.total)}`) : ''; },
+  muster_grew: (f, s, c) => { const d = f.data || {}; return d.total ? sentences(d.total >= 6000 ? 'The host has grown into a great one' : `There are now ${body(d.total)} in the host`) : ''; },
   host_formed: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return d.men ? sentences(`${P.He} has ${body(d.men)} under ${P.him}`) : sentences(`Men gather under ${P.his} banner`); },
   host_joined: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`The host grows by ${body(d.men)}`) : ''; },
   host_split: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} are split off`) : ''; },
@@ -1105,11 +1104,11 @@ export const SUM = {
   scheme_discovered: (f) => sentences(f.data?.kind === 'spy' ? 'A spy has been at work there' : 'Someone has been plotting there'),
   feast: (f, s, c) => {
     const d = f.data || {}; const guests = (f.actors || []).slice(1).filter((id) => c.known.person(id)).slice(0, 3).map((id) => c.nm(id));
-    if (d.brawl) return sentences('Guests come to blows before the night is over');
+    if (d.brawl) { const [x, y] = (d.brawlers || []).filter((id) => c.known.person(id)); return sentences(x && y ? `${c.lordly(x)} and ${c.lordly(y)} come to blows${d.over ? ` over ${d.over}` : ''}` : 'Guests come to blows before the night is over'); }
     return guests.length ? sentences(`${list(guests)} sit at the table`) : sentences('It is a feast for the household, with no great guests');
   },
   tourney: (f) => { const d = f.data || {}; const n = say(d.guests); return sentences(n ? `${cap1(n)} houses are asked to send knights` : 'Knights are called to the lists'); },
-  tourney_result: (f, s, c) => { const h = (f.houses || []).find((x) => c.known.house(x)); const P = pro(c, f); return h ? sentences(`${P.He} rides for ${c.hs(h)}`) : sentences(`${P.He} is the champion of the lists`); },
+  tourney_result: (f, s, c) => { const own = s.characters?.[(f.actors || [])[0]]?.house; const h = c.known.house(own) ? own : (f.houses || []).find((x) => c.known.house(x)); const P = pro(c, f); return h ? sentences(`${P.He} rides for ${c.hs(h)}`) : sentences(`${P.He} is the champion of the lists`); },
   judgement: (f) => { const v = String(f.data?.verdict || '').trim(); return v ? sentences(`The verdict is ${v}`) : ''; },
   petition: () => '',
   tax_changed: () => '',

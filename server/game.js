@@ -6,7 +6,7 @@ import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { chat, extractJson, loadConfig, estimateTokens } from './llm.js';
 import { buildSuggestPrompt } from './prompts.js';
-import { whatHappened } from './ai/calls/consolidate.js';
+import { whatHappened, toldHappenings } from './ai/calls/consolidate.js';
 import { createInitialState, migrateState, applyChanges, placeName, addDays, dateStr, spanOf, resolvePlaceId, dayNumber } from '../public/js/shared/world.js';
 import { partyOf, together, placeOf } from '../public/js/engine/parties.js';
 import { settleWorld } from '../public/js/engine/state/settle.js';
@@ -33,6 +33,9 @@ import { runMinds, knownTo } from './minds.js';
 import { directWeek, thinWeek } from './director.js';
 import { relevantMemory, chronicleNotes } from './ai/context/memory.js';
 import { narrateTurn, narratorOn } from './narrator.js';
+import { cardOf } from '../public/js/engine/facts/headline.js';
+import { noteFirsts } from '../public/js/engine/facts/rank.js';
+import { shapeCard, digestOf } from '../public/js/engine/facts/digest.js';
 import { deliverLetters, reveal } from './letters.js';
 import { replyText, promisesIn } from './ai/calls/audience.js';
 import { makeCommitment, COMMITMENTS, commitmentsTick } from '../public/js/engine/politics/commitments.js';
@@ -89,6 +92,7 @@ export function readWorldLog(id) {
   const f = path.join(dir(id), 'world-log.md');
   return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
 }
+const detailLines = (e) => (Array.isArray(e.details) ? e.details : e.details ? [e.details] : []);
 function appendWorldLog(id, state, t) {
   const f = path.join(dir(id), 'world-log.md');
   const place = (w) => (w && (state.holdings[w]?.name || placeName(state, w))) || '';
@@ -101,8 +105,8 @@ function appendWorldLog(id, state, t) {
   for (const o of orders) lines.push(`- ${o}`);
   for (const c of t.carried || []) if (c.result?.length) lines.push(`  - carried out: ${c.result.join('; ')}`);
   const main = (t.events || []).filter((e) => !e.bg), bg = (t.events || []).filter((e) => e.bg);
-  if (main.length) { lines.push('\n**What happened:**'); for (const e of main) lines.push(`- _day ${e.day}_ · ${place(e.where) ? place(e.where) + ' · ' : ''}**${e.title}** — ${e.text}${e.details ? ' ' + e.details : ''}`); }
-  if (bg.length) { lines.push('\n**Meanwhile, across the realm:**'); for (const e of bg) lines.push(`- _day ${e.day}_ · ${place(e.where)} · **${e.title}** — ${e.text}`); }
+  if (main.length) { lines.push('\n**What happened:**'); for (const e of main) lines.push(`- _day ${e.day}_ · ${place(e.where) ? place(e.where) + ' · ' : ''}**${e.headline || e.title}** — ${e.summary ?? e.text}${detailLines(e).length ? ' ' + detailLines(e).join(' ') : ''}`); }
+  if (bg.length) { lines.push('\n**Meanwhile, across the realm:**'); for (const e of bg) lines.push(`- _day ${e.day}_ · ${place(e.where)} · **${e.headline || e.title}** — ${e.summary ?? e.text}`); }
   const decided = (state.decisions || []).filter((d) => d.status !== 'pending' && d.decidedTurn === t.turn - 1);
   for (const d of decided) lines.push(`- Decision: ${d.title} → ${d.choice || d.status}`);
   if (t.salvaged) lines.push('\n_(The model\'s reply could not be read this turn; the engine moved the world on alone.)_');
@@ -195,9 +199,13 @@ export function realmView(id, opts = {}) {
 
 export function writeChronicle(id, text) { fs.writeFileSync(path.join(dir(id), 'chronicle.md'), text); }
 function appendChronicle(id, text) { fs.appendFileSync(path.join(dir(id), 'chronicle.md'), text); }
-function logLLM(id, kind, messages, response) {
+// `info` (from server/ai/client.js): { attempt, model, ms, problems, provider }. With config `logCalls: true` every attempt is also kept whole — the
+// prompt, the reply and what the checks said of it — in llm-calls.jsonl: the next fine-tune's data (accepted replies are examples, refused ones
+// are what to train away from). Off by default: a turn's calls are some hundreds of kilobytes.
+function logLLM(id, kind, messages, response, info) {
   const entry = { t: new Date().toISOString(), kind, promptTokens: estimateTokens(messages.map((m) => m.content).join('\n')), response };
   fs.appendFileSync(path.join(dir(id), 'llm-log.jsonl'), JSON.stringify(entry) + '\n');
+  if (info && loadConfig().logCalls === true) fs.appendFileSync(path.join(dir(id), 'llm-calls.jsonl'), JSON.stringify({ t: entry.t, kind, ...info, accepted: !info.problems?.length, messages, reply: response }) + '\n');
   fs.writeFileSync(path.join(dir(id), `last-prompt-${kind}.txt`), messages.map((m) => `### ${m.role.toUpperCase()}\n${m.content}`).join('\n\n'));
 }
 
@@ -282,7 +290,7 @@ export const mindsBudget = (cfg) => (cfg.minds === 'off' || cfg.minds === false 
 // The receipt for written orders: read and tried on a copy of the world as soon as they are written (orders.js).
 // Each order is read by the rules, and by the model only when the rules cannot (orders/interpret.js); every model call
 // is logged with the rest (llm-log.jsonl), so a misreading can be found and a fine-tuning set built from it.
-const interpreter = (id, state, cfg) => (text) => interpretOrder(state, text, { cfg, log: (kind, messages, response) => logLLM(id, kind, messages, response) });
+const interpreter = (id, state, cfg) => (text) => interpretOrder(state, text, { cfg, log: (kind, messages, response, info) => logLLM(id, kind, messages, response, info) });
 const previewing = new Map(); // save id -> promise
 export async function previewOrderPlans(id) {
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
@@ -351,7 +359,7 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   state.meta.clock = { turn, from: day0 + 1, to: day0 + 1 };
   for (const a of Object.values(state.parties)) { delete a.motion; delete a.arriveDay; }
   const dateFrom = dateStr(state.meta.date);
-  const log = (kind, messages, response) => logLLM(id, kind, messages, response);
+  const log = (kind, messages, response, info) => logLLM(id, kind, messages, response, info);
   // The lord's written orders are carried out first, on the morrow, through the verbs (their receipts were read when
   // they were written: server/orders.js)
   const carried = await carryOutOrders(state, interpreter(id, state, cfg)).catch((e) => { console.warn('orders:', e.message); return []; });
@@ -371,6 +379,13 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   const deliver = async (st) => [...deliverReplies(st), ...await deliverLetters(st, { provider: cfg.provider, cfg, log, known, memory: (c, words) => remember(c, { words }) }).catch((e) => { console.warn('letters:', e.message); return []; })];
   const touched = new Set(); const applied = [], rejected = [], cards = [], mindsRecord = [], hooksRecord = [], segments = [], narrated = [], meanwhile = [];
   const eyes = { foes: sightedFoes(state) };
+  // news of an earlier turn that only now reaches the house (a raven, a rumour) is told from the fact log: its facts are not in `state.facts` any more
+  const oldFacts = new Map();
+  const lookup = (fid) => {
+    const m = /^f(\d+)\./.exec(fid); if (!m || Number(m[1]) === turn) return null;
+    if (!oldFacts.has(fid)) for (const x of readFacts(id, { from: Number(m[1]), to: Number(m[1]) })) oldFacts.set(x.id, x);
+    return oldFacts.get(fid) || null;
+  };
   let stopped = null, ran = 0;
   const ms = { orders: 0, minds: 0, engine: 0, narrate: 0 }; const t0 = Date.now(); const clock = (k, t) => { ms[k] += Date.now() - t; };
   const onProgress = tracker(id, 'jump', { agentLabel: 'The realm moves', segments: [] });
@@ -422,9 +437,13 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
       if (narratorOn(cfg)) {
         onProgress({ agentLabel: 'The chronicle is written', phase: 'writing' });
         const own = (state.facts || []).filter((f) => f.cause?.type === 'order' && f.importance >= 2 && f.day >= segFrom && f.day <= segTo);
-        const n = await narrateTurn(state, told, { provider: cfg.provider, cfg, log, own, onProgress: (x) => onProgress({ ...x, agentLabel: 'The chronicle is written' }) })
+        const n = await narrateTurn(state, told, { provider: cfg.provider, cfg, log, own, lookup, onProgress: (x) => onProgress({ ...x, agentLabel: 'The chronicle is written' }) })
           .catch((e) => { console.warn('narrator:', e.message); return null; });
-        if (n) { told = n.cards; narrated.push(n.record); if (n.meanwhile) meanwhile.push(segMeanwhile = n.meanwhile); }
+        if (n) {
+          told = n.cards; narrated.push(n.record); if (n.meanwhile) meanwhile.push(segMeanwhile = n.meanwhile);
+          // what the chronicle has now had a first of (18 §2.5): the next week's battle is no longer the first battle
+          state.firsts = noteFirsts(state, n.ranked || [], state.firsts || {});
+        }
       }
       clock('narrate', tn);
       // a week tells only its own days: a story of late news is told on the day the word came, not the day it happened
@@ -434,7 +453,7 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
       segments.push(segment);
       // the week, sent to the lord as soon as it is told (SSE: 03 §10) — the next is simulated while he watches it
       const shown = told.map((c) => ({ ...c, date: dateStr(dateOfDay(day0 + c.day)) }));
-      onProgress({ segments: [...(progress.get(id)?.segments || []), { ...segment, headlines: shown.filter((c) => !c.bg).map((c) => ({ title: c.title, where: c.where, day: c.day })) }] });
+      onProgress({ segments: [...(progress.get(id)?.segments || []), { ...segment, headlines: shown.filter((c) => !c.bg).map((c) => ({ title: c.headline || c.title, headline: c.headline || c.title, tier: c.tier, where: c.where, day: c.day })) }] });
       onSegment?.({ ...segment, events: shown, meanwhile: segMeanwhile, date: dateStr(state.meta.date), ...(stopped ? { stopped: stopped.text } : {}) });
     }
   } finally { done(id); }
@@ -445,16 +464,24 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   for (const a of applied.filter((x) => x.op === 'succession')) {
     const hh = state.houses[a.house]; const f = factById(state, a.fact);
     const card = { title: `A new head of House ${hh?.name}`, text: a.text.replace(/^SUCCESSION: /, ''), where: hh?.seat || null, importance: a.house === p ? 5 : 4, type: 'court', houses: [a.house] };
-    events.unshift(f ? { ...card, fact: f.id, day: Math.max(1, f.day - day0) } : { ...card, day: 1 });
+    // told by the writer from the fact's slots (18 §3.1), not by the engine's line; the line is kept as the record
+    let w = null; if (f) { try { w = cardOf(state, { facts: [f] }); } catch { w = null; } }
+    const told = w?.headline ? { ...card, headline: w.headline, summary: w.summary, title: w.headline, text: w.summary || card.text, details: w.details, kind: w.kind, archetype: w.archetype, who: w.who, told: 'writer', narrated: true, record: [card.text] } : card;
+    events.unshift(f ? { ...told, fact: f.id, day: Math.max(1, f.day - day0) } : { ...told, day: 1 });
   }
   // one date for every view (HUD, feed, reel, pins): day d of the turn is the d-th day after it began
   events.forEach((e, k) => { e.day = Math.max(1, Math.min(days, e.day || 1)); e.id = `${turn}-${k}`; e.date = dateStr(dateOfDay(day0 + e.day)); });
-  const narration = narrated.length ? narrated.reduce((a, r) => ({ stories: a.stories + r.stories, told: a.told + r.told, again: a.again + r.again, plain: a.plain + r.plain, problems: Object.fromEntries([...new Set([...Object.keys(a.problems), ...Object.keys(r.problems)])].map((k) => [k, (a.problems[k] || 0) + (r.problems[k] || 0)])), groups: [...a.groups, ...(r.groups || [])], small: [...a.small, ...(r.small || [])].slice(0, 16), via: r.via, ...(r.key ? { key: r.key } : {}) }), { stories: 0, told: 0, again: 0, plain: 0, problems: {}, groups: [], small: [] }) : null;
-  const summary = [...cards.filter((c) => c.narrated).sort((a, b) => b.importance - a.importance).slice(0, 4).map((c) => c.text), ...meanwhile.slice(0, 1)].join(' ');
+  // every card in the one shape (headline, summary, details[], tier, score; `title` and `text` stay as aliases), and the week's digest
+  // from the cards by the engine: no model, so it can never contradict them (18 §2.5)
+  for (let k = 0; k < events.length; k++) events[k] = shapeCard(events[k]);
+  const digest = digestOf(events, meanwhile[0] || '');
+  const narration = narrated.length ? narrated.reduce((a, r) => ({ stories: a.stories + r.stories, told: a.told + r.told, again: a.again + r.again, plain: a.plain + r.plain, written: a.written + (r.written || 0), asked: [...(a.asked || []), ...(r.asked || [])], smallIds: [...(a.smallIds || []), ...(r.smallIds || [])], problems: Object.fromEntries([...new Set([...Object.keys(a.problems), ...Object.keys(r.problems)])].map((k) => [k, (a.problems[k] || 0) + (r.problems[k] || 0)])), groups: [...a.groups, ...(r.groups || [])], small: [...a.small, ...(r.small || [])].slice(0, 16), via: r.via, ...(r.key ? { key: r.key } : {}) }), { stories: 0, told: 0, again: 0, plain: 0, written: 0, asked: [], smallIds: [], problems: {}, groups: [], small: [] }) : null;
+  // (the digest is the turn's summary now; `summary` keeps its name for what reads it: the world log, the bench, the playtest)
+  const summary = digest.text;
   const record = {
     carried, ...(mindsRecord.length ? { minds: mindsRecord } : {}), ...(hooksRecord.length ? { hooks: hooksRecord } : {}), turn, dateFrom, date: dateStr(state.meta.date), span: `${days}d`,
     ...(stopped ? { until: stopped.text, stopped: stopped.major ? 'major' : 'minor' } : until ? { until } : {}), ...(stopAt ? { stoppedAt: days } : {}),
-    segments, orders: state.orders, summary: stripForeignScript(summary), ...(narration ? { narration } : {}), ...(meanwhile.length ? { meanwhile: meanwhile.join(' ') } : {}),
+    segments, orders: state.orders, summary: stripForeignScript(summary), digest, ...(narration ? { narration } : {}), ...(meanwhile.length ? { meanwhile: meanwhile.join(' ') } : {}),
     events, applied, rejected, ledger: state.houses[p].ledger.at(-1), ms: { ...ms, total: Date.now() - t0 },
   };
   // the clock's timings are the machine's, not the world's: kept in the turn's file, never in the save (a replay is the
@@ -465,7 +492,7 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   state.orders = [];
   closeTurn(state, record, days);
   // Flush chronicle ops + major events into the markdown chronicle
-  const notes = [...state.chronicle.map((c) => c.text), ...events.filter((e) => e.importance >= 5).map((e) => `${e.title} — ${e.text}`)];
+  const notes = [...state.chronicle.map((c) => c.text), ...events.filter((e) => e.importance >= 5 && !e.bg).map((e) => `${e.headline}${e.summary ? ` — ${e.summary}` : ''}`)];
   if (notes.length) appendChronicle(id, `\n### ${record.date} (turn ${record.turn})\n` + notes.map((n) => `- ${n}`).join('\n') + '\n');
   state.chronicle = [];
   // the world holds together (03 §14), checked every turn: a broken invariant is an engine bug, reported, never hidden
@@ -566,13 +593,13 @@ async function maybeConsolidate(id, state, cfg, force = false) {
   if (!batch.length) return null;
   // the stretch's facts as the lord's house knows them (the chronicle is the player's: no other house's secrets)
   const facts = readFacts(id, { from: batch[0].turn, to: batch.at(-1).turn, view: 'player', limit: 6000 });
-  const r = await runCall('consolidate', state, { facts }, { provider: cfg.provider, cfg, log: (kind, messages, response) => logLLM(id, kind, messages, response) }).catch(() => null);
+  const r = await runCall('consolidate', state, { facts }, { provider: cfg.provider, cfg, log: (kind, messages, response, info) => logLLM(id, kind, messages, response, info) }).catch(() => null);
   const v = r?.value || { open: [], rumours: [], summary: '' };
   // the engine's dated facts first — they cannot contradict the world; then what is open, then what is only said
   const bullets = (xs) => (xs || []).map((x) => `- ${String(x).replace(/^[-*]\s*/, '')}`).join('\n');
   const threads = bullets(v.open); const rumours = bullets(v.rumours);
   const from = batch[0].dateFrom || batch[0].date, to = batch.at(-1).date;
-  const entry = [`### What happened\n${whatHappened(facts) || batch.map((t) => `- **${t.date}** — ${t.summary}`).join('\n')}`, v.summary && `### In brief\n${v.summary}`, threads && `### Still open, as of ${to}\n${threads}`, rumours && `### Said, not confirmed\n${rumours}`].filter(Boolean).join('\n\n');
+  const entry = [`### What happened\n${toldHappenings(batch) || whatHappened(facts) || batch.map((t) => `- **${t.date}** — ${t.summary}`).join('\n')}`, v.summary && `### In brief\n${v.summary}`, threads && `### Still open, as of ${to}\n${threads}`, rumours && `### Said, not confirmed\n${rumours}`].filter(Boolean).join('\n\n');
   appendChronicle(id, `\n## ${from} — ${to}\n${entry}\n`);
   const fresh = loadState(id);
   fresh.consolidatedThrough = batch.at(-1).turn;
@@ -662,7 +689,7 @@ async function talkWith(id, state, cfg, charId, message) {
   const memory = cfg.provider === 'mock' ? '' : memoryOf(id, state)(c, { words: message });
   const onProgress = tracker(id, 'chat');
   let r; try {
-    r = await runCall('audience', state, { character: c.id, words: message, stance, face: true, known, memory, receipt: applied.map((a) => a.text) }, { provider: cfg.provider, cfg, onProgress, log: (kind, messages, response) => logLLM(id, kind, messages, response) });
+    r = await runCall('audience', state, { character: c.id, words: message, stance, face: true, known, memory, receipt: applied.map((a) => a.text) }, { provider: cfg.provider, cfg, onProgress, log: (kind, messages, response, info) => logLLM(id, kind, messages, response, info) });
   } finally { done(id); }
   const v = r.value;
   const reply = replyText(v);
@@ -792,7 +819,7 @@ async function councilWith(id, state, cfg, members, message, { advisor = false }
   const who = advisor ? [advisorFor(state, ids, message)] : ids;
   const onProgress = tracker(id, 'council');
   let r; try {
-    r = await runCall('council', state, { members: who, words: message, advisor, listening }, { provider: cfg.provider, cfg, onProgress, log: (kind, messages, response) => logLLM(id, kind, messages, response) });
+    r = await runCall('council', state, { members: who, words: message, advisor, listening }, { provider: cfg.provider, cfg, onProgress, log: (kind, messages, response, info) => logLLM(id, kind, messages, response, info) });
   } finally { done(id); }
   const replies = (r.value?.speeches || []).map((x) => ({ speaker: x.speaker, text: stripForeignScript(x.text) }));
   if (!replies.length) throw httpError(502, 'The council could not agree on an answer. Put the question again.');
