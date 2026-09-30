@@ -48,6 +48,7 @@ export function openWindow(name, arg) {
   app.back = null;
   const first = app.win !== door;
   app.win = door; app.tab = tab || (first ? TABS[door][0].id : app.tab); app.winArg = arg; sfx('open');
+  if (door === 'realm' && app.tab === 'ledger') app.coachDone?.('realm');
   $('#window').classList.remove('hidden');
   $('#window').setAttribute('aria-hidden', 'false');
   renderWindow();

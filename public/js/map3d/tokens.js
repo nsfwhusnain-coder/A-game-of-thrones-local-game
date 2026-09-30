@@ -75,3 +75,14 @@ export function clusterPlates(items, r = 18) {
   }
   return out;
 }
+
+/**
+ * Which plates to drop when there are more than `cap` (WP U8). `items`: { id, own, d, men } — `own` for a party of the player's, `d` the world distance from the
+ * player's nearest holding, `men` its strength. The player's own come first, then the nearest to the player's lands, then the strongest, then by id: a stable
+ * order, so a plate never swaps with another as the camera moves. Returns the Set of ids to drop.
+ */
+export function capTokens(items, cap) {
+  if (items.length <= cap) return new Set();
+  const order = [...items].sort((a, b) => (b.own - a.own) || (a.d - b.d) || ((b.men || 0) - (a.men || 0)) || String(a.id).localeCompare(String(b.id)));
+  return new Set(order.slice(cap).map((x) => x.id));
+}

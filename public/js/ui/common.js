@@ -173,7 +173,7 @@ export async function answerOrder(oid, k) {
 export function addOrder(text) {
   text = String(text || '').trim(); if (!text) return;
   app.state.orders.push({ id: Math.random().toString(36).slice(2, 10), text });
-  saveOrders(); app.renderOrders?.();
+  saveOrders(); app.renderOrders?.(); app.coachDone?.('order');
 }
 export function sparkline(values, color = '#c9a44a') {
   if (values.length < 2) return '';

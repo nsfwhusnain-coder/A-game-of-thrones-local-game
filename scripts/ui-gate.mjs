@@ -231,13 +231,47 @@ async function probeCards(page) {
   out.panelsClear = bad.length ? 'FAIL: ' + bad.join('; ') : 'ok';
   return out;
 }
+// U8 (GDD 17 §2.6–2.7): a new game shows the welcome card once; three coach marks in order, each put away by doing its thing; and F leaves the map and the command bar.
+async function probeFirstRun(browser, w, h) {
+  const { id } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 298 });
+  const page = await browser.newPage({ viewport: { width: w, height: h } }); page.setDefaultTimeout(120000);
+  const errors = []; page.on('pageerror', (e) => errors.push(e.message)); await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => { try { localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); } catch { /* */ } });
+  const boot = async () => { await page.goto(`http://127.0.0.1:${PORT}/?dev&game=${id}`); await page.waitForFunction(() => window.__wc?.map && document.querySelector('#map-loading')?.classList.contains('hidden'), null, { timeout: 240000, polling: 500 }); await page.waitForTimeout(1200); await page.evaluate(() => window.__wc?.map?.renderer?.setAnimationLoop?.(null)); await page.evaluate(`(${pageLib.toString()})()`); };
+  const mark = () => page.evaluate(() => document.querySelector('#coach .wc-coach')?.dataset.mark || null);
+  const slip = () => page.evaluate(() => { const s = document.querySelector('#coach .wc-slip'); if (!s) return null; const r = s.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; });
+  const out = { welcome: false, marks: [], slipInside: true, again: 'n/a', focus: null, focusBack: false, flag: false, errors };
+  await boot();
+  out.welcome = await page.evaluate(() => window.__gate.visible('#modal') && !!document.querySelector('.wc-welcome #welcome-go'));
+  await page.click('#welcome-go'); await page.waitForTimeout(500);
+  const vp = page.viewportSize(); const inside = (r) => r && r[0] >= 0 && r[1] >= 0 && r[2] <= vp.width && r[3] <= vp.height;
+  out.marks.push(await mark()); if (!inside(await slip())) out.slipInside = false;
+  await page.fill('#order-input', 'Send Ser Rodrik to hold the Stony Shore'); await page.keyboard.press('Enter'); await page.waitForTimeout(3000);
+  out.marks.push(await mark()); if (!inside(await slip())) out.slipInside = false;
+  await page.click('#hud-top .advance-btn'); await page.waitForTimeout(800);
+  await page.waitForFunction(() => document.querySelector('#busy')?.classList.contains('hidden'), null, { timeout: 180000, polling: 500 }); await page.waitForTimeout(800);
+  for (let i = 0; i < 4; i++) { if (await page.evaluate(() => window.__gate.visible('#modal'))) { await page.keyboard.press('Escape'); await page.waitForTimeout(300); } }
+  await page.evaluate(() => window.__wc.state.meta.turn <= 2 && window.__wc.renderTop?.());
+  out.marks.push(await mark()); if (!inside(await slip())) out.slipInside = false;
+  await page.evaluate(() => document.activeElement?.blur?.()); await page.keyboard.press('r'); await page.waitForTimeout(600);
+  out.marks.push(await mark()); await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  // a reload shows neither the card nor a mark again
+  await boot(); out.again = (await page.evaluate(() => window.__gate.visible('#modal') || !!document.querySelector('.wc-welcome'))) || (await mark()) ? 'FAIL: shown again' : 'ok';
+  out.flag = (await api(`/games/${id}`)).meta?.welcomed === true;
+  // focus mode: the map and the command bar, and F again brings the bars back
+  await page.evaluate(() => document.activeElement?.blur?.()); await page.keyboard.press('f'); await page.waitForTimeout(400);
+  out.focus = await page.evaluate(() => window.__gate.snapshot().ctl.length);
+  await page.keyboard.press('f'); await page.waitForTimeout(400);
+  out.focusBack = await page.evaluate(() => window.__gate.visible('#hud-top') && window.__gate.visible('#strip'));
+  await page.close(); return out;
+}
 async function measure(browser, id, w, h, turn) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.setDefaultTimeout(90000);
   const errors = []; page.on('pageerror', (e) => errors.push(e.message));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   // the map is not what is measured: the cheap settings keep SwiftShader from drawing a forest every frame while we ask questions
-  await page.addInitScript(() => { try { localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); } catch { /* private mode */ } });
+  await page.addInitScript((gid) => { try { localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); localStorage.setItem('wc.welcomed.' + gid, '1'); localStorage.setItem('wc.coach.' + gid, JSON.stringify(['command', 'turn', 'realm'])); } catch { /* private mode */ } }, id);
   await page.goto(`http://127.0.0.1:${PORT}/?dev&game=${id}`);
   say('page loading'); await page.waitForFunction(() => window.__wc?.map && document.querySelector('#map-loading')?.classList.contains('hidden'), null, { timeout: 240000, polling: 500 });
   say('map ready'); await page.waitForTimeout(2000);
@@ -276,6 +310,11 @@ function report(cells) {
     ['"More" opens the sheet in place of a window', (c) => c.u4.more, (c) => c.u4.more === 'ok', () => 'ok'],
     ['old keys land on their tabs', (c) => `${c.u4.tabs.filter((t) => t.got === t.want).length}/${c.u4.tabs.length}`, (c) => c.u4.tabs.length === 7 && c.u4.tabs.every((t) => t.got === t.want), () => '7/7'],
     ['windows and sheets clear of the command bar', (c) => c.u4.panelsClear, (c) => c.u4.panelsClear === 'ok', () => 'ok'],
+    ['the welcome card is shown on a new game', (c) => (c.first.welcome ? 'yes' : 'NO'), (c) => c.first.welcome, () => 'yes'],
+    ['coach marks, in order, each put away by its thing', (c) => (c.first.marks.join('>') === 'command>turn>realm>' ? 'in order' : c.first.marks.map((m) => m || 'none').join('>')), (c) => c.first.marks.join('>') === 'command>turn>realm>', () => 'command>turn>realm>none'],
+    ['a mark stays on the screen', (c) => (c.first.slipInside ? 'ok' : 'FAIL'), (c) => c.first.slipInside, () => 'ok'],
+    ['never shown again after a reload (and on the server)', (c) => `${c.first.again}/${c.first.flag ? 'saved' : 'NOT SAVED'}`, (c) => c.first.again === 'ok' && c.first.flag, () => 'ok/saved'],
+    ['focus mode: controls left (F), bars back on F', (c) => `${c.first.focus}${c.first.focusBack ? '' : ' NOT BACK'}`, (c) => c.first.focus != null && c.first.focus <= 6 && c.first.focusBack, () => '≤ 6, back'],
     ['Escape closes the menu first', (c) => c.escape, (c) => c.escape === 'n/a' || c.escape === 'ok', () => 'ok (n/a: no #menu-pop)'],
   ];
   const cols = cells.map((c) => `${c.w}x${c.h} t${c.turn}`);
@@ -325,6 +364,9 @@ async function main() {
       if (turn > 0) for (let i = 0; i < turn; i++) await api(`/games/${id}/advance`, { span: '7d', orders: [] });
       for (const [w, h] of SIZES) { say(`measuring ${w}x${h} at turn ${turn}`); const c = await measure(browser, id, w, h, turn); Object.assign(c, { w, h, turn }); cells.push(c); }
     }
+    const first = [];
+    for (const [w, h] of SIZES) { say(`first run at ${w}x${h}`); first.push({ w, h, ...(await probeFirstRun(browser, w, h)) }); }
+    for (const c of cells) c.first = first.find((f) => f.w === c.w);
     const failed = report(cells);
     process.exitCode = failed ? 1 : 0;
   } finally { if (browser) await browser.close().catch(() => {}); stop(); fs.rmSync(saves, { recursive: true, force: true }); }

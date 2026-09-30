@@ -57,3 +57,11 @@ export function openPin(where) {
   };
   show();
 }
+
+// The pins that do not fit (WP U8: at most six at once): a "+n" bubble beside the map, and a click opens the next of them.
+export function showPinsMore(hidden) {
+  const el = $('#pins-more'); if (!el) return;
+  el.hidden = !hidden.length; el.textContent = `+${hidden.length}`; el.dataset.next = hidden[0] || '';
+  el.title = hidden.length ? `${hidden.length} more place${hidden.length > 1 ? 's' : ''} with news or a matter awaiting your word: click to open the next` : '';
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('#pins-more'); if (b?.dataset.next) openPin(b.dataset.next); });

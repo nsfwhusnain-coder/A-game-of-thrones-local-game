@@ -80,6 +80,7 @@
         <button data-action="settings" title="Settings and the model endpoint" aria-label="Settings"><i data-i="chain"></i></button>
         <button data-action="help" title="How to play (?)" aria-label="How to play" aria-keyshortcuts="?"><i data-i="book"></i></button>
         <button data-action="music" id="music-btn" title="Music on or off" aria-label="Music"><i data-i="music"></i></button>
+        <button data-action="focus" title="Hide everything but the map (F)" aria-label="Focus mode" aria-keyshortcuts="F"><i data-i="eye"></i></button>
         <button data-action="undo" title="Turn back the glass" aria-label="Undo the last turn"><i data-i="undo"></i></button>
         <button data-action="title" title="Leave this game for the title screen" aria-label="Main menu"><i data-i="castle"></i></button>
       </div>
@@ -99,6 +100,11 @@
 
     <!-- right sliding window: the realm, people, the chronicle's long book -->
     <aside id="window" class="window hidden" role="region" aria-labelledby="win-title" aria-hidden="true"><div class="win-head"><h2 id="win-title"></h2><button class="win-close" data-action="close-window" aria-label="Close"><i data-i="close"></i></button></div><div class="win-body" id="win-body"></div></aside>
+
+    <!-- focus mode's way back, the bubble for the pins that do not fit, and the coach marks (ui/welcome.js) -->
+    <button id="focus-exit" class="wc-btn wc-btn--quiet" data-action="focus" hidden title="Bring the bars back (F)">Focus · F</button>
+    <button id="pins-more" class="wc-chip wc-chip--vellum" hidden title="More news and matters on the map: open the next"></button>
+    <div id="coach" class="wc-coach-layer" aria-live="polite"></div>
 
     <!-- the card beside a castle or a host that was clicked on the map (ui/card.js); its "More" opens the sheet -->
     <aside id="card" class="wc-oak card hidden" role="dialog" aria-label="Detail" aria-hidden="true"></aside>

@@ -17,8 +17,9 @@ import { portraitURL, loadCustomPortraits } from './ui/portrait.js';
 import { app, $, $$, esc, fmt, api, doVerb, toast, modal, closeModal, md, player, ruler, sig, por, addOrder, saveOrders, answerOrder, confirmModal, REGION_NAMES, RANK_NAMES, applyHouseTheme, uiScale, setUiScale, houseTheming, setHouseTheming } from './ui/common.js';
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openDrawer, closeDrawer, drawerOpen, pickFilter, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
-import { openPin } from './ui/pins.js';
+import { openPin, showPinsMore } from './ui/pins.js';
 import { openCard, closeCard, dismissCard, refreshCard } from './ui/card.js';
+import { startFirstRun, showWelcome, coachDone, showCoach, maybeQuietTip, toggleFocus, mapActive, watchIdle } from './ui/welcome.js';
 import { showReport, reportOn, setReportOn } from './ui/report.js';
 import { tidy, forgetScribe } from './ui/scribe.js';
 import { makeEars, canListen } from './ui/ears.js';
@@ -30,7 +31,7 @@ import { regencyLine, speakerFor, incapacity } from './shared/regency.js';
 import { standing, standingWord, epitaph } from './shared/standing.js';
 import { supplyOf } from './engine/military/supply.js';
 
-app.openChat = openChat; app.openCouncil = openCouncil; app.openPin = openPin; app.openSheet = openSheet; app.openCard = openCard; app.renderWindow = renderWindow;
+app.openChat = openChat; app.openCouncil = openCouncil; app.openPin = openPin; app.openSheet = openSheet; app.openCard = openCard; app.coachDone = coachDone; app.renderWindow = renderWindow;
 
 // ═════════════ Title screen ═════════════
 // the music follows your situation: war drums when you are at war, the cold theme in the North
@@ -149,6 +150,8 @@ async function startGame(id, state) {
         onSelect: (hid) => { if (app.picking) return finishPick(hid); if (hid) openCard('holding', hid); else { closeCard(); closeSheet(); } },
         onSelectArmy: (aid) => { if (app.picking) return finishPickArmy(aid); openCard('army', aid); },
         onHover: showTooltip,
+        onActive: mapActive,
+        onPinsMore: (hidden) => showPinsMore(hidden),
         onPin: (where) => openPin(where),
         onChar: (id) => openSheet('char', id),
       });
@@ -165,6 +168,7 @@ async function startGame(id, state) {
   app.map.setState(app.state);
   closeWindow(); closeSheet(); closeDrawer({ read: false }); closePopovers();
   renderAll();
+  startFirstRun(); if (!app.idleWatched) { app.idleWatched = true; watchIdle(); }
 }
 function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); refreshCard(); maybeShowOutcome(); }
 app.renderOrders = renderOrders; app.renderTop = renderTop; app.markSeen = markSeen; app.renderStrip = renderStrip;
@@ -177,6 +181,7 @@ app.setState = (s, opts = {}) => {
   app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); refreshCard(); if (!opts.keepDrawer) renderDrawer();
   // an ironman chronicle has no glass to turn back
   for (const b of document.querySelectorAll('[data-action="undo"]')) b.classList.toggle('hidden', !!s.meta.settings?.ironman);
+  showCoach(); maybeQuietTip();
 };
 
 // The top bar (GDD 17 §2.1): chrome.js draws the crest, the three vitals, the Inbox seal and the headline strip from the tested functions of hud.js;
@@ -460,6 +465,7 @@ document.addEventListener('keydown', (e) => {
   if (!app.state || /input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) return advance();
   if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFocus(); return; }
   // the old one-letter keys still open what they always opened; hud.js knows where each now lives
   const to = routeKey(e.key);
   if (to) return openDoor(to.open, to.section);
@@ -491,6 +497,8 @@ async function handleAction(action, el) {
     case 'undo': return chooseUndo();
     case 'settings': return showSettings();
     case 'help': return showHelp();
+    case 'focus': closePopovers(); toggleFocus(); return;
+    case 'welcome': return showWelcome({ again: true });
     case 'music': { startMusic(); const on = !musicSettings().on; setMusic('on', on); toast(on ? 'Music on' : 'Music off'); return; }
     case 'menu': return togglePopover('menu');
     case 'inbox': return togglePopover('inbox');
@@ -514,6 +522,7 @@ async function advance() {
     `${undecided.map((d) => d.title).join('; ')}. Silence is an answer too — the world will decide without you.`,
     { yes: 'Let the days pass', no: 'Hear them first' })) { openPopover('inbox'); return; }
   await sendOrder(); // (what is written in the box goes down as an order first)
+  coachDone('turn');
   const span = 'auto'; const until = nextTurnLength(app.state);
   busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}…`, { live: true });
   try {
@@ -597,6 +606,7 @@ const HELP_KEYS = [
   ['Enter', 'Add what you have written as an order'],
   ['R', 'The Realm: your holdings, wars, wealth and the houses'], ['P', 'People: your kin, council and shadows'], ['H', 'The chronicle, in full'],
   ['M · E · D · C · I', 'Straight to the wars, the wealth, the houses, the council or the shadows'],
+  ['F', 'Focus: hide everything but the map and the command bar; again to bring them back'], ['G', 'Go with the selected host (the map follows it)'],
   ['?', 'This page'],
   ['Esc', 'Close whatever is open; cancel a march you are aiming'],
 ];

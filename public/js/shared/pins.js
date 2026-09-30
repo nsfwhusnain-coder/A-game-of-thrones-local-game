@@ -57,3 +57,13 @@ export function openPins(s) {
   for (const g of out.values()) g.events.sort((a, b) => (b.importance || 0) - (a.importance || 0) || (a.day || 0) - (b.day || 0));
   return out;
 }
+
+/**
+ * The pins to draw when there are more than `max` open (WP U8): matters that await the player's word first, then the weightiest news, then the newest; the rest are
+ * counted behind a "+n" bubble. `groups`: the map openPins() returns. `{ shown: [where…], hidden: [where…] }`, each in the order of showing.
+ */
+export function capPins(groups, max = 6) {
+  const rank = (g) => [g.decisions.length ? 1 : 0, Math.max(0, ...g.events.map((e) => e.importance || 0)), Math.max(0, ...g.events.map((e) => e.turn || 0))];
+  const order = [...groups.entries()].sort((a, b) => { const x = rank(a[1]), y = rank(b[1]); return (y[0] - x[0]) || (y[1] - x[1]) || (y[2] - x[2]) || String(a[0]).localeCompare(String(b[0])); }).map(([w]) => w);
+  return { shown: order.slice(0, max), hidden: order.slice(max) };
+}
