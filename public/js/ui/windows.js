@@ -34,6 +34,8 @@ import { renderLedger, wireLedger } from './realm.js';
 import { TABS, tabTarget } from './hud.js';
 import { peopleSections, conditionOf } from './people.js';
 import { treeOf, treeHtml } from './tree.js';
+import { promiseBookHtml } from './promises.js';
+import { icon } from './icons.js';
 
 // Two windows, each with tabs (GDD 17 §4 U4): the Realm (the State of the Realm, your house, the hosts, the treasury, the dealings of the houses) and
 // People (the household and court, the council, the shadows). What were six windows are tabs of these, unchanged inside; the old keys and the old
@@ -319,6 +321,7 @@ function diplomacy() {
   const neighbours = Object.values(s.houses).filter((x) => x.id !== p && x.liege === player().liege && x.liege).slice(0, 12);
   return `
     <div class="section"><h4>Wars</h4>${wars.map((w) => warRow(s, p, w)).join('') || '<div class="muted">Peace — for now.</div>'}</div>
+    ${promiseBookHtml(s, { esc, icon })}
     <div class="section"><h4>Pacts & agreements</h4>${pacts.map((x) => `<div class="row"><div class="grow"><div class="title">${esc(x.type)} · ${esc(s.houses[x.a]?.name)} & ${esc(s.houses[x.b]?.name)} <span class="pill">${esc(x.status)}</span></div><div class="sub" title="${esc(x.terms)}">${esc(x.terms)}</div></div></div>`).join('') || '<div class="muted">None.</div>'}</div>
     <div class="section"><h4>The great powers</h4>${tops.map((x) => houseRow(x)).join('')}</div>
     ${neighbours.length ? `<div class="section"><h4>Fellow vassals of ${esc(s.houses[player().liege]?.name)}</h4>${neighbours.map((x) => houseRow(x)).join('')}</div>` : ''}`;

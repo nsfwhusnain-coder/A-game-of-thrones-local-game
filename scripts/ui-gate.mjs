@@ -290,6 +290,41 @@ async function probePeople(page) {
   if (hasCards) { await page.keyboard.press('h'); await page.waitForTimeout(900); const n = await page.evaluate(() => document.querySelectorAll('#drawer .wc-card__faces img').length); out.faces = n >= 1 ? 'ok' : 'FAIL: none'; await closeAll(page); }
   return out;
 }
+// F4 (GDD 12 §7): an audience keeps its composer and its promises on the screen and clear of the command bar; a promise a lord made shows in it with the days left; a reply
+// wears chips; "Back" returns to the chronicle; the Realm's Diplomacy tab lists the promises. (The promise and the reply are put into the browser's own copy of the state: the
+// question is whether the screens draw them where a player can see and reach them.)
+async function probeAudience(page) {
+  const out = { promises: 'n/a', chips: 'n/a', composer: 'n/a', back: 'n/a', book: 'n/a' };
+  const setup = await page.evaluate(() => {
+    const app = window.__wc; const s = app.state; const day = s.meta.date;
+    const other = Object.values(s.characters).find((c) => c.alive && c.house !== s.meta.player && s.houses[c.house]?.lord === c.id && c.loc);
+    if (!other) return null;
+    const me = s.houses[s.meta.player].lord; const due = 12;
+    const dn = (d) => d.year * 360 + (d.month - 1) * 30 + (d.day - 1);
+    s.commitments = [{ id: 'gate_cm1', by: other.id, to: me, kind: 'attend', params: { place: s.houses[s.meta.player].seat }, madeDay: dn(day) - 1, dueDay: dn(day) + due, source: { type: 'audience' }, state: 'open', publicity: 'witnessed' }];
+    s.chats[other.id] = [{ role: 'player', text: 'Will you come to my hall?', date: 'today', turn: s.meta.turn }, { role: 'npc', text: '*A slow nod.* "I will come."', date: 'today', turn: s.meta.turn, verdict: 'agree', mood: 'warm', applied: [other.name + ' promises to come to Winterfell within 12 days'] }];
+    return other.id;
+  });
+  if (!setup) return out;
+  await page.evaluate((id) => window.__wc.openChat(id), setup); await page.waitForTimeout(700);
+  const box = (sel) => page.evaluate((q) => { const e = document.querySelector(q); if (!e) return null; const r = e.getBoundingClientRect(); return r.width ? [r.left, r.top, r.right, r.bottom] : null; }, sel);
+  const hit = (a, b) => a && b && a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
+  const vp = page.viewportSize();
+  const pm = await page.evaluate(() => ({ n: document.querySelectorAll('#drawer .promises .pm').length, when: document.querySelector('#drawer .promises .pm-when')?.textContent || '', chips: document.querySelectorAll('#drawer .msg .chips .chip').length }));
+  const pr = await box('#drawer .promises'); const cb = await box('#command-bar');
+  out.promises = pm.n === 1 && /12 days left/.test(pm.when) && pr && pr[3] <= vp.height && !hit(pr, cb) ? 'ok' : `FAIL ${JSON.stringify({ ...pm, pr, cb })}`;
+  out.chips = pm.chips >= 2 ? 'ok' : `FAIL ${pm.chips} chips`;
+  const cs = await box('#chat-send'); const ct = await box('#chat-text');
+  out.composer = cs && ct && cs[3] <= vp.height && ct[3] <= vp.height && cs[2] <= vp.width && !hit(cs, cb) && !hit(ct, cb) ? 'ok' : `FAIL ${JSON.stringify({ cs, ct, cb })}`;
+  const back = await page.$('#drawer [data-action="close-chat"]');
+  if (back) { await back.click(); await page.waitForTimeout(500); const t = await page.evaluate(() => ({ tab: window.__wc.drawerTab, chat: !!document.querySelector('#drawer .chat') })); out.back = t.tab === 'feed' && !t.chat ? 'ok' : `FAIL ${JSON.stringify(t)}`; } else out.back = 'FAIL: no Back button';
+  await closeAll(page);
+  await page.evaluate(() => document.activeElement?.blur?.()); await page.keyboard.press('d'); await page.waitForTimeout(600);
+  const bk = await page.evaluate(() => ({ book: !!document.querySelector('#promise-book'), rows: document.querySelectorAll('#promise-book .pm').length }));
+  out.book = bk.book && bk.rows >= 1 ? 'ok' : `FAIL ${JSON.stringify(bk)}`;
+  await closeAll(page);
+  return out;
+}
 async function measure(browser, id, w, h, turn) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.setDefaultTimeout(90000);
@@ -313,6 +348,8 @@ async function measure(browser, id, w, h, turn) {
   say('cards probed');
   Object.assign(res, { u9: await probePeople(page) });
   say('people probed');
+  Object.assign(res, { f4: await probeAudience(page) });
+  say('audience probed');
   res.errors = errors; await page.close();
   return res;
 }
@@ -341,6 +378,9 @@ function report(cells) {
     ['the family tree draws its portraits and lines', (c) => c.u9.tree, (c) => c.u9.tree === 'ok', () => 'ok'],
     ["the ruler's plate has a hover card and a ring", (c) => c.u9.hover, (c) => c.u9.hover === 'ok', () => 'ok'],
     ["the chronicle's cards carry faces (turn 5)", (c) => c.u9.faces, (c) => c.u9.faces === 'ok' || (c.turn === 0 && c.u9.faces === 'n/a'), () => 'ok (n/a at turn 0)'],
+    ['audience: promises and composer clear', (c) => `${c.f4.promises}/${c.f4.composer}`, (c) => c.f4.promises === 'ok' && c.f4.composer === 'ok', () => 'ok/ok'],
+    ['audience: reply chips; Back works', (c) => `${c.f4.chips}/${c.f4.back}`, (c) => c.f4.chips === 'ok' && c.f4.back === 'ok', () => 'ok/ok'],
+    ['Diplomacy tab lists the promises', (c) => c.f4.book, (c) => c.f4.book === 'ok', () => 'ok'],
     ['the welcome card is shown on a new game', (c) => (c.first.welcome ? 'yes' : 'NO'), (c) => c.first.welcome, () => 'yes'],
     ['coach marks, in order, each put away by its thing', (c) => (c.first.marks.join('>') === 'command>turn>realm>' ? 'in order' : c.first.marks.map((m) => m || 'none').join('>')), (c) => c.first.marks.join('>') === 'command>turn>realm>', () => 'command>turn>realm>none'],
     ['a mark stays on the screen', (c) => (c.first.slipInside ? 'ok' : 'FAIL'), (c) => c.first.slipInside, () => 'ok'],

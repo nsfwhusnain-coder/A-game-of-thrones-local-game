@@ -15,6 +15,9 @@ const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefin
 // two significant figures: "about 2,800,000", as a maester's estimate is
 const about = (v) => { const n = Number(v); if (!Number.isFinite(n) || !n) return n; const p = 10 ** Math.max(0, Math.floor(Math.log10(Math.abs(n))) - 1); return Math.round(n / p) * p; };
 
+/** A promise a lord made in a letter of the player's whose answer has not landed: it was made the day the letter arrived, and is read by the player when the raven brings it back. */
+export const onTheRoad = (state, c) => c.source?.type === 'letter' && (state.post || []).some((l) => l.reply && l.replyTo === c.source.ref && l.status === 'in flight');
+
 /** The state as the player's house knows it. Never mutates `state`. */
 export function playerView(state) {
   if (!state?.meta || !state.parties) return state;
@@ -60,8 +63,8 @@ export function playerView(state) {
     // the realm's minds keep their counsel; replies still on the road are not yet read; tempers are read in faces
     minds: undefined, pendingReplies: undefined,
     moods: Object.fromEntries(Object.entries(state.moods || {}).map(([id, m]) => [id, { turn: m.turn, full: m.full, patience: m.patience, closed: m.closed, word: moodWord(m) }])),
-    // promises: those made to or by our house, without how much they were meant (the engine's secret)
-    commitments: (state.commitments || []).filter((c) => [state.characters[c.by]?.house, state.characters[c.to]?.house || c.to].includes(me)).map(({ sincerity, acted, ...c }) => c),
+    // promises: those made to or by our house, without how much they were meant (the engine's secret) — and not one made in a letter whose answer is still on the road: it is read when it lands
+    commitments: (state.commitments || []).filter((c) => [state.characters[c.by]?.house, state.characters[c.to]?.house || c.to].includes(me) && !onTheRoad(state, c)).map(({ sincerity, acted, ...c }) => c),
     // letters: ours, and the answers that have landed
     post: (state.post || []).filter((l) => !l.reply || l.status !== 'in flight'),
     // pacts: ours, our friends', and the realm's open alliances and marriages
@@ -118,6 +121,7 @@ export function hiddenTruths(state, view) {
   if (view.minds || view.pendingReplies || Object.values(view.moods || {}).some((m) => 'anger' in m)) out.push('10: the minds, the tempers or the unread replies are sent');
   if ((view.commitments || []).some((c) => 'sincerity' in c)) out.push('10: how much a promise was meant is sent');
   if ((view.post || []).some((l) => l.reply && l.status === 'in flight')) out.push('10: an answer still on the road is sent');
+  if ((view.commitments || []).some((c) => onTheRoad(state, c))) out.push('10: a promise from a letter still on the road is sent');
   for (const h of Object.keys(view.knowledge || {})) if (h !== me) out.push(`10: House ${h}'s knowledge is sent`);
   for (const t of view.history || []) if (t.minds || t.hooks) out.push(`10: turn ${t.turn}'s minds or hooks are sent`);
   if (view.realmStats) out.push('10: the realm ledger\'s true series is sent');
