@@ -94,6 +94,14 @@ export function entitiesIn(state, sentence, { start = false } = {}) {
     out = out.filter((e) => !(e.from < to && e.to > from));
     out.push({ kind: 'office', ids: ['hand'], from, to, text: m[0] });
   }
+  // "the royal house" is how the writer (engine/facts/heads.js) names the house on the throne, so it does not have to be told which Baratheons
+  const crown = Object.values(state.houses || {}).filter((h) => h.rank === 'crown').map((h) => h.id);
+  if (crown.length) for (const m of sentence.matchAll(/\b[Tt]he royal (?:house|family)\b/g)) {
+    const from = ws0.findIndex((x) => x.at >= m.index); let to = from < 0 ? 0 : from; while (ws0[to] && ws0[to].end <= m.index + m[0].length) to++;
+    if (from < 0 || to <= from) continue;
+    out = out.filter((e) => !(e.from < to && e.to > from));
+    out.push({ kind: 'house', ids: [...crown], from, to, text: m[0], explicit: true, plural: false, bare: false, initial: false });
+  }
   const taken = new Set(); for (const e of out) for (let k = e.from; k < e.to; k++) taken.add(k);
   const ws = words(sentence); const keys = houseKeys(state);
   // namesIn drops a possessive from every word ("King's Landing" is read as "King Landing" and found nowhere): the seats and

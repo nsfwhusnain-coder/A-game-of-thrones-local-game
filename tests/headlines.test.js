@@ -468,6 +468,17 @@ test('offices: "the Queen", "the King", "the Hand" mean the story\'s own holder 
   assert.deepEqual(ents.map((e) => [e.kind, e.ids[0]]), [['office', 'hand']]);
 });
 
+test('"the royal house" is how the writer names the house on the throne: the story\'s own when the crown\'s house is in it, invented when it is not (found by a soak whose luck was a fever in the nursery)', () => {
+  const heir = (houses) => ({ facts: [{ id: 'f1.1', kind: 'incident', actors: [], houses, data: {}, importance: 2, text: 'The heir sickens.' }], must: [], mustNot: [] });
+  const crown = Object.values(state.houses).find((h) => h.rank === 'crown').id;
+  const ents = entitiesIn(state, 'The heir of the royal house sickens', { start: true });
+  assert.deepEqual(ents.map((e) => [e.kind, e.ids, e.text]), [['house', [crown], 'the royal house']]);
+  assert.deepEqual(faultsOf('The heir of the royal house sickens', heir([crown])), []);
+  assert.deepEqual(faultsOf('The royal house feasts with an old rival', heir([crown])).filter((f) => f === 'who' || f === 'invented'), []);
+  assert.ok(faultsOf('The heir of the royal house sickens', heir(['karstark'])).includes('invented'), 'a story without the crown\'s house does not have it');
+  assert.ok(faultsOf('The heir of the royal family sickens', heir([crown])).length === 0, 'the royal family says the same');
+});
+
 test('a free city is house and holding at once: "Pentos" and "Braavos" are the story\'s when its place or its house is', () => {
   // (a story of a Pentoshi galley, told at Widow's Watch: the house is Pentos, the place is not)
   assert.deepEqual(faultsOf("Pentos loses a galley off Widow's Watch", 'g-meanwhile-03'), []);
