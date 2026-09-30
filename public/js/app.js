@@ -18,6 +18,7 @@ import { app, $, $$, esc, fmt, api, doVerb, toast, modal, closeModal, md, player
 import { openWindow, closeWindow, renderWindow, openSheet, closeSheet, renderSheet } from './ui/windows.js';
 import { renderDrawer, setDrawer, openDrawer, closeDrawer, drawerOpen, pickFilter, openChat, openCouncil, eventHtml, decisionsHtml, mainEvents, meanwhileHtml, wireDecisions, wireVoices } from './ui/drawer.js';
 import { openPin } from './ui/pins.js';
+import { openCard, closeCard, dismissCard, refreshCard } from './ui/card.js';
 import { showReport, reportOn, setReportOn } from './ui/report.js';
 import { tidy, forgetScribe } from './ui/scribe.js';
 import { makeEars, canListen } from './ui/ears.js';
@@ -29,7 +30,7 @@ import { regencyLine, speakerFor, incapacity } from './shared/regency.js';
 import { standing, standingWord, epitaph } from './shared/standing.js';
 import { supplyOf } from './engine/military/supply.js';
 
-app.openChat = openChat; app.openCouncil = openCouncil; app.openPin = openPin;
+app.openChat = openChat; app.openCouncil = openCouncil; app.openPin = openPin; app.openSheet = openSheet; app.openCard = openCard; app.renderWindow = renderWindow;
 
 // ═════════════ Title screen ═════════════
 // the music follows your situation: war drums when you are at war, the cold theme in the North
@@ -145,8 +146,8 @@ async function startGame(id, state) {
     try {
       const { MapScene } = await import('./map3d/MapScene.js');
       app.map = new MapScene($('#map-wrap'), {
-        onSelect: (hid) => { if (app.picking) return finishPick(hid); if (hid) openSheet('holding', hid); else closeSheet(); },
-        onSelectArmy: (aid) => { if (app.picking) return finishPickArmy(aid); openSheet('army', aid); },
+        onSelect: (hid) => { if (app.picking) return finishPick(hid); if (hid) openCard('holding', hid); else { closeCard(); closeSheet(); } },
+        onSelectArmy: (aid) => { if (app.picking) return finishPickArmy(aid); openCard('army', aid); },
         onHover: showTooltip,
         onPin: (where) => openPin(where),
         onChar: (id) => openSheet('char', id),
@@ -165,7 +166,7 @@ async function startGame(id, state) {
   closeWindow(); closeSheet(); closeDrawer({ read: false }); closePopovers();
   renderAll();
 }
-function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); maybeShowOutcome(); }
+function renderAll() { renderTop(); renderPlayer(); renderOrders(); renderDrawer(); renderWindow(); renderSheet(); refreshCard(); maybeShowOutcome(); }
 app.renderOrders = renderOrders; app.renderTop = renderTop; app.markSeen = markSeen; app.renderStrip = renderStrip;
 // the game's code changed on disk (an update): say so, rather than run a page that no longer matches the server
 (async () => {
@@ -173,7 +174,7 @@ app.renderOrders = renderOrders; app.renderTop = renderTop; app.markSeen = markS
   setInterval(async () => { try { const b = (await api('/version')).build; if (b !== mine && !$('#update-banner')) document.body.insertAdjacentHTML('beforeend', '<div id="update-banner" class="update-banner">The game has been updated. <button class="btn small primary" onclick="location.reload()">Reload</button></div>'); } catch { /* server restarting */ } }, 20000);
 })();
 app.setState = (s, opts = {}) => {
-  app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); if (!opts.keepDrawer) renderDrawer();
+  app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); refreshCard(); if (!opts.keepDrawer) renderDrawer();
   // an ironman chronicle has no glass to turn back
   for (const b of document.querySelectorAll('[data-action="undo"]')) b.classList.toggle('hidden', !!s.meta.settings?.ironman);
 };
@@ -453,7 +454,7 @@ document.addEventListener('keydown', (e) => {
     if (app.state && closePopovers()) return;
     if (!$('#modal').classList.contains('hidden')) return closeModal();
     if (app.picking) { app.picking = null; $('#pick-hint').classList.add('hidden'); return; }
-    if (app.sheet) return closeSheet(); if (app.win) return closeWindow();
+    if (app.card) return dismissCard(); if (app.sheet) return closeSheet(); if (app.win) return closeWindow();
     if (app.state && drawerOpen()) return closeDrawer();
   }
   if (!app.state || /input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;

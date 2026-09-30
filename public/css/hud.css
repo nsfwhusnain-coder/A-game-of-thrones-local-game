@@ -173,12 +173,12 @@ body.has-drawer #strip { display: none; }
 
 /* ───────────────────────────── the windows and the sheet: they open on the right, above the ruler ───────────────────────────── */
 .window { left: auto; right: var(--hud-gap); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 1.6rem); bottom: 7.6rem; width: var(--panel-w); z-index: 14; }
-.sheet, .sheet.solo { left: auto; right: calc(var(--panel-w) + var(--hud-gap) * 2); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 1.6rem); bottom: auto; width: min(26rem, 30vw); max-height: calc(100% - 15rem); z-index: 15; }
+.sheet, .sheet.solo { left: auto; right: var(--hud-gap); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 1.6rem); bottom: auto; width: var(--panel-w); max-height: calc(100% - 15rem); z-index: 15; } /* a sheet takes a window's place (U4): one panel at a time */
 .sheet.solo { right: var(--hud-gap); }
-body:has(#window:not(.hidden)) .mapmode, body:has(#sheet.solo:not(.hidden)) .mapmode { right: calc(var(--panel-w) + var(--hud-gap) * 2); }
+body:has(#window:not(.hidden)) .mapmode, body:has(#sheet:not(.hidden)) .mapmode { right: calc(var(--panel-w) + var(--hud-gap) * 2); }
 body:has(#window:not(.hidden)) .mapmode { z-index: 9; }
 .map-legend { right: var(--hud-gap); bottom: 7.6rem; }
-body:has(#window:not(.hidden)) .map-legend { right: calc(var(--panel-w) + var(--hud-gap) * 2); }
+body:has(#window:not(.hidden)) .map-legend, body:has(#sheet:not(.hidden)) .map-legend { right: calc(var(--panel-w) + var(--hud-gap) * 2); }
 
 /* ───────────────────────────── the day being written: a card at the map's corner ───────────────────────────── */
 .busy.live { top: calc(var(--hud-gap) + var(--hud-bar) + 1.4rem); left: var(--hud-gap); width: min(26rem, 90vw); color: var(--bone); border: 1px solid #070403; border-radius: var(--radius-card);
@@ -211,3 +211,41 @@ body:has(#window:not(.hidden)) .map-legend { right: calc(var(--panel-w) + var(--
 @keyframes wc-rec { 0%, 100% { box-shadow: inset 1px 2px 4px rgba(0, 0, 0, .7), 0 0 0 0 rgba(168, 69, 58, .55); } 50% { box-shadow: inset 1px 2px 4px rgba(0, 0, 0, .7), 0 0 0 .32rem rgba(168, 69, 58, 0); } }
 @media (prefers-reduced-motion: reduce) { #listen-btn.is-rec, #send-btn[aria-busy='true'] .ico { animation: none; } #listen-btn.is-rec { box-shadow: inset 0 0 0 .14rem var(--madder-lit); } }
 #command-bar .wc-input { min-height: 2.7rem; }
+
+/* ───────────────────────────── the window's tabs, and a sheet's way back (WP U4) ───────────────────────────── */
+.win-tabs { flex-wrap: wrap; row-gap: .2rem; padding: 0; margin: -.1rem 0 .55rem; border-bottom: 1px solid rgba(0, 0, 0, .55); }
+.win-tabs .wc-tab { padding: .32rem .5rem .3rem; font-size: max(.78rem, 12px); letter-spacing: .04em; }
+.win-tabs .wc-tab[aria-selected='true'] { padding-bottom: .42rem; }
+#window.wide .win-tabs { margin: 0 0 .5rem; }
+.sheet-back { margin: 0 0 .5rem; }
+
+/* ───────────────────────────── the card beside a castle or a host (WP U4; mockup 07) ───────────────────────────── */
+.card { position: absolute; z-index: 16; width: min(22rem, 40vw); padding: .8rem .9rem .75rem; }
+.card.hidden { display: none; }
+.card::after { content: ''; position: absolute; top: 50%; width: .9rem; height: .9rem; margin-top: -.45rem; background: inherit; border: inherit; transform: rotate(45deg); z-index: -1; }
+.card[data-side='left']::after { left: -.5rem; border-top: 0; border-right: 0; }
+.card[data-side='right']::after { right: -.5rem; border-bottom: 0; border-left: 0; }
+.card[data-side='above']::after, .card[data-side='below']::after { display: none; }
+.card-head { display: flex; gap: .7rem; align-items: flex-start; padding-right: 1.5rem; }
+.card-crest { width: 2.5rem; flex: none; filter: drop-shadow(0 .1rem .15rem rgba(0, 0, 0, .6)); }
+.card-head .grow { min-width: 0; }
+.card-head h3 { margin: 0; font: 600 1.32rem/1.1 var(--wc-display); letter-spacing: .06em; color: var(--bone); overflow-wrap: anywhere; }
+.card-head .sub { margin-top: .2rem; font-style: italic; font-size: .98rem; line-height: 1.2; color: var(--bone-dim); }
+.card .win-close { position: absolute; top: .45rem; right: .55rem; padding: .1rem .3rem; color: var(--bone-dim); }
+.card-rows { margin-top: .65rem; border-top: 1px solid rgba(0, 0, 0, .6); box-shadow: 0 -1px 0 rgba(255, 226, 170, .08); }
+.card-row { display: grid; grid-template-columns: 6.3rem 1fr; gap: .5rem; align-items: center; padding: .34rem 0; border-bottom: 1px solid rgba(0, 0, 0, .4); box-shadow: 0 1px 0 rgba(255, 226, 170, .06); }
+.card-row .k { font: 600 max(.78rem, 12px) var(--wc-display); letter-spacing: .12em; text-transform: uppercase; color: var(--bone-dim); }
+.card-row .v { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .5rem; min-width: 0; color: var(--bone); font-size: 1.05rem; }
+.card-chip { display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; padding: .12rem .55rem .12rem .15rem; margin: 0; cursor: pointer; color: var(--bone); font: inherit; background: rgba(0, 0, 0, .28); border: 1px solid rgba(0, 0, 0, .7); border-radius: 2rem; box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .1); }
+.card-chip:hover { border-color: var(--gold-flat); }
+.card-chip .por { width: 1.7rem; height: 1.7rem; border-radius: 50%; object-fit: cover; flex: none; }
+.card-chip span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-chip small { font-style: italic; color: var(--bone-dim); white-space: nowrap; }
+.card-more { color: var(--bone-dim); font-style: italic; }
+.card-news { display: flex; gap: .45rem; align-items: baseline; width: 100%; margin: .5rem 0 0; padding: .25rem 0; text-align: left; cursor: pointer; background: none; border: 0; color: var(--bone-dim); font: italic 1rem/1.25 var(--wc-serif); }
+.card-news i { flex: none; width: .5rem; height: .5rem; transform: rotate(45deg); background: var(--ochre); }
+.card-news:hover { color: var(--bone); }
+.card-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .65rem; }
+.card-actions .btn { flex: 0 1 auto; }
+.card-actions .btn.ghost:last-child { margin-left: auto; }
+@media (prefers-reduced-motion: no-preference) { .card { animation: card-in .16s ease-out; } @keyframes card-in { from { opacity: 0; transform: translateY(.3rem); } to { opacity: 1; transform: none; } } }

@@ -94,7 +94,7 @@ const Q = { lens: 'strength', scope: 'great', realm: false, moons: 3, sortKey: '
 test('the page is drawn from the view: the tabs, the window, the rising strip, the table with the player\'s row marked, the wars, what the realm is saying and where to focus', () => {
   const s = world(); s.houses.stark.figures.food.v = 1.2; const v = realmViewFor(s, 'stark', { house: 'stark' });
   const html = ledgerHtml({ ...v, focus: [{ id: 'f', kind: 'hungry', text: 'Your granaries hold 1.2 moons of bread.', verb: 'buy_grain', order: 'Buy grain for the granaries.' }] }, Q, env);
-  for (const t of ['Strength', 'Economy', 'Lands', 'Wars', 'Your house', 'Show', 'Window', 'What the realm is saying', 'Where to focus', 'Wars, as your house knows them']) assert.match(html, new RegExp(t), t);
+  for (const t of ['Strength', 'Economy', 'Lands', 'Wars', 'Show', 'Window', 'What the realm is saying', 'Where to focus', 'Wars, as your house knows them']) assert.match(html, new RegExp(t), t);
   assert.match(html, /<tr class="is-you"[^>]*data-row="stark"/, 'the player\'s row is marked'); assert.match(html, /exact · your house/);
   assert.match(html, /data-focus="Buy grain for the granaries\."/, 'where to focus writes an order, and only writes it');
   assert.match(html, /aria-label="[^"]*(steady|up|down|too few)[^"]*"/, 'each line has words for a screen reader'); assert.match(html, /<svg class="wc-spark/);
@@ -121,7 +121,7 @@ test('the window\'s wiring: the Realm door opens it, R (and never S), closed unt
   assert.equal(routeKey('r').open, 'realm'); assert.equal(routeKey('s'), null, 'S is the map\'s');
   const html = read('public/index.html'); assert.doesNotMatch(html, /realm-body|realm-ledger/, 'nothing of the ledger is on the page until the window is asked for'); assert.match(html, /css\/ledger\.css/);
   const win = noComments(read('public/js/ui/windows.js'));
-  assert.match(win, /from '\.\/realm\.js'/); assert.match(win, /function realmWindow\(/); assert.match(win, /'State of the Realm'/); assert.match(win, /data-realm-tab/, 'the own-house page is a tab');
+  assert.match(win, /from '\.\/realm\.js'/); assert.match(win, /function realmWindow\(/); assert.match(noComments(read('public/js/ui/hud.js')), /State of the Realm/, 'the ledger is the first tab of the Realm door'); assert.match(win, /data-win-tab/, 'the own-house page is a tab of the Realm window');
   assert.match(win, /function familyTree\(/, 'and the family tree is untouched');
   const ui = noComments(read('public/js/ui/realm.js'));
   assert.doesNotMatch(ui, /doVerb|addOrder\(|api\([^)]*\{\s*body/, 'the window sends no order and posts nothing'); assert.match(ui, /toast\('Written in the order box/, 'a focus writes into the box and says so');
