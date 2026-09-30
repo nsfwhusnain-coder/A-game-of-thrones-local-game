@@ -31,7 +31,7 @@
 .chips { display: flex; flex-wrap: wrap; gap: .3rem .4rem; margin-top: .5rem; padding-top: .45rem; border-top: 1px solid rgba(139, 109, 62, .5); }
 .chip { display: inline-flex; align-items: center; gap: .3rem; padding: .08rem .55rem .08rem .4rem; font: 600 var(--wc-min)/1.25 var(--wc-display); letter-spacing: .03em; border: 1px solid currentColor; border-radius: 1rem; background: rgba(255, 250, 235, .35); }
 .chip b { font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .78em; }
-.chip .chip-ico { width: 1rem; height: 1rem; flex: none; }
+.chip .chip-ico { width: 1rem; height: 1rem; flex: none; color: inherit; }
 .chip-text { font: 500 var(--wc-min)/1.25 var(--wc-serif); letter-spacing: 0; color: var(--ink-iron); }
 .chip-ok { color: var(--verdigris-ink); } .chip-warn { color: #7a5518; } .chip-bad { color: var(--madder-ink); }
 
@@ -42,7 +42,7 @@
 .pm-who { font-family: var(--wc-display); letter-spacing: .02em; white-space: nowrap; }
 .pm-what { color: var(--bone-dim); min-width: 0; overflow-wrap: anywhere; }
 .pm-when { font-family: var(--wc-display); font-size: .92em; white-space: nowrap; display: inline-flex; align-items: center; gap: .25rem; color: var(--bone-dim); }
-.pm-when .chip-ico { width: .95rem; height: .95rem; }
+.pm-when .chip-ico { width: .95rem; height: .95rem; color: inherit; }
 .pm-soon .pm-when { color: var(--ochre); } .pm-late .pm-when { color: var(--madder-lit); }
 .pm-kept .pm-when { color: var(--verdigris); } .pm-broken .pm-when { color: var(--madder-lit); }
 .pm-more { color: var(--bone-dim); font-style: italic; padding-top: .1rem; }
@@ -64,3 +64,9 @@
 .chat-head .council-faces .cf b { font: 600 var(--wc-min)/1.15 var(--wc-display); color: var(--gold-flat); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-head .council-faces .cf span { font-size: .78rem; color: var(--bone-dim); line-height: 1.1; text-align: center; }
 .chat-head .council-faces .cf:hover, .chat-head .council-faces .cf:focus-visible { border-color: var(--bronze); outline: none; }
+
+/* the head is two short lines (who they are, where and how they are reached) so the talk keeps the room; with a talk going the quick questions are one row, not four */
+.chat-head .sub-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-head .sub-b { line-height: 1.25; }
+.chat.has-log .quick-asks { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .2rem; scrollbar-width: thin; }
+.chat.has-log .quick-asks button { flex: none; white-space: nowrap; }
