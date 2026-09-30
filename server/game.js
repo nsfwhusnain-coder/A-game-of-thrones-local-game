@@ -488,6 +488,8 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
     let w = null; if (f) { try { w = cardOf(state, { facts: [f] }); } catch { w = null; } }
     const told = w?.headline ? { ...card, headline: w.headline, summary: w.summary, title: w.headline, text: w.summary || card.text, details: w.details, kind: w.kind, archetype: w.archetype, who: w.who, told: 'writer', narrated: true, record: [card.text] } : card;
     events.unshift(f ? { ...told, fact: f.id, day: Math.max(1, f.day - day0) } : { ...told, day: 1 });
+    // the chronicle keeps it in the writer's words, not the engine's line (the player's own house is already there as a great event)
+    if (a.house !== p) state.chronicle.push({ date: dateStr(dateOfDay(day0 + Math.max(1, Math.min(days, f ? f.day - day0 : 1)))), text: `${told.headline || told.title} — ${told.summary || told.text}` });
   }
   // one date for every view (HUD, feed, reel, pins): day d of the turn is the d-th day after it began
   events.forEach((e, k) => { e.day = Math.max(1, Math.min(days, e.day || 1)); e.id = `${turn}-${k}`; e.date = dateStr(dateOfDay(day0 + e.day)); });

@@ -156,7 +156,7 @@ export function happenings(state, days, r = random) {
     const { ctx, owner, rival, friend } = slotsFor(s, h, r);
     const title = sentenceCase(fill(variant(tpl.t, r), ctx, r)); const text = sentenceCase(fill(variant(tpl.x, r), ctx, r));
     const mine = inPlayerRealm(s, h);
-    const e = fact(s, 'happening', { title, text, where: h.id, importance: tpl.imp || 1, type: tpl.type || 'rumor', houses: [owner.id], bg: true, tpl: tpl.id, day: 1 + Math.floor(r() * days) }, { data: { tpl: tpl.id } });
+    const e = fact(s, 'happening', { title, text, where: h.id, importance: tpl.imp || 1, type: tpl.type || 'rumor', houses: [owner.id], bg: true, tpl: tpl.id, day: 1 + Math.floor(r() * days) }, { data: { tpl: tpl.id }, ...(tpl.where.startsWith('c:') ? { actors: [tpl.where.slice(2)] } : {}) }); // (a person's own happening is of that person: the headline names them)
     if (mine) e.mine = true;
     out.events.push(e);
     cd[tpl.id] = turn;

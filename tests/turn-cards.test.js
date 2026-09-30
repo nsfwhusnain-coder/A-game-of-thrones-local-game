@@ -81,6 +81,16 @@ test('the chronicle and the world log are written in the new words: no engine li
   assert.ok(news.every((l) => !/…/.test(l) && !BAD.some((re) => re.test(l))), 'and no line of the news is cut short or in the ledger\'s words');
 });
 
+test('a succession is not written into the chronicle in the engine\'s words: the op keeps the line as its record, the turn\'s writer tells it', async () => {
+  const { createInitialState, resolveSuccessions } = await import('../public/js/shared/world.js');
+  const s = createInitialState('agot_298', 'stark', { seed: 298 });
+  s.characters[s.houses.braavos.lord].alive = false;
+  const notes = resolveSuccessions(s).filter((n) => n.op === 'succession');
+  assert.equal(notes.length, 1, 'the sealord\'s seat is filled');
+  assert.match(notes[0].text, /^SUCCESSION: the magisters of Braavos choose /, 'the op keeps the engine\'s line');
+  assert.ok(!s.chronicle.some((c) => /SUCCESSION/.test(c.text)), 'the chronicle gets none of it from the engine');
+});
+
 test('an old save renders in the new shape: cards from their title, text and details, and a digest for every turn', async () => {
   const raw = zlib.gunzipSync(fs.readFileSync(path.join(here, 'fixtures', 'saves', 'v2-stark-turn3.json.gz'))).toString('utf8');
   const state = migrateState(JSON.parse(raw));

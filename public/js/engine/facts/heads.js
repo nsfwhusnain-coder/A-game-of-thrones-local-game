@@ -22,6 +22,7 @@ import { friendsOf } from '../knowledge.js';
 import { dateOfDay, longDate } from '../time.js';
 import { pronouns } from '../../shared/people.js';
 import { HAPPENINGS } from '../../../data/happenings.js';
+import { HAP_HEADS } from '../../../data/happening-heads.js';
 
 // ── The tables the scorer shares (18 §3.3) ───────────────────────────────────────────────────────────────────────────
 // `act` is the kind of deed; `patient` and `agent` are paths into the fact ("actors.0", "data.by"): a character or a
@@ -732,7 +733,7 @@ function liegeName(c, f, liege) {
 // A happening or a hook fact carries the id of its template and nothing of its words (the words were made from the dice);
 // what the template was about is the writer's own knowledge, so each is told in a line of its own, and a template the
 // table does not know is told by its kind of news. `{P}` is the place, `{hs}` the house, `{A}` who it is about.
-const TPL = {
+export const TPL = {
   harvest_good: [['A full harvest fills the barns at {P}', 'The fields ripen heavy round {P}'], 'The granaries are filling and the smallfolk have meat on feast days.'],
   m_good_harvest: [['A rich harvest fills the barns at {P}', 'The fields ripen heavy round {P}'], "The steward writes that the tithe barns are full."],
   harvest_bad: [['Blight takes the crops at {P}', 'The harvest fails at {P}'], 'Rot or hail has cost the smallfolk a good part of the harvest.'],
@@ -863,7 +864,7 @@ const fillTpl = (t, f, c) => {
   return cap1(out);
 };
 function happeningHead(f, s, c) {
-  const id = f.data?.tpl; const [heads] = TPL[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor;
+  const id = f.data?.tpl; const [heads] = TPL[id] || HAP_HEADS[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor;
   const t = c.pick(f, heads); return fillTpl(t, f, c);
 }
 function hookHead(f, s, c) {
@@ -1125,7 +1126,7 @@ export const SUM = {
     if (f.thread === 'kings_ride') return sentences("The King's progress is on the road, and the whole realm watches it pass".replace("The King's progress", 'The royal progress'));
     return sentences('The ravens carry the word across the realm');
   },
-  happening: (f, s, c) => { const id = f.data?.tpl; const [, sum] = TPL[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor; return sentences(sum); },
+  happening: (f, s, c) => { const id = f.data?.tpl; const [, sum] = TPL[id] || HAP_HEADS[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor; return sentences(sum); },
   hook: (f, s, c) => { const e = HOOK[f.data?.hook]; return e ? sentences(e[1]) : ''; },
   behaviour: () => '',
   weather: () => '',
