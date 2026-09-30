@@ -1286,3 +1286,39 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **The ears run in the page, on the CPU** (WebAssembly, never WebGPU; `ui/ears-worker.js`), with the runtime vendored (`public/vendor/transformers/`, Apache-2.0, the same version as the voices' runtime) and the model from
   `npm run fetch-ears` or, once, the hub. The recording is decoded, written down and dropped; `ears.js` has no network call (a test holds it to that). Single-threaded (the page is not cross-origin isolated): about 3.5 s for 9 s of speech.
 - **Spoken words wait in the box** for the lord to read and press the quill, rather than being sent: a misheard word must not become an order unseen.
+
+## D-082 · 2026-09-30 · The State of the Realm as built (WP R4 + R6)
+
+- **The words are the engine's** (`engine/realm/notes.js`), made from the displayed cells and the observed series of each row and from the wars and hosts the viewer knows: a house's word is rising, falling or steady only when
+  the Power series says so on two turns running (`direction`), "seems" for a house known by reports; a flag has its reason in plain words; a war's movement is `warMomentum` of the war's score series, and only for a war the viewer's
+  own house or realm is in (`sideOf`) — the score of any other war is never read. `state.realmStats.wars` keeps each live war's score weekly (24 points), invariant 12 checks it, and an ended war is forgotten.
+- **"Where to focus" is the server's** (`game.realmFocus`, not the view function): facts about the viewer's own house that carry a verb and an order, kept only if `optionsFor` for the player's lord offers the verb — the
+  legality the minds and the order interpreter answer to — three at most. The button writes the order into the box (`toast`s that it did) and sends nothing.
+- **The window:** the Realm door opens the ledger; the old own-house page is its "Your house" tab (the portraits, the family tree and the court actions are untouched). The page is drawn by a pure function of the view (`realm-view.js`),
+  so a test runs it on hostile names; every name and line the server sent goes through `esc`. Bands are written in k (`≈ 17k–100k`), people in k or m. The lord's last choices (lens, rows, window, sort, columns) are kept in `localStorage` (`wc.ledger`), never the selected house.
+- **Not built:** `banners_called` and `great_debt` facts, a war's holdings note, the Neighbours chip, the wide-window "steps aside" behaviour of GDD 17 §2.9 (the window only moves the map's chip and the sheets), and the quiet pip on the Realm door when a word turns.
+
+## D-083 · 2026-09-30 · The minds and the council read the same numbers (WP R5)
+
+- **One source, the house's own eyes.** `realmSummary(state, house)` and `realmBrief(state, house)` call `realmViewFor(state, house, { scope: 'great' })`: a house with no notes of another sees it as the public prior (rank and the map),
+  its own and its sworn houses live, exactly what the estimates give it and no more; figures are written by `engine/realm/words.js`, the same functions the window uses, so the brief and the window agree word for word (a test).
+- **`w.ledger`, not `w.realm`:** `worldView` already has `realm` (the id of the house's realm's head). `ledger` is a lazy getter (about 3 ms; computed only when a trigger, a tree or a dossier reads it).
+- **Triggers:** a hungry house is woken a little sooner (+15, not a trigger), a house that has lost holdings sooner still (+20, a trigger). An empty purse is *not* one: the Crown is always in debt (its canon), and it would wake it every week.
+- **The tree:** a new calm rule `rising_rival` — no war, six thousand dragons, the strongest house rising and no friend: send it a gift — with no dice of its own (the ledger's word is the only reason, and a gift rests a season), and that house
+  joins `send_gift`'s targets only while it is the rising leader. The soak (2 houses × 30 turns) holds every invariant.
+- **The council's dossier** opens with the brief (its snapshot is updated); its existing check (a counsellor's figure must be one the dossier gives) now covers the ledger's figures too.
+- **The tuned model's mind prompt is not changed.** The adapter was taught the dossier without a realm block (D-078); the block is built and tested, and `"mindRealmBrief": true` in config adds it to the call (`realm: true`) for the next tuning round.
+  The engine's own minds (the trees and the order in which lords are woken) read it now.
+- **Not built:** `observe` for houses other than the player's (a mind's house sees the public prior for those it has no notes of); `docs/gdd/04-ai-system.md` §5's one-line pointer.
+
+## D-084 · 2026-09-30 · The headlines suite (WP N10)
+
+- **The writer is the floor, measured every CI run.** `bench/lib/headlines.js` reuses `bundles()` of the narrate suite (twelve-game harness) on four games of its own (`bench/suites/headlines/weeks.json`: Stark, Lannister,
+  Greyjoy, Tyrell × six weeks) and writes every story with `cardOf`. Over 505 stories: scorer 100 %, headline 7.2 words on average (12 at most), no boilerplate, 5.4 distinct verbs per kind of story, 2.5 facts a card.
+- **Gates** (`GATES` in the lib): pass 100 %; mean ≤ 9 and max ≤ 12 words; boilerplate 0; the headline names a person, house or place of its story ≥ 99 % (the scorer's `who` rule); at least two verb forms for a kind seen
+  six times or more (the spec's "distinct-verb ratio ≥ 70 %" is not measurable on a mock's few weeks: a ratio of verbs to stories punishes a kind that is told often; forms per kind does not); facts a card tells ≥ 1.5.
+- **What the bench found and fixed:** a roll-up of one house's lords said "One lords take the road" (a count of houses that was one) and named only a region; now the count is of the facts when one house is behind them and
+  the house is named ("Four Lannister lords take the road across the Westerlands"; "banners" for a house's answering vassals).
+- **CI:** `tests/headlines-bench.test.js` (Stark × six weeks, about 3 s) holds every gate and determinism; the four-game run is `npm run bench -- --suite headlines` (exit code 1 if a gate fails).
+  `scripts/soak.js` already scores every card of a long game; `scripts/headlines-check.js` is the owner's live-model run and is never in CI.
+- **Not built:** a replay suite of recorded model cards (waits for the owner's recordings: `--suite narrate --record` exists for it).

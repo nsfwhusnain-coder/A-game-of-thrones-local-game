@@ -42,6 +42,7 @@ import { makeCommitment, COMMITMENTS, commitmentsTick } from '../public/js/engin
 import { runCall } from './ai/client.js';
 import { sampleRealm } from '../public/js/engine/realm/stats.js';
 import { realmViewFor } from '../public/js/engine/realm/view.js';
+import { optionsFor } from '../public/js/engine/minds/options.js';
 import { scribe as scribeText, scribeOn } from './scribe.js';
 import { playerView } from './view.js';
 import { parseOrder } from './orders/parse.js';
@@ -196,7 +197,16 @@ export function undoDepth(id, state = loadState(id)) {
  */
 export function realmView(id, opts = {}) {
   const state = loadState(id);
-  return realmViewFor(state, state.meta.player, opts);
+  const v = realmViewFor(state, state.meta.player, opts);
+  return { ...v, focus: realmFocus(state, v.facts) };
+}
+/**
+ * "Where to focus" (docs/gdd/19-realm-ledger.md §6.4): the heaviest facts about the player's own house that have an answer, each with the order that answers it — and only
+ * those the player may lawfully do now (`optionsFor`: the same legality the minds and the order interpreter answer to). A button only writes the order into the box; it changes no state.
+ */
+export function realmFocus(state, facts) {
+  const lord = state.houses[state.meta.player]?.lord; const lawful = new Set(lord ? optionsFor(state, lord).options.map((o) => o.verb) : []);
+  return (facts || []).filter((f) => f.verb && f.order && lawful.has(f.verb)).slice(0, 3).map((f) => ({ id: f.id, kind: f.kind, text: f.text, verb: f.verb, order: f.order }));
 }
 
 /** The lord's words mended for the steward (server/scribe.js): the rules, and the small model on the CPU when one is set up. */

@@ -9,6 +9,8 @@
 import { seriesOf } from './stats.js';
 import { estimateOf, realmContext, knownTo, readSworn, learnWars } from './estimate.js';
 import { dayNumber, dateOfDay, dateStr } from '../time.js';
+import { sideOf } from '../politics/war.js';
+import { flagsOf, wordOf, warNote, factsOf } from './notes.js';
 
 /** The columns of each lens (§4.1): the Strength lens leads with Power; every lens's rows are ranked by Power. */
 const LENSES = {
@@ -115,13 +117,26 @@ function trendOf(state, viewer, est, lens, since) {
 
 // ── wars, as the viewer has heard of them (the momentum and the score come with WP R6) ─────────────────────────────────────
 /** From the viewer's own notes of the wars and the war facts it has just heard (estimate.js `learnWars`) — never from the live list. */
-function warsKnown(state, viewer, ctx) {
+function warsKnown(state, viewer, ctx, since = -Infinity, estimate = null) {
   const notes = learnWars(state, viewer, state.knowledge?.[viewer]?.wars ?? null);
   const out = [];
   for (const [id, n] of Object.entries(notes)) {
     if (n.over) continue;
     const A = n.A.filter((h) => knownTo(state, viewer, h, ctx)), D = n.D.filter((h) => knownTo(state, viewer, h, ctx));
-    out.push({ id, name: n.name, sides: { A, D }, you: A.some((h) => ctx.friends.has(h)) ? 'A' : D.some((h) => ctx.friends.has(h)) ? 'D' : null });
+    const war = { id, name: n.name, sides: { A, D }, you: A.some((h) => ctx.friends.has(h)) ? 'A' : D.some((h) => ctx.friends.has(h)) ? 'D' : null };
+    // the movement and the score are the viewer's to read only in a war its own house or realm is in (the score of a war it only hears of is not known to it)
+    const live = (state.wars || []).find((w) => w.id === id);
+    const mine = live && live.status !== 'ended' ? sideOf(state, live, viewer) : null;
+    if (mine) {
+      const m = warNote(state, live, mine, since, n.name);
+      if (m) Object.assign(war, { you: mine, momentum: m.word, standing: m.standing, delta: m.delta });
+    }
+    // the swords each side is known to have, as the ledger shows them (a lower bound where a house is only heard of)
+    if (estimate) {
+      const side = (hs) => { const parts = hs.map((h) => estimate(h).cells.swords); return parts.length ? pooled(parts, { mark: '—' }) : { mark: '—' }; };
+      war.strength = { A: side(A), D: side(D) };
+    }
+    out.push(war);
   }
   return out.sort((a, b) => (a.id < b.id ? -1 : 1));
 }
@@ -177,10 +192,20 @@ export function realmViewFor(state, viewer, opts = {}) {
     idx.forEach((i, n) => { shown[i][f].rank = rk[n].rank; if (rk[n].tied) shown[i][f].tied = true; });
   });
 
-  const rows = all.map((r, i) => ({
-    house: r.id, lord: houses[r.id].lord ? state.characters?.[houses[r.id].lord]?.name ?? null : null,
-    rank: r.rank ?? null, rankTied: !!r.rankTied, cells: shown[i], trend: trendOf(state, viewer, r.est, lens, since), flags: [],
-  }));
+  // the wars the viewer is in, with their movement: what puts a house on the winning or the losing side of one
+  const wars = warsKnown(state, viewer, ctx, since, estimate);
+  const inWar = new Map(); // house → the movement of a war its side is in, as seen from that house's side
+  for (const w of wars) if (w.momentum) for (const [k, hs] of Object.entries(w.sides)) for (const h of hs) if (!inWar.has(h)) inWar.set(h, { word: k === w.you ? w.momentum : w.momentum === 'gaining' ? 'slipping' : w.momentum === 'slipping' ? 'gaining' : 'holding', name: w.name });
+  const rows = all.map((r, i) => {
+    const trend = trendOf(state, viewer, r.est, lens, since);
+    const ps = seriesFor(state, viewer, r.est, 'power', since); const reported = r.est.kind === 'other';
+    const dir = !reported && ps.length < 2 ? { dir: '—', arrow: '·', seems: false } : direction(ps, ps.slice(0, -1), { field: 'power', reported });
+    const flags = flagsOf({ cells: r.est.cells, holdings: seriesFor(state, viewer, r.est, 'holdings', since), swords: seriesFor(state, viewer, r.est, 'swords', since), war: inWar.get(r.id) || null });
+    const word = wordOf(dir, flags);
+    return { house: r.id, lord: houses[r.id].lord ? state.characters?.[houses[r.id].lord]?.name ?? null : null,
+      rank: r.rank ?? null, rankTied: !!r.rankTied, cells: shown[i], trend: { ...trend, why: word.why }, word, flags };
+  });
+  const going = { rising: rows.filter((r) => r.word.word === 'rising').map((r) => r.house), falling: rows.filter((r) => r.word.word === 'falling').map((r) => r.house) };
 
   // the chronicle of figures: how many samples the truth series has in the window, and when it began
   const S = state.realmStats?.samples || [];
@@ -200,6 +225,6 @@ export function realmViewFor(state, viewer, opts = {}) {
   return {
     asOf: { turn: state.meta.turn, date: dateStr(state.meta.date), day: today },
     window, lens, scope, realm, you: viewer, rows,
-    wars: warsKnown(state, viewer, ctx), facts: [], focus: [], detail,
+    going, wars, facts: factsOf(state, viewer, { rows, wars, ests: estimate }), focus: [], detail,
   };
 }

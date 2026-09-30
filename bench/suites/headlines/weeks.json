@@ -1,0 +1,9 @@
+{
+ "about": "The writer's weeks: four games from four corners of the realm, six weeks each (the first six weeks of the war's opening), played on the mock. Every story of every week is written by the deterministic writer and held to the headline scorer.",
+ "games": [
+  { "id": "stark-north", "house": "stark", "seed": 298, "orders": { "1": ["Call the banners to Winterfell.", "Send Jon Snow to Castle Black."], "3": ["Hold a feast at Winterfell."] }, "tell": [1, 2, 3, 4, 5, 6] },
+  { "id": "lannister-west", "house": "lannister", "seed": 11, "orders": { "1": ["Raise 2000 men at Casterly Rock."], "3": ["Send a raven to King's Landing."] }, "tell": [1, 2, 3, 4, 5, 6] },
+  { "id": "greyjoy-isles", "house": "greyjoy", "seed": 23, "orders": { "2": ["Build ships at Pyke."] }, "tell": [1, 2, 3, 4, 5, 6] },
+  { "id": "tyrell-reach", "house": "tyrell", "seed": 5, "orders": { "1": ["Hold a tourney at Highgarden."], "4": ["Call the banners to Highgarden."] }, "tell": [1, 2, 3, 4, 5, 6] }
+ ]
+}

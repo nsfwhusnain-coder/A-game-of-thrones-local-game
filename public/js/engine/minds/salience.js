@@ -33,6 +33,10 @@ export function scoreActors(state, { player = state.meta.player } = {}) {
     if ((state.post || []).some((x) => x.to === c.id && x.arriveDay != null && x.arriveDay <= today && today - x.arriveDay <= 14)) add(25, 'a raven from the player arrived');
     if (w.liege && w.me.obligations?.levies === 'called') add(15, 'their liege has called the banners');
     if (w.atWar) add(10, 'at war');
+    // what the ledger says of the house (engine/realm: the flags it would read itself): a granary nearly empty, holdings lost (an empty purse is not one: the Crown is always in debt)
+    const flags = w.ledger.flags;
+    if (flags.includes('hungry')) add(15, 'the granaries are nearly empty', false);
+    if (flags.includes('reeling')) add(20, 'holdings have been lost');
     // a great aim of their own (data/goals.js): the story's movers are weighed a little higher
     const great = goalsOf(state, c).find((g) => g.priority >= 3);
     if (great) add(5, `pursues ${great.text.split(/[,:—]/)[0]}`, false);

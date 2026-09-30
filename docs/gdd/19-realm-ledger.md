@@ -1,6 +1,6 @@
 # 19 · The State of the Realm (the realm ledger)
 
-> Status: **R1–R3 implemented (Slice 2)** — the figures, the knowledge filter and `GET /api/games/:id/realm`, as built in
+> Status: **R1–R3 implemented (Slice 2); R4, R5 and R6 implemented (Slice 8, D-082, D-083)** — the figures, the knowledge filter and `GET /api/games/:id/realm`, as built in
 > `public/js/engine/realm/` (see [DECISIONS](DECISIONS.md) D-068–D-071); **R4–R7 proposed**. Sections carry an
 > *Implemented in R1–R3* line where they are built, and say "as built" where the code departs from the first plan.
 > An info view, closed by default, that shows the player where the realm is going: the strengths and
@@ -324,6 +324,10 @@ The rule is one function, `direction(seriesNow, seriesThen)`, used by the table,
 
 ---
 
+*Implemented in R4 and R6 (Slice 8), as built in D-082: `ui/realm.js` (the window), `ui/realm-view.js` and `ui/realm-fmt.js` (the page and how a cell, a line and a word are written — pure, tested),
+`engine/realm/notes.js` (flags, words, facts), `warMomentum` in `engine/politics/war.js`, the war series in `realmStats.wars`, `game.realmFocus` for "where to focus". Departures: the window is 56 rem wide and shows the columns that fit
+(Levies, Men-at-arms, Outgoings, Debt behind "All columns" and in a house's detail); "Show" has no Neighbours; a war's note ("Riverlands: 2 holdings besieged") and the `banners_called` and `great_debt` facts are not built.*
+
 ## 6. What the window shows
 
 ### 6.1 Entry point (closed by default)
@@ -500,6 +504,10 @@ validation problem (the existing repair/fallback path).
 *facts* the viewer's house has heard, the same set `server/minds.js` `knownTo` gives a mind for its own house.
 
 ---
+
+*Implemented in R5 (Slice 8), as built in D-083: `engine/realm/brief.js` (`realmSummary`, `realmBrief`), `engine/realm/words.js` (the one place a figure is written, shared with the window), `worldView(...).ledger` (not `.realm`: that
+name was taken by the realm's top house), the flags in `minds/salience.js`, the `rising_rival` rule and the rising leader among `send_gift`'s targets in `minds/houseways.js` and `minds/options.js`, the brief in `ai/calls/council.js`
+and, behind `"mindRealmBrief": true`, in `ai/calls/mind.js`.*
 
 ## 9. Performance and determinism
 

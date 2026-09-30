@@ -57,6 +57,8 @@ const CALM = [
     (T.pride >= 0.7 && chance(0.5) && f('hold_tourney')) || (T.warmth >= 0.5 && f('hold_feast')) ||
     (T.wits >= 0.6 && prefer(f, 'fund_works', ['market', 'roads', 'harbour', 'granaries', 'walls'])) || f('hold_feast')), () => 'The realm is at peace and your coffers full: a lord is seen to be generous, or builds.'],
   ['envoy', (w, f) => !w.atWar && chance(0.12) && f('send_person'), () => 'A lord keeps his friends close: send one of your household to their court.'],
+  // the strongest house is rising and is no friend: a gift, before it looks this way (no dice: the ledger's word is the only reason, and a gift rests a season)
+  ['rising_rival', (w, f) => !w.atWar && w.ledger.risingLeader && w.gold >= 6000 && f('send_gift', (p) => p.target === w.state.houses[w.ledger.risingLeader]?.lord), (w) => `House ${w.state.houses[w.ledger.risingLeader]?.name}, the strongest you know, is rising and is no friend of yours: a gift now costs less than its enmity later.`],
 ];
 // a lord works at what they want when nothing presses (engine/minds/goals.js): the first lawful next step of their
 // most pressing goal

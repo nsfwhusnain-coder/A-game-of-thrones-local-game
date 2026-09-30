@@ -329,6 +329,9 @@ player's) and `MATURITY` (Book / Restrained, chosen on the begin screen, carried
 prompt's settings). The narration, audience, letter, council and memory validators read the same words.
 `tests/style.test.js`.
 
+*Implemented in N10: the headlines suite holds the writer to the rules above over four games × six weeks in CI (`tests/headlines-bench.test.js`), and a roll-up of one house's lords names the house
+("Four Lannister lords take the road across the Westerlands"), never a count of houses that is one.*
+
 ## 9. Anachronism guard
 
 `data/anachronisms.js`: phrases the narrator/audience/letter validators reject **unless** the named fact has happened:

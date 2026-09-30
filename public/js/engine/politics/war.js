@@ -38,6 +38,19 @@ export function sideOf(state, w, house) {
 }
 /** The score as one side sees it. */
 export const scoreFor = (w, side) => (side === 'A' ? 1 : -1) * (w.score || 0);
+/**
+ * How a war has moved for one side over a window (docs/gdd/19-realm-ledger.md §6.2): `series` is `[[day, score]]` (the attackers' point of view, as the truth series keeps it),
+ * `side` 'A' or 'D', `since` the window's first day. `delta` is the score now less the score at the window's start (a war begins level, so a war begun inside it starts from 0);
+ * the word follows the delta: gaining at +8 or more, slipping at −8 or less, else holding; `standing` is where the score itself stands (±10 either way is leading or trailing).
+ * Null when the war has no series. Pure.
+ */
+export function warMomentum(series, side, since = -Infinity) {
+  if (!series?.length || (side !== 'A' && side !== 'D')) return null;
+  const sign = side === 'A' ? 1 : -1; const now = sign * series.at(-1)[1];
+  let then = 0; for (const [d, v] of series) if (d <= since) then = sign * v;
+  const delta = now - then;
+  return { now, delta, word: delta >= 8 ? 'gaining' : delta <= -8 ? 'slipping' : 'holding', standing: now >= 10 ? 'leading' : now <= -10 ? 'trailing' : 'level' };
+}
 /** Who answers for a side: its first house's lord (the war's leader on that side). */
 export const leaderOf = (w, side) => (side === 'A' ? w.attackers[0] : w.defenders[0]);
 

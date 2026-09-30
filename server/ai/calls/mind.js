@@ -16,6 +16,7 @@ import { goalsOf } from '../../../public/js/engine/minds/goals.js';
 import { VOICES } from '../../../public/data/voices.js';
 import { system } from '../context/primer.js';
 import { promisesOf, promiseText } from '../../../public/js/engine/politics/commitments.js';
+import { realmBrief } from '../../../public/js/engine/realm/brief.js';
 
 const n = (x) => Math.round(Number(x) || 0).toLocaleString('en-GB');
 const SCALE = [['courage', 'courage'], ['wits', 'wits'], ['guile', 'guile'], ['pride', 'pride'], ['volatility', 'temper'], ['warmth', 'warmth'], ['honesty', 'honesty'], ['ambition', 'ambition']];
@@ -48,7 +49,8 @@ function targetEnum(state, ids) {
 export default {
   kind: 'mind',
   fixtureArgs: () => ({ actor: 'tywin_lannister' }),
-  context(state, { actor, known = [], memory = '', except = [] } = {}) {
+  // `realm`: also tell the lord how the realm stands as his house knows it (engine/realm/brief.js). Off unless config says `"mindRealmBrief": true`: the tuned model was taught the dossier without it (D-083)
+  context(state, { actor, known = [], memory = '', except = [], realm = false } = {}) {
     const c = state.characters[actor]; if (!c) throw new Error(`no such person: ${actor}`);
     const opts = optionsFor(state, actor, { except }); const w = opts.view;
     const tree = treeChoice(state, actor, opts);
@@ -77,6 +79,7 @@ export default {
       dossier: [
         `DATE: ${dateStr(state.meta.date)}. ${String(state.world?.season || 'summer').replace(/^./, (x) => x.toUpperCase())}.`,
         `YOU ARE: ${c.name} [${c.id}]${c.title ? `, ${c.title}` : ''}${c.age ? `, ${c.age}` : ''}. ${h.regent === c.id ? 'Regent' : 'Head'} of House ${h.name}. At ${whereabouts(state, c).text}.`,
+        realm ? `THE REALM AS YOUR HOUSE KNOWS IT:\n${realmBrief(state, c.house).text}` : null,
         `YOUR NATURE: ${SCALE.map(([k, word]) => `${word} ${Math.round((T[k] ?? 0.5) * 10)}`).join(', ')}.${T.sway ? ` Swayed by: ${Object.entries(T.sway).filter(([, v]) => v).map(([k]) => k).join(', ') || 'little'}.` : ''}`,
         wants.length ? `WHAT YOU WANT: ${wants.join(' — ')}` : null,
         `YOUR STRENGTH: coin ~${n(w?.gold)} dragons; levies ~${n(w?.levies)} uncalled; men-at-arms ${n(w?.menAtArms)}${w?.hosts.length ? `; hosts: ${w.hosts.map((a) => `${a.id} "${a.name}" ${n(a.men)}${a.at ? ` at ${state.holdings[a.at]?.name || a.at}` : ' in the field'}${a.march ? ` (marching)` : ''}`).join('; ')}` : '; no host in the field'}.`,
