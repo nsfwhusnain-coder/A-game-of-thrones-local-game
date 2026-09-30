@@ -35,6 +35,7 @@ import { TABS, tabTarget } from './hud.js';
 import { peopleSections, conditionOf } from './people.js';
 import { treeOf, treeHtml } from './tree.js';
 import { promiseBookHtml } from './promises.js';
+import { rememberOpener, restoreOpener } from './opener.js';
 import { icon } from './icons.js';
 
 // Two windows, each with tabs (GDD 17 §4 U4): the Realm (the State of the Realm, your house, the hosts, the treasury, the dealings of the houses) and
@@ -50,6 +51,7 @@ export function openWindow(name, arg) {
   if (app.win === door && (tab == null || app.tab === tab)) return closeWindow();
   app.closeCard?.(); if (app.sheet) closeSheet();
   app.back = null;
+  if (!app.win) rememberOpener('window');
   const first = app.win !== door;
   app.win = door; app.tab = tab || (first ? TABS[door][0].id : app.tab); app.winArg = arg; sfx('open');
   if (door === 'realm' && app.tab === 'ledger') app.coachDone?.('realm');
@@ -57,7 +59,7 @@ export function openWindow(name, arg) {
   $('#window').setAttribute('aria-hidden', 'false');
   renderWindow();
 }
-export function closeWindow(quiet = false) { if (app.win && !quiet) sfx('close'); app.win = null; wideWindow(false); $('#window').classList.add('hidden'); $('#window').setAttribute('aria-hidden', 'true'); }
+export function closeWindow(quiet = false) { const was = app.win; if (app.win && !quiet) sfx('close'); app.win = null; wideWindow(false); $('#window').classList.add('hidden'); $('#window').setAttribute('aria-hidden', 'true'); if (was && !quiet) restoreOpener('window'); }
 export function renderWindow() {
   if (!app.win || !app.state) return;
   const body = $('#win-body'); const key = `${app.win}/${app.tab}`;
@@ -202,7 +204,7 @@ function companiesHtml(s, p) {
     const act = by === p ? `<button class="btn small" data-dismiss-company="${id}">Pay off</button>` : !by || C.turncoat ? `<button class="btn small" data-hire-company="${id}" data-offer="${by ? Math.ceil(host.contract.price * 1.5) : ''}">Hire</button>` : '';
     return `<div class="row"><div class="grow"><div class="title">${esc(C.name.replace(/^./, (x) => x.toUpperCase()))} <span class="muted">~${fmt(men)} swords</span></div><div class="sub">${status}</div></div>${act}</div>`;
   });
-  return rows.length ? `<div class="section"><h4>Free companies</h4>${rows.join('')}<p class="muted" style="font-size:0.78rem">A moon paid on signing and each moon after; miss a moon's pay and the company is gone.</p></div>` : '';
+  return rows.length ? `<div class="section"><h4>Free companies</h4>${rows.join('')}<p class="muted" style="font-size:max(0.78rem,12px)">A moon paid on signing and each moon after; miss a moon's pay and the company is gone.</p></div>` : '';
 }
 document.addEventListener('click', (e) => {
   const h = e.target.closest('[data-hire-company]'); if (h) doVerb('hire_company', { company: h.dataset.hireCompany, ...(h.dataset.offer ? { offer: Number(h.dataset.offer) } : {}) }, { after: () => renderWindow() });
@@ -237,7 +239,7 @@ function moonAccounts(h) {
   return `<div class="section"><h4>The last ${days} days, all told</h4><table class="ledger">${inc.map((x) => row(x, 1)).join('')}${exp.map((x) => row(x, -1)).join('')}
     <tr class="sum"><td>Net</td><td class="n">${tot(inc) - tot(exp) >= 0 ? '+' : ''}${fmt(Math.round(tot(inc) - tot(exp)))}</td></tr>
     <tr><td>Granaries</td><td class="n">${foodFrom != null && food != null ? `${foodFrom} → ${food} moons` : ''}</td></tr></table>
-    <p class="muted" style="font-size:0.78rem">Levies cost bread, not wages: a host in the field eats from your granaries and leaves its fields untended. Men-at-arms and sellswords are paid in gold.</p></div>`;
+    <p class="muted" style="font-size:max(0.78rem,12px)">Levies cost bread, not wages: a host in the field eats from your granaries and leaves its fields untended. Men-at-arms and sellswords are paid in gold.</p></div>`;
 }
 // Trade: agreements lift what your markets and ports earn; embargoes and wars choke them
 function tradeSection(s, p) {
@@ -245,7 +247,7 @@ function tradeSection(s, p) {
   const m = tradeModifier(s, p);
   const partners = Object.values(s.houses).filter((h) => h.id !== p && ['paramount', 'city_state', 'crown', 'major'].includes(h.rank) && !pacts.some((x) => [x.a, x.b].includes(h.id))).sort((a, b) => a.name.localeCompare(b.name));
   return `<div class="section"><h4>Trade</h4>
-    <div class="muted" style="font-size:0.82rem">Your trade runs at <b style="color:${m >= 1 ? '#a8e08a' : '#ec9a8a'}">${Math.round(m * 100)}%</b> — each agreement +10%, each embargo −18%, each war −10%.</div>
+    <div class="muted" style="font-size:max(0.82rem,12px)">Your trade runs at <b style="color:${m >= 1 ? '#a8e08a' : '#ec9a8a'}">${Math.round(m * 100)}%</b> — each agreement +10%, each embargo −18%, each war −10%.</div>
     ${pacts.map((x) => { const o = s.houses[x.a === p ? x.b : x.a]; return `<div class="row clickable" data-house="${o.id}">${sig(o)}<div class="grow"><div class="title">${x.type === 'trade' ? 'Trade agreement' : 'Embargo'} with House ${esc(o.name)}</div><div class="sub">${esc(x.terms || '')}</div></div><span class="pill ${x.type === 'trade' ? '' : 'bad'}">${x.type === 'trade' ? '+10%' : '−18%'}</span></div>`; }).join('') || '<div class="muted">No agreements yet.</div>'}
     <div class="row-actions" style="margin-top:0.4rem"><select id="trade-with">${partners.map((h) => `<option value="${h.id}">House ${esc(h.name)}</option>`).join('')}</select><button class="btn small" id="trade-go">Seek a trade agreement</button></div></div>`;
 }
@@ -257,16 +259,16 @@ function customsSection(s, p) {
   if (!rules.length) return '';
   const KIND = { income: ['+', 'dragons a moon'], expense: ['−', 'dragons a moon'], food: ['', 'moons of stores'], unrest: ['', 'unrest on every holding'], prosperity: ['', 'prosperity on every holding'], levies: ['', 'men a moon'], var: ['', ''] };
   return `<div class="section"><h4>Customs of your realm</h4>
-    <p class="muted" style="font-size:0.8rem;margin:-0.2rem 0 0.5rem">Not laws of the world, but of <i>your</i> world — things the chronicle raised, which your stewards now reckon with every moon.</p>
+    <p class="muted" style="font-size:max(0.8rem,12px);margin:-0.2rem 0 0.5rem">Not laws of the world, but of <i>your</i> world — things the chronicle raised, which your stewards now reckon with every moon.</p>
     ${rules.map((r) => {
       const [sign, unit] = KIND[r.kind] || ['', ''];
       const vals = Object.entries(r.values || {}).map(([k, v]) => `${esc(k.replace(/_/g, ' '))} <b style="color:var(--gold2)">${fmt(Math.round(v))}</b>`).join(' · ');
       return `<div class="proj"><div style="display:flex;justify-content:space-between;gap:0.6rem;align-items:baseline">
-        <b>${esc(r.name)}</b><span class="muted" style="font-size:0.78rem;white-space:nowrap">${sign}${unit ? esc(unit) : esc(r.kind)}</span></div>
-        ${r.note ? `<div class="muted" style="font-size:0.82rem">${esc(r.note)}</div>` : ''}
-        ${vals ? `<div style="font-size:0.82rem;margin-top:0.2rem">${vals}</div>` : ''}
-        ${r.last != null ? `<div class="muted" style="font-size:0.78rem">Last moon: ${r.kind === 'income' || r.kind === 'expense' ? `${sign}${fmt(Math.abs(Math.round(r.last)))} dragons` : `${Math.round(r.last * 10) / 10}`}</div>` : ''}
-        <div class="muted" style="font-size:0.72rem;margin-top:0.25rem;font-family:var(--mono,monospace);opacity:0.55" title="how your stewards reckon it">${esc(r.formula)}</div>
+        <b>${esc(r.name)}</b><span class="muted" style="font-size:max(0.78rem,12px);white-space:nowrap">${sign}${unit ? esc(unit) : esc(r.kind)}</span></div>
+        ${r.note ? `<div class="muted" style="font-size:max(0.82rem,12px)">${esc(r.note)}</div>` : ''}
+        ${vals ? `<div style="font-size:max(0.82rem,12px);margin-top:0.2rem">${vals}</div>` : ''}
+        ${r.last != null ? `<div class="muted" style="font-size:max(0.78rem,12px)">Last moon: ${r.kind === 'income' || r.kind === 'expense' ? `${sign}${fmt(Math.abs(Math.round(r.last)))} dragons` : `${Math.round(r.last * 10) / 10}`}</div>` : ''}
+        <div class="muted" style="font-size:max(0.72rem,12px);margin-top:0.25rem;font-family:var(--mono,monospace);opacity:0.55" title="how your stewards reckon it">${esc(r.formula)}</div>
       </div>`;
     }).join('')}</div>`;
 }
@@ -284,8 +286,8 @@ function economy() {
   const season = SEASONS[s.world?.season || 'summer'];
   return `
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:1rem">
-      <div><div class="muted" style="font-size:0.75rem">TREASURY</div><div class="big-num">${fmt(h.figures.treasury.v)} <small style="font-size:0.9rem">gold dragons</small></div>
-      <div class="muted" style="font-size:0.78rem">${esc(h.figures.treasury.src)} · ${esc(h.figures.treasury.asOf)}${h.figures.debt?.v ? ` · <span style="color:#ec9a8a">debt ${fmt(h.figures.debt.v)}</span>` : ''}</div></div>
+      <div><div class="muted" style="font-size:max(0.75rem,12px)">TREASURY</div><div class="big-num">${fmt(h.figures.treasury.v)} <small style="font-size:max(0.9rem,12px)">gold dragons</small></div>
+      <div class="muted" style="font-size:max(0.78rem,12px)">${esc(h.figures.treasury.src)} · ${esc(h.figures.treasury.asOf)}${h.figures.debt?.v ? ` · <span style="color:#ec9a8a">debt ${fmt(h.figures.debt.v)}</span>` : ''}</div></div>
       ${steward ? `<button class="btn small" data-talk="${steward.id}">Ask ${esc(steward.name.split(' ').slice(-1)[0])}</button>` : ''}
     </div>
     ${sparkline(hist)}
@@ -294,7 +296,7 @@ function economy() {
       <span class="k">Hosts & fleets</span><span>−${fmt(pr.upkeep)}</span><span class="k">Men-at-arms & guard</span><span>−${fmt(pr.household)}</span><span class="k">Court</span><span>−${fmt(pr.court)}</span>
       ${pr.owed ? `<span class="k">Owed to your liege</span><span>−${fmt(pr.owed)}</span>` : ''}${pr.interest ? `<span class="k">Interest</span><span>−${fmt(pr.interest)}</span>` : ''}${pr.projects ? `<span class="k">Works</span><span>−${fmt(pr.projects)}</span>` : ''}
       <span class="k"><b>Net</b></span><span><b>${fmt(pr.low)} … ${fmt(pr.high)}</b> <span class="muted">(luck, harvests and loyalty decide)</span></span></div>
-      <p class="muted" style="font-size:0.8rem">${esc(season.label)}: ${esc(s.world?.seasonNote || season.note)}</p></div>
+      <p class="muted" style="font-size:max(0.8rem,12px)">${esc(season.label)}: ${esc(s.world?.seasonNote || season.note)}</p></div>
     <div class="section"><h4>Taxation</h4><div class="tpl-grid">${Object.entries(TAX_LEVELS).map(([k, t]) => `<div class="tpl" data-tax="${k}" style="${k === tax ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t.label}${k === tax ? ' ✓' : ''}</b><div class="c">${esc(t.desc)}</div></div>`).join('')}</div></div>
     ${h.liege && s.houses[h.liege] ? (() => { const cur = h.obligations?.tribute || 'paying'; const D = { paying: ['Pay in full', 'What is owed, on time. Your liege is content.'], late: ['Pay late', 'Excuses and partial sums. Patience wears thin.'], withholding: ['Withhold', 'Keep the gold. Your liege will notice, and will act.'] }; return `<div class="section"><h4>Dues to House ${esc(s.houses[h.liege].name)}</h4><div class="tpl-grid">${Object.entries(D).map(([k, [t, d]]) => `<div class="tpl" data-dues="${k}" style="${k === cur ? 'border-color:var(--gold2);background:var(--panel2)' : ''}"><b>${t}${k === cur ? ' ✓' : ''}</b><div class="c">${d}</div></div>`).join('')}</div></div>`; })() : ''}
     ${customsSection(s, p)}
@@ -303,8 +305,8 @@ function economy() {
     ${L ? `<div class="section"><h4>Last accounts — ${esc(L.date)} (${L.days} day${L.days > 1 ? 's' : ''})${L.reporter ? ', by ' + esc(L.reporter) : ''}</h4><table class="ledger">
       ${L.lines.map((l) => `<tr class="${l.kind === 'income' ? 'inc' : 'exp'} ${l.note && /withheld|late|short/.test(l.note) ? 'warn' : ''}"><td>${esc(l.label)}${l.note ? `<div class="note">${esc(l.note)}${l.expected ? ` — expected ~${fmt(l.expected)}` : ''}</div>` : ''}${l.detail ? `<div class="note">${l.detail.filter((d) => d.amount).slice(0, 6).map((d) => `${esc(d.label)} ${fmt(d.amount)}${d.note ? ' (' + esc(d.note) + ')' : ''}`).join(' · ')}</div>` : ''}</td><td class="n">${l.kind === 'income' ? '+' : '−'}${fmt(l.amount)}</td></tr>`).join('')}
       <tr class="sum"><td>Net</td><td class="n">${L.net >= 0 ? '+' : ''}${fmt(L.net)}</td></tr></table></div>` : '<p class="muted">No accounts yet — the first reckoning comes when time advances.</p>'}
-    <div class="section"><h4>Works & projects</h4>${(() => { const act = projs.filter((x) => x.status === 'active'); if (!act.length) return ''; const left = act.reduce((a, x) => a + (x.remaining || 0), 0); const perMoon = act.reduce((a, x) => a + (x.perMonth || 0), 0); return `<div class="muted" style="font-size:0.85rem;margin-bottom:0.4rem">Committed: <b style="color:var(--gold2)">${fmt(Math.round(left))}</b> dragons still to spend on ${act.length} work${act.length > 1 ? 's' : ''} — about ${fmt(Math.round(perMoon))} a moon.</div>`; })()}${projs.filter((x) => x.status === 'active').map((x) => `<div class="proj"><div style="display:flex;justify-content:space-between"><b>${esc(x.name)}</b><button class="btn small danger" data-cancel-proj="${x.id}">Cancel</button></div><div class="muted" style="font-size:0.78rem">${fmt(Math.round(x.cost - x.remaining))} / ${fmt(x.cost)} gd · ${Math.round(x.monthsLeft * 10) / 10} moons left</div>${meter(100 - (x.monthsLeft / x.months) * 100)}</div>`).join('') || '<div class="muted" style="font-size:0.85rem">Nothing under way.</div>'}
-      ${projs.filter((x) => x.status === 'complete').slice(-3).map((x) => `<div class="muted" style="font-size:0.8rem">✓ ${esc(x.name)}</div>`).join('')}
+    <div class="section"><h4>Works & projects</h4>${(() => { const act = projs.filter((x) => x.status === 'active'); if (!act.length) return ''; const left = act.reduce((a, x) => a + (x.remaining || 0), 0); const perMoon = act.reduce((a, x) => a + (x.perMonth || 0), 0); return `<div class="muted" style="font-size:max(0.85rem,12px);margin-bottom:0.4rem">Committed: <b style="color:var(--gold2)">${fmt(Math.round(left))}</b> dragons still to spend on ${act.length} work${act.length > 1 ? 's' : ''} — about ${fmt(Math.round(perMoon))} a moon.</div>`; })()}${projs.filter((x) => x.status === 'active').map((x) => `<div class="proj"><div style="display:flex;justify-content:space-between"><b>${esc(x.name)}</b><button class="btn small danger" data-cancel-proj="${x.id}">Cancel</button></div><div class="muted" style="font-size:max(0.78rem,12px)">${fmt(Math.round(x.cost - x.remaining))} / ${fmt(x.cost)} gd · ${Math.round(x.monthsLeft * 10) / 10} moons left</div>${meter(100 - (x.monthsLeft / x.months) * 100)}</div>`).join('') || '<div class="muted" style="font-size:max(0.85rem,12px)">Nothing under way.</div>'}
+      ${projs.filter((x) => x.status === 'complete').slice(-3).map((x) => `<div class="muted" style="font-size:max(0.8rem,12px)">✓ ${esc(x.name)}</div>`).join('')}
       <h4 style="margin-top:0.8rem">Fund new works</h4>
       <label>At</label><select id="proj-hold">${holdings.map((x) => `<option value="${x.id}"${x.id === app.projHold ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
       <div class="tpl-grid" style="margin-top:0.4rem">${PROJECT_TEMPLATES.map((t) => `<div class="tpl" data-proj="${t.key}"><b>${t.icon} ${esc(t.name)}</b><div class="c">${fmt(t.cost)} gd · ${t.months} moons</div><div class="c">${esc(t.desc)}</div></div>`).join('')}</div></div>
@@ -341,7 +343,7 @@ function intrigue() {
       <label>Target</label><select id="plot-target">${houses.map((h) => `<option value="${h.id}">House ${esc(h.name)}</option>`).join('')}</select>
       <label>Means & budget</label><input class="input" id="plot-means" placeholder="e.g. 2,000 dragons, a trusted sellsword, a letter forged in Lord Tywin's hand">
       <div class="row-actions"><button class="btn primary" id="plot-go">🗡 Set it in motion</button></div>
-      <p class="muted" style="font-size:0.8rem">Planting spies and uncovering secrets is your spymaster's work, settled at once and paid for now. Every other scheme becomes a secret order that unfolds as time advances — it may take months, fail, or be discovered.</p></div>
+      <p class="muted" style="font-size:max(0.8rem,12px)">Planting spies and uncovering secrets is your spymaster's work, settled at once and paid for now. Every other scheme becomes a secret order that unfolds as time advances — it may take months, fail, or be discovered.</p></div>
     ${shadowsHtml(s)}
     <div class="section"><h4>Whispers & intrigue</h4>${recent.map((e) => `<div class="event"><div class="et">${esc(e.title)}</div><div class="eb">${esc(e.text)}</div><div class="meta">${esc(e.date)}</div></div>`).join('') || '<div class="muted">Nothing yet.</div>'}</div>`;
 }
@@ -357,7 +359,7 @@ function shadowsHtml(s) {
   const matters = THREADS.filter((t) => (s.plots.stages?.[t.id] || 0) > 0).map((t) => {
     const i = s.plots.stages[t.id]; const lastLog = (s.plots.log || []).filter((l) => l.thread === t.id).at(-1);
     const st = i >= t.stages.length ? ['done', 'Resolved'] : ['underway', 'Unfolding'];
-    return `<div class="errand"><span class="ost ${st[0]}">${st[1]}</span><div class="grow"><b>${esc(t.name)}</b>${lastLog?.title ? `<div class="muted" style="font-size:0.8rem">Last: ${esc(lastLog.title)}</div>` : ''}</div></div>`;
+    return `<div class="errand"><span class="ost ${st[0]}">${st[1]}</span><div class="grow"><b>${esc(t.name)}</b>${lastLog?.title ? `<div class="muted" style="font-size:max(0.8rem,12px)">Last: ${esc(lastLog.title)}</div>` : ''}</div></div>`;
   }).join('');
   return `${matters ? `<div class="section"><h4>Great matters</h4>${matters}</div>` : ''}<div class="section"><h4>Shadows over the realm</h4><div class="threats">${meters}</div></div>
     ${log.length ? `<div class="section"><h4>What has come to pass</h4><ol class="saga">${log.map((l) => `<li><span class="saga-date">${esc(thread[l.thread] || '')}</span><b>${esc(l.title || '')}</b></li>`).join('')}</ol></div>` : ''}`;
@@ -480,11 +482,12 @@ document.addEventListener('click', (e) => {
 export function openSheet(kind, id) {
   app.closeCard?.();
   if (app.win) { app.back = { win: app.win, tab: app.tab }; closeWindow(true); }
+  if (!app.sheet) rememberOpener('sheet');
   app.sheet = { kind, id };
   const el = $('#sheet'); el.classList.remove('hidden'); el.setAttribute('aria-hidden', 'false'); el.classList.add('solo');
   renderSheet();
 }
-export function closeSheet() { app.sheet = null; app.back = null; $('#sheet').classList.add('hidden'); $('#sheet').setAttribute('aria-hidden', 'true'); }
+export function closeSheet() { const was = app.sheet; app.sheet = null; app.back = null; $('#sheet').classList.add('hidden'); $('#sheet').setAttribute('aria-hidden', 'true'); if (was) restoreOpener('sheet'); }
 function backFromSheet() { const b = app.back; if (!b) return; closeSheet(); openWindow(b.win, b.tab); }
 document.addEventListener('click', (e) => { if (e.target.closest('[data-sheet-back]')) backFromSheet(); });
 export function renderSheet() {
@@ -533,13 +536,13 @@ function characterSheet(id) {
     </div></div>
     <div class="skills">${SKILL_NAMES.map((n, i) => `<div class="sk" title="${n}"><div class="i">${SKILL_ICONS[i]}</div><div class="n">${sk[i]}</div><div class="l">${n.slice(0, 4).toUpperCase()}</div></div>`).join('')}</div>
     <div>${traits.map((t) => `<span class="pill trait">${esc(t)}</span>`).join('')}</div>
-    ${c.bio ? `<p style="font-size:0.92rem;line-height:1.45">${esc(c.bio)}</p>` : ''}
-    ${c.secret && (mine || c.secretKnown) ? `<p style="font-size:0.88rem;border-left:3px solid var(--red);padding-left:0.5rem">🗝 <b>Secret:</b> <i>${esc(c.secret)}</i></p>` : (c.secretHidden || c.secret) && !mine ? '<p class="muted" style="font-size:0.8rem">🔒 There is more to this one than meets the eye.</p>' : ''}
+    ${c.bio ? `<p style="font-size:max(0.92rem,12px);line-height:1.45">${esc(c.bio)}</p>` : ''}
+    ${c.secret && (mine || c.secretKnown) ? `<p style="font-size:max(0.88rem,12px);border-left:3px solid var(--red);padding-left:0.5rem">🗝 <b>Secret:</b> <i>${esc(c.secret)}</i></p>` : (c.secretHidden || c.secret) && !mine ? '<p class="muted" style="font-size:max(0.8rem,12px)">🔒 There is more to this one than meets the eye.</p>' : ''}
     ${natureHtml(c)}
     ${!mine && c.alive && c.house !== p ? dispositionHtml(id) : ''}
     <h4>Family <button class="btn small" data-tree="${c.id}" style="float:right">Family tree</button></h4>
     <div class="family">${famMember(father, 'Father')}${famMember(mother, 'Mother')}${famMember(spouse, 'Spouse')}${famMember(betrothed, 'Betrothed')}${kids.map((k) => famMember(k, 'Child')).join('')}${sibs.slice(0, 8).map((k) => famMember(k, 'Sibling')).join('')}</div>
-    ${c.memories?.length ? `<h4>Remembers</h4>${c.memories.slice(-5).map((m) => `<div class="muted" style="font-size:0.82rem">• ${esc(m)}</div>`).join('')}` : ''}
+    ${c.memories?.length ? `<h4>Remembers</h4>${c.memories.slice(-5).map((m) => `<div class="muted" style="font-size:max(0.82rem,12px)">• ${esc(m)}</div>`).join('')}` : ''}
     ${c.alive && !isRuler ? `<hr><div class="row-actions">
       <button class="btn primary" data-talk="${c.id}">${together(s, s.characters[player().lord], c) ? '🗣 Speak' : '✉ Send a raven'}</button>
       <button class="btn" data-order-tpl="Summon ${esc(c.name)} to ${esc(s.holdings[player().seat]?.name || 'my court')}. ">Summon</button>
@@ -556,8 +559,8 @@ function natureHtml(c) {
   if (!c.alive) return '';
   const { tags, sway } = natureTags(temperament(c)); const dm = DEMEANOURS[c.id];
   const cur = voiceSettings().overrides[c.id] || '';
-  return `<h4>Nature</h4><div>${tags.map((t) => `<span class="pill trait">${esc(t)}</span>`).join('')}${sway.length ? `<span class="muted" style="font-size:0.8rem"> moved by ${esc(sway.join(', '))}</span>` : ''}</div>
-    ${dm ? `<div class="muted" style="font-size:0.82rem;margin-top:0.2rem"><i>${esc(dm.reg)} — ${esc(dm.tics)}</i></div>` : ''}
+  return `<h4>Nature</h4><div>${tags.map((t) => `<span class="pill trait">${esc(t)}</span>`).join('')}${sway.length ? `<span class="muted" style="font-size:max(0.8rem,12px)"> moved by ${esc(sway.join(', '))}</span>` : ''}</div>
+    ${dm ? `<div class="muted" style="font-size:max(0.82rem,15px);margin-top:0.2rem"><i>${esc(dm.reg)} — ${esc(dm.tics)}</i></div>` : ''}
     <div class="voice-pick"><label>Voice</label><select data-voice-pick="${c.id}"><option value="">Their own (${esc(profileFor(c).voice.split('+').map((x) => x.split('*')[0].replace(/^[ab][mf]_/, '')).join(' & '))})</option>${VOICE_CHOICES.map((v) => `<option value="${v}"${cur === v ? ' selected' : ''}>${esc(VOICE_NAMES[v] || v)}</option>`).join('')}</select><button class="btn small" data-voice-hear="${c.id}">🔊 Hear</button></div>`;
 }
 document.addEventListener('change', (e) => {
@@ -580,7 +583,7 @@ function dispositionHtml(id) {
   const tip = (x) => esc(x.factors.map(([l, v]) => `${l}: ${v > 0 ? '+' : ''}${v}`).join('\n') || 'No strong feelings');
   const pill = (label, x) => `<span class="pill" title="${tip(x)}" style="color:${DISP_COLOR[x.word]}">${label}: ${x.word}</span>`;
   const N = { alliance: 'Alliance', marriage: 'Marriage', trade: 'Trade', fealty: 'Fealty' };
-  return `<h4>Disposition toward you</h4><div>${pill('Overall', d)}${Object.entries(d.proposals).filter(([k]) => !(k === 'fealty' && app.state.houses[app.state.characters[id].house]?.liege === app.state.meta.player)).map(([k, x]) => pill(N[k], x)).join('')}</div><div class="muted" style="font-size:0.75rem">Hover for the reasons. Gifts, favours, threats and good arguments can change minds.</div>`;
+  return `<h4>Disposition toward you</h4><div>${pill('Overall', d)}${Object.entries(d.proposals).filter(([k]) => !(k === 'fealty' && app.state.houses[app.state.characters[id].house]?.liege === app.state.meta.player)).map(([k, x]) => pill(N[k], x)).join('')}</div><div class="muted" style="font-size:max(0.75rem,12px)">Hover for the reasons. Gifts, favours, threats and good arguments can change minds.</div>`;
 }
 
 function familyTree(id, { wider = false } = {}) {
@@ -613,7 +616,7 @@ function siegeHtml(s, hd) {
   const p = s.meta.player; const bes = forces(s).filter((a) => a.besieging === hd.id && a.men > 0);
   const R = FORTRESS[hd.id];
   if (!hd.siege && !R) return '';
-  if (!hd.siege) return `<div class="muted" style="font-size:0.85rem;margin-top:0.3rem">${esc([R.noStorm ? 'It cannot be taken by storm' : '', R.needsSea ? 'fed by sea: starved only with a fleet before it' : '', R.mules ? 'fed by the high road until winter' : '', R.camps ? 'rivers on two sides: besiegers must lie in divided camps' : '', R.causeway ? 'from the south, only a causeway leads to it' : ''].filter(Boolean).join('; '))}.</div>`;
+  if (!hd.siege) return `<div class="muted" style="font-size:max(0.85rem,12px);margin-top:0.3rem">${esc([R.noStorm ? 'It cannot be taken by storm' : '', R.needsSea ? 'fed by sea: starved only with a fleet before it' : '', R.mules ? 'fed by the high road until winter' : '', R.camps ? 'rivers on two sides: besiegers must lie in divided camps' : '', R.causeway ? 'from the south, only a causeway leads to it' : ''].filter(Boolean).join('; '))}.</div>`;
   const v = siegeView(s, hd, bes); const by = s.houses[hd.siege.by];
   const ours = bes.some((a) => a.owner === p || a.serving === p);
   return `<h4>The siege</h4><div class="kv"><span class="k">Besieged by</span><span>House ${esc(by?.name || '?')}, ${hd.siege.days} day${hd.siege.days === 1 ? '' : 's'}</span>
@@ -648,14 +651,14 @@ function holdingSheet(id) {
       <div class="s"><div class="k">Prosperity</div><div class="v">${Math.round(hd.prosperity)}</div>${meter(hd.prosperity, '#7fb85a')}</div>
       <div class="s"><div class="k">Unrest</div><div class="v">${Math.round(hd.unrest)}</div>${meter(hd.unrest, '#d0604a')}</div>
       <div class="s"><div class="k">Walls</div><div class="v">${'■'.repeat(fortOf(s, hd))}${'□'.repeat(Math.max(0, 6 - fortOf(s, hd)))}</div></div>
-      <div class="s"><div class="k">Status</div><div class="v" style="font-size:0.9rem">${esc(hd.status)}</div></div>
+      <div class="s"><div class="k">Status</div><div class="v" style="font-size:max(0.9rem,12px)">${esc(hd.status)}</div></div>
       <div class="s"><div class="k">Garrison</div><div class="v">${mine ? '~' + fmt(garrisonOf(s, hd)) : hd.garrison != null ? '~' + fmt(hd.garrison) : '?'}</div></div>
     </div>
     ${siegeHtml(s, hd)}
     <div>${Object.entries(hd.resources || {}).filter(([, v]) => v >= 0.3).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span class="pill" title="${esc(RESOURCES[k]?.desc || '')}">${RESOURCES[k]?.icon || ''} ${esc(RESOURCES[k]?.name || k)} ${v >= 2 ? '●●●' : v >= 1 ? '●●' : '●'}</span>`).join('')}</div>
     ${hd.buildings?.length ? `<div style="margin-top:0.3rem">${hd.buildings.map((b) => `<span class="pill good">${esc(b)}</span>`).join('')}</div>` : ''}
     ${owner.seat === id ? `<h4>${mine ? 'Your' : 'Rumoured'} strength of House ${esc(owner.name)}</h4><div class="kv"><span class="k">Levies</span><span>${fig('levies')}</span><span class="k">Men-at-arms</span><span>${fig('menAtArms')}</span><span class="k">Ships</span><span>${fig('ships')}</span><span class="k">Treasury</span><span>${fig('treasury')} gd</span></div>` : ''}
-    ${hd.notes?.length ? `<h4>Recent</h4>${hd.notes.slice(-4).map((n) => `<div class="muted" style="font-size:0.85rem">${esc(n)}</div>`).join('')}` : ''}
+    ${hd.notes?.length ? `<h4>Recent</h4>${hd.notes.slice(-4).map((n) => `<div class="muted" style="font-size:max(0.85rem,12px)">${esc(n)}</div>`).join('')}` : ''}
     ${(() => { const guests = guestsAt(s, id); const gid = new Set(guests.map((c) => c.id)); const home = here.filter((c) => !gid.has(c.id));
       return `<h4>People here</h4>${home.map((c) => charRow(c)).join('') || '<div class="muted">No one of note.</div>'}${guests.length ? `<h4>Guests at ${esc(hd.name)}</h4>${guests.map((c) => charRow(c)).join('')}` : ''}`; })()}
     ${armies.length ? `<h4>Forces here</h4>${armies.map(armyRow).join('')}` : ''}
@@ -676,7 +679,7 @@ function armySheet(id) {
     return `<div class="detail-hero"><div class="unknown-banner"></div><div><h2>${a.kind === 'fleet' ? '⛵ A fleet' : '⚔ A host'}, unconfirmed</h2><div class="muted">Said to fly the banners of <a href="#" data-house="${h.id}">House ${esc(h.name)}</a></div></div></div>
       <div class="kv"><span class="k">Men</span><span>~${fmt(v.men)}, by report</span><span class="k">Commander</span><span><i>unknown</i></span><span class="k">Riding with it</span><span><i>unknown</i></span>
       <span class="k">Last heard of</span><span>near ${esc(near?.name || '?')}, ${ageText(v.age)}</span><span class="k">Word came by</span><span>${esc(v.source)}</span></div>
-      <p class="muted" style="font-size:0.85rem">No eyes of yours are on this host: it may have moved, grown or dwindled since — or the word may be a lie. Hosts near your lands, your hosts and your allies' are seen as they are. Plant spies in House ${esc(h.name)} (Intrigue) to follow theirs.</p>`;
+      <p class="muted" style="font-size:max(0.85rem,12px)">No eyes of yours are on this host: it may have moved, grown or dwindled since — or the word may be a lie. Hosts near your lands, your hosts and your allies' are seen as they are. Plant spies in House ${esc(h.name)} (Intrigue) to follow theirs.</p>`;
   }
   return `
     <div class="detail-hero"><img class="banner" src="${banner(h, 60, 90)}" style="width:4rem" alt=""><div><h2>${a.kind === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</h2><div class="muted"><a href="#" data-house="${h.id}">House ${esc(h.name)}</a> · ${esc(statusText(s, a))}</div></div></div>
@@ -702,7 +705,7 @@ function armySheet(id) {
       const targets = a.kind === 'fleet' ? [] : Object.values(s.holdings).filter((h) => atWar(s, a.owner, h.owner)).map((h) => ({ h, m: marchDays(a, a.pos, h.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
       // what it is made of (seen hosts only), and the banners in it
       const banners = sworn(a).filter(([, n]) => n > 0).map(([h, n]) => `${esc(s.houses[h]?.name || h)} ${n.toLocaleString('en-GB')}`);
-      return (a.kind !== 'fleet' && (a.owner === p || known.get(a.id)?.known === 'seen') ? `<h4>The host</h4><div class="muted" style="font-size:0.88rem">${esc(unitsText(s, a))}${banners.length ? `<br>Banners: House ${esc(s.houses[a.owner]?.name)}, ${banners.join(', ')}` : ''}</div>` : '')
+      return (a.kind !== 'fleet' && (a.owner === p || known.get(a.id)?.known === 'seen') ? `<h4>The host</h4><div class="muted" style="font-size:max(0.88rem,12px)">${esc(unitsText(s, a))}${banners.length ? `<br>Banners: House ${esc(s.houses[a.owner]?.name)}, ${banners.join(', ')}` : ''}</div>` : '')
         + (with_.length ? `<h4>Riding with the host</h4>${with_.map((c) => charRow(c)).join('')}` : '')
         + (foes.length ? `<h4>War room — enemy hosts</h4>${foes.map(({ b, m, o, seen }) => `<div class="row clickable" data-army="${b.id}">${seen ? sig(s.houses[b.owner]) : '<span class="unknown-dot"></span>'}<div class="grow"><div class="title">${seen ? esc(b.name) : 'An unconfirmed host'} <span class="muted">~${fmt(b.men)}</span></div><div class="sub">${m.days} days' march (${m.miles} mi) · if you attack: <b style="color:${o.attacker >= 60 ? '#a8e08a' : o.attacker >= 40 ? '#ffe0a0' : '#ec9a8a'}">${o.attacker}%</b></div></div></div>`).join('')}` : '')
         + (targets.length ? `<h4>Enemy holdings in reach</h4>${targets.map(({ h, m }) => { const e = siegeEstimate(s, h, [a]); return `<div class="row clickable" data-hold="${h.id}"><div class="grow"><div class="title">${esc(h.name)}</div><div class="sub">${m.days} days · walls ${e.fort}/6 · a siege would take ~${e.months} moons · ${esc(e.storm)}</div></div></div>`; }).join('')}` : '');

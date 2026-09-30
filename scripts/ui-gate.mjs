@@ -409,6 +409,32 @@ async function probeNames(page) {
   await closeAll(page);
   return out;
 }
+// F9 (GDD 12 §13, §14 items 10 and 11): the keyboard gets round the map ([ and ] step through what is on it, Enter opens the one in hand, and it is announced) and, closing a panel with
+// Escape, focus goes back to what opened it.
+async function probeKeys(page) {
+  const out = { step: 'n/a', open: 'n/a', live: 'n/a', menu: 'n/a', vital: 'n/a' };
+  await closeAll(page); await page.evaluate(() => { document.activeElement?.blur?.(); });
+  await page.keyboard.press(']'); await page.waitForTimeout(700);
+  const st = await page.evaluate(() => ({ ringed: document.querySelectorAll('.lbl.kbd-focus').length, live: document.querySelector('#map-live')?.textContent || '' }));
+  out.step = st.ringed === 1 ? 'ok' : `FAIL ${st.ringed} ringed`; out.live = st.live.length > 1 ? 'ok' : 'FAIL: not announced';
+  await page.keyboard.press(']'); await page.waitForTimeout(400);
+  const again = await page.evaluate(() => ({ ringed: document.querySelectorAll('.lbl.kbd-focus').length, live: document.querySelector('#map-live')?.textContent || '' }));
+  if (again.ringed !== 1) out.step = `FAIL ${again.ringed} ringed after the second step`;
+  await page.keyboard.press('Enter'); await page.waitForTimeout(800);
+  out.open = await page.evaluate(() => { const vis = (q) => { const e = document.querySelector(q); return !!e && !e.classList.contains('hidden') && e.getBoundingClientRect().width > 0; }; return vis('#card') || vis('#sheet') || vis('#modal') || vis('#window') ? 'ok' : 'FAIL: Enter opened nothing'; });
+  await closeAll(page); await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  // Escape closes the menu and focus goes back to the button that opened it; the same for a window opened from the top bar
+  await page.focus('#menu-btn'); await page.keyboard.press('Enter'); await page.waitForTimeout(400);
+  await page.keyboard.press('Tab'); await page.waitForTimeout(100); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  out.menu = await page.evaluate(() => (document.activeElement?.id === 'menu-btn' ? 'ok' : `FAIL focus on ${document.activeElement?.tagName}#${document.activeElement?.id}`));
+  await closeAll(page);
+  await page.focus('.wc-vital'); await page.keyboard.press('Enter'); await page.waitForTimeout(700);
+  const opened = await page.evaluate(() => !!window.__wc.win);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  out.vital = opened && await page.evaluate(() => document.activeElement?.classList?.contains('wc-vital')) ? 'ok' : `FAIL opened=${opened} focus=${await page.evaluate(() => document.activeElement?.tagName)}`;
+  await closeAll(page); await page.evaluate(() => document.activeElement?.blur?.());
+  return out;
+}
 async function measure(browser, id, w, h, turn) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.setDefaultTimeout(90000);
@@ -440,6 +466,8 @@ async function measure(browser, id, w, h, turn) {
   say('orders probed');
   Object.assign(res, { f7: await probeNames(page) });
   say('names probed');
+  Object.assign(res, { f9: await probeKeys(page) });
+  say('keys probed');
   res.errors = errors; await page.close();
   return res;
 }
@@ -478,6 +506,8 @@ function report(cells) {
     ['names: a link, a card on hover', (c) => `${c.f7.link}/${c.f7.hover}`, (c) => c.f7.link === 'ok' && c.f7.hover === 'ok', () => 'ok/ok'],
     ['names: click and Enter open the person', (c) => `${c.f7.open}/${c.f7.key}`, (c) => c.f7.open === 'ok' && c.f7.key === 'ok', () => 'ok/ok'],
     ['audience: what they are to you', (c) => c.f7.rel, (c) => c.f7.rel === 'ok', () => 'ok'],
+    ['keyboard: [ ] step round the map, announced', (c) => `${c.f9.step}/${c.f9.live}/${c.f9.open}`, (c) => c.f9.step === 'ok' && c.f9.live === 'ok' && c.f9.open === 'ok', () => 'ok/ok/ok'],
+    ['keyboard: Escape returns focus to the opener', (c) => `${c.f9.menu}/${c.f9.vital}`, (c) => c.f9.menu === 'ok' && c.f9.vital === 'ok', () => 'ok/ok'],
     ['the welcome card is shown on a new game', (c) => (c.first.welcome ? 'yes' : 'NO'), (c) => c.first.welcome, () => 'yes'],
     ['coach marks, in order, each put away by its thing', (c) => (c.first.marks.join('>') === 'command>turn>realm>' ? 'in order' : c.first.marks.map((m) => m || 'none').join('>')), (c) => c.first.marks.join('>') === 'command>turn>realm>', () => 'command>turn>realm>none'],
     ['a mark stays on the screen', (c) => (c.first.slipInside ? 'ok' : 'FAIL'), (c) => c.first.slipInside, () => 'ok'],

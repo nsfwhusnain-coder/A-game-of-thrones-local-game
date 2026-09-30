@@ -278,6 +278,8 @@ modal is replaced.
 
 ## 13. Accessibility and input
 
+*Implemented in F9 (D-097): the map's keys, focus returning to the opener, a visible ring, reduced motion as a setting, a 12 px floor, styled tooltips.*
+
 - Full keyboard: Tab order through corners and panels; arrow keys in lists and chips; Enter/Space activate; Esc closes
   the top-most panel; focus rings (existing `:focus-visible`).
 - ARIA: dialogs, tabs, live regions for receipts and the chronicle (existing work kept).
@@ -288,6 +290,8 @@ modal is replaced.
   (usable, panels overlay the map). No horizontal scrolling anywhere.
 
 ## 14. Interface acceptance checklist (gate Q8)
+
+*Automated in F9 (D-097): `scripts/visual.js` (a real browser, 14 screens, 1920/1366/1024, and the main flow) and `tests/a11y-static.test.js`. Items 1, 15 and 19 are recorded there as met differently or held by a ratchet.*
 
 Every item is checked at 1920×1080 and 1366×768, by a Playwright script where possible (DOM/geometry assertions) and
 by screenshots attached to the PR:

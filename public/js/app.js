@@ -1,5 +1,8 @@
 import { HOUSES } from '../data/houses.js';
 import { startIconizer, icon, hydrateIcons } from './ui/icons.js';
+import { startTips } from './ui/tips.js';
+import { startFocus } from './ui/focus.js';
+import { motionChoice, setMotionChoice, applyMotion, MOTION_CHOICES } from './ui/motion.js';
 import { routeKey, turnLabel } from './ui/hud.js';
 import { receiptHtml as receiptOf, briefHtml as briefOf, ordersSummary, ordersNote, noteTone } from './ui/orders.js';
 import { conditionOf } from './ui/people.js';
@@ -93,7 +96,7 @@ function renderHouseDetail() {
   $('#house-detail').innerHTML = `
     <div class="detail-hero"><img class="banner" src="${bannerURL(h.sigil, 80, 120)}" alt=""><div><h2>House ${esc(h.name)}</h2><div class="words">${esc(h.words ? '“' + h.words + '”' : '')}</div><div class="muted">${RANK_NAMES[h.rank] || ''} · ${REGION_NAMES[h.region] || h.region}</div></div></div>
     ${lord ? `<div class="lord-card"><img src="${portraitURL({ ...lord, alive: true }, h, 160)}" alt=""><div style="flex:1;min-width:0"><div class="lc-k">You will play as</div><div class="lc-name">${esc(lord.name)}</div><div class="lc-title">${esc(lord.title || '')}</div><div class="lc-traits">${esc(lord.traits || '')}</div></div><div class="begin-box"><button class="wc-btn wc-btn--gold" id="begin">Begin ▶</button><label class="ironman" title="An ironman chronicle is written once: there is no undoing a turn."><input type="checkbox" id="ironman"> Ironman</label><label class="ironman" title="How hard the story pulls toward the books: Canon keeps its great events on their course unless you change them; Loose keeps only the pillars; Sandbox keeps none."><select id="gravity"><option value="canon">Canon story</option><option value="loose">Loose canon</option><option value="sandbox">Sandbox</option></select></label><label class="ironman" title="How the chronicle tells the cruelty of the books: as the books do, without relish; or summarised."><select id="maturity"><option value="book">Book content</option><option value="restrained">Restrained</option></select></label></div></div>` : '<div class="begin-box"><button class="wc-btn wc-btn--gold" id="begin">Begin ▶</button><label class="ironman" title="An ironman chronicle is written once: there is no undoing a turn."><input type="checkbox" id="ironman"> Ironman</label><label class="ironman" title="How hard the story pulls toward the books: Canon keeps its great events on their course unless you change them; Loose keeps only the pillars; Sandbox keeps none."><select id="gravity"><option value="canon">Canon story</option><option value="loose">Loose canon</option><option value="sandbox">Sandbox</option></select></label><label class="ironman" title="How the chronicle tells the cruelty of the books: as the books do, without relish; or summarised."><select id="maturity"><option value="book">Book content</option><option value="restrained">Restrained</option></select></label></div>'}
-    ${(() => { const b = briefFor(h, { houses: Object.fromEntries(HOUSES.map((x) => [x.id, x])) }); return `<p style="line-height:1.45">${esc(b.situation)}</p><div class="grid2"><div><h4>Strengths</h4>${b.strengths.map((x) => `<div style="font-size:0.88rem">✦ ${esc(x)}</div>`).join('')}</div><div><h4>Weaknesses</h4>${b.weaknesses.map((x) => `<div style="font-size:0.88rem">✧ ${esc(x)}</div>`).join('')}</div></div>${b.levers?.length ? `<div style="font-size:0.88rem;margin-top:0.35rem"><b>Levers:</b> ${b.levers.map(esc).join(' · ')}</div>` : ''}`; })()}
+    ${(() => { const b = briefFor(h, { houses: Object.fromEntries(HOUSES.map((x) => [x.id, x])) }); return `<p style="line-height:1.45">${esc(b.situation)}</p><div class="grid2"><div><h4>Strengths</h4>${b.strengths.map((x) => `<div style="font-size:max(0.88rem,12px)">✦ ${esc(x)}</div>`).join('')}</div><div><h4>Weaknesses</h4>${b.weaknesses.map((x) => `<div style="font-size:max(0.88rem,12px)">✧ ${esc(x)}</div>`).join('')}</div></div>${b.levers?.length ? `<div style="font-size:max(0.88rem,12px);margin-top:0.35rem"><b>Levers:</b> ${b.levers.map(esc).join(' · ')}</div>` : ''}`; })()}
     <div class="kv"><span class="k">Seat</span><span>${esc(h.seat || '— (landless)')}</span><span class="k">Liege</span><span>${liege ? esc(liege.name) : 'None'}</span><span class="k">Vassals</span><span>${vassals.length ? vassals.length + ' houses' : '—'}</span></div>
     ${people.length ? `<h4>Your people</h4><div class="portrait-row">${people.map((c) => `<div class="p" title="${esc(c.title)}"><img src="${portraitURL({ ...c, alive: true }, h, 96)}"><div>${esc(c.name.replace(/^(Ser|Maester|Lord|Lady|Grand Maester) /, '').split(' ')[0])}</div></div>`).join('')}</div>` : ''}`;
   $('#begin').onclick = async () => { try { try { localStorage.setItem('wc-last-house', h.id); } catch { /* ignore */ } const r = await api('/games', { body: { scenario: 'agot_298', house: h.id, ironman: !!$('#ironman')?.checked, canonGravity: $('#gravity')?.value || 'canon', maturity: $('#maturity')?.value || 'book' } }); startGame(r.id, r.state); } catch (e) { toast(e.message, true); } };
@@ -102,7 +105,7 @@ async function renderSaves() {
   const saves = await api('/saves');
   $('#save-list').innerHTML = saves.length ? saves.map((s) => {
     const h = HOUSES.find((x) => x.id === s.player);
-    return `<div class="save" data-id="${s.id}">${h ? `<img src="${bannerURL(h.sigil, 40, 60)}">` : ''}<div><div>${esc(s.playerName)}</div><div class="muted" style="font-size:0.8rem">${esc(s.date)} · turn ${s.turn}</div></div><button class="btn small del" data-del="${s.id}">✕</button></div>`;
+    return `<div class="save" data-id="${s.id}">${h ? `<img src="${bannerURL(h.sigil, 40, 60)}">` : ''}<div><div>${esc(s.playerName)}</div><div class="muted" style="font-size:max(0.8rem,12px)">${esc(s.date)} · turn ${s.turn}</div></div><button class="btn small del" data-del="${s.id}">✕</button></div>`;
   }).join('') : '<div class="muted">No saved games yet.</div>';
   $('#save-list').onclick = async (e) => {
     const del = e.target.closest('[data-del]')?.dataset.del;
@@ -254,7 +257,7 @@ function maybeShowOutcome() {
       ${row('Wars', `${e.wars} · ${e.battlesWon} of ${e.battles} battles won`)}
       ${row('Standing', `<b>${st.score}</b> / 100 — ${esc(standingWord(st))}`)}
     </div>
-    <p class="muted" style="font-size:0.85rem">The world does not stop. You may play on, undo the turn, or begin again with another house.</p>
+    <p class="muted" style="font-size:max(0.85rem,12px)">The world does not stop. You may play on, undo the turn, or begin again with another house.</p>
     <div class="wc-outcome__go">
       <button class="wc-btn wc-btn--quiet" data-action="close-modal">Play on</button>
       ${app.state.meta.settings?.ironman ? '' : '<button class="wc-btn" id="oc-undo">Undo the turn</button>'}
@@ -276,7 +279,7 @@ async function chooseUndo() {
   modal(`<h2>Turn back the glass?</h2>
     <p style="line-height:1.5">The world returns to how it stood on the eve of the turn you choose, your orders for it still written. Everything that happened since is unwritten.</p>
     <div class="undo-levels">${Array.from({ length: u.depth }, (_, i) => i + 1).map((n) => `<button class="btn${n === 1 ? ' primary' : ''}" data-undo="${n}">${n === 1 ? 'The last turn' : `The last ${n} turns`}${eve(n) ? `<span class="muted"> — back to ${esc(eve(n))}</span>` : ''}</button>`).join('')}</div>
-    ${stopDays > 1 ? `<h4 style="margin-top:1rem">Or stop the last turn sooner</h4><p class="muted" style="font-size:0.85rem">The turn is played again with the same orders and the same counsels, as far as the day you choose — those days come out as you saw them; the rest is unwritten.</p>
+    ${stopDays > 1 ? `<h4 style="margin-top:1rem">Or stop the last turn sooner</h4><p class="muted" style="font-size:max(0.85rem,12px)">The turn is played again with the same orders and the same counsels, as far as the day you choose — those days come out as you saw them; the rest is unwritten.</p>
     <div class="undo-levels"><select id="stop-day">${Array.from({ length: stopDays - 1 }, (_, i) => i + 1).map((d) => `<option value="${d}">Day ${d}</option>`).join('')}</select><button class="btn" id="stop-here">Stop here</button></div>` : ''}
     <div class="settings-actions"><button class="btn ghost" data-action="close-modal">Let it stand</button></div>`);
   $('#stop-here')?.addEventListener('click', async () => {
@@ -509,7 +512,7 @@ function showErrands() {
   const ICON = { ride: 'horse', march: 'swords', banners: 'flag', works: 'hammer', raven: 'raven' };
   const stop = (m) => (m.kind === 'ride' ? `<button class="btn small" data-recall-char="${m.id}" title="Turn back for where they set out">Call back</button>` : m.kind === 'march' ? `<button class="btn small" data-recall-army="${m.id}" title="Stop and hold where it stands">Halt</button>` : '');
   const rows = moving.map((m) => `<div class="errand"><span class="ei">${icon(ICON[m.kind])}</span><div class="grow"><b>${esc(m.who)}</b> <span class="muted">${esc(m.text)}</span></div><span class="ed">${m.days ? `~${m.days} ${m.days === 1 ? 'day' : 'days'}` : '—'}</span>${stop(m)}</div>`).join('') || '<div class="muted">Nothing of yours is on the road or being built.</div>';
-  const outs = (last?.orders || []).map((o) => { const r = orderOutcome(o, s); return `<div class="errand"><span class="ost ${r.status}">${STATUS_LABEL[r.status]}</span><div class="grow">${esc(o.text)}${r.lines.length ? `<div class="muted" style="font-size:0.8rem">${r.lines.map(esc).join(' · ')}</div>` : ''}</div></div>`; }).join('');
+  const outs = (last?.orders || []).map((o) => { const r = orderOutcome(o, s); return `<div class="errand"><span class="ost ${r.status}">${STATUS_LABEL[r.status]}</span><div class="grow">${esc(o.text)}${r.lines.length ? `<div class="muted" style="font-size:max(0.8rem,12px)">${r.lines.map(esc).join(' · ')}</div>` : ''}</div></div>`; }).join('');
   const recall = (params) => doVerb(params.character ? 'recall_rider' : 'halt_host', params, { after: showErrands });
   setTimeout(() => {
     $$('[data-recall-char]').forEach((b) => b.onclick = () => recall({ character: b.dataset.recallChar }));
@@ -611,7 +614,7 @@ async function jump(body) {
 async function showChronicle() {
   if (!app.saveId) return;
   const r = await api(`/games/${app.saveId}/chronicle`);
-  modal(`<div class="chron-tabs"><button class="btn small active" id="chron-tab-c">The Chronicle</button><button class="btn small" id="chron-tab-w">World log</button></div><h2>📜 The Chronicle</h2><p class="muted" style="font-size:0.85rem">The long memory of your story. Every few turns the archmaester compresses older events into this record (<code>saves/${esc(app.saveId)}/chronicle.md</code>). The simulator reads it every turn — edit it to correct or steer the tale.</p>
+  modal(`<div class="chron-tabs"><button class="btn small active" id="chron-tab-c">The Chronicle</button><button class="btn small" id="chron-tab-w">World log</button></div><h2>📜 The Chronicle</h2><p class="muted" style="font-size:max(0.85rem,12px)">The long memory of your story. Every few turns the archmaester compresses older events into this record (<code>saves/${esc(app.saveId)}/chronicle.md</code>). The simulator reads it every turn — edit it to correct or steer the tale.</p>
     <div class="md" id="chron-view">${md(r.text)}</div>
     <textarea class="chronicle-edit hidden" id="chron-edit">${esc(r.text)}</textarea>
     <div class="settings-actions"><button class="btn" id="chron-toggle">Edit</button><button class="btn hidden" id="chron-save">Save</button><button class="btn ghost" id="chron-consolidate">Consolidate now</button></div>`);
@@ -624,7 +627,7 @@ async function showChronicle() {
 async function showWorldLog() {
   const r = await api(`/games/${app.saveId}/worldlog`);
   const turns = r.text.split(/\n(?=## Turn )/).filter((t) => t.startsWith('## Turn'));
-  modal(`<div class="chron-tabs"><button class="btn small" id="chron-tab-c">The Chronicle</button><button class="btn small active" id="chron-tab-w">World log</button></div><h2>📖 World log</h2><p class="muted" style="font-size:0.85rem">Everything that has happened, turn by turn — your orders, your decisions, the great events and the small life of the realm. Newest first. Also kept as <code>saves/${esc(app.saveId)}/world-log.md</code>.</p>
+  modal(`<div class="chron-tabs"><button class="btn small" id="chron-tab-c">The Chronicle</button><button class="btn small active" id="chron-tab-w">World log</button></div><h2>📖 World log</h2><p class="muted" style="font-size:max(0.85rem,12px)">Everything that has happened, turn by turn — your orders, your decisions, the great events and the small life of the realm. Newest first. Also kept as <code>saves/${esc(app.saveId)}/world-log.md</code>.</p>
     <div class="md world-log">${turns.length ? md(turns.reverse().join('\n\n')) : '<p class="muted">Nothing yet — advance time and the log begins.</p>'}</div>`);
   $('#chron-tab-c').onclick = showChronicle;
 }
@@ -639,6 +642,8 @@ const HELP_KEYS = [
   ['M · E · D · C · I', 'Straight to hosts, treasury, diplomacy, council, shadows'],
   ['F', 'Focus: only the map and the command bar; again to bring the rest back'], ['G', 'Go with the selected host (the map follows it)'],
   ['W A S D · arrows', 'Move the map; + and − (or the wheel) zoom; Home returns to your seat'],
+  ['[ and ]', 'Step through what is on the map: matters, news, hosts, places; Enter opens the one you are on'],
+  ['Tab', 'Move between everything you can press; Enter or Space presses it'],
   ['?', 'This page'],
   ['Esc', 'Close whatever is on top: a card, a sheet, a window; stop aiming a march'],
 ];
@@ -693,11 +698,13 @@ async function showSettings() {
     <section class="set-panel" id="set-display" data-set-panel="display" role="tabpanel" aria-labelledby="settab-display" hidden>
     <div class="scale-row"><label style="margin:0;white-space:nowrap">Interface size</label><input type="range" id="ui-scale" min="0.6" max="1.8" step="0.05" value="${uiScale()}"><span id="ui-scale-v" style="width:3.5rem;text-align:right">${Math.round(uiScale() * 100)}%</span><button class="btn small" id="ui-scale-reset">Reset</button></div>
     <label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="house-theme" ${houseTheming() ? 'checked' : ''}> Colour the interface in my house's colours</label>
+    <div class="scale-row"><label style="margin:0;white-space:nowrap" for="motion-choice">Motion</label><select id="motion-choice" style="flex:1">${MOTION_CHOICES.map(([k, l]) => `<option value="${k}"${motionChoice() === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+    <p class="muted">Reduced, the camera cuts instead of flying to the news, panels do not slide and nothing pulses.</p>
     </section>
     <section class="set-panel" id="set-graphics" data-set-panel="graphics" role="tabpanel" aria-labelledby="settab-graphics" hidden>
     <div class="scale-row"><label style="margin:0;white-space:nowrap" title="Refugees leaving a sacked town, carts between prosperous holdings, outriders ahead of a host, deserters slipping away, ravens carrying the letters that were really sent"><input type="checkbox" id="gfx-life"> A living map</label></div>
     <div class="scale-row"><label style="margin:0;white-space:nowrap">Graphics</label><select id="gfx-q" style="flex:1"><option value="high">Beautiful — sharpest relief, smoke, weather, full resolution</option><option value="balanced">Balanced — recommended for laptops</option><option value="fast">Fast — for older machines: no ambient life, almost no effects</option></select></div>
-      <p class="muted" style="font-size:0.85rem">Fast draws no smoke, glow or weather and no ambient life; Beautiful draws the most. The map changes when it next loads.</p>
+      <p class="muted" style="font-size:max(0.85rem,12px)">Fast draws no smoke, glow or weather and no ambient life; Beautiful draws the most. The map changes when it next loads.</p>
     </section>
     <section class="set-panel" id="set-sound" data-set-panel="sound" role="tabpanel" aria-labelledby="settab-sound" hidden>
     <div class="grid2">
@@ -709,12 +716,12 @@ async function showSettings() {
       <div><button class="btn small" id="snd-test">Hear Lord Tywin</button> <button class="btn small" id="snd-test2">Hear Lady Catelyn</button></div>
       <div style="grid-column:1/-1"><label>Voice server URL <span class="muted">(OpenAI-compatible <code>/v1/audio/speech</code>, e.g. Kokoro-FastAPI <code>http://localhost:8880/v1</code>)</span></label><input class="input" id="snd-tts" value="${esc(c.ttsUrl || '')}" placeholder="http://localhost:8880/v1"></div>
       <div><label>Narrator</label><select id="snd-narrator"><option value="storyteller">The storyteller — a woman's voice, clear and warm</option><option value="maester">The maester — an old man, grave</option><option value="chronicler">The chronicler — a man, wry and light</option></select></div>
-      <div><label>Character voices</label><div class="muted" style="font-size:0.82rem">Every character has a voice of their own. To change one, open their sheet and choose under <i>Nature → Voice</i>.</div></div>
-      <p class="muted" style="grid-column:1/-1;font-size:0.78rem;margin:0">Every character has a voice of their own. The main cast are shaped by hand (Tywin deep and slow, Robert booming, Arya quick and young); everyone else by sex, age and homeland. Drop your own music into <code>public/music/</code> to replace the score.</p>
+      <div><label>Character voices</label><div class="muted" style="font-size:max(0.82rem,12px)">Every character has a voice of their own. To change one, open their sheet and choose under <i>Nature → Voice</i>.</div></div>
+      <p class="muted" style="grid-column:1/-1;font-size:max(0.78rem,12px);margin:0">Every character has a voice of their own. The main cast are shaped by hand (Tywin deep and slow, Robert booming, Arya quick and young); everyone else by sex, age and homeland. Drop your own music into <code>public/music/</code> to replace the score.</p>
     </div>
     </section>
     <section class="set-panel" id="set-model" data-set-panel="model" role="tabpanel" aria-labelledby="settab-model" hidden>
-    <p class="muted" style="font-size:0.9rem">Any OpenAI-compatible server works (llama.cpp's <code>llama-server</code>, LM Studio, Ollama…). The simulator juggles hundreds of names and must answer in JSON, so larger instruct models do best. Set the context window to what your server was started with (e.g. <code>-c 262144</code> → 262144).</p>
+    <p class="muted" style="font-size:max(0.9rem,12px)">Any OpenAI-compatible server works (llama.cpp's <code>llama-server</code>, LM Studio, Ollama…). The simulator juggles hundreds of names and must answer in JSON, so larger instruct models do best. Set the context window to what your server was started with (e.g. <code>-c 262144</code> → 262144).</p>
     <div class="grid2">
       <div><label>Provider</label><select id="cfg-provider"><option value="openai">OpenAI-compatible (local server)</option><option value="mock">Mock (no model, for testing)</option><option value="relay">Relay (you or another app writes the replies — see README)</option></select></div>
       <div><label>Model name <span class="muted">(blank = server default)</span></label><input class="input" id="cfg-model" list="model-list" value="${esc(c.model)}"><datalist id="model-list"></datalist></div>
@@ -740,7 +747,7 @@ async function showSettings() {
       </div></details>
     </section>
     <div class="settings-actions"><button class="btn primary" id="cfg-save">Save</button><button class="btn" id="cfg-test">Test connection</button><button class="btn ghost" id="cfg-models">Fetch models</button></div>
-    <div id="cfg-result" class="muted" style="margin-top:0.6rem;white-space:pre-wrap;font-size:0.85rem"></div>`);
+    <div id="cfg-result" class="muted" style="margin-top:0.6rem;white-space:pre-wrap;font-size:max(0.85rem,12px)"></div>`);
   // the tabs: one panel at a time, the last one asked for is remembered
   const setTab = (id) => { for (const el of $$('[data-set-panel]')) el.hidden = el.dataset.setPanel !== id; for (const t of $$('[data-set-tab]')) t.setAttribute('aria-selected', String(t.dataset.setTab === id)); try { localStorage.setItem('wc.settings.tab', id); } catch { /* */ } };
   $$('[data-set-tab]').forEach((t) => { t.onclick = () => setTab(t.dataset.setTab); });
@@ -751,6 +758,7 @@ async function showSettings() {
   $('#ui-scale').oninput = (e) => showScale(Number(e.target.value));
   $('#ui-scale-reset').onclick = () => { $('#ui-scale').value = 1; showScale(1); };
   $('#rep-on').onchange = (e) => setReportOn(e.target.checked);
+  $('#motion-choice').onchange = (e) => setMotionChoice(e.target.value);
   $('#house-theme').onchange = (e) => { setHouseTheming(e.target.checked); applyHouseTheme(app.state ? app.state.houses[app.state.meta.player] : HOUSES.find((x) => x.id === app.chosenHouse)); };
   $('#cfg-url').onchange = () => { if ($('#cfg-provider').value === 'mock') $('#cfg-provider').value = 'openai'; };
   $('#snd-engine').value = voiceSettings().engine; $('#snd-narrator').value = voiceSettings().narrator;
@@ -781,7 +789,7 @@ async function showSettings() {
   $('#cfg-models').onclick = async () => { await api('/config', { body: collect() }); try { const r = await api('/models'); $('#model-list').innerHTML = r.models.map((m) => `<option value="${esc(m)}">`).join(''); $('#cfg-result').textContent = 'Models: ' + r.models.join(', '); } catch (e) { $('#cfg-result').textContent = '✖ ' + e.message; } };
 }
 
-startIconizer(); hydrateIcons(); drawMenu();
+startIconizer(); hydrateIcons(); drawMenu(); startTips(); startFocus(); applyMotion(); try { matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => applyMotion()); } catch { /* an old browser */ }
 document.addEventListener('pointerdown', () => startMusic(), { once: true });
 wireVoices($('#drawer-body'));
 $$('[data-mi]').forEach((b) => b.insertAdjacentHTML('afterbegin', icon(b.dataset.mi)));

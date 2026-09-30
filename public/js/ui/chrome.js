@@ -71,7 +71,7 @@ export function openPopover(name) {
 }
 // the Inbox opens under its seal, not at the screen's edge: its left edge under the seal's, and never off the screen
 function alignUnder(pop, btn) { const p = $(pop), r = $(btn).getBoundingClientRect(); p.style.right = 'auto'; p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.left - 8)) + 'px'; }
-export function closePopover(name) { const [pop, btn] = POP[name]; $(pop).classList.add('hidden'); $(btn).setAttribute('aria-expanded', 'false'); $(btn).classList.remove('is-on'); }
+export function closePopover(name) { const [pop, btn] = POP[name]; if ($(pop).contains(document.activeElement)) $(btn).focus({ preventScroll: true }); $(pop).classList.add('hidden'); $(btn).setAttribute('aria-expanded', 'false'); $(btn).classList.remove('is-on'); }
 /** Close every popover (but `except`); true if one was open — Escape closes these before a window or a card (GDD 17 §2.5). */
 export function closePopovers(except = null) { let was = false; for (const n of Object.keys(POP)) if (n !== except && isOpen(n)) { closePopover(n); was = true; } return was; }
 export function togglePopover(name) { if (isOpen(name)) closePopover(name); else openPopover(name); }

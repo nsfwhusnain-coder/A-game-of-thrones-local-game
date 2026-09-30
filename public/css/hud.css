@@ -33,7 +33,7 @@
 .wc-vitals--bar .wc-vital { padding: 0 .85rem; gap: .5rem; }
 .wc-vitals--bar .wc-vital > .ico { width: 1.3rem; height: 1.3rem; }
 .wc-vitals--bar .wc-vital b { font-size: 1.12rem; white-space: nowrap; }
-.wc-vitals--bar .wc-vital b em { font-size: .72em; font-style: italic; font-weight: 500; color: var(--bone-dim); letter-spacing: 0; }
+.wc-vitals--bar .wc-vital b em { font-size: max(.72em, 12px); font-style: italic; font-weight: 500; color: var(--bone-dim); letter-spacing: 0; }
 .wc-vitals--bar .wc-vital small { margin-top: .16rem; font-size: var(--hud-min); }
 .wc-vital__txt { display: block; }
 .wc-vital:hover b { color: #fff4d6; }
@@ -77,7 +77,7 @@
 .wc-inbox__item .ico { width: 1.35rem; height: 1.35rem; color: var(--bronze-hi); flex: none; }
 .wc-inbox__t { display: block; min-width: 0; }
 .wc-inbox__t b { display: block; font: 600 1.05rem/1.15 var(--wc-serif); color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wc-inbox__t small { display: block; margin-top: .1rem; font-size: .92rem; font-style: italic; line-height: 1.2; color: var(--bone-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wc-inbox__t small { display: block; margin-top: .1rem; font-size: max(.92rem, 15px); font-style: italic; line-height: 1.2; color: var(--bone-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wc-inbox__item:hover { background: linear-gradient(90deg, rgba(214, 150, 60, .2), rgba(214, 150, 60, 0)); }
 .wc-inbox__item:hover .ico { color: var(--gold-flat); }
 .wc-inbox__more, .wc-inbox__none { padding: .45rem .8rem; font-style: italic; color: var(--bone-dim); }
@@ -137,7 +137,7 @@ body.has-drawer #strip { display: none; }
 .wc-cmd .ost.underway { color: var(--ink-soft); }
 .wc-cmd .ost.failed { color: var(--madder-ink); border-color: rgba(140, 47, 37, .5); }
 .wc-cmd .ost.delayed { color: var(--rubric); }
-.wc-cmd .receipt { font-size: .92rem; color: var(--ink-soft); margin-top: .1rem; }
+.wc-cmd .receipt { font-size: max(.92rem, 12px); color: var(--ink-soft); margin-top: .1rem; }
 .wc-cmd .receipt .rl.good .mk { color: var(--verdigris-ink); }
 .wc-cmd .receipt .rl.warn { color: var(--rubric); }
 .wc-cmd .receipt .rl.bad, .wc-cmd .receipt .bad { color: var(--madder-ink); }
@@ -301,21 +301,21 @@ body:has(#window:not(.hidden)) #pins-more, body:has(#sheet:not(.hidden)) #pins-m
 #player-card b { font: 600 1.2rem/1.15 var(--wc-display); letter-spacing: .04em; }
 #player-card span { font-size: 1.02rem; line-height: 1.25; }
 #player-card .note { font-style: italic; color: var(--ink-soft); }
-#player-card em { margin-top: .25rem; font-size: .92rem; color: var(--ink-soft); }
+#player-card em { margin-top: .25rem; font-size: max(.92rem, 12px); color: var(--ink-soft); }
 #player-card .cond.good { color: #3f6b36; } #player-card .cond.warn { color: #8a5a10; } #player-card .cond.bad { color: #8a2a1c; }
 .char-hero .por { width: 10rem; border-radius: 6px; }
 .cond.good, .kv .cond { font-style: normal; }
 .ppl-sec { margin-bottom: .9rem; }
 .ppl-sec h4 { margin: .5rem 0 .3rem; }
-.ppl-sec h4 .muted { font-weight: 400; font-size: .85em; letter-spacing: 0; text-transform: none; }
+.ppl-sec h4 .muted { font-weight: 400; font-size: max(.85em, 12px); letter-spacing: 0; text-transform: none; }
 .pill.role { flex: none; align-self: center; margin: 0 .5rem; white-space: nowrap; }
-.ppl-more { font-size: .9rem; }
+.ppl-more { font-size: max(.9rem, 12px); }
 
 /* the family tree: generations with the lines between them */
 #modal-box.is-tree { width: min(72rem, 96vw); max-width: 96vw; }
 .tree-tools { display: flex; align-items: center; gap: 1.2rem; margin: -.2rem 0 .6rem; }
 .tree-wider { display: inline-flex; gap: .4rem; align-items: center; cursor: pointer; }
-.tree-hint { font-size: .9rem; }
+.tree-hint { font-size: max(.9rem, 12px); }
 .tree-v2 { position: relative; gap: 2.2rem; padding: .4rem .5rem 1rem; overflow-x: auto; }
 .tree-v2 .gen { gap: 1.1rem; flex-wrap: nowrap; justify-content: center; align-items: flex-start; min-width: max-content; }
 .tree.tree-v2 .gen .tm { position: relative; z-index: 1; width: 8rem; display: flex; flex-direction: column; align-items: center; gap: .15rem; padding: .35rem .3rem .4rem; margin: 0; cursor: pointer; color: var(--bone); font: inherit; background: rgba(0, 0, 0, .3); border: 1px solid rgba(0, 0, 0, .7); border-radius: 4px; box-shadow: inset 1px 1px 0 rgba(255, 226, 170, .1); }
@@ -325,7 +325,7 @@ body:has(#window:not(.hidden)) #pins-more, body:has(#sheet:not(.hidden)) #pins-m
 .tree.tree-v2 .gen .tm.self img { border-color: var(--gold-flat); }
 .tree.tree-v2 .gen .tm.wider { opacity: .78; }
 .tree.tree-v2 .gen .tm.dead img { filter: grayscale(.85); }
-.tree.tree-v2 .gen .tm .rl { font: 600 max(.66rem, 10px) var(--wc-display); letter-spacing: .05em; text-transform: uppercase; color: var(--ochre); }
+.tree.tree-v2 .gen .tm .rl { font: 600 max(.75rem, 12px) var(--wc-display); letter-spacing: .05em; text-transform: uppercase; color: var(--ochre); }
 .tree.tree-v2 .gen .tm .nm { font-size: 1.02rem; line-height: 1.1; text-align: center; }
 .tree-links { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; overflow: visible; }
 .tree-links path { fill: none; stroke: rgba(214, 180, 110, .5); stroke-width: 1.6; stroke-linecap: round; }
@@ -365,7 +365,7 @@ body:has(#window:not(.hidden)) #pins-more, body:has(#sheet:not(.hidden)) #pins-m
 .wc-help p, .wc-help li { font-size: 1rem; line-height: 1.3; margin: .2rem 0; }
 .wc-help ul { padding-left: 1.1rem; margin: .25rem 0; }
 .wc-help .help-keys { display: grid; grid-template-columns: max-content 1fr; gap: .25rem .8rem; font-size: 1rem; }
-.wc-help kbd { font: 600 .9rem var(--wc-display); padding: .05rem .4rem; border: 1px solid rgba(60, 40, 20, .5); border-radius: 3px; background: rgba(255, 255, 255, .35); color: var(--ink-iron); }
+.wc-help kbd { font: 600 max(.9rem, 12px) var(--wc-display); padding: .05rem .4rem; border: 1px solid rgba(60, 40, 20, .5); border-radius: 3px; background: rgba(255, 255, 255, .35); color: var(--ink-iron); }
 .wc-help__go { display: flex; justify-content: center; margin-top: 1rem; }
 @media (max-width: 900px) { .wc-help__cols { grid-template-columns: 1fr; } }
 

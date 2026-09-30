@@ -56,7 +56,8 @@
 
   <!-- ═════════ Game ═════════ -->
   <section id="game-screen" class="screen hidden">
-    <div id="map-wrap"></div>
+    <div id="map-wrap" tabindex="0" role="application" aria-label="The map. Square brackets step through what is on it, Enter opens it, W A S D move the view."></div>
+    <div id="map-live" class="sr-only" aria-live="polite"></div>
     <div id="map-loading" class="map-loading hidden"><img id="map-loading-banner" class="loading-banner" alt=""><div class="loading-title">Westeros Chronicles</div><div class="loading-words" id="map-loading-words"></div><div class="bar"><div id="map-loading-bar"></div></div><div id="map-loading-text" class="loading-text">Unrolling the map…</div><blockquote id="map-loading-quote" class="loading-quote"></blockquote></div>
 
     <!-- the top bar: the house and the day, three vitals; the Inbox, End turn and the menu (GDD 17 §2.1) -->
@@ -69,7 +70,7 @@
         <button class="wc-seal wc-seal--small" id="inbox-btn" data-action="inbox" aria-haspopup="true" aria-expanded="false" aria-controls="inbox" aria-label="Letters and matters: none wait"><i data-i="raven"></i><b id="inbox-count"></b></button>
         <div class="wc-oak wc-endturn wc-endturn--bar">
           <button class="wc-plate advance-btn" data-action="advance" title="End the turn (Ctrl+Enter)"><span>End turn</span><b class="advance-count" hidden></b><i data-i="play"></i></button>
-          <div class="wc-endturn__why" id="turn-until" title="A turn runs until the next thing that matters, at most a moon"></div>
+          <div class="wc-endturn__why" id="turn-until" title="Time runs until something matters, a moon at most"></div>
         </div>
         <button class="wc-btn wc-btn--icon" id="menu-btn" data-action="menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-pop" aria-label="Menu" title="Menu"><i data-i="menu"></i></button>
       </div>
@@ -99,7 +100,7 @@
     <div id="hud-player">
       <div class="wc-oak wc-nameplate" id="player-name"></div>
       <div class="wc-slip" id="player-card" role="tooltip" aria-hidden="true"></div>
-      <div class="wc-medallion"><button class="wc-medallion__face player-portrait" id="player-portrait" data-action="open-ruler"></button><i class="wc-medallion__jewel"></i></div>
+      <div class="wc-medallion"><button class="wc-medallion__face player-portrait" id="player-portrait" data-action="open-ruler" aria-label="Open your character sheet"></button><i class="wc-medallion__jewel"></i></div>
     </div>
 
     <!-- right sliding window: the realm, people, the chronicle's long book -->

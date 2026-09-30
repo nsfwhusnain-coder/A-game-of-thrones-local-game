@@ -3,6 +3,13 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-01 — F9: the keyboard, reduced motion, small text and the checklist
+
+- **The map has keys:** **[** and **]** step through what is on it (matters, news, hosts, places), **Enter** opens the one you are on, **Esc** lets go; it is announced for a screen reader and ringed on screen. **Esc closes a panel and focus goes back to what opened it.** Every row, card and plate can be reached with Tab and pressed with Enter; the command field shows where your words will go.
+- **Text is never under 12 px**, and long text is 15 px at 1366; long tooltips are in the game's own style (hover, or Tab to it); at 1024 wide the chronicle no longer lies over the command bar.
+- **Settings → Display → Motion:** follow your system, reduce (the camera cuts, nothing pulses or slides) or keep the motion.
+- **The whole interface checklist runs in a real browser** (`node scripts/visual.js`) over fourteen screens at three sizes and the way in from the title with nothing in the console; the static half is in `npm test` (`tests/a11y-static.test.js`, 9 tests). The help page lists the map's keys. **Phase F is done.**
+
 ## 2026-10-01 — F7 (second part): faces over a life
 
 - **Children look like their parents**: the hair, the eyes, the skin, the family nose and ears and the very proportions of the face come from mother and father (the Stark children are auburn or dark, blue- or grey-eyed). People whom the books describe look as they did; people with no known parents are unchanged. The lord's other generated kin now have both parents, and stand under both in the Family tree.
