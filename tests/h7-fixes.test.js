@@ -76,6 +76,9 @@ test('the Crown\'s own tourney waits for the Hand\'s (canon beat): not before it
   const s = createInitialState('agot_298', 'stark', { seed: 7 });
   assert.equal(crownWaitsForHand(s, 'baratheon').code, 'canon'); assert.equal(crownWaitsForHand(s, 'lannister'), null, 'only the Crown');
   assert.equal(perform(s, 'hold_tourney', { house: 'baratheon', source: { type: 'intent', ref: 'robert_baratheon', by: 'mock' } }).ok, false);
+  // nor a feast at King's Landing in those weeks (the day-one mind is asked before the progress is on the road: "feasts 33 lords at King's Landing" beside "passes the Twins")
+  const fe = perform(s, 'hold_feast', { house: 'baratheon', source: { type: 'intent', ref: 'robert_baratheon', by: 'mock' } }); assert.equal(fe.ok, false); assert.match(JSON.stringify(fe.refusal), /no feast at King's Landing/);
+  assert.equal(crownWaitsForHand(s, 'lannister', 'feast'), null, 'only the Crown');
   s.meta.settings = { ...(s.meta.settings || {}), canonGravity: 'sandbox' }; assert.equal(crownWaitsForHand(s, 'baratheon'), null, 'sandbox');
   s.meta.settings.canonGravity = 'canon'; s.plots = { ...(s.plots || {}), log: [{ thread: 'hands_tourney', stage: 'tourney' }] }; assert.equal(crownWaitsForHand(s, 'baratheon'), null, 'the Hand\'s tourney has been held');
   s.plots.log = []; s.meta.date = { ...s.meta.date, month: 12 }; assert.equal(crownWaitsForHand(s, 'baratheon'), null, 'after the 12th moon');

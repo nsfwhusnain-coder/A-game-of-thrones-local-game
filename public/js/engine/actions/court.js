@@ -34,13 +34,13 @@ export function awayFromSeat(state, house) {
   if (at && at === resolvePlaceId(me.seat)) return null;
   return { code: 'away', text: `${doer.name} is not at ${state.holdings[me.seat]?.name || 'the seat'}, and no one holds a feast or a tourney in an empty hall.` };
 }
-/** The Crown's own tourney waits for the Hand's (the canon beat, shared/plots.js 'hands_tourney'): while the story has it to come, the King does not hold lists of his own (the player's own house is never held back). */
-export function crownWaitsForHand(state, house) {
+/** The Crown's own tourney waits for the Hand's (the canon beat, shared/plots.js 'hands_tourney'): while the story has it to come, the King does not hold lists of his own (the player's own house is never held back). Nor does he feast at King's Landing in the same weeks: on the first day of the game his mind is asked before the progress is on the road, and a feast "at King's Landing" would be told beside "King Robert passes the Twins". */
+export function crownWaitsForHand(state, house, what = 'lists') {
   if (house !== 'baratheon' || house === state.meta.player || (state.meta.settings?.canonGravity || 'canon') === 'sandbox') return null;
   const d = state.meta.date || {};
   if ((d.year || 0) > 298 || ((d.year || 0) === 298 && (d.month || 0) >= 12)) return null;
   if ((state.plots?.log || []).some((l) => l.thread === 'hands_tourney' && l.stage === 'tourney')) return null;
-  return { code: 'canon', text: 'The King will hold his lists when his Hand has come to court.' };
+  return { code: 'canon', text: what === 'feast' ? "The King holds no feast at King's Landing while the court is on the road." : 'The King will hold his lists when his Hand has come to court.' };
 }
 
 /** A feast at the seat: the lords come, drink the wine and remember it — mostly kindly. */
@@ -167,7 +167,7 @@ export const COURT = [
   {
     id: 'hold_feast', family: 'court', label: 'Hold a feast',
     params: {},
-    legal: (state, i) => { const cost = feastCost(state, i.house); return gold(state.houses[i.house]) < cost ? { code: 'gold', text: `A feast worthy of your house would cost ~${cost.toLocaleString('en-US')} dragons.` } : awayFromSeat(state, i.house); },
+    legal: (state, i) => { const cost = feastCost(state, i.house); return gold(state.houses[i.house]) < cost ? { code: 'gold', text: `A feast worthy of your house would cost ~${cost.toLocaleString('en-US')} dragons.` } : awayFromSeat(state, i.house) || crownWaitsForHand(state, i.house, 'feast'); },
     cost: (state, i) => ({ gold: feastCost(state, i.house) }),
     start: (state, i) => feast(state, i.house, i.source),
     receipt: (state, i, d) => [{ ok: true, text: d.summary }],
