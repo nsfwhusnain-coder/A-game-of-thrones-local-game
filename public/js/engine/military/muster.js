@@ -107,6 +107,11 @@ function adopt(state, v, today) {
   v.obligations.call.arrive = today; v.obligations.stage = 'deliberating'; v.obligations.call.decide = today;
 }
 
+/** Who leads a house's host: its regent while the lord is a captive or a child (the regent rules in his name), else the lord; no one if the lord is a prisoner and there is no regent. */
+const leaderOf = (state, v) => {
+  const r = v.regent && state.characters[v.regent]; if (r?.alive && !/imprisoned|captive|hostage/.test(r.status || '')) return r;
+  const l = state.characters[v.lord]; return l?.alive && !/imprisoned|captive|hostage/.test(l.status || '') ? l : null;
+};
 /**
  * A lord answers: his levies begin to gather at his seat today (a host serving his liege, growing day by day), and set
  * out when they are gathered. `now` — he answers at once (the verb answer_call), without the days of thought.
@@ -115,19 +120,20 @@ function adopt(state, v, today) {
 export function answer(state, v, { today = dayNumber(state.meta.date), late = false, cause = { type: 'rule', ref: 'the call' }, mine = v.liege === state.meta.player } = {}) {
   if (!v.obligations?.call) summon(state, v, { host: v.obligations?.join && state.parties[v.obligations.join] ? v.obligations.join : null, muster: v.obligations?.muster || state.houses[v.liege]?.seat, today });
   const ob = v.obligations; const call = ob.call;
-  const lordName = state.characters[v.lord].name; const P = pronouns(state.characters[v.lord]);
+  const lead = leaderOf(state, v);
+  const lordName = lead ? lead.name : `House ${v.name}`; const P = lead ? pronouns(lead) : { he: 'it', him: 'them', his: 'its' };
   const sent = menSent(state, v, { scope: call.scope, late: late || call.late });
   const seatPos = placePos(v.seat, state.holdings);
   ob.levies = 'answered';
   if (sent.men < 50 || !seatPos) {
     ob.stage = 'joined'; call.men = 0;
     const text = `${lordName} sends word that ${P.he} has no men left to send.`;
-    return { applied: [], events: shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text, where: v.seat, importance: 2, type: 'war', houses: answerHouses(v) }, { actors: [v.lord], data: { men: 0 }, cause })), men: 0, party: null, text };
+    return { applied: [], events: shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text, where: v.seat, importance: 2, type: 'war', houses: answerHouses(v) }, { actors: [lead?.id], data: { men: 0 }, cause })), men: 0, party: null, text };
   }
   const name = `Host of House ${v.name}`;
   const first = Math.min(sent.men, Math.max(50, round50(sent.men / call.gather)));
   const r = applyChanges(state, [
-    { op: 'army_create', owner: v.id, name, at: v.seat, men: first, commander: v.lord, composition: `Levies of House ${v.name}${sent.arms > 200 ? ', with knights and men-at-arms' : ''}`, status: 'mustering' },
+    { op: 'army_create', owner: v.id, name, at: v.seat, men: first, commander: lead?.id || null, composition: `Levies of House ${v.name}${sent.arms > 200 ? ', with knights and men-at-arms' : ''}`, status: 'mustering' },
     { op: 'figure', house: v.id, field: 'levies', delta: -sent.levies, source: 'Muster rolls' },
     { op: 'figure', house: v.id, field: 'menAtArms', delta: -sent.arms, source: 'Muster rolls' },
   ], { cause });
@@ -137,8 +143,8 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
     a.serving = v.liege; ob.host = a.id;
     if (sent.men > first) a.muster = { remaining: sent.men - first, daily: Math.max(50, Math.ceil((sent.men - first) / Math.max(1, call.gather - 1))), house: v.id, quiet: true };
     // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
-    joinParty(state, state.characters[v.lord], a);
-    const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && (!isFemale(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !rideOf(state, c) && (c.loc === v.seat || isRef(c.loc)) && !(c.roles || []).includes('maester'));
+    if (lead) joinParty(state, lead, a);
+    const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && c.id !== lead?.id && (!isFemale(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !rideOf(state, c) && (c.loc === v.seat || isRef(c.loc)) && !(c.roles || []).includes('maester'));
     riding = kin.filter(() => random() < 0.55).slice(0, 2);
     for (const c of riding) joinParty(state, c, a);
   }
@@ -146,7 +152,7 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
   call.predicted = call.depart + marchFrom(state, v, call, seatPos);
   const t = targetOf(state, call);
   const text = `${lordName} answers the call with ${sent.men.toLocaleString('en-GB')} men${riding.length ? `, ${riding.map((c) => c.name).join(' and ')} riding with ${P.him}` : ''}; they gather at ${placeName(state, v.seat)} and march for ${t.name} in about ${call.gather} days.`;
-  const events = shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: answerHouses(v) }, { actors: [v.lord, ...riding.map((c) => c.id)], data: { men: sent.men, party: a?.id || null, to: call.host ? ref(call.host) : call.muster || null, depart: call.depart }, cause }));
+  const events = shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers the call`, text, where: v.seat, importance: 3, type: 'war', houses: answerHouses(v) }, { actors: [lead?.id, ...riding.map((c) => c.id)], data: { men: sent.men, party: a?.id || null, to: call.host ? ref(call.host) : call.muster || null, depart: call.depart }, cause }));
   return { applied: r.applied, events, men: sent.men, party: a?.id || null, text };
 }
 
@@ -162,7 +168,7 @@ function depart(state, v, today, mine) {
   call.bySea = !!bySea; call.eta = bySea ? null : today + days; call.eta0 = call.eta;
   if (t.pos && Math.hypot(a.pos[0] - t.pos[0], a.pos[1] - t.pos[1]) >= 4) { a.march = { to: t.to, since: state.meta.turn }; a.at = null; }
   settle(state, a);
-  return shown(mine, fact(state, 'set_out', { title: `${a.name} sets out`, text: `${a.name}, ${a.men.toLocaleString('en-GB')} strong, sets out from ${placeName(state, v.seat)} for ${t.name}${bySea ? ' — by sea' : days ? ` (~${days} days)` : ''}.`, where: v.seat, importance: 2, houses: [v.id, v.liege] }, { actors: [v.lord], data: { party: a.id, to: String(t.to), eta: call.eta } }));
+  return shown(mine, fact(state, 'set_out', { title: `${a.name} sets out`, text: `${a.name}, ${a.men.toLocaleString('en-GB')} strong, sets out from ${placeName(state, v.seat)} for ${t.name}${bySea ? ' — by sea' : days ? ` (~${days} days)` : ''}.`, where: v.seat, importance: 2, houses: [v.id, v.liege] }, { actors: [a.commander], data: { party: a.id, to: String(t.to), eta: call.eta } }));
 }
 
 /**

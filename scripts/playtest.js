@@ -1,6 +1,7 @@
 // A scripted playthrough against the configured model: plays a house turn by turn with real orders, audiences
 // and decisions, and writes everything that happens to playtest/<house>-<date>.md for reading.
-//   node scripts/playtest.js [--house stark] [--turns 10]
+//   node scripts/playtest.js [--house stark] [--turns 10] [--seed N] [--out dir]
+// The report ends with the coherence check of the game just played (bench/lib/coherence.js, docs/gdd/15-qa-tooling.md §3): paste it back with the rest.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -22,7 +23,7 @@ const seenRavens = new Set();
 const s2threads = (id) => (game.loadState(id).storyThreads || []).map((t) => `${t.title}: ${t.last}`).join(' | ');
 const house = args.house || 'stark';
 const out = []; const log = (s) => { out.push(s); console.log(s); };
-const { id } = game.newGame('agot_298', house);
+const { id } = game.newGame('agot_298', house, args.seed ? { seed: Number(args.seed) } : {});
 const cfg = loadConfig();
 log(`# Playtest — House ${house} — ${cfg.model || cfg.provider} — ${new Date().toISOString().slice(0, 16)}\n`);
 
@@ -79,8 +80,11 @@ for (let t = 1; t <= turns; t++) {
   const out2 = (tr.orders || []).map((o) => `${o.text.slice(0, 50)} → ${orderOutcome(o, s2).status}`); if (out2.length) log(`- order statuses: ${out2.join(' | ')}`);
   log(`- state: treasury ${Math.round(h.figures.treasury.v)} · food ${h.figures.food.v} · levies ${h.figures.levies.v} · hosts ${Object.values(s2.parties).filter((a) => a.owner === house).map((a) => `${a.name} ${a.men}`).join(', ') || 'none'} · pending decisions ${(s2.decisions || []).filter((d) => d.status === 'pending').map((d) => d.title).join(' | ') || 'none'}`);
 }
-const dir = path.join(ROOT, 'playtest'); fs.mkdirSync(dir, { recursive: true });
+// the coherence of the game just played: what the story told against what the world kept
+const { coherence, coherenceReport, readGame } = await import(pathToFileURL(path.join(ROOT, 'bench', 'lib', 'coherence.js')).href);
+try { out.push('\n' + coherenceReport(coherence(readGame(game, id)), { title: 'Coherence' })); } catch (e) { out.push(`\n## Coherence\n\nThe check could not run: ${e.message}`); }
+const dir = typeof args.out === 'string' ? path.resolve(args.out) : path.join(ROOT, 'playtest'); fs.mkdirSync(dir, { recursive: true });
 const file = path.join(dir, `${house}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.md`);
 fs.writeFileSync(file, out.join('\n') + '\n');
-fs.cpSync(path.join(work, 'saves', id), path.join(dir, id), { recursive: true });
+fs.cpSync(path.join(game.SAVES, id), path.join(dir, id), { recursive: true });
 console.log('\nReport:', path.relative(ROOT, file));

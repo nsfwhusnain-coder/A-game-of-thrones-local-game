@@ -615,3 +615,5 @@ per-call routing, and — if the owner's bench results fall below the §11.4 thr
 to run.
 
 *(H2, implemented: `server/ai/calls/weaver.js` (the call: schema over the facts offered, `check` runs `compileRule`'s parser and dry run, mock and fallback are the engine's own plain reading), `server/weaver.js` (the jump's cadence: config `weaver: true`, one a game month, an ordinary `inject_rule`, a replay asks nothing), Settings → Model has the switch. DECISIONS D-101.)*
+
+*(H3, implemented: the `audience` suite (`bench/lib/audience.js`, `bench/suites/audience`: 80 lines, ten kinds of words to eight people, each labelled with the verdict the engine settles; the gate is that every reply keeps to its verdict, and a judge's 3.8 when one is used) and the `latency` suite (`bench/lib/latency.js`: 7-day jumps, a 30-day jump, an audience, a receipt, each call's p50/p95 from the call log, against the pace of Q3). `npm run bench -- --suite interpret,mind,narrate,audience,latency` runs them in turn and writes `bench/<date>.md` with every report. DECISIONS D-102.)*

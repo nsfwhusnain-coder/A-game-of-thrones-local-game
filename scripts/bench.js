@@ -33,6 +33,15 @@
 // The headlines suite (18 §5, WP N10): the writer's own headlines over the same weeks, no model asked
 //   npm run bench -- --suite headlines                    # pass rate, length, names, verbs, facts a card tells (bench/headlines-mock-<date>.md)
 //   npm run bench -- --suite headlines --weeks 6          # only the first six weeks of each game
+//
+// The audience suite (04 §13, WP H3): eighty lines with the verdicts the engine settles; does the reply keep to its verdict
+//   npm run bench -- --suite audience                     # every reply keeps to its verdict (the 100 % gate); --judge adds a judge's score (3.8)
+//   npm run bench -- --suite audience --limit 10          # the first ten lines only
+// The latency suite (04 §13; gate Q3): a scripted fortnight in a scratch copy of the server, timed by phase
+//   npm run bench -- --suite latency                      # 7-day jumps (--jumps N), a 30-day jump, an audience, a receipt, and each call's p50/p95
+//
+// All of it in one command, the owner's (docs/gdd/15-qa-tooling.md §8): a list writes bench/<date>.md with every report in it, to paste back
+//   npm run bench -- --suite interpret,mind,narrate,audience,latency          # (--out <dir> puts the reports elsewhere than bench/)
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -40,11 +49,27 @@ import { fileURLToPath, pathToFileURL } from 'node:url'; // a file URL's pathnam
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, all) => (x.startsWith('--') ? [...a, [x.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true]] : a), []));
+const OUT = typeof args.out === 'string' ? path.resolve(args.out) : path.join(ROOT, 'bench'); // where the reports go (a test points it at a scratch directory)
 
-if (args.suite === 'interpret') { await interpretBench(); process.exit(0); }
-if (args.suite === 'mind') { await mindBench(); process.exit(0); }
-if (args.suite === 'narrate') { await narrateBench(); process.exit(0); }
-if (args.suite === 'headlines') { await headlinesBench(); process.exit(process.exitCode || 0); }
+// The suites, one or a list (the owner's one command: `--suite interpret,mind,narrate,audience,latency`); each writes its own report, and a list also writes bench/<date>.md that holds them all, to paste back.
+const SUITES = { interpret: interpretBench, mind: mindBench, narrate: narrateBench, headlines: headlinesBench, audience: audienceBench, latency: latencyBench };
+if (args.suite) await runSuites(String(args.suite).split(',').map((x) => x.trim()).filter(Boolean));
+async function runSuites(names) {
+  const bad = names.filter((n) => !SUITES[n]); if (bad.length) { console.error(`No such suite: ${bad.join(', ')} (there are ${Object.keys(SUITES).join(', ')})`); process.exit(2); }
+  const ran = [];
+  for (const n of names) { console.log(`\n=== ${n} ===`); ran.push(await SUITES[n]()); }
+  if (names.length > 1) {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const { loadConfig } = await import('../server/llm.js');
+    const cfg = { ...loadConfig(), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.provider ? { provider: args.provider } : {}), ...(args.mock ? { provider: 'mock' } : {}) };
+    const head = `# Bench — ${cfg.provider === 'mock' ? 'mock' : cfg.model || '(server default)'} — ${stamp}\n\n${ran.map((r) => `- ${r.name}: ${r.ok == null ? 'see below' : r.ok ? 'every gate met' : '**a gate missed**'}`).join('\n')}\n\n_${new Date().toISOString().slice(0, 16)} · provider ${cfg.provider}_\n`;
+    const out = path.join(OUT, `${stamp}.md`);
+    fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, `${head}\n${ran.map((r) => r.text).join('\n\n---\n\n')}\n`);
+    console.log(`\nAll the reports in one: ${path.relative(ROOT, out)}`);
+  }
+  if (ran.some((r) => r.ok === false)) process.exitCode = 1;
+  process.exit(process.exitCode || 0);
+}
 async function headlinesBench() {
   process.env.WC_PROVIDER = 'mock'; // the writer needs no model; the suite's games are played on the mock
   const { runHeadlinesSuite, headlinesReport, verdicts } = await import('../bench/lib/headlines.js');
@@ -52,9 +77,55 @@ async function headlinesBench() {
   const text = headlinesReport(r) + `
 _${new Date().toISOString().slice(0, 16)} · the writer, no model_
 `;
-  const out = path.join(ROOT, 'bench', `headlines-mock-${new Date().toISOString().slice(0, 10)}.md`);
+  const out = path.join(OUT, `headlines-mock-${new Date().toISOString().slice(0, 10)}.md`);
   fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, text); console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`);
-  if (verdicts(r).some((v) => !v.ok)) process.exitCode = 1;
+  if (verdicts(r).some((v) => !v.ok)) process.exitCode = 1; return { name: 'headlines', text, ok: !verdicts(r).some((v) => !v.ok) };
+}
+// The audience suite (04 §13): eighty lines with the engine's verdicts; does the model's reply keep to the verdict
+async function audienceBench() {
+  const { loadConfig } = await import('../server/llm.js');
+  const cfg = { ...loadConfig(), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.provider ? { provider: args.provider } : {}), ...(args.mock ? { provider: 'mock' } : {}) };
+  const { runAudienceSuite, audienceReport, verdicts, JUDGE } = await import('../bench/lib/audience.js');
+  const { runCall } = await import('../server/ai/client.js');
+  const { default: call } = await import('../server/ai/calls/audience.js');
+  const recordTo = typeof args.record === 'string' ? path.resolve(args.record) : null; let recorded = 0;
+  const read = (state, item, stance) => {
+    const a = { character: item.who, words: item.words, stance, face: true };
+    return runCall('audience', state, a, { cfg, provider: cfg.provider, log: (kind, messages, reply) => {
+      if (!recordTo) return; fs.mkdirSync(recordTo, { recursive: true });
+      fs.writeFileSync(path.join(recordTo, `${item.id}-${recorded++}.json`), JSON.stringify({ kind: 'audience', fingerprint: call.fingerprint(call.context(state, a)), model: cfg.model || 'unknown', note: `recorded by the bench, ${new Date().toISOString().slice(0, 10)}`, reply }, null, 1) + '\n');
+    } });
+  };
+  const judge = args.judge && !['mock', 'replay'].includes(cfg.provider) ? async (item, stance, value) => {
+    const { openaiReply } = await import('../server/ai/providers/openai.js'); const { routeFor } = await import('../server/ai/models.js'); const { judgeSchema } = await import('../bench/lib/narrate.js');
+    const route = { ...routeFor(cfg, 'narrate'), temperature: 0.2, maxTokens: 120 };
+    const messages = [{ role: 'system', content: JUDGE }, { role: 'user', content: `PERSON: ${item.who}\nTHE LORD SAYS: ${item.words}\nOUTCOME: ${stance.directive || stance.verdict}\nREPLY: ${value.beats.map((b) => b.text).join(' ')}` }];
+    try { const r = await openaiReply({ kind: 'judge', messages, schema: judgeSchema, route, cfg }); const v = JSON.parse(r.text); return Number.isInteger(v.score) ? v : null; } catch { return null; }
+  } : null;
+  const who = cfg.provider === 'mock' ? 'mock (the verdict played plainly, through the call and its checks)' : cfg.provider === 'replay' ? 'recorded replies' : cfg.model || '(server default)';
+  console.log(`Audience suite — ${who}`);
+  const r = await runAudienceSuite(read, { only: typeof args.only === 'string' ? args.only.split(',') : null, limit: Number.isFinite(+args.limit) ? +args.limit : Infinity, judge, onItem: (x) => process.stdout.write(x.ok ? '.' : 'x') });
+  const text = audienceReport(r, { reader: who }) + `\n_${new Date().toISOString().slice(0, 16)} · provider ${cfg.provider}${recordTo ? ` · ${recorded} replies recorded to ${path.relative(ROOT, recordTo)}` : ''}_\n`;
+  const out = path.join(OUT, `audience-${slugOf(cfg.provider === 'mock' ? 'mock' : cfg.provider === 'replay' ? 'replay' : cfg.model || 'model')}-${new Date().toISOString().slice(0, 10)}.md`);
+  fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, text); console.log(`\n${text}`); console.log(`Written to ${path.relative(ROOT, out)}`);
+  return { name: 'audience', text, ok: verdicts(r).every((v) => v.ok) };
+}
+// The latency suite (04 §13, gate Q3): a scripted fortnight in a scratch copy of the server, timed by phase, against the game's promised pace
+async function latencyBench() {
+  const { loadConfig } = await import('../server/llm.js');
+  const cfg = { ...loadConfig(), ...(args.url ? { baseUrl: args.url, provider: 'openai' } : {}), ...(args.model ? { model: args.model } : {}), ...(args.provider ? { provider: args.provider } : {}), ...(args.mock ? { provider: 'mock' } : {}), logCalls: true };
+  const { sandbox } = await import('../bench/lib/sandbox.js');
+  const { runLatencySuite, latencyReport, verdicts } = await import('../bench/lib/latency.js');
+  const who = cfg.provider === 'mock' ? 'mock (the engine alone)' : cfg.model || '(server default)';
+  console.log(`Latency suite — ${who}`);
+  const sb = await sandbox({ root: ROOT, config: cfg, prefix: 'wc-latency-' });
+  try {
+    const r = await runLatencySuite({ game: sb.game, saves: sb.saves, house: typeof args.house === 'string' ? args.house : 'stark', seed: Number(args.seed) || 7, jumps: Number.isFinite(+args.jumps) ? +args.jumps : 4, longSpan: typeof args.long === 'string' ? args.long : '30d', onStep: (x) => console.log(`  ${x.span} jump: ${(x.wall / 1000).toFixed(1)} s`) });
+    const text = latencyReport(r, { reader: who }) + `\n_${new Date().toISOString().slice(0, 16)} · provider ${cfg.provider}_\n`;
+    const out = path.join(OUT, `latency-${slugOf(cfg.provider === 'mock' ? 'mock' : cfg.model || 'model')}-${new Date().toISOString().slice(0, 10)}.md`);
+    fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, text); console.log(`\n${text}`); console.log(`Written to ${path.relative(ROOT, out)}`);
+    return { name: 'latency', text, ok: verdicts(r).every((v) => v.ok) };
+  } finally { sb.dispose(); }
 }
 async function narrateBench() {
   const { loadConfig } = await import('../server/llm.js');
@@ -80,8 +151,8 @@ async function narrateBench() {
   } : null;
   const r = await runNarrateSuite(list, narrate, { judge });
   const text = narrateReport(r, { reader: who }) + `\n_${new Date().toISOString().slice(0, 16)} · provider ${cfg.provider}${recordTo ? ` · ${recorded} replies recorded to ${path.relative(ROOT, recordTo)}` : ''}_\n`;
-  const out = path.join(ROOT, 'bench', `narrate-${slugOf(cfg.provider === 'mock' ? 'mock' : cfg.provider === 'replay' ? 'replay' : cfg.model || 'model')}-${new Date().toISOString().slice(0, 10)}.md`);
-  fs.writeFileSync(out, text); console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`);
+  const out = path.join(OUT, `narrate-${slugOf(cfg.provider === 'mock' ? 'mock' : cfg.provider === 'replay' ? 'replay' : cfg.model || 'model')}-${new Date().toISOString().slice(0, 10)}.md`);
+  fs.writeFileSync(out, text); console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`); return { name: 'narrate', text, ok: null };
 }
 async function mindBench() {
   const { runMindSuite, mindReport } = await import('../bench/lib/mind.js');
@@ -106,8 +177,8 @@ async function mindBench() {
   console.log(`Mind suite — ${who}`);
   const r = await runMindSuite(read, { only: typeof args.only === 'string' ? args.only.split(',') : null });
   const text = mindReport(r, { reader: who }) + `\n_${new Date().toISOString().slice(0, 16)} · provider ${cfg.provider}${recordTo ? ` · ${recorded} replies recorded to ${path.relative(ROOT, recordTo)}` : ''}_\n`;
-  const out = path.join(ROOT, 'bench', `mind-${reader === 'tree' ? 'tree' : slugOf(cfg.provider === 'mock' ? 'mock' : cfg.model || 'model')}-${new Date().toISOString().slice(0, 10)}.md`);
-  fs.writeFileSync(out, text); console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`);
+  const out = path.join(OUT, `mind-${reader === 'tree' ? 'tree' : slugOf(cfg.provider === 'mock' ? 'mock' : cfg.model || 'model')}-${new Date().toISOString().slice(0, 10)}.md`);
+  fs.writeFileSync(out, text); console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`); return { name: 'mind', text, ok: null };
 }
 async function interpretBench() {
   const { runSuite, report, loadSuite } = await import('../bench/lib/interpret.js');
@@ -136,9 +207,9 @@ async function interpretBench() {
   const r = await runSuite(read, { suites, only: typeof args.house === 'string' ? args.house.split(',') : null });
   const text = `# ${report(r, { title: `Interpret ${args.holdout ? 'hold-out' : 'suite'}`, reader: who }).replace(/^## /, '')}\n_${new Date().toISOString().slice(0, 16)} · provider ${cfg.provider}${cfg.provider === 'mock' ? '' : ` · ${cfg.baseUrl}`}${recordTo ? ` · ${recorded} replies recorded to ${path.relative(ROOT, recordTo)}` : ''}_\n`;
   const by = reader === 'rules' ? 'rules' : `${reader}-${slugOf(cfg.provider === 'mock' ? 'mock' : cfg.model || 'model')}`;
-  const out = path.join(ROOT, 'bench', `interpret-${by}-${new Date().toISOString().slice(0, 10)}${args.holdout ? '-holdout' : ''}.md`);
+  const out = path.join(OUT, `interpret-${by}-${new Date().toISOString().slice(0, 10)}${args.holdout ? '-holdout' : ''}.md`);
   fs.writeFileSync(out, text);
-  console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`);
+  console.log(text); console.log(`Written to ${path.relative(ROOT, out)}`); return { name: 'interpret', text, ok: null };
 }
 function slugOf(s) { return String(s).toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-|-$/g, ''); }
 
@@ -224,7 +295,7 @@ if (!args.only || args.only === 'audiences') {
 
 log('\n## Score');
 for (const [k, [ok, n]] of Object.entries(score)) log(`- ${k}: ${ok}/${n}`);
-const dir = path.join(ROOT, 'bench'); fs.mkdirSync(dir, { recursive: true });
+const dir = OUT; fs.mkdirSync(dir, { recursive: true });
 const file = path.join(dir, `${String(cfg.provider === 'mock' ? 'mock' : cfg.model || 'default').replace(/[^\w.-]+/g, '_')}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.md`);
 fs.writeFileSync(file, report.join('\n') + '\n');
 console.log(`\nReport: ${path.relative(ROOT, file)}`);

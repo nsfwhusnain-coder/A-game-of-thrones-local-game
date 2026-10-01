@@ -21,6 +21,12 @@ const turnOf = (state) => state.meta.clock?.turn ?? state.meta.turn + 1;
  * given explicitly is kept as it is, else the kind's default is raised for the player's house and for great lords.
  * Returns the fact.
  */
+/**
+ * What a house does as a house, in its lord's name (gifts, feasts, levies, dues, loans, bribes, works): while a regent rules for a captive
+ * or a child, the regent is the one who does it, and the fact says so; a captive with no regent is not named at all (a prisoner is not seen
+ * to hold a feast; the coherence checker looks).
+ */
+const BY_HOUSE = new Set(['works_begun', 'gift', 'feast', 'tourney', 'judgement', 'tax_changed', 'grain_bought', 'embargo', 'bribe', 'bribe_refused', 'levies_called', 'loan_taken', 'loan_repaid']);
 export function emit(state, kind, f = {}) {
   const K = KINDS[kind]; if (!K) throw new Error(`no such kind of fact: ${kind}`); // a programming error, caught by the tests
   state.facts = state.facts || [];
@@ -29,7 +35,17 @@ export function emit(state, kind, f = {}) {
   const n = (state.meta.factSeq = (state.meta.factSeq || 0) + 1);
   const clock = state.meta.clock || { from: today(state), to: today(state) };
   const day = f.on != null ? Math.max(clock.from, Math.min(clock.to, clock.from + Math.round(f.on) - 1)) : clock.to;
-  const actors = [...new Set((f.actors || []).filter(Boolean))], houses = [...new Set((f.houses || []).filter(Boolean))];
+  const houses = [...new Set((f.houses || []).filter(Boolean))];
+  let doer = f.actors || [];
+  if (BY_HOUSE.has(kind) && doer[0]) {
+    const h = houses.map((x) => state.houses?.[x]).find((x) => x && x.lord === doer[0]); // (the house whose lord it is: a vassal's dues name the liege's house first)
+    if (h) {
+      const held = (c) => !c?.alive || /imprisoned|captive|hostage/.test(c.status || ''); // (a regent in a cell rules no more than the lord he rules for)
+      if (h.regent && !held(state.characters?.[h.regent])) doer = [h.regent, ...doer.slice(1)];
+      else if (held(state.characters?.[h.lord])) doer = doer.slice(1);
+    }
+  }
+  const actors = [...new Set(doer.filter(Boolean))];
   const fact = { id: `f${turn}.${n}`, turn, day, kind, actors, houses };
   if (f.place) fact.place = f.place;
   if (f.pos) fact.pos = f.pos.map((x) => Math.round(x * 10) / 10);

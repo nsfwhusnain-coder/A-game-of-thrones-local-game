@@ -1,0 +1,565 @@
+{
+ "about": "Eighty things a lord might say: ten kinds of words (a request for men, for gold, for fealty, an alliance, a truce, a threat, an insult, flattery with a request, an apology, small talk) to eight people, each in a fresh world of the speaker's own house. `verdict` is what the engine settles from the words (shared/temperament.js weighAudience); the model plays the scene and keeps to it.",
+ "items": [
+  {
+   "id": "stark-roose_bolton-request",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "I ask you, Roose Bolton, to bring your men to Moat Cailin within the fortnight.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-roose_bolton-gold",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "Lend me five thousand dragons; I will repay them within the year.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-roose_bolton-fealty",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "I ask you to swear fealty to my house, and I will name you my man.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-roose_bolton-alliance",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "Let us be allies against our common enemies, and fight beside one another.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "stark-roose_bolton-truce",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "Let us make a truce, and keep the peace between our houses.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "stark-roose_bolton-threat",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "Send me three hundred men at Moat Cailin, or I will bring fire and sword to your lands.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "stark-roose_bolton-insult",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "You are a coward and a fool. Open your gates and send your men to Moat Cailin, or answer for it.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "stark-roose_bolton-flattery",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "None is wiser or braver than you. Will you send me two hundred men at Moat Cailin?",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-roose_bolton-apology",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "I was wrong to speak harshly at the feast. Forgive me, and I ask you to ride with me to Moat Cailin.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-roose_bolton-plea",
+   "house": "stark",
+   "who": "roose_bolton",
+   "words": "I ask it as one old friend of another: send me your swords at Moat Cailin, and I will not forget it.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-walder_frey-request",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "I ask you, Walder Frey, to bring your men to Moat Cailin within the fortnight.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-walder_frey-gold",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "Lend me five thousand dragons; I will repay them within the year.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "stark-walder_frey-fealty",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "I ask you to swear fealty to my house, and I will name you my man.",
+   "verdict": "stall"
+  },
+  {
+   "id": "stark-walder_frey-alliance",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "Let us be allies against our common enemies, and fight beside one another.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "stark-walder_frey-truce",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "Let us make a truce, and keep the peace between our houses.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "stark-walder_frey-threat",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "Send me three hundred men at Moat Cailin, or I will bring fire and sword to your lands.",
+   "verdict": "stall"
+  },
+  {
+   "id": "stark-walder_frey-insult",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "You are a coward and a fool. Open your gates and send your men to Moat Cailin, or answer for it.",
+   "verdict": "dismiss"
+  },
+  {
+   "id": "stark-walder_frey-flattery",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "None is wiser or braver than you. Will you send me two hundred men at Moat Cailin?",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-walder_frey-apology",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "I was wrong to speak harshly at the feast. Forgive me, and I ask you to ride with me to Moat Cailin.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-walder_frey-plea",
+   "house": "stark",
+   "who": "walder_frey",
+   "words": "I ask it as one old friend of another: send me your swords at Moat Cailin, and I will not forget it.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-jeor_mormont-request",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "I ask you, Jeor Mormont, to bring your men to Castle Black within the fortnight.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-jeor_mormont-gold",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "Lend me five thousand dragons; I will repay them within the year.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-jeor_mormont-fealty",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "I ask you to swear fealty to my house, and I will name you my man.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-jeor_mormont-alliance",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "Let us be allies against our common enemies, and fight beside one another.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-jeor_mormont-truce",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "Let us make a truce, and keep the peace between our houses.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-jeor_mormont-threat",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "Send me three hundred men at Castle Black, or I will bring fire and sword to your lands.",
+   "verdict": "stall"
+  },
+  {
+   "id": "stark-jeor_mormont-insult",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "You are a coward and a fool. Open your gates and send your men to Castle Black, or answer for it.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "stark-jeor_mormont-flattery",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "None is wiser or braver than you. Will you send me two hundred men at Castle Black?",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-jeor_mormont-apology",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "I was wrong to speak harshly at the feast. Forgive me, and I ask you to ride with me to Castle Black.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-jeor_mormont-plea",
+   "house": "stark",
+   "who": "jeor_mormont",
+   "words": "I ask it as one old friend of another: send me your swords at Castle Black, and I will not forget it.",
+   "verdict": "agree"
+  },
+  {
+   "id": "stark-rodrik_cassel-request",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "I ask you, Ser Rodrik Cassel, to bring your men to Winterfell within the fortnight.",
+   "verdict": "obey"
+  },
+  {
+   "id": "stark-rodrik_cassel-gold",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "Lend me five thousand dragons; I will repay them within the year.",
+   "verdict": null
+  },
+  {
+   "id": "stark-rodrik_cassel-fealty",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "I ask you to swear fealty to my house, and I will name you my man.",
+   "verdict": "obey"
+  },
+  {
+   "id": "stark-rodrik_cassel-alliance",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "Let us be allies against our common enemies, and fight beside one another.",
+   "verdict": "obey"
+  },
+  {
+   "id": "stark-rodrik_cassel-truce",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "Let us make a truce, and keep the peace between our houses.",
+   "verdict": "obey"
+  },
+  {
+   "id": "stark-rodrik_cassel-threat",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "Send me three hundred men at Winterfell, or I will bring fire and sword to your lands.",
+   "verdict": "obey"
+  },
+  {
+   "id": "stark-rodrik_cassel-insult",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "You are a coward and a fool. Open your gates and send your men to Winterfell, or answer for it.",
+   "verdict": "obey"
+  },
+  {
+   "id": "stark-rodrik_cassel-flattery",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "None is wiser or braver than you. Will you send me two hundred men at Winterfell?",
+   "verdict": "obey"
+  },
+  {
+   "id": "stark-rodrik_cassel-apology",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "I was wrong to speak harshly at the feast. Forgive me, and I ask you to ride with me to Winterfell.",
+   "verdict": "obey"
+  },
+  {
+   "id": "stark-rodrik_cassel-plea",
+   "house": "stark",
+   "who": "rodrik_cassel",
+   "words": "I ask it as one old friend of another: send me your swords at Winterfell, and I will not forget it.",
+   "verdict": "obey"
+  },
+  {
+   "id": "lannister-hoster_tully-request",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "I ask you, Hoster Tully, to bring your men to King's Landing within the fortnight.",
+   "verdict": "agree"
+  },
+  {
+   "id": "lannister-hoster_tully-gold",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "Lend me five thousand dragons; I will repay them within the year.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "lannister-hoster_tully-fealty",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "I ask you to swear fealty to my house, and I will name you my man.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "lannister-hoster_tully-alliance",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "Let us be allies against our common enemies, and fight beside one another.",
+   "verdict": "stall"
+  },
+  {
+   "id": "lannister-hoster_tully-truce",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "Let us make a truce, and keep the peace between our houses.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "lannister-hoster_tully-threat",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "Send me three hundred men at King's Landing, or I will bring fire and sword to your lands.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "lannister-hoster_tully-insult",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "You are a coward and a fool. Open your gates and send your men to King's Landing, or answer for it.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "lannister-hoster_tully-flattery",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "None is wiser or braver than you. Will you send me two hundred men at King's Landing?",
+   "verdict": "agree"
+  },
+  {
+   "id": "lannister-hoster_tully-apology",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "I was wrong to speak harshly at the feast. Forgive me, and I ask you to ride with me to King's Landing.",
+   "verdict": "agree"
+  },
+  {
+   "id": "lannister-hoster_tully-plea",
+   "house": "lannister",
+   "who": "hoster_tully",
+   "words": "I ask it as one old friend of another: send me your swords at King's Landing, and I will not forget it.",
+   "verdict": "agree"
+  },
+  {
+   "id": "lannister-mace_tyrell-request",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "I ask you, Mace Tyrell, to bring your men to King's Landing within the fortnight.",
+   "verdict": "agree"
+  },
+  {
+   "id": "lannister-mace_tyrell-gold",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "Lend me five thousand dragons; I will repay them within the year.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "lannister-mace_tyrell-fealty",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "I ask you to swear fealty to my house, and I will name you my man.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "lannister-mace_tyrell-alliance",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "Let us be allies against our common enemies, and fight beside one another.",
+   "verdict": "stall"
+  },
+  {
+   "id": "lannister-mace_tyrell-truce",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "Let us make a truce, and keep the peace between our houses.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "lannister-mace_tyrell-threat",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "Send me three hundred men at King's Landing, or I will bring fire and sword to your lands.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "lannister-mace_tyrell-insult",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "You are a coward and a fool. Open your gates and send your men to King's Landing, or answer for it.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "lannister-mace_tyrell-flattery",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "None is wiser or braver than you. Will you send me two hundred men at King's Landing?",
+   "verdict": "agree"
+  },
+  {
+   "id": "lannister-mace_tyrell-apology",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "I was wrong to speak harshly at the feast. Forgive me, and I ask you to ride with me to King's Landing.",
+   "verdict": "agree"
+  },
+  {
+   "id": "lannister-mace_tyrell-plea",
+   "house": "lannister",
+   "who": "mace_tyrell",
+   "words": "I ask it as one old friend of another: send me your swords at King's Landing, and I will not forget it.",
+   "verdict": "agree"
+  },
+  {
+   "id": "tully-tywin_lannister-request",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "I ask you, Tywin Lannister, to bring your men to Riverrun within the fortnight.",
+   "verdict": "agree"
+  },
+  {
+   "id": "tully-tywin_lannister-gold",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "Lend me five thousand dragons; I will repay them within the year.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "tully-tywin_lannister-fealty",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "I ask you to swear fealty to my house, and I will name you my man.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "tully-tywin_lannister-alliance",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "Let us be allies against our common enemies, and fight beside one another.",
+   "verdict": "stall"
+  },
+  {
+   "id": "tully-tywin_lannister-truce",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "Let us make a truce, and keep the peace between our houses.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "tully-tywin_lannister-threat",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "Send me three hundred men at Riverrun, or I will bring fire and sword to your lands.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "tully-tywin_lannister-insult",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "You are a coward and a fool. Open your gates and send your men to Riverrun, or answer for it.",
+   "verdict": "dismiss"
+  },
+  {
+   "id": "tully-tywin_lannister-flattery",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "None is wiser or braver than you. Will you send me two hundred men at Riverrun?",
+   "verdict": "agree"
+  },
+  {
+   "id": "tully-tywin_lannister-apology",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "I was wrong to speak harshly at the feast. Forgive me, and I ask you to ride with me to Riverrun.",
+   "verdict": "agree"
+  },
+  {
+   "id": "tully-tywin_lannister-plea",
+   "house": "tully",
+   "who": "tywin_lannister",
+   "words": "I ask it as one old friend of another: send me your swords at Riverrun, and I will not forget it.",
+   "verdict": "agree"
+  },
+  {
+   "id": "greyjoy-doran_martell-request",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "I ask you, Doran Martell, to bring your men to Pyke within the fortnight.",
+   "verdict": "agree"
+  },
+  {
+   "id": "greyjoy-doran_martell-gold",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "Lend me five thousand dragons; I will repay them within the year.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "greyjoy-doran_martell-fealty",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "I ask you to swear fealty to my house, and I will name you my man.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "greyjoy-doran_martell-alliance",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "Let us be allies against our common enemies, and fight beside one another.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "greyjoy-doran_martell-truce",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "Let us make a truce, and keep the peace between our houses.",
+   "verdict": "bargain"
+  },
+  {
+   "id": "greyjoy-doran_martell-threat",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "Send me three hundred men at Pyke, or I will bring fire and sword to your lands.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "greyjoy-doran_martell-insult",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "You are a coward and a fool. Open your gates and send your men to Pyke, or answer for it.",
+   "verdict": "refuse"
+  },
+  {
+   "id": "greyjoy-doran_martell-flattery",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "None is wiser or braver than you. Will you send me two hundred men at Pyke?",
+   "verdict": "agree"
+  },
+  {
+   "id": "greyjoy-doran_martell-apology",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "I was wrong to speak harshly at the feast. Forgive me, and I ask you to ride with me to Pyke.",
+   "verdict": "agree"
+  },
+  {
+   "id": "greyjoy-doran_martell-plea",
+   "house": "greyjoy",
+   "who": "doran_martell",
+   "words": "I ask it as one old friend of another: send me your swords at Pyke, and I will not forget it.",
+   "verdict": "agree"
+  }
+ ]
+}

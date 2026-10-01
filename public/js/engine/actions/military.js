@@ -87,7 +87,7 @@ export function raiseLevies(state, { house = state.meta.player, at, men, command
   if (!hold || (hold.owner !== house && state.houses[hold.owner]?.liege !== house)) throw new Error(`${hold?.name || at} is not your land`);
   const avail = Math.round(Number(me.figures.levies?.v) || 0); const n = Math.min(avail, Math.round(Number(men) || avail));
   if (n < 50) throw new Error(avail < 50 ? 'no levies are left to call' : 'too few men to be worth the muster');
-  const cmd = commander && state.characters[commander]?.alive && state.characters[commander].house === house ? state.characters[commander] : null;
+  const cmd = commander && state.characters[commander]?.alive && state.characters[commander].house === house && !/imprisoned|captive|hostage/.test(state.characters[commander].status || '') ? state.characters[commander] : null;
   const out = []; let host = fieldHostAt(state, house, place);
   // A levy is a population, not a button. Reserve the men immediately (so they cannot be called twice), but only the
   // first day's contingent reaches the camp now: the rest walk in from the fields over the following days.
