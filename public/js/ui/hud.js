@@ -144,5 +144,6 @@ export function stripOf(history, n = 3, seen = new Set()) {
 /** The End-turn plate's reason, in one line: "next: 7 days — a quiet week". */
 export function turnLabel(state) {
   const u = nextTurnLength(state);
-  return `next: ${u.days} ${u.days === 1 ? 'day' : 'days'} — ${u.reason}`;
+  const full = `next: ${u.days} ${u.days === 1 ? 'day' : 'days'} — ${u.reason}`;
+  return full.length <= 58 ? full : `${full.slice(0, 57).replace(/\s+\S*$/, '')}…`; // (a line beside the button, not a paragraph)
 }

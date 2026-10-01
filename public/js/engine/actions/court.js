@@ -1,11 +1,11 @@
 // Court verbs (docs/gdd/08-characters-politics.md §12): offices, grants of land, feasts and tourneys, the judgement of
 // prisoners, and the answering of the matters brought before the lord. Each costs what it should, changes the numbers
 // and the people at once, and is told to the story as an act already done, so it narrates how the realm takes it.
-import { applyChanges, vassalsOf, realmOf, getRelation, dateStr } from '../../shared/world.js';
+import { applyChanges, vassalsOf, realmOf, getRelation, dateStr, resolvePlaceId } from '../../shared/world.js';
 import { temperament } from '../../shared/temperament.js';
 import { applyPetitionFx } from '../../shared/petitions.js';
 import { random, shuffle } from '../rng.js';
-import { partyOf } from '../parties.js';
+import { partyOf, placeOf } from '../parties.js';
 import { emit } from '../facts/log.js';
 import { dayNumber } from '../time.js';
 import { keptByStory } from '../people/life.js';
@@ -20,6 +20,28 @@ export const RANSOM = { crown: 30000, paramount: 20000, major: 8000, minor: 2500
 const VERDICT = { release: 'release', ransom: 'ransom', wall: 'send to the Wall', execute: 'execute' };
 const feastCost = (state, house) => 1200 + vassalsOf(state, house).map((v) => state.houses[v]).filter((v) => v.lord && state.characters[v.lord]?.alive).length * 150;
 const TOURNEY_COST = 5000;
+
+/**
+ * A feast or a tourney is held in a hall, by someone in it: the regent while the lord is a prisoner or a child, else the lord. Away from the seat — on the road with a party, at another
+ * castle — there is no one to hold it (the playtest saw the King "hold a tourney at King's Landing" with the King at the Neck on his progress). Null when it may be held.
+ */
+export function awayFromSeat(state, house) {
+  const me = state.houses[house]; if (!me?.seat) return null;
+  const free = (c) => c?.alive && !/imprisoned|captive|hostage/.test(c.status || '');
+  const doer = me.regent && free(state.characters[me.regent]) ? state.characters[me.regent] : state.characters[me.lord];
+  if (!doer?.alive) return null;
+  const at = resolvePlaceId(placeOf(state, doer));
+  if (at && at === resolvePlaceId(me.seat)) return null;
+  return { code: 'away', text: `${doer.name} is not at ${state.holdings[me.seat]?.name || 'the seat'}, and no one holds a feast or a tourney in an empty hall.` };
+}
+/** The Crown's own tourney waits for the Hand's (the canon beat, shared/plots.js 'hands_tourney'): while the story has it to come, the King does not hold lists of his own (the player's own house is never held back). */
+export function crownWaitsForHand(state, house) {
+  if (house !== 'baratheon' || house === state.meta.player || (state.meta.settings?.canonGravity || 'canon') === 'sandbox') return null;
+  const d = state.meta.date || {};
+  if ((d.year || 0) > 298 || ((d.year || 0) === 298 && (d.month || 0) >= 12)) return null;
+  if ((state.plots?.log || []).some((l) => l.thread === 'hands_tourney' && l.stage === 'tourney')) return null;
+  return { code: 'canon', text: 'The King will hold his lists when his Hand has come to court.' };
+}
 
 /** A feast at the seat: the lords come, drink the wine and remember it — mostly kindly. */
 function feast(state, house, cause) {
@@ -145,7 +167,7 @@ export const COURT = [
   {
     id: 'hold_feast', family: 'court', label: 'Hold a feast',
     params: {},
-    legal: (state, i) => { const cost = feastCost(state, i.house); return gold(state.houses[i.house]) < cost ? { code: 'gold', text: `A feast worthy of your house would cost ~${cost.toLocaleString('en-US')} dragons.` } : null; },
+    legal: (state, i) => { const cost = feastCost(state, i.house); return gold(state.houses[i.house]) < cost ? { code: 'gold', text: `A feast worthy of your house would cost ~${cost.toLocaleString('en-US')} dragons.` } : awayFromSeat(state, i.house); },
     cost: (state, i) => ({ gold: feastCost(state, i.house) }),
     start: (state, i) => feast(state, i.house, i.source),
     receipt: (state, i, d) => [{ ok: true, text: d.summary }],
@@ -155,7 +177,7 @@ export const COURT = [
   {
     id: 'hold_tourney', family: 'court', label: 'Hold a tourney',
     params: {},
-    legal: (state, i) => (gold(state.houses[i.house]) < TOURNEY_COST ? { code: 'gold', text: 'A tourney worth the name needs ~5,000 dragons for purses and pavilions.' } : null),
+    legal: (state, i) => (gold(state.houses[i.house]) < TOURNEY_COST ? { code: 'gold', text: 'A tourney worth the name needs ~5,000 dragons for purses and pavilions.' } : awayFromSeat(state, i.house) || crownWaitsForHand(state, i.house)),
     cost: () => ({ gold: TOURNEY_COST }),
     start: (state, i) => tourney(state, i.house, i.source),
     receipt: (state, i, d) => [{ ok: true, text: d.summary.trim() }],

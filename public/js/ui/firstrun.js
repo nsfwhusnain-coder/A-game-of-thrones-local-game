@@ -7,7 +7,7 @@ import { briefFor } from '../../data/briefs.js';
 export const COACH = [
   { id: 'command', target: '#order-input', text: 'Tell your house what to do, in your own words.', on: 'order', side: 'above' },
   { id: 'turn', target: '#hud-top .advance-btn', text: 'Then let the world move.', on: 'turn', side: 'below' },
-  { id: 'realm', target: '#menu-btn', text: 'Open the menu to see how your house stands.', on: 'realm', side: 'below' },
+  { id: 'realm', target: '#menu-btn', text: 'Open the menu to see how your house stands.', on: 'realm', side: 'below-left', clear: 11 }, // (under the bar and to the left of the menu that opens under the button: a slip beside the button covers End turn, one under it covers the doors; `clear`, in rem, is the menu's width and a gap)
 ];
 
 /**
@@ -43,9 +43,13 @@ export const QUIET_TIP = 'Press F to hide everything but the map. Press it again
  * Where a coach mark's slip goes for a target's box `t` ({ x0, y0, x1, y1 }) on a screen `screen` ({ w, h }): `{ left, top, arrow, dot }`. The slip (`size` { w, h }) sits above or
  * below the target (`side`), centred on it and kept inside the screen; `arrow` is 'up' (the slip is below, its arrow points up) or 'down'; `dot` is where the wax dot goes (on the target's near corner).
  */
-export function placeCoach(t, size, screen, side = 'below', gap = 14, margin = 8) {
+export function placeCoach(t, size, screen, side = 'below', gap = 14, margin = 8, clear = 0) {
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const cx = (t.x0 + t.x1) / 2;
+  if (side === 'below-left') { // under the bar, clear of the menu that opens under a button at the right edge (`clear` px); no arrow: the wax dot is on the button
+    const left = clamp(t.x1 - clear - gap - size.w, margin, screen.w - size.w - margin); const top = clamp(t.y1 + gap, margin, screen.h - size.h - margin);
+    return { left: Math.round(left), top: Math.round(top), arrow: null, arrowX: 16, dot: { x: Math.round(cx), y: Math.round(t.y1) } };
+  }
   const roomBelow = screen.h - t.y1 - gap - margin, roomAbove = t.y0 - gap - margin;
   const below = side === 'below' ? roomBelow >= size.h || roomBelow >= roomAbove : roomAbove < size.h && roomBelow > roomAbove;
   const top = below ? t.y1 + gap : t.y0 - gap - size.h;

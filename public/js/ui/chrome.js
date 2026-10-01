@@ -68,6 +68,7 @@ export function openPopover(name) {
   closePopovers(name);
   const [pop, btn] = POP[name]; $(pop).classList.remove('hidden'); $(btn).setAttribute('aria-expanded', 'true'); $(btn).classList.add('is-on'); sfx('open');
   if (name === 'inbox') { renderInbox(); alignUnder('#inbox', btn); }
+  if (name === 'menu') app.coachDone?.('realm'); // the tip that said "open the menu" has been answered
 }
 // the Inbox opens under its seal, not at the screen's edge: its left edge under the seal's, and never off the screen
 function alignUnder(pop, btn) { const p = $(pop), r = $(btn).getBoundingClientRect(); p.style.right = 'auto'; p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.left - 8)) + 'px'; }

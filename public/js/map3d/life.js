@@ -70,11 +70,11 @@ export class LivingMap {
     const want = (id, kind, from, to, extra = {}) => {
       const old = keep.get(id);
       if (old && old.kind === kind && dist2(old.to, to) < 4) { Object.assign(old, extra); next.push(old); return; }
-      // A ravens flies straight; everyone else follows the ground. Pathfinding is capped per sync
-      // so a realm in chaos cannot cost a frame: the rest walk the straight road.
-      const path = kind === 'raven' || budget.n <= 0
-        ? [[...from], [...to]]
-        : (budget.n--, this.o.grid.find(from, to, 'land'));
+      // A raven flies straight; everyone else follows the ground. Pathfinding is capped per sync
+      // so a realm in chaos cannot cost a frame: the rest are given their roads at the next.
+      // (a walker whose road is not found yet waits for the next sync: the straight line it used to take was kept, and crossed the mountains and the lakes)
+      if (kind !== 'raven' && budget.n <= 0) { if (old && old.kind === kind) next.push(old); return; }
+      const path = kind === 'raven' ? [[...from], [...to]] : (budget.n--, this.o.grid.find(from, to, 'land'));
       if (!path || path.length < 2) return;
       // an A* path can be hundreds of points; walking it every frame for hundreds of entities is
       // needless work, so each road is thinned to at most 64 waypoints once, here
