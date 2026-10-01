@@ -3,6 +3,11 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — H4: the recipe for the next fine-tune
+
+- **`scripts/finetune/`**: play with `"logCalls": true`, and the game's own call log becomes the training data — the replies the game itself accepted (clean of a foreign script, a game word, a phrase from after 298), and, as preference pairs, the answers it refused beside the ones it accepted when it asked again. A trainer, the GGUF export and the llama-swap entry (64k, adapter on and off) follow, and the README says what to tune first and how to know it was worth it (the bench, the playtest, the coherence check, before and after). Nothing here runs in the game; CI runs the dry runs on a tiny fixture. No GPU was used: the first real run is the trainer's test.
+- Tests: `tests/finetune.test.js` (9): the labeller's reasons, the pairs, the dev split by prompt, a manifest with no words in it, the trainer's dry run for both stages, the profile (64k, `:plain`), the export's plan and its run.
+
 ## 2026-10-02 — H3: the bench, and a check that the story agrees with the world
 
 - **`npm run coherence -- --play stark --turns 12`** (or a save's id) reads a game and says where the story contradicted the world: a dead man acting, a prisoner holding a feast, a party arriving that never set out, a letter before it could land, a card with no fact behind it, a game word in a headline, a title a man does not hold, a rumour told as fact, a place named that is not on the road. The playtest report now ends with it.
