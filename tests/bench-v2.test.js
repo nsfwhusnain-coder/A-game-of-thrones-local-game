@@ -250,6 +250,14 @@ test('bench --suite a,b runs each in turn and writes one report with them all', 
   fs.rmSync(out, { recursive: true, force: true });
 });
 
+test('a suite writes its report into a folder that is not there yet (the live run of the interpret suite into a new folder failed at the last step)', async () => {
+  const out = path.join(tmp(), 'not', 'there', 'yet');
+  const r = await run(process.execPath, [path.join(ROOT, 'scripts', 'bench.js'), '--suite', 'interpret', '--reader', 'rules', '--out', out], { cwd: ROOT, env: { ...process.env, WC_PROVIDER: 'mock', WC_SAVES: '' }, maxBuffer: 1 << 24, timeout: 300000 }).catch((e) => e);
+  assert.ok(!r.code || r.code === 1, String(r.stderr).slice(0, 400)); // (1: a gate of the pre-parser missed; 0: met; a crash is anything else)
+  assert.ok(fs.readdirSync(out).some((f) => f.startsWith('interpret-rules')), fs.existsSync(out) ? fs.readdirSync(out).join() : 'no folder');
+  fs.rmSync(path.dirname(path.dirname(path.dirname(out))), { recursive: true, force: true });
+});
+
 test('scripts/coherence.js plays a game on the mock and checks it: the report, the JSON, the file', async () => {
   const out = tmp(); const file = path.join(out, 'report.md');
   const base = [path.join(ROOT, 'scripts', 'coherence.js'), '--play', 'stark', '--turns', '2', '--span', '7d', '--seed', '7'];
