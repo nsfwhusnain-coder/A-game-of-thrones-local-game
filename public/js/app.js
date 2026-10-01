@@ -11,7 +11,8 @@ import { placeCard } from './ui/cards.js';
 import { whereabouts } from './shared/roads.js';
 import { renderChrome, drawMenu, togglePopover, closePopovers, closePopover, openPopover, isOpen, openDoor, openStripLine, openItem, loadSeen, markSeen, renderStrip, setMapModeName } from './ui/chrome.js';
 import { drawTitleMap } from './ui/titlemap.js';
-import { startMusic, setMood, setMusicHouse, musicSettings, setMusic } from './ui/music.js';
+import { startMusic, setMusicHouse, musicSettings, setMusic } from './ui/music.js';
+import { refreshScene, awaitJump, watchScene } from './ui/scene.js';
 import { sfx, wireSfx, sfxSettings, setSfx } from './ui/sfx.js';
 import { playTurn, prepareReveal, stageTurn } from './ui/playback.js';
 import { voiceSettings, setVoiceSetting, speak } from './ui/voice.js';
@@ -42,17 +43,11 @@ import { supplyOf } from './engine/military/supply.js';
 app.openChat = openChat; app.openCouncil = openCouncil; app.openPin = openPin; app.openSheet = openSheet; app.openCard = openCard; app.maybeShowOutcome = () => maybeShowOutcome(); app.coachDone = coachDone; app.renderWindow = renderWindow;
 
 // ═════════════ Title screen ═════════════
-// the music follows your situation: war drums when you are at war, the cold theme in the North
-function moodFor(s) {
-  const p = s.meta.player;
-  if (s.wars.some((w) => w.status !== 'ended' && (w.attackers.includes(p) || w.defenders.includes(p)))) return 'war';
-  const region = s.holdings[s.houses[p]?.seat]?.region || s.houses[p]?.region;
-  return ['north', 'wall', 'beyond'].includes(region) ? 'north' : 'court';
-}
+// the music follows your situation (ui/audio-map.js: war drums at war, the region's colour, tension while the days are awaited, a lament, the quiet of a matter; ui/scene.js gives it to the music)
 async function initTitle() {
-  wireSfx();
+  wireSfx(); watchScene();
   await loadCustomPortraits();
-  setMood('title');
+  app.screen = 'title'; refreshScene();
   $('#title-screen').classList.remove('hidden'); $('#game-screen').classList.add('hidden');
   await loadSigilArt();
   const scenarios = await api('/scenarios');
@@ -84,7 +79,7 @@ function renderHouseGrid() {
     return h.region === f;
   });
   $('#house-grid').innerHTML = list.map((h) => `<div class="house-tile ${app.chosenHouse === h.id ? 'selected' : ''}" data-h="${h.id}"><img src="${bannerURL(h.sigil, 60, 90)}" alt=""><div>${esc(h.name)}</div><div class="rank">${RANK_NAMES[h.rank] || h.rank}</div></div>`).join('');
-  $('#house-grid').onclick = (e) => { const t = e.target.closest('.house-tile'); if (!t) return; app.chosenHouse = t.dataset.h; applyHouseTheme(HOUSES.find((x) => x.id === t.dataset.h)); renderHouseGrid(); renderHouseDetail(); };
+  $('#house-grid').onclick = (e) => { const t = e.target.closest('.house-tile'); if (!t) return; app.chosenHouse = t.dataset.h; app.titleHouse = t.dataset.h; refreshScene(); applyHouseTheme(HOUSES.find((x) => x.id === t.dataset.h)); renderHouseGrid(); renderHouseDetail(); };
 }
 function renderHouseDetail() {
   const h = HOUSES.find((x) => x.id === app.chosenHouse); if (!h) return;
@@ -143,7 +138,7 @@ async function startGame(id, state) {
   app.saveId = id; loadSeen();
   app.state = state || await api('/games/' + id);
   applyHouseTheme(app.state.houses[app.state.meta.player]);
-  setMusicHouse(app.state.meta.player); setMood(moodFor(app.state));
+  setMusicHouse(app.state.meta.player); app.screen = 'game'; refreshScene();
   $('#title-screen').classList.add('hidden'); $('#game-screen').classList.remove('hidden');
   if (!app.map) {
     $('#map-loading').classList.remove('hidden');
@@ -187,7 +182,7 @@ app.renderOrders = renderOrders; app.renderTop = renderTop; app.markSeen = markS
   setInterval(async () => { try { const b = (await api('/version')).build; if (b !== mine && !$('#update-banner')) document.body.insertAdjacentHTML('beforeend', '<div id="update-banner" class="update-banner">The game has been updated. <button class="btn small primary" onclick="location.reload()">Reload</button></div>'); } catch { /* server restarting */ } }, 20000);
 })();
 app.setState = (s, opts = {}) => {
-  app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); setMood(moodFor(s)); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); refreshCard(); if (!opts.keepDrawer) renderDrawer();
+  app.state = s; applyHouseTheme(s.houses[s.meta.player]); setMusicHouse(s.meta.player); refreshScene(); app.map?.setState(s); renderTop(); renderPlayer(); renderOrders(); renderWindow(); renderSheet(); refreshCard(); if (!opts.keepDrawer) renderDrawer();
   // an ironman chronicle has no glass to turn back
   for (const b of document.querySelectorAll('[data-action="undo"]')) b.classList.toggle('hidden', !!s.meta.settings?.ironman);
   showCoach(); maybeQuietTip();
@@ -236,7 +231,7 @@ app.openRuler = () => { const sp = speakerFor(app.state, player().id); if (sp) o
 let outcomeShown = null;
 function maybeShowOutcome() {
   const o = app.state?.outcome; if (!o || outcomeShown === o.turn) return;
-  outcomeShown = o.turn;
+  outcomeShown = o.turn; app.screen = 'end'; app.endResult = o.victory ? 'victory' : 'defeat';
   const e = epitaph(app.state);
   const h = player();
   const row = (k, v) => `<div class="k">${k}</div><div>${v}</div>`;
@@ -559,6 +554,7 @@ async function advance() {
   coachDone('turn');
   const span = 'auto'; const until = nextTurnLength(app.state);
   busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}…`, { live: true });
+  app.endWait = awaitJump();
   try {
     const unreadBefore = app.state.ravens.filter((x) => !x.read).length;
     const r = await jump({ span, orders: app.state.orders });
@@ -578,7 +574,7 @@ async function advance() {
       if (newRavens) sfx('raven');
     } });
     if (r.turn.salvaged) toast("The model's reply for this period could not be read, so the realm moved on by its own laws (ledger, vassals, seasons, marches). Try again next turn — or lower the period, or switch thinking off in Settings.", true);
-  } catch (e) { toast(e.message, true); } finally { busy(false); }
+  } catch (e) { toast(e.message, true); } finally { app.endWait?.(); app.endWait = null; busy(false); }
 }
 // The days pass as a stream (03 §6.2, §10): each week is sent the moment it is told — its news in the feed, the map
 // flashing where it happened — while the next is simulated; the lord may stop the days on the week he is watching.
@@ -594,7 +590,7 @@ async function jump(body) {
     return await new Promise((resolve, reject) => {
       const es = new EventSource(`/api/games/${app.saveId}/jump/${job}/stream`);
       es.addEventListener('segment', (m) => {
-        const seg = JSON.parse(m.data); lastDay = seg.days?.[1] || lastDay;
+        const seg = JSON.parse(m.data); lastDay = seg.days?.[1] || lastDay; app.endWait?.(); app.endWait = null; // the first week told: the tension ends
         feed.insertAdjacentHTML('beforeend', `<div class="bf-seg">${esc(seg.from)}${seg.to !== seg.from ? ` – ${esc(seg.to)}` : ''}</div>`);
         // a long jump prints each week's best headline or two, not every card (GDD 18 §2.6): the strip and the chronicle hold the rest
         const told = (seg.events || []).filter((x) => !x.bg).sort((a, b) => (b.score ?? b.importance ?? 0) - (a.score ?? a.importance ?? 0));
@@ -713,11 +709,13 @@ async function showSettings() {
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-sfx" ${sfxSettings().on ? 'checked' : ''}> Sound effects</label><input type="range" id="snd-svol" min="0" max="1" step="0.05" value="${sfxSettings().volume}" style="width:100%"></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-narrate" ${voiceSettings().narrate ? 'checked' : ''}> A narrator reads the scene's actions</label></div>
       <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-auto" ${voiceSettings().auto ? 'checked' : ''}> Speak replies aloud as they arrive</label></div>
+      <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-read" ${voiceSettings().readAloud ? 'checked' : ''}> The chronicle is read aloud (the narrator reads each great story as it is told, and the days wait for it)</label></div>
+      <div><label style="display:flex;gap:0.4rem;align-items:center"><input type="checkbox" id="snd-letters" ${voiceSettings().letters ? 'checked' : ''}> Letters are read in their sender's voice when opened</label></div>
       <div><button class="btn small" id="snd-test">Hear Lord Tywin</button> <button class="btn small" id="snd-test2">Hear Lady Catelyn</button></div>
       <div style="grid-column:1/-1"><label>Voice server URL <span class="muted">(OpenAI-compatible <code>/v1/audio/speech</code>, e.g. Kokoro-FastAPI <code>http://localhost:8880/v1</code>)</span></label><input class="input" id="snd-tts" value="${esc(c.ttsUrl || '')}" placeholder="http://localhost:8880/v1"></div>
       <div><label>Narrator</label><select id="snd-narrator"><option value="storyteller">The storyteller — a woman's voice, clear and warm</option><option value="maester">The maester — an old man, grave</option><option value="chronicler">The chronicler — a man, wry and light</option></select></div>
       <div><label>Character voices</label><div class="muted" style="font-size:max(0.82rem,12px)">Every character has a voice of their own. To change one, open their sheet and choose under <i>Nature → Voice</i>.</div></div>
-      <p class="muted" style="grid-column:1/-1;font-size:max(0.78rem,12px);margin:0">Every character has a voice of their own. The main cast are shaped by hand (Tywin deep and slow, Robert booming, Arya quick and young); everyone else by sex, age and homeland. Drop your own music into <code>public/music/</code> to replace the score.</p>
+      <p class="muted" style="grid-column:1/-1;font-size:max(0.78rem,12px);margin:0">Every character has a voice of their own. The main cast are shaped by hand (Tywin deep and slow, Robert booming, Arya quick and young); everyone else by sex, age and homeland. Your own music goes in <code>public/music/</code>, in folders named for the mood (war, tension, lament, winter, north…): the game plays the one that fits what is happening.</p>
     </div>
     </section>
     <section class="set-panel" id="set-model" data-set-panel="model" role="tabpanel" aria-labelledby="settab-model" hidden>
@@ -774,6 +772,8 @@ async function showSettings() {
   $('#snd-engine').onchange = (e) => setVoiceSetting('engine', e.target.value);
   $('#snd-vvol').oninput = (e) => setVoiceSetting('volume', Number(e.target.value));
   $('#snd-auto').onchange = (e) => setVoiceSetting('auto', e.target.checked);
+  $('#snd-read').onchange = (e) => setVoiceSetting('readAloud', e.target.checked);
+  $('#snd-letters').onchange = (e) => setVoiceSetting('letters', e.target.checked);
   $('#snd-narrate').onchange = (e) => setVoiceSetting('narrate', e.target.checked);
   $('#snd-narrator').onchange = (e) => { setVoiceSetting('narrator', e.target.value); speak('The night is dark, and the realm holds its breath.', null, { narrator: true }); };
   $('#snd-tts').onchange = async (e) => { await api('/config', { body: { ttsUrl: e.target.value.trim() } }); };

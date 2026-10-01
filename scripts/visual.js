@@ -129,7 +129,7 @@ async function flow(browser) {
   const out = { steps: [], errors: [] }; const page = await browser.newPage({ viewport: { width: 1366, height: 768 } }); page.setDefaultTimeout(90000);
   page.on('pageerror', (e) => out.errors.push(e.message.slice(0, 160))); page.on('console', (m) => { if (m.type() === 'error' && !/404|Failed to load resource/.test(m.text())) out.errors.push(m.text().slice(0, 160)); });
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.addInitScript(() => { try { localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); } catch { /* */ } });
+  await page.addInitScript(() => { try { localStorage.setItem('voice-download', '"off"'); localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); } catch { /* */ } });
   const step = async (name, fn) => { try { await fn(); out.steps.push(name); return true; } catch (e) { out.failed = `${name}: ${String(e.message).split(String.fromCharCode(10))[0]}`; return false; } };
   try {
     if (!(await step('title', async () => { await page.goto(`http://127.0.0.1:${PORT}/?dev`); await page.waitForSelector('#house-grid .house-tile', { timeout: 60000 }); }))) return out;
@@ -166,7 +166,7 @@ async function main() {
       const page = await browser.newPage({ viewport: { width: w, height: h } }); page.setDefaultTimeout(60000);
       const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/404|Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 140)); });
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.addInitScript((gid) => { try { localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); localStorage.setItem('wc.welcomed.' + gid, '1'); localStorage.setItem('wc.coach.' + gid, '["command","turn","realm"]'); } catch { /* */ } }, id);
+      await page.addInitScript((gid) => { try { localStorage.setItem('voice-download', '"off"'); localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); localStorage.setItem('wc.welcomed.' + gid, '1'); localStorage.setItem('wc.coach.' + gid, '["command","turn","realm"]'); } catch { /* */ } }, id);
       await page.goto(`http://127.0.0.1:${PORT}/?dev&game=${id}`);
       await page.waitForFunction(() => window.__wc?.map && document.querySelector('#map-loading')?.classList.contains('hidden'), null, { timeout: 240000, polling: 500 });
       await page.waitForTimeout(2000); await page.evaluate(() => window.__wc?.map?.renderer?.setAnimationLoop?.(null));

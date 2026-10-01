@@ -60,7 +60,29 @@ const SOUNDS = {
   coins() { const t = now(); for (let i = 0; i < 6; i++) { const k = t + i * 0.05 + Math.random() * 0.03; tone(k, 3000 + Math.random() * 2500, 0.16, { peak: 0.04, wet: 0.2 }); noise(k, 0.03, { freq: 6000, q: 2, peak: 0.05, wet: 0.1 }); } },
   seal() { const t = now(); tone(t, 90, 0.18, { peak: 0.2, glideTo: 55, wet: 0.15 }); noise(t, 0.06, { freq: 600, q: 1, peak: 0.15, wet: 0.15 }); tone(t + 0.12, 880, 0.9, { peak: 0.03, wet: 0.5 }); tone(t + 0.12, 1318, 0.8, { peak: 0.02, wet: 0.5 }); },
   error() { const t = now(); tone(t, 140, 0.2, { type: 'triangle', peak: 0.1, glideTo: 90, wet: 0.1 }); },
+  // WP H1 (ui/audio-map.js says which fact sounds which): the low horn of a siege, two short blasts of a muster, soft drums, a lute's flourish, a wind, a soft tick, a single deep bell and the sting of a great thing of war
+  lowhorn() { const t = now(); const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.13, t + 0.5); g.gain.setValueAtTime(0.13, t + 1.5); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.8); const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 2; for (const [f, dt] of [[62, 0], [62, 6], [124, -4]]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = dt; o.connect(lp); o.start(t); o.stop(t + 2.9); } lp.connect(g); route(g, 0.7); },
+  horn2() { const t = now(); for (const k of [0, 0.55]) { const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t + k); g.gain.exponentialRampToValueAtTime(0.12, t + k + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + k + 0.5); const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; for (const f of [130, 131.5, 262]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(t + k); o.stop(t + k + 0.55); } lp.connect(g); route(g, 0.5); } },
+  drums() { const t = now(); for (let i = 0; i < 4; i++) { const k = t + i * 0.22; tone(k, 78, 0.25, { peak: 0.12, glideTo: 48, wet: 0.2 }); noise(k, 0.06, { type: 'lowpass', freq: 400, q: 0.8, peak: 0.09, wet: 0.2 }); } },
+  lute() { const t = now(); [293.66, 369.99, 440, 587.33, 440].forEach((f, i) => { const k = t + i * 0.11; tone(k, f, 0.7, { type: 'triangle', peak: 0.07, a: 0.003, wet: 0.35 }); tone(k, f * 2, 0.35, { type: 'sine', peak: 0.02, a: 0.003, wet: 0.35 }); noise(k, 0.02, { freq: 3500, q: 2, peak: 0.03, wet: 0.1 }); }); },
+  wind() { const t = now(); const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 0.7; f.frequency.setValueAtTime(380, t); f.frequency.exponentialRampToValueAtTime(900, t + 1.4); f.frequency.exponentialRampToValueAtTime(420, t + 3); const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 1.2); g.gain.exponentialRampToValueAtTime(0.0001, t + 3); src.connect(f); f.connect(g); route(g, 0.4); src.start(t); src.stop(t + 3.1); },
+  tick() { const t = now(); tone(t, 1250, 0.04, { peak: 0.05, wet: 0 }); noise(t, 0.015, { freq: 4000, q: 2, peak: 0.04, wet: 0 }); },
+  toll() { const t = now(); const f = 65; for (const [m, p, d] of [[1, 0.26, 6], [2.0, 0.11, 4.5], [2.76, 0.08, 3.5], [5.4, 0.04, 2.4]]) tone(t, f * m, d, { peak: p, a: 0.008, wet: 0.7 }); noise(t, 0.06, { freq: 2200, q: 1, peak: 0.07, wet: 0.3 }); },
+  sting() { const t = now(); tone(t, 55, 0.5, { type: 'sawtooth', peak: 0.12, glideTo: 40, wet: 0.4 }); tone(t, 110, 0.35, { type: 'sawtooth', peak: 0.07, wet: 0.4 }); noise(t, 0.12, { type: 'lowpass', freq: 600, q: 0.7, peak: 0.16, wet: 0.3 }); },
 };
+/** Every cue the bank has (tests/audio-map.test.js holds that each cue ui/audio-map.js names is among them). */
+export const SFX_IDS = Object.keys(SOUNDS);
+const LENGTH_MS = { lowhorn: 2800, horn2: 1100, drums: 900, lute: 900, wind: 3000, tick: 60, toll: 6000, sting: 600, horn: 2400, bell: 4500, raven: 1200 };
+let duckHandler = null; let gateAt = -Infinity;
+/** The music registers how it is ducked: a cue lowers it by a fraction for its length (music.js `duck`). */
+export function onDuck(fn) { duckHandler = fn; }
+/** Play a list of cues for a story (a caw then a parchment): at most one cue in 400 ms, each ducking the music by 30 % for its length. */
+export function cue(names) {
+  const list = (Array.isArray(names) ? names : [names]).filter(Boolean); if (!list.length || !sfxSettings().on) return;
+  const t = performance.now(); if (t - gateAt < 400) return; gateAt = t;
+  list.forEach((n, i) => setTimeout(() => sfx(n), i * 260));
+  duckHandler?.(0.3, Math.max(...list.map((n) => LENGTH_MS[n] || 400)) + 260 * (list.length - 1));
+}
 
 export function sfx(name) {
   if (!sfxSettings().on) return;
