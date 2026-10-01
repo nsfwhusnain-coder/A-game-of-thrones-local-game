@@ -30,8 +30,8 @@ agent ran a wide bug hunt.
    `docs/bughunt/live-samples/` as **text fixtures** in unit tests.
 2. Everything in `CLAUDE.md`'s **Never** list: model output never mutates state; no runtime npm dependencies; never remove or
    degrade portraits or family trees; no post-298 knowledge in characters; no spoilers shown to the player; no copied book text.
-3. **The engine is deterministic.** `engine/`, `shared/` and the turn code may not use `Math.random`, the clock or `crypto`
-   (the engine lint inside `npm run check` enforces it). Randomness comes from the engine's seeded generator (`engine/rng.js`).
+3. **The engine is deterministic.** `public/js/engine/`, `public/js/shared/` and `server/turn/` may not use `Math.random`, the clock or `crypto`
+   (the engine lint inside `npm run check` enforces it). Randomness comes from the engine's seeded generator (`public/js/engine/rng.js`).
 4. **Both CI platforms stay green.** CI runs 8 checks per commit (push and pull_request, windows-latest and ubuntu-latest,
    Node 22 and 24). The owner plays on Windows: dynamic `import()` of a path goes through `pathToFileURL`; never parse source
    files with `\n`-only regexes (a Windows checkout has CRLF); timing tests must be relative (CI runners are about four times
@@ -106,11 +106,11 @@ the S3s. These groups are a suggestion; keep a group to one theme so each PR is 
 - **ST4 (lords decree on the road).** Decisions are taken at the start of the week and dated at its end; either date them at the
   start or hold the ones that need the lord at home while he is away.
 - **WD1 (births and marriages).** Deterministic, conservative, and plausible: married couples of fertile age have children at
-  historical-ish rates, the `birth` fact kind already exists in `engine/facts/kinds.js` and `heads.js` and nothing emits it. Keep
+  historical-ish rates, the `birth` fact kind already exists in `public/js/engine/facts/kinds.js` and `heads.js` and nothing emits it. Keep
   canon characters on their canon paths (Canon gravity); do not give the story's protected people children the story forbids.
   Marriages and betrothals between houses may start as an engine-side process; add order verbs only if the GDD has them. Record
   the rates and the choices in `DECISIONS.md` and ask the owner in the PR body.
-- **ST1.** `beatHead` and the `canon_beat` summary in `engine/facts/heads.js` ignore the fact's own `title` and `text`; use them.
+- **ST1.** `beatHead` and the `canon_beat` summary in `public/js/engine/facts/heads.js` ignore the fact's own `title` and `text`; use them.
   Check every beat in `public/data/beats.js` reads well as a headline and a subtitle.
 - **SV1.** Same-origin only: reject POSTs whose `Origin` or `Host` is not the server's own (the owner plays at
   `http://127.0.0.1:3298`), require a JSON content type, add basic security headers, answer `OPTIONS`, return clean JSON errors
