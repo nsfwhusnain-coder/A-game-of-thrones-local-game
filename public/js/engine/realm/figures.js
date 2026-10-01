@@ -11,7 +11,8 @@
 //   people     the souls of the house's holdings; prosperity / unrest the people-weighted mean of them, 0–100
 //   power      `standing().score`, 0–100
 import { standing } from '../../shared/standing.js';
-import { project } from '../../shared/economy.js';
+import { project, almsFor } from '../../shared/economy.js';
+import { forces } from '../parties.js';
 
 export const FIELDS = ['swords', 'levies', 'menAtArms', 'guard', 'gold', 'debt', 'income', 'expenses', 'food', 'ships', 'holdings', 'people', 'prosperity', 'unrest', 'power'];
 
@@ -25,13 +26,29 @@ export function holdingsIndex(state) {
 }
 
 /**
+ * Everything a pass over every house needs from the world, each list made once (a scan of the world per house is the slow way):
+ * holdings, hosts (with men), the houses sworn to each (by liege), the living kin (not wards), the standing forces, the alms sent
+ * north; and `revenue`, a house's yield, worked the first time it is asked.
+ */
+export function figuresIndex(state) {
+  const add = (m, k, v) => { const l = m.get(k); if (l) l.push(v); else m.set(k, [v]); };
+  const hosts = new Map(), vassals = new Map(), kin = new Map(), fleets = new Map();
+  for (const a of Object.values(state.parties || {})) if (a.men > 0) add(hosts, a.owner, a);
+  for (const a of forces(state)) add(fleets, a.owner, a);
+  for (const v of Object.values(state.houses || {})) if (v.liege) add(vassals, v.liege, v);
+  for (const c of Object.values(state.characters || {})) if (c.alive && !(c.roles || []).includes('ward')) add(kin, c.house, c);
+  return { holds: holdingsIndex(state), hosts, vassals, kin, forces: fleets, alms: new Map(almsFor(state).map((x) => [x.id, x.amount])), revenue: new Map() };
+}
+
+/**
  * The figures of `house` as the world truly stands, keyed by FIELDS; null for a house there is not. `held` is an
- * optional `holdingsIndex(state)` when many houses are done in a row.
+ * optional `holdingsIndex(state)` when many houses are done in a row, or a whole `figuresIndex(state)` (the fast way, for all of them).
  */
 export function figuresOf(state, house, held = null) {
   const h = state.houses?.[house]; if (!h) return null;
-  const st = standing(state, house); const pr = project(state, house);
-  const holds = (held || holdingsIndex(state)).get(house) || [];
+  const ix = held?.revenue ? held : null; // (a figuresIndex; a bare holdingsIndex has no revenue cache)
+  const st = standing(state, house, ix); const pr = project(state, house, ix);
+  const holds = (ix ? ix.holds : held || holdingsIndex(state)).get(house) || [];
   const people = holds.reduce((n, x) => n + (x.population || 0), 0);
   // the mood of the lands, weighted by the people in them (an empty land is plainly worth nothing: 0)
   const mean = (key, fallback) => (holds.length ? (people > 0 ? holds.reduce((n, x) => n + (x[key] ?? fallback) * (x.population || 0), 0) / people : holds.reduce((n, x) => n + (x[key] ?? fallback), 0) / holds.length) : 0);

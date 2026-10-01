@@ -90,8 +90,10 @@ test('after createInitialState a sample exists: the §3.1 shape, integers only, 
   // which houses (§3.1): the great and the orders, the player's own, and the minor houses sworn to one of those
   assert.ok(first.h.stark, 'the player\'s house');
   for (const h of Object.values(s.houses)) {
-    const listed = HOUSE_RANKS.has(h.rank) || h.id === 'stark' || (h.rank === 'minor' && HOUSE_RANKS.has(s.houses[h.liege]?.rank));
+    const lesser = !!s.holdings[h.id]?.lesser; // a lesser house (WP G1) is sampled only for its liege's player: nobody else reads its row back
+    const listed = lesser ? h.liege === 'stark' : HOUSE_RANKS.has(h.rank) || h.id === 'stark' || (h.rank === 'minor' && HOUSE_RANKS.has(s.houses[h.liege]?.rank));
     if (listed) assert.ok(first.h[h.id], `${h.id} (${h.rank}) is sampled`);
+    if (lesser && h.liege !== 'stark') assert.ok(!first.h[h.id], `${h.id} is a lesser house of another's: not sampled`);
   }
 });
 
@@ -114,6 +116,15 @@ test('the figures come from one place: figuresOf, and the sample is figuresOf', 
     const row = s.realmStats.samples.at(-1).h[house];
     for (const k of ['swords', 'levies', 'menAtArms', 'holdings', 'power']) assert.equal(row[at(k)], f[k], `${house}: the sample's ${k} is figuresOf's`);
   }
+});
+
+test('the index of a pass over many houses changes no figure of any house, and the sample is cheap with it', async () => {
+  const { figuresIndex } = await import('../public/js/engine/realm/figures.js');
+  const s = world('stark', 7); const ix = figuresIndex(s);
+  for (const house of Object.keys(s.houses)) assert.deepEqual(figuresOf(s, house, ix), figuresOf(s, house), `${house}: the same figures with the index`);
+  assert.deepEqual(standing(s, 'stark', ix), standing(s, 'stark'));
+  // 290 houses made one scan of the world each took a tenth of a second; the index makes the pass a few milliseconds (a loose guard: CI boxes are slow)
+  const c = JSON.parse(JSON.stringify(s)); const t0 = performance.now(); sampleRealm(c); assert.ok(performance.now() - t0 < 60, `the sample took ${(performance.now() - t0).toFixed(0)} ms`);
 });
 
 test('own power equals state.standing.score exactly after a turn (and every house\'s power is standing\'s score)', async () => {
