@@ -72,7 +72,8 @@ test('the digest of a turn: whole pieces, at most 90 words, the best first, and 
 test('the chronicle and the world log are written in the new words: no engine line, no ledger phrase', async () => {
   const { id } = await play();
   const chronicle = game.readChronicle(id); const log = game.readWorldLog(id);
-  const lines = chronicle.split(/\r?\n/).filter((l) => l.startsWith('- '));
+  // (the consolidation's own notes of what is still open, "- As of …: …", are the memory's, not cards: a moon of days brings one)
+  const lines = chronicle.split(/\r?\n/).filter((l) => l.startsWith('- ') && !/^- As of /.test(l));
   assert.ok(lines.length >= 1, 'the muster of the first week is in the chronicle');
   for (const l of lines) { assert.ok(!BAD.some((re) => re.test(l)), l); assert.ok(!/…/.test(l), l); assert.match(l, / — /, 'headline — summary'); }
   assert.match(log, /\*\*Eddard Stark raises the northern banners at Winterfell\*\*/, 'the world log keeps the headline');

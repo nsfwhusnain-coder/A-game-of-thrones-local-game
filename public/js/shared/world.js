@@ -1,5 +1,6 @@
 // Shared world logic used by both the server (simulation) and the browser (display).
-import { HOUSES, EXTRA_HOLDINGS, PLACE_ALIASES } from '../../data/houses.js';
+import { HOUSES, EXTRA_HOLDINGS, PLACE_ALIASES, MORE_HOUSE_IDS, MORE_HOLDING_IDS } from '../../data/houses.js';
+const LESSER = new Set(MORE_HOUSE_IDS); const LESSER_HOLDINGS = new Set(MORE_HOLDING_IDS);
 import { CHARACTERS } from '../../data/characters.js';
 import { SCENARIOS } from '../../data/scenarios.js';
 import { MATTER_IDS } from '../../data/matters.js';
@@ -7,6 +8,7 @@ import { JUNCTIONS, PLACE_NAMES, LAND, LAKES, MILES_PER_UNIT } from '../../data/
 import { MAP_VERSION, warpOld } from '../../data/warp.js';
 import { ANCESTORS, PARENTS, SPOUSES, deriveSkills } from '../../data/families.js';
 import { initEconomy, TAX_LEVELS, project } from './economy.js';
+import { fillHouseholds } from './households.js';
 import { heirOf, isFemale, sexOf } from './people.js';
 import { addReport, seedKnowledge, knowledgeOf } from '../engine/knowledge.js';
 import { commandable } from './errands.js';
@@ -34,6 +36,8 @@ const RANK_DEFAULTS = {
   paramount: { treasury: 200000, income: 12000, debt: 0, levies: 12000, menAtArms: 1200, guard: 150, ships: 8, food: 18 },
   major: { treasury: 30000, income: 1800, debt: 0, levies: 3000, menAtArms: 400, guard: 60, ships: 2, food: 12 },
   minor: { treasury: 6000, income: 400, debt: 0, levies: 900, menAtArms: 100, guard: 25, ships: 0, food: 10 },
+  // the lesser houses of WP G1: a holdfast and its villages (their domain is a share of a castle's: ECONOMY.lesserDomain)
+  lesser: { treasury: 1500, income: 120, debt: 0, levies: 110, menAtArms: 25, guard: 10, ships: 0, food: 10 },
   city_state: { treasury: 500000, income: 30000, debt: 0, levies: 5000, menAtArms: 1500, guard: 200, ships: 40, food: 12 },
   order: { treasury: 1000, income: 100, debt: 0, levies: 0, menAtArms: 500, guard: 0, ships: 1, food: 12 },
   tribe: { treasury: 0, income: 0, debt: 0, levies: 10000, menAtArms: 0, guard: 0, ships: 0, food: 3 },
@@ -61,13 +65,14 @@ export function buildHoldings() {
       pos: [...h.pos], owner: h.id, seatOf: h.id, region: h.region,
       type: h.holdingType || (h.rank === 'paramount' || h.rank === 'crown' ? 'great_castle' : 'castle'),
       prosperity: 60, unrest: 10, garrison: null, status: 'normal', notes: [],
+      ...(LESSER.has(h.id) ? { lesser: true } : {}), // a house of WP G1: a small domain over and above its region's people (economy ledger)
     };
   }
   holdings.baratheon.name = 'King\'s Landing';
   for (const h of Object.values(holdings)) h.coastal = isCoastal(h.pos);
   for (const [id, name, x, y, owner, type] of EXTRA_HOLDINGS) {
     const region = HOUSES.find((h) => h.id === owner)?.region || 'unknown';
-    holdings[id] = { id, name, fullName: name, pos: [x, y], owner, seatOf: null, region, type, prosperity: 50, unrest: 10, garrison: null, status: 'normal', notes: [] };
+    holdings[id] = { id, name, fullName: name, pos: [x, y], owner, seatOf: null, region, type, prosperity: 50, unrest: 10, garrison: null, status: 'normal', notes: [], ...(LESSER_HOLDINGS.has(id) ? { lesser: true } : {}) };
   }
   return holdings;
 }
@@ -106,8 +111,8 @@ function buildInitialState(scenarioId, playerHouse, seed) {
   if (!sc) throw new Error('Unknown scenario ' + scenarioId);
   const houses = {};
   for (const h of HOUSES) {
-    const base = RANK_DEFAULTS[h.rank] || RANK_DEFAULTS.minor;
-    const ov = sc.figures[h.id] || {};
+    const base = (LESSER.has(h.id) ? RANK_DEFAULTS.lesser : RANK_DEFAULTS[h.rank]) || RANK_DEFAULTS.minor;
+    const ov = sc.figures[h.id] || (LESSER.has(h.id) && h.region === 'iron_islands' ? { ships: 5 } : {}); // an island lord keeps boats of his own (07 §5)
     const figures = {};
     for (const f of FIGURE_FIELDS) {
       const v = ov[f] !== undefined ? ov[f] : (f === 'food' || f === 'ships' || f === 'debt' ? base[f] : jitter(h.id + f, base[f]));
@@ -138,13 +143,17 @@ function buildInitialState(scenarioId, playerHouse, seed) {
   // Every house needs a head. Where the books name none, raise a plausible lord.
   for (const h of Object.values(houses)) {
     if (h.lord || h.rank === 'company') continue;
-    const c = generateLord(h, sc.date.year);
+    // houses of one name (the five Goodbrothers) must not raise the same man: another draw until the name is new
+    let c = generateLord(h, sc.date.year);
+    for (let k = 1; (characters[c.id] || Object.values(characters).some((x) => x.name === c.name)) && k < 40; k++) c = generateLord(h, sc.date.year, `~${k}`);
     characters[c.id] = c; h.lord = c.id;
   }
   houses.baratheon_se.lord = 'renly_baratheon';
   houses.golden_company.lord = 'harry_strickland';
   houses.arryn.lord = 'robert_arryn';
   houses.arryn.regent = 'lysa_arryn';
+  // every landed house has at least three people: where the books name no spouse or heir, raise a plausible pair (shared/households.js)
+  fillHouseholds(characters, houses, sc.date.year);
 
   const holdings = buildHoldings();
   const parties = {};
@@ -255,7 +264,7 @@ function generateLord(h, year, salt = '') {
   const title = essos ? (h.title || `First Magister of ${h.name}`) : `${female ? 'Lady' : 'Lord'} of ${seatName}`;
   const id = slug(`${first}_${essos ? h.id : surname}`);
   return {
-    id, name: essos ? `${first} of ${h.name}` : `${first} ${surname}`, house: h.id, title, age, born: year - age, loc: h.id,
+    id, name: essos ? `${first} of ${h.name}` : `${first} ${surname}`, house: h.id, title, age, born: year - age, loc: resolvePlaceId(h.id) || h.id,
     roles: essos ? ['ruler'] : [female ? 'lady' : 'lord'], traits, bio: `Head of House ${h.name}.`, alive: true, status: 'free', opinion: 0, loyalty: 50 + Math.floor(rnd() * 40), memories: [], generated: true, sex: female ? 'f' : 'm',
     skills: deriveSkills({ roles: ['lord'], traits, age }),
   };

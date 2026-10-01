@@ -74,7 +74,7 @@ export const HEADS = {
   cl_herring_shoals: [['Herring fill the bay at {P}', 'The summer catch at {P} breaks records'], 'The fishermen bought a round of ale for the whole town.'],
   cl_watch_streets: [['The watch clears a market at {P}', 'The watch at {P} gets a new captain'], 'The thieves say they will miss the old days.'],
   cl_ships_dragonstone: [['Ships fill the harbour at {P}', 'Timber and pitch reach {P}'], 'The harbourmaster says the lord means to have a fleet.'],
-  cl_crown_tourney: [['A tourney is held near {P}', 'Small houses meet in the lists near {P}'], 'The silver helm went to a young man nobody had heard of.'],
+  cl_crown_tourney: [['A tourney is held near {P}', 'Lesser houses meet in the lists near {P}'], 'The silver helm went to a young man nobody had heard of.'],
   cl_foraging_war: [['Foragers strip the farms near {P}', 'Soldiers camp near {P} and eat what they find'], 'The smallfolk hide their grain in the well.'],
   cl_river_fever: [['A river fever sweeps {P}', 'Fever from the marsh reaches {P}'], 'The well was closed and the lord rode out to see for himself.'],
   re_apple_harvest: [['Apples fill the carts at {P}', 'The orchards near {P} give more than the barrels hold'], 'The cider presses are working day and night.'],

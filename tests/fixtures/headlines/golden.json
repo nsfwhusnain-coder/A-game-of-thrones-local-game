@@ -56,7 +56,7 @@
   {
     "id": "g-slain-03", "archetype": "death-in-battle",
     "facts": [
-      {"id":"f1.1","kind":"slain_in_battle","actors":["vardis_egen"],"houses":["arryn"],"place":"bloody_gate","data":{"cause":"killed in battle near The Bloody Gate","how":"held the gate against the clansmen"},"importance":4,"text":"Ser Vardis Egen is slain — killed in battle near The Bloody Gate."}
+      {"id":"f1.1","kind":"slain_in_battle","actors":["vardis_egen"],"houses":["arryn","egen"],"place":"bloody_gate","data":{"cause":"killed in battle near The Bloody Gate","how":"held the gate against the clansmen"},"importance":4,"text":"Ser Vardis Egen is slain — killed in battle near The Bloody Gate."}
     ],
     "must": ["Vardis Egen","Bloody Gate"], "mustNot": ["Robb","Winterfell"], "maxWords": 12, "verb": "slain",
     "reference": "Ser Vardis Egen slain at the Bloody Gate",

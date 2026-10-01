@@ -30,6 +30,12 @@ export function realmSummary(state, house, view = realmViewFor(state, house, { s
   };
 }
 
+/** The flags on a house, as it reads them of itself (`hungry`, `reeling`…): its own row of the ledger alone, which is what the realm's lords are woken by each week — a house's whole view of the realm is not needed for it. */
+export function ledgerFlags(state, house) {
+  const me = realmViewFor(state, house, { scope: 'self' }).rows.find((r) => r.house === house);
+  return (me?.flags || []).map((f) => f.id);
+}
+
 /**
  * The block of the dossier that says how the realm stands (§8): at most twelve short lines, about three hundred tokens, each figure written as the ledger writes it.
  * `{ lines, text }`. Your house first, then the strongest, the others, the wars, and what the realm is saying about you.

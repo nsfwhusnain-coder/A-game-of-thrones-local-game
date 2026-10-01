@@ -17,13 +17,15 @@ const kinOf = (s, id) => Object.values(s.characters).filter((c) => c.alive && c.
 /**
  * Where a house stands, in five plain measures, each 0..100, plus the raw figures behind them.
  * This is the number the end screen scores, the Realm window shows, and the prompt summarises.
+ * `ix` is an optional `figuresIndex(state)` (engine/realm/figures.js) when many houses are done in a row: the same lists, made once,
+ * where each house's own call would scan every holding, host, house and person in the world.
  */
-export function standing(state, houseId) {
+export function standing(state, houseId, ix = null) {
   const h = state.houses[houseId]; if (!h) return null;
-  const holds = holdingsOf(state, houseId);
-  const hosts = armiesOf(state, houseId);
-  const vassals = Object.values(state.houses).filter((v) => v.liege === houseId && v.status !== 'extinct');
-  const kin = kinOf(state, houseId);
+  const holds = ix ? ix.holds.get(houseId) || [] : holdingsOf(state, houseId);
+  const hosts = ix ? ix.hosts.get(houseId) || [] : armiesOf(state, houseId);
+  const vassals = ix ? (ix.vassals.get(houseId) || []).filter((v) => v.status !== 'extinct') : Object.values(state.houses).filter((v) => v.liege === houseId && v.status !== 'extinct');
+  const kin = ix ? ix.kin.get(houseId) || [] : kinOf(state, houseId);
 
   const swords = hosts.reduce((n, a) => n + a.men, 0) + (Number(h.figures?.levies?.v) || 0) + (Number(h.figures?.menAtArms?.v) || 0);
   const gold = (Number(h.figures?.treasury?.v) || 0) - (Number(h.figures?.debt?.v) || 0);

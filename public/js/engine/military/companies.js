@@ -126,7 +126,7 @@ export function irregularsTick(state, days, r) {
     const nw = Object.values(state.parties).find((p) => p.owner === 'nights_watch' && p.kind === 'garrison');
     if (nw) { const n = 20 + Math.floor(r() * 11); nw.men += n; applied.push({ op: 'watch', text: `${n} recruits reach the Wall` }); }
     const ff = Object.values(state.parties).find((p) => p.owner === 'free_folk' && p.kind === 'host');
-    if (ff && ff.men < 90000) ff.men = Math.min(90000, Math.round(ff.men * 1.01));
+    if (ff && ff.men < 90000) ff.men = Math.min(90000, Math.round(ff.men * 1.075)); // Mance's gathering: from ~8,000 in 298 to the host of the year 300 (07 §10), then no further
   }
   return { events, applied };
 }

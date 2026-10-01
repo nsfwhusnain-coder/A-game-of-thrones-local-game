@@ -1053,7 +1053,9 @@ export const SUM = {
   death: (f, s, c) => {
     const d = f.data || {}; const P = pro(c, f); const age = say(d.age);
     const of = deathOf(d); const shown = of && String(d.cause || '').toLowerCase() !== of ? String(d.cause || '').trim() : '';
-    return sentences(age ? `${P.He} was ${age}` : '', shown ? `${P.He} died of ${shown}` : '');
+    // a death that carries no age and no cause the headline did not say still says what the person was (their office, in a word), never nothing
+    const role = { maester: 'a maester', knight: 'a knight', lord: 'a lord', lady: 'a lady', priest: 'a septon', steward: 'a steward', captain: 'a captain', commander: 'a commander', master_at_arms: 'a master-at-arms', heir: 'an heir', ward: 'a ward of the house', servant: 'a servant of the house', family: 'of the house' }[(s.characters?.[f.actors?.[0]]?.roles || [])[0]];
+    return sentences(age ? `${P.He} was ${age}` : '', shown ? `${P.He} died of ${shown}` : '') || (role ? sentences(`${P.He} was ${role}`) : '');
   },
   birth: () => '',
   betrothal: (f, s, c) => { const [a, b] = houseSides(c, f); return a && b ? sentences(`The match joins ${a} and ${b}`) : sentences('The match is made between two houses'); },

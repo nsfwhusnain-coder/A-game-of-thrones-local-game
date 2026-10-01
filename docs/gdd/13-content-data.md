@@ -23,7 +23,7 @@
 
 ## 2. Houses: the roster to reach
 
-Current: **158 houses** (1 crown, 8 paramount, 24 major, 109 minor, 16 others), **124 with ≤ 1 character**. Target:
+**Done (WP G1/G2, D-099): 290 houses (130 lesser houses and the Second Sons and the Stormcrows added), every landed house with at least three people.** (Before: 158 houses (1 crown, 8 paramount, 24 major, 109 minor, 16 others), **124 with ≤ 1 character**.) Target:
 **≈ 260 houses**, every one with ≥ 3 characters (lord, spouse or heir, one more), and every great house fully peopled.
 
 Add the following (verify each against the books; seats per the atlas). Existing ids in brackets are kept.
@@ -73,7 +73,7 @@ Add the following (verify each against the books; seats per the atlas). Existing
 
 ## 3. Characters: coverage targets
 
-Current: 312 characters (290 alive). Target: **≈ 700**, of which ≈ 450 canon-named.
+**Done (WP G2, D-099): 1,011 people at the start** (324 named by the books — 109 of them added by G2 — and 687 raised for the households and the lesser houses, flagged `generated`). (Before: 312 characters (290 alive).) Target: **≈ 700**, of which ≈ 450 canon-named.
 
 | House class | Minimum characters | Must include |
 |---|---|---|
@@ -92,7 +92,7 @@ pool), family links, and for canon characters the `canon.deathWindow` where appl
 
 ## 4. Holdings and places
 
-Current: 165 holdings (8 towns). Target: **≈ 300 holdings** (all seats + ≈ 70 towns, ports and villages) and
+**Done (WP G3, D-099): 335 holdings** (the Watch's other sixteen castles as ruins, Mole's Town, Winter Town, ten more towns, five ruins, eight towns and ruins across the narrow sea, the clans' camps); the atlas's other places remain places. (Before: 165 holdings (8 towns).) Target: **≈ 300 holdings** (all seats + ≈ 70 towns, ports and villages) and
 **≈ 120 places**.
 
 - **Towns and ports** to add (at least): Winter Town, Mole's Town, Barrowton (town at the Barrowlands' seat), the Rills

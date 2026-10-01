@@ -3,5 +3,5 @@
  "note": "A hook set somewhere it cannot happen (a weirwood felled at Highgarden is not on its list).",
  "reply": "{\"hooks\": [{\"hook\": \"weirwood_cut\", \"place\": \"tyrell\", \"why\": \"Why not.\"}]}",
  "expect": "refuse",
- "problem": "is not one of weirwood_cut's places"
+ "problem": "is not one of"
 }

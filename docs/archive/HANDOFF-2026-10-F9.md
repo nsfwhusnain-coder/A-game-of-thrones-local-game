@@ -1,15 +1,14 @@
-# Handoff — Phases N, R, U, E, F and G are built: the headlines, the realm's figures, the quiet screen, the living map, the whole interface and the world's roster
+# Handoff — Phases N, R, U, E and F are built: the headlines, the realm's figures, the quiet screen, the living map and the whole interface
 
-*Written 2026-10-02 at the end of Phase G, by the lead engineer who carried Phases N, R, U, E, F and G from their plans to the default branch (the previous handoff, at the end of Phase F, is
-[`archive/HANDOFF-2026-10-F9.md`](archive/HANDOFF-2026-10-F9.md); earlier ones are in [`archive/`](archive/)). The plan is the Game Design Document in
-[`docs/gdd/`](gdd/README.md); the order of work is [`16-roadmap.md`](gdd/16-roadmap.md); design departures are in [`DECISIONS.md`](gdd/DECISIONS.md) (D-001 … D-099); what changed for the player is in
+*Written 2026-10-01 at the end of Phase F, by the lead engineer who carried Phases N, R, U, E and F from their plans to the default branch (the previous handoff, at the end of Phase U, is
+[`archive/HANDOFF-2026-09-U9.md`](archive/HANDOFF-2026-09-U9.md); earlier ones are in [`archive/`](archive/)). The plan is the Game Design Document in
+[`docs/gdd/`](gdd/README.md); the order of work is [`16-roadmap.md`](gdd/16-roadmap.md); design departures are in [`DECISIONS.md`](gdd/DECISIONS.md) (D-001 … D-097); what changed for the player is in
 [`CHANGELOG.md`](CHANGELOG.md). The local model's own documents are in [`local-ai/`](local-ai/README.md).*
 
 ## 0. Where things stand (read this first)
 
 - **The default branch `claude/brave-ramanujan-i8dt0q` is green and playable** (CI: windows-latest and ubuntu-latest, Node 22 and 24; about 800 tests). Everything below is merged. `npm start` → http://127.0.0.1:3298.
-- **About 95 of the roadmap's 100 work packages are built.** Done: Phases A–D (the engine, the war, the story), **E (the whole map)**, **N (headlines), R (the State of the Realm), U (the quiet screen)**, **F (the interface: F1–F9)** and **G (the data: G1–G5)**. Left: **H1–H5** (music and read-aloud, the weaver, bench v2, the fine-tune recipe, the final handoff).
-- **What G changed for a new game:** 290 houses (130 lesser houses added: every region's small lords), 1,011 people (every landed house has a head, a spouse and an heir; 109 more people the books name), 335 holdings (the Watch's empty castles, towns, ports), 425 happenings, the Second Sons and the Stormcrows for hire, Mance's gathering at 8,000. **An old save keeps its old world** (nothing in a save is rebuilt); only a new game has the new roster.
+- **About 85 of the roadmap's 100 work packages are built.** Done: Phases A–D (the engine, the war, the story), **E (the whole map)**, **N (headlines), R (the State of the Realm), U (the quiet screen)** and **F (the interface: F1–F9)**. Left: **G1–G5** (data: houses, characters, holdings, happenings, scenario) and **H1–H5** (music and read-aloud, the weaver, bench v2, the fine-tune recipe, the final handoff).
 - **What the player sees today:** a map with the maester's-desk look (GDD 21) that shows what is happening (smoke over a siege, tents by a host, fields fought over) in three graphics presets; a top bar of three vitals, an Inbox and **End turn with a count of the orders it will carry out**; a headline strip and a chronicle of ranked cards; the turn told on the map by a camera that flies only for weighty news; a command bar (a box, a microphone and a quill: one button sends; a small CPU-only scribe mends spelling before the steward reads);
   **click a castle or a host and a card opens beside it**; two windows with tabs (Realm: Ledger · House · Hosts · Treasury · Diplomacy, with the **promises** between you and others; People); the State of the Realm ledger (marks for how sure);
   **audiences** with promises and outcome chips and letters on the wing; **matters as sealed letters** with the days they wait and what silence will do (and silence now really decides); **every name in the text is a link** with a hover card; **children look like their parents**, and faces show mood in an audience; the family tree with lines; a welcome page and three tips;
@@ -23,7 +22,7 @@
   - The owner's model server is theirs: **never kill or restart their `ollama`, `llama-server` or llama-swap**, never touch their `config.json`; the local model may be used only on the lead's own llama-swap (port 8096) and only when the GPU is idle (VRAM ≤ ~10.7 GB).
   - Screenshots at 1920×1080 and 1366×768 for every UI package, looked at, and attached to the PR.
   - **No "Counsel ideas" or "Polish" buttons** (the owner removed the sparkle button: one quill, a microphone and the scribe; D-094).
-- **Next, in this order:** H1–H5 (§6). **Owed to the owner at the very end:** whether to fine-tune the local model again and on what (§4 has what is known so far).
+- **Next, in this order:** G1–G5, H1–H5 (§6). **Owed to the owner at the very end:** whether to fine-tune the local model again and on what (§4 has what is known so far).
 
 ### How the work has been done (keep doing it this way)
 
@@ -42,7 +41,6 @@
 - **`tests/http.test.js` uses a fixed port (3411)**: never run two full `npm test` at once. **The soak test (`tests/realm-soak.test.js`) plays three 24-moon games in three processes** (about 100 s).
   **`scripts/soak.js` takes a random seed from the clock**: a failure there is a real bug that only some seeds show; it prints the seed (`--seed N --houses <house>` plays it again).
 - **Leaks by spread:** `server/view.js` `playerView` spreads `...state`, so every new top-level state field reaches the browser unless it is deleted there (that is how `realmStats` leaked; D-069). Every new field: strip it, and add a non-interference test. **A fact the player has not been told yet must not be drawn**: F4 holds back a promise a lord made in a letter until his answer lands (`onTheRoad`) and `hiddenTruths` watches for it.
-- **Content is data, built by a script when it is many rows:** `data/houses/more.js` was written by a placement script (nearest free land to where the books put the house; scratch scripts are not in the repository) and may be edited by hand; `check-data` holds what the script held. **A new house or holding changes the world's numbers:** the regional people (`ECONOMY.lesserDomain`), the great houses' incomes (`regionOutput`, `scripts/balance-sim.js`), the realm ledger's bands (the soak) and every prompt that lists the world (the interpret prompt is at its budget; `UPDATE_SNAPSHOTS=1` and read the diff). **A name that is also an English word is a trap for the scribe and the scorer** ("Winter Town", "Small Paul", "Egen" as a place): see D-099.
 - **Facts are not in `state` between turns** (they are in `facts.jsonl`). **Canon gravity owns the story's dates**: a test that needs a season to pass or a lord to die needs `canonGravity: 'sandbox'`.
 - **`UPDATE_SNAPSHOTS=1` rewrites every prompt snapshot**: run it, look at `git diff --stat`, and `git checkout` the ones you did not mean to change (line endings show as changes).
 - **Portraits are painted on demand** (`ui/portrait.js`: about 10 ms each on a real machine, about 200 ms on the cloud's software renderer). A screenshot of a list must wait for them (the shooters poll for placeholders).
@@ -78,13 +76,6 @@ All merged into `claude/brave-ramanujan-i8dt0q` with CI green on windows-latest 
 | **F3** | #61 | The End-turn plate counts the orders and says which cannot be done or ask; receipts in icons with words; all 300 bench orders get a receipt. |
 | **F7** | #62, #63 | Names are links with a hover card; "who is this" in an audience; every house opens a family tree. Children look like their parents (hair, eyes, skin, family features and the proportions of the face), the six ages of a face, a scar from a healed wound, mood in an audience's portrait; `dev/portraits.html` shows it all. |
 | **F9** | #64 | The interface checklist (GDD 12 §14) automated: `scripts/visual.js` tours 14 screens at three sizes (1920, 1366, 1024) and checks emoji, long titles (now styled tooltips), text sizes (12 px floor; 15 px for long text at 1366), overlaps, keyboard reach, focus rings, contrast, motion, horizontal scroll, and the whole way in with no console errors; the keyboard's way round the map, focus returning to what opened a panel, a reduced-motion setting, the 1024 layout. `tests/a11y-static.test.js` holds the static half. |
-
-### Phase G (this handoff)
-
-| Slice | PR | What changed |
-|---|---|---|
-| **G4** | #65 | 425 happenings (214 before), each with its own headline and summary, every region with its winter, summer, war and peace (`tests/happenings-content.test.js`); a happening of a person names the person; two faults found (a merged host counted twice in the realm ledger; a succession's engine line in the chronicle). |
-| **G1, G2, G3, G5** | #66 | The roster: 130 lesser houses and two free companies, 109 named people and a household for every landed house, 46 more holdings, the scenario's figures (D-099); `check-data` holds land, spacing and seats; the lords' weekly wake-up and four hot loops made fast enough that a turn is about a fifth slower, not twice. |
 
 ### Earlier phases
 
@@ -152,13 +143,11 @@ What is known so far, for the decision that is owed at the end:
 - **The welcome flag lives in the save's `meta`**, so undoing to before it may show the page once more on another browser. **Portraits fill in slowly on a slow machine.** `sampleRealm` takes ≈ 20 ms a turn on the mock and the save grows ≈ 0.5 MB by turn 40. `playerView` still sends other houses' figures at two significant figures to the old sheets (D-033).
 - The recorded turn fixtures (`tests/fixtures/headlines/turns/`) predate SB's muster cards; re-record them with `tests/fixtures/headlines/turns/record.mjs` when the narrator's input changes.
 - From earlier handoffs, still true: the economy settles per week; battle stances and siege terms are rules, not model calls; the realm's lords do not yet carry hosts by sea; outlaw bands are a mark, not a party; the King's progress has no scheduled stops.
-- **Doubts of Phase G (the books' names I could not vouch for are left out, not invented):** houses omitted — the riverlands' Charlton, Hawick, Shawney, Vypren, Wode; the westerlands' Yarwyck, Vikary, Turnberry, Parren, Sarwyck, Lannett, Lantell, Hamell; the Reach's Inchfield, Leygood, Uffering, Vyrwel; the crownlands' Langward, Hardy, Wendwater; the North's Knott; the Vale's Shett of Gulltown and Arryn of Gulltown (their seat is Gulltown); the Windblown (the GDD says "later") and the Iron Bank (a lender, not a house). **Most seats and positions of the 130 are inferred** (each row's comment says so) and the sigils are placeholders drawn from the name. Ages of the new named people are for 298 AC and several (the Freys, Kevan's younger children, Dorne's sand snakes left out) are best guesses. The 687 generated people are plausible, not canon: if a name matters to you, give it a row in `data/characters/more.js`.
-- **A new game's turn is slower** (about 3 s on the mock instead of 2.5; the realm soak takes about 4 minutes a game instead of 70 s when three run at once). The next speed-up, if one is wanted: `standing()` and `kinOf()` scan every character for every house (an index per tick), and `worldView` is rebuilt for every lord each week.
 - **`docs/screens/`** is about 70 MB of screenshots (each package's, at both sizes); prune older sets if the repository grows too heavy to clone.
 
 ## 6. What comes next
 
 Follow `16-roadmap.md`; the order the lead has kept is G1–G5, then H1–H5, with this file rewritten at the end of each phase and the fine-tune recommendation given at the end.
 
-1. **G1–G5 are done** (above). The interface holds for the new numbers (the tree, the people browser and the ledger are searched, not listed; the map's plate and pin caps (U8) keep it readable); the UI gate and the visual tour were not re-run on the 290-house map in this slice — run them first (§2).
+1. **G1–G5 (data):** houses to ~260 with placeable seats (158 now), characters to ~700 with sex, birth, nature, looks and voices (312 now), holdings ~300 and places ~120 (165 now), happenings ~400, and the scenario rebuild (`check-data` and the balance sim are the gates). The interface holds for any number of houses (the tree, the people browser and the ledger are searched, not listed); the map's plate and pin caps (U8) keep it readable.
 2. **H1–H5:** music states and fact sounds and read-aloud; the weaver (optional); bench v2 and the coherence report; the fine-tune recipe under `scripts/finetune/`; the final handoff and README.

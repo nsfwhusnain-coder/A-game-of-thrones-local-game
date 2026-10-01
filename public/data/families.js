@@ -1,4 +1,5 @@
 // Lineages, marriages, ancestors, appearance and CK3-style skills.
+import { MORE_PARENTS, MORE_SPOUSES } from './characters/more.js';
 
 // Dead ancestors & notable dead (so family trees have roots). Same shape as CHARACTERS.
 // the women of the family trees (sex is data: docs/gdd/03-architecture.md §3.2)
@@ -62,6 +63,7 @@ export const PARENTS = {
   patrek_mallister: ['jason_mallister', null], samwell_tarly: ['randyll_tarly', null], dickon_tarly: ['randyll_tarly', null],
   addam_marbrand: ['damon_marbrand', null], jeyne_westerling: ['gawen_westerling', null], brienne_tarth: ['selwyn_tarth', null],
   benfred_tallhart: ['helman_tallhart', null], cley_cerwyn: ['medger_cerwyn', null],
+  ...MORE_PARENTS, // WP G2
 };
 
 export const SPOUSES = [
@@ -69,6 +71,7 @@ export const SPOUSES = [
   ['tywin_lannister', 'joanna_lannister'], ['robert_baratheon', 'cersei_lannister'], ['steffon_baratheon', 'cassana_estermont'],
   ['stannis_baratheon', 'selyse_florent'], ['aerys_targaryen', 'rhaella_targaryen'], ['rhaegar_targaryen', 'elia_martell'],
   ['luthor_tyrell', 'olenna_tyrell'], ['balon_greyjoy', 'alannys_harlaw'], ['doran_martell', 'mellario'],
+  ...MORE_SPOUSES, // WP G2
 ];
 
 // Appearance by house (hair, eyes, skin). Characters can override via `look`.

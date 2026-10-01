@@ -84,9 +84,12 @@ export const ECONOMY = {
   domain: { great_castle: 8, castle: 4, town: 4, city: 4, palace: 3, fortress: 1, camp: 1, ruin: 0.1 },
   // lords whose lands are wider or narrower than a castle's (the Dreadfort's, Dragonstone's rock)
   domainOf: { bolton: 7, karstark: 5, umber: 5, baratheon_ds: 2, frey: 5 },
+  // the lesser houses of WP G1 (a holdfast, a few villages) hold this share of a castle's domain, over and above their region's people: they take nothing from
+  // the great houses' lands, which the books' counts are for; `regionOutput` below is set so the great houses' incomes (which now include these vassals' dues) still come to the books' figures
+  lesserDomain: 0.15,
   // how much a head yields by the land (§5.1 is the Reach's measure): the North's thin soil, the Vale's mountains,
   // the Riverlands' many lords and wars, the Stormlands' rain, the rock of the Iron Islands
-  regionOutput: { north: 0.8, riverlands: 0.65, vale: 0.75, westerlands: 1, reach: 1, stormlands: 0.8, dorne: 1, crownlands: 1, iron_islands: 0.5, wall: 1, beyond: 0.3 },
+  regionOutput: { north: 0.77, riverlands: 0.61, vale: 0.75, westerlands: 0.97, reach: 0.91, stormlands: 0.8, dorne: 1, crownlands: 1, iron_islands: 0.44, wall: 1, beyond: 0.3 },
   // §5.1: what a head of the smallfolk yields a moon, and the lord's share of it by his taxes
   outputPerHead: 0.25,
   rentShare: { low: 0.06, normal: 0.08, high: 0.105, crushing: 0.13 },

@@ -20,7 +20,7 @@ const LENSES = {
 };
 /** The figure each lens draws its little trend line for (§4.5); Economy's is the net, where the viewer has both halves. */
 const HEADLINE = { strength: 'power', economy: 'net', land: 'prosperity' };
-const SCOPES = ['great', 'mine', 'war', 'all'];
+const SCOPES = ['great', 'mine', 'war', 'all', 'self']; // 'self': only the viewer's own row (the minds' cheap look at their own house's flags: engine/realm/brief.js `ledgerFlags`)
 const GREAT = new Set(['crown', 'paramount', 'major']);
 /** The figures that add up when a house is shown with its sworn houses ("the North" is Stark and its bannermen). */
 const SUMS = ['swords', 'levies', 'menAtArms', 'guard', 'ships', 'holdings', 'people', 'gold', 'debt', 'income', 'expenses'];
@@ -159,9 +159,9 @@ export function realmViewFor(state, viewer, opts = {}) {
   const houses = state.houses;
 
   // the rows listed: who the viewer may name, and which of them the chip asks for
-  const known = Object.keys(houses).filter((id) => knownTo(state, viewer, id, ctx)).sort();
+  const known = scope === 'self' ? [viewer] : Object.keys(houses).filter((id) => knownTo(state, viewer, id, ctx)).sort();
   let ids;
-  if (scope === 'all') ids = known;
+  if (scope === 'all' || scope === 'self') ids = known;
   else if (scope === 'mine') { const own = houses[viewer]?.liege; ids = known.filter((id) => id === viewer || id === own || ctx.friends.has(id)); }
   else if (scope === 'war') { const at = new Set(warsKnown(state, viewer, ctx).flatMap((w) => [...w.sides.A, ...w.sides.D])); ids = known.filter((id) => id === viewer || at.has(id)); }
   else ids = known.filter((id) => id === viewer || GREAT.has(houses[id].rank));
@@ -225,6 +225,6 @@ export function realmViewFor(state, viewer, opts = {}) {
   return {
     asOf: { turn: state.meta.turn, date: dateStr(state.meta.date), day: today },
     window, lens, scope, realm, you: viewer, rows,
-    going, wars, facts: factsOf(state, viewer, { rows, wars, ests: estimate }), focus: [], detail,
+    going, wars, facts: scope === 'self' ? [] : factsOf(state, viewer, { rows, wars, ests: estimate }), focus: [], detail,
   };
 }

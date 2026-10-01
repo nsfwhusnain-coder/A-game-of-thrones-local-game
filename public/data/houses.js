@@ -4,12 +4,15 @@
 //   charges:   wolf lion stag dragon falcon trout kraken sun rose flayed giant bear merman
 //              tower moon star tree fish bird horse skull spear hand key flame lizard
 
+import { MORE_HOUSES, MORE_HOLDINGS, MORE_ALIASES } from './houses/more.js';
+import { G3_HOLDINGS } from './houses/holdings.js';
+
 const H = (id, name, seat, x, y, liege, region, rank, color, sigil, words = '', extra = {}) => ({
   id, name, seat, pos: [x, y], liege, region, rank, color, sigil, words, ...extra,
 });
 const S = (f, c, cc, d = 'plain', t = null) => ({ f, c, cc, d, t });
 
-export const HOUSES = [
+const FIRST_HOUSES = [
   // ───────────── The Crown ─────────────
   H('baratheon', 'Baratheon of King\'s Landing', 'The Red Keep, King\'s Landing', 725, 1735, null, 'crownlands', 'crown', '#6a4c93',
     S('#e8b923', 'stag', '#141414'), 'Ours is the Fury', { holdingType: 'city', title: 'The Iron Throne', realmName: 'The Crownlands' }),
@@ -207,12 +210,24 @@ export const HOUSES = [
     S('#c9a44a', 'skull', '#111'), 'Beneath the gold, the bitter steel', { landless: true, realmName: 'The Golden Company' }),
   H('brave_companions', 'The Brave Companions', null, 1330, 2090, null, 'essos', 'company', '#6a2a2a',
     S('#1a1a1a', 'skull', '#a8321e'), '', { landless: true, realmName: 'The Brave Companions' }),
-  H('stone_crows', 'The Stone Crows', null, 840, 1200, null, 'vale', 'tribe', '#4a4a4a',
+  H('second_sons', 'The Second Sons', null, 1300, 2000, null, 'essos', 'company', '#3a5a7a',
+    S('#1f3f7a', 'star', '#e9eef2', 'bend', '#141414'), '', { landless: true, realmName: 'The Second Sons' }), // src: 07 §10; a sellsword company of the free cities (WoIaF)
+  H('stormcrows', 'The Stormcrows', null, 1250, 2040, null, 'essos', 'company', '#4a3a5a',
+    S('#141414', 'bird', '#e8b923'), '', { landless: true, realmName: 'The Stormcrows' }), // src: 07 §10; a sellsword company of the free cities (WoIaF)
+  H('stone_crows', 'The Stone Crows', null, 829, 1210, null, 'vale', 'tribe', '#4a4a4a',
     S('#3a3a3a', 'spear', '#ddd'), '', { landless: true, realmName: 'The clans of the Mountains of the Moon' }),
 ];
 
+// The first roster, and the lesser houses G1 added (houses/more.js)
+export const HOUSES = [...FIRST_HOUSES, ...MORE_HOUSES];
+/** The ids of the houses WP G1 added: small domains, over and above their region's people (ECONOMY.lesserDomain). */
+export const MORE_HOUSE_IDS = MORE_HOUSES.filter((h) => h.rank === 'minor').map((h) => h.id);
+/** The ids of the holdings WP G1 and G3 added that are not seats of the first roster: small ones, over and above their region's people too. */
+export const MORE_HOLDING_IDS = [...MORE_HOLDINGS, ...G3_HOLDINGS].map((e) => e[0]);
+
 // Extra named holdings owned by a house (not seats). [id, name, x, y, owner, type]
 export const EXTRA_HOLDINGS = [
+  ...MORE_HOLDINGS, ...G3_HOLDINGS,
   ['moat_cailin', 'Moat Cailin', 563, 1119, 'stark', 'fortress'],
   ['shadow_tower', 'The Shadow Tower', 622, 555, 'nights_watch', 'fortress'],
   ['eastwatch', 'Eastwatch-by-the-Sea', 787, 563, 'nights_watch', 'fortress'],
@@ -224,10 +239,13 @@ export const EXTRA_HOLDINGS = [
   ['summerhall', 'Summerhall', 703, 1950, 'baratheon', 'ruin'],
   ['bloody_gate', 'The Bloody Gate', 755, 1441, 'arryn', 'fortress'],
   ['golden_company_camp', 'Camp of the Golden Company', 1371, 2056, 'golden_company', 'camp'],
+  ['second_sons_camp', 'Camp of the Second Sons', 1300, 2000, 'second_sons', 'camp'],
+  ['stormcrows_camp', 'Camp of the Stormcrows', 1250, 2040, 'stormcrows', 'camp'],
 ];
 
 // Location aliases so the AI (and the road network) can reference places by id
 export const PLACE_ALIASES = {
+  ...MORE_ALIASES,
   north_of_the_wall: 'hardhome', beyond_the_wall: 'hardhome', frostfangs: 'hardhome', north_of_wall: 'hardhome',
   winterfell: 'stark', castle_black: 'nights_watch', the_wall: 'nights_watch', wall: 'nights_watch', dreadfort: 'bolton', karhold: 'karstark', last_hearth: 'umber',
   the_neck: 'moat_cailin', neck: 'moat_cailin', // "march to the Neck": the road through it is held at Moat Cailin
@@ -243,5 +261,5 @@ export const PLACE_ALIASES = {
   bronzegate: 'buckler', harvest_hall: 'selmy', sunspear: 'martell', starfall: 'dayne', yronwood: 'yronwood', skyreach: 'fowler',
   kingsgrave: 'manwoody', hellholt: 'uller', godsgrace: 'allyrion', wyl: 'wyl', vaith: 'vaith', pyke: 'greyjoy', ten_towers: 'harlaw',
   dragonstone: 'baratheon_ds', driftmark: 'velaryon', duskendale: 'rykker', rosby: 'rosby', stokeworth: 'stokeworth',
-  red_keep: 'baratheon', golden_company: 'golden_company_camp', targaryen: 'pentos', the_rills: 'ryswell', cleganes_keep: 'clegane', hornvale: 'brax', ironoaks: 'waynwood', hearts_home: 'corbray', strongsong: 'belmore', longbow_hall: 'hunter', sisterton: 'sunderland', the_fingers: 'baelish', the_dreadfort: 'bolton', greenstone: 'estermont', stonehelm: 'swann', highgarden_town: 'tyrell', starpike: 'peake', blackcrown: 'bulwer', three_towers: 'costayne', honeyholt: 'beesbury', cider_hall: 'fossoway', red_lake: 'crane', uplands: 'mullendore', grassy_vale: 'meadows', longtable: 'merryweather', silverhill: 'serrett', feastfires: 'prester', kayce: 'kenning', sarsfield: 'sarsfield', the_banefort: 'banefort', faircastle: 'farman', fair_isle: 'farman', acorn_hall: 'smallwood', whitewalls: 'butterwell', wayfarers_rest: 'vance', oldcastle: 'locke', ironrath: 'forrester', widows_watch: 'flint', hornwood: 'hornwood', castle_cerwyn: 'cerwyn', skagos: 'crowl', crows_nest: 'morrigen', grandview: 'grandison', mistwood: 'mertyns', parchments: 'penrose', haystack_hall: 'errol', gallowsgrey: 'trant', felwood: 'fell', rain_house: 'wylde', salt_shore: 'gargalen', ghost_hill: 'toland', lemonwood: 'dalt', spottswood: 'santagar', the_tor: 'jordayne', sandstone: 'qorgyle', blackmont: 'blackmont', claw_isle: 'celtigar', sharp_point: 'bar_emmon', hayford: 'hayford', stonedance: 'massey', brownhollow: 'brune', high_tide: 'velaryon', lordsport: 'greyjoy', hammerhorn: 'goodbrother', old_wyk: 'drumm', harlaw: 'harlaw', myr: 'myr', tyrosh: 'tyrosh', lys: 'lys', lorath: 'lorath', norvos: 'norvos', qohor: 'qohor', volantis: 'volantis', kings_landing: 'baratheon', gulltown: 'grafton', oldtown: 'hightower', white_harbor: 'manderly', lannisport: 'lannisport', pentos: 'pentos', braavos: 'braavos',
+  red_keep: 'baratheon', golden_company: 'golden_company_camp', second_sons: 'second_sons_camp', stormcrows: 'stormcrows_camp', targaryen: 'pentos', the_rills: 'ryswell', cleganes_keep: 'clegane', hornvale: 'brax', ironoaks: 'waynwood', hearts_home: 'corbray', strongsong: 'belmore', longbow_hall: 'hunter', sisterton: 'sunderland', the_fingers: 'baelish', the_dreadfort: 'bolton', greenstone: 'estermont', stonehelm: 'swann', highgarden_town: 'tyrell', starpike: 'peake', blackcrown: 'bulwer', three_towers: 'costayne', honeyholt: 'beesbury', cider_hall: 'fossoway', red_lake: 'crane', uplands: 'mullendore', grassy_vale: 'meadows', longtable: 'merryweather', silverhill: 'serrett', feastfires: 'prester', kayce: 'kenning', sarsfield: 'sarsfield', the_banefort: 'banefort', faircastle: 'farman', fair_isle: 'farman', acorn_hall: 'smallwood', whitewalls: 'butterwell', wayfarers_rest: 'vance', oldcastle: 'locke', ironrath: 'forrester', widows_watch: 'flint', hornwood: 'hornwood', castle_cerwyn: 'cerwyn', skagos: 'crowl', crows_nest: 'morrigen', grandview: 'grandison', mistwood: 'mertyns', parchments: 'penrose', haystack_hall: 'errol', gallowsgrey: 'trant', felwood: 'fell', rain_house: 'wylde', salt_shore: 'gargalen', ghost_hill: 'toland', lemonwood: 'dalt', spottswood: 'santagar', the_tor: 'jordayne', sandstone: 'qorgyle', blackmont: 'blackmont', claw_isle: 'celtigar', sharp_point: 'bar_emmon', hayford: 'hayford', stonedance: 'massey', brownhollow: 'brune', high_tide: 'velaryon', lordsport: 'greyjoy', hammerhorn: 'goodbrother', old_wyk: 'drumm', harlaw: 'harlaw', myr: 'myr', tyrosh: 'tyrosh', lys: 'lys', lorath: 'lorath', norvos: 'norvos', qohor: 'qohor', volantis: 'volantis', kings_landing: 'baratheon', gulltown: 'grafton', oldtown: 'hightower', white_harbor: 'manderly', lannisport: 'lannisport', pentos: 'pentos', braavos: 'braavos',
 };

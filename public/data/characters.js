@@ -18,7 +18,9 @@ const C = (id, name, house, title, age, loc, roles, traits, bio, extra = {}) => 
   id, name, house, sex: WOMEN.has(id) ? 'f' : 'm', title, age, loc, roles, traits, bio, alive: true, ...extra,
 });
 
-export const CHARACTERS = [
+import { MORE_CHARACTERS } from './characters/more.js';
+
+const FIRST_CHARACTERS = [
   // ── Stark ──
   C('eddard_stark', 'Eddard Stark', 'stark', 'Lord of Winterfell, Warden of the North', 35, 'winterfell', ['lord'], 'honorable, dutiful, stern, just, reserved',
     'Fought beside Robert in the Rebellion. Keeps the old gods. Carries a secret about Jon Snow\'s mother.', { secret: 'Jon Snow is the son of Lyanna Stark and Rhaegar Targaryen.' }),
@@ -152,7 +154,7 @@ export const CHARACTERS = [
   C('anya_waynwood', 'Anya Waynwood', 'waynwood', 'Lady of Ironoaks', 60, 'ironoaks', ['lady'], 'shrewd, dignified', ''),
   C('lyonel_corbray', 'Lyonel Corbray', 'corbray', 'Lord of Heart\'s Home', 40, 'hearts_home', ['lord'], '', ''),
   C('lyn_corbray', 'Ser Lyn Corbray', 'corbray', '', 38, 'hearts_home', ['knight'], 'dangerous, deadly duellist', 'Wields the ancestral sword Lady Forlorn.'),
-  C('vardis_egen', 'Ser Vardis Egen', 'arryn', 'Captain of the Guard of the Eyrie', 45, 'eyrie', ['captain', 'knight'], 'loyal, dutiful', 'Knows the strength of the Eyrie\'s garrison.'),
+  C('vardis_egen', 'Ser Vardis Egen', 'egen', 'Captain of the Guard of the Eyrie', 45, 'eyrie', ['captain', 'knight'], 'loyal, dutiful', 'Knows the strength of the Eyrie\'s garrison.'),
   C('maester_colemon', 'Maester Colemon', 'arryn', 'Maester of the Eyrie', 50, 'eyrie', ['maester'], 'nervous, kind', ''),
 
   // ── Tyrell & the Reach ──
@@ -240,3 +242,6 @@ export const CHARACTERS = [
   C('qotho', 'Qotho', 'dothraki', 'Bloodrider of Khal Drogo', 30, 'dothraki', ['knight'], 'cruel, proud', 'One of Drogo\'s bloodriders; despises the Westerosi.'),
   C('edric_dayne', 'Edric Dayne', 'dayne', 'Lord of Starfall', 10, 'starfall', ['lord'], 'earnest, brave, young', 'The boy lord of Starfall, nephew of Ser Arthur Dayne.'),
 ];
+
+// The first roster, and the people WP G2 added (characters/more.js)
+export const CHARACTERS = [...FIRST_CHARACTERS, ...MORE_CHARACTERS];

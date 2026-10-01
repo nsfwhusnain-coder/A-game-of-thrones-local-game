@@ -62,10 +62,12 @@ test('adversarial replies: each is accepted or refused as its fixture says, and 
     const fx = JSON.parse(fs.readFileSync(path.join(ADV, f), 'utf8'));
     const call = CALLS[fx.kind]; assert.ok(call, `${f}: unknown call ${fx.kind}`);
     const state = world(); const ctx = call.context(state, fx.args || call.fixtureArgs?.(state) || {});
-    const { value, problems } = readReply(fx.reply, call, ctx, call.schema(ctx));
+    // `$PLACE(hook)` is the first place the world offers for that hook (the offer moves as the map grows: a fixture should not hold a place by name)
+    const fill = (t) => (typeof t === 'string' ? t.replace(/\$PLACE\((\w+)\)/g, (_, hook) => ctx.hooks?.find((h) => h.id === hook)?.places[0] ?? '') : t);
+    const { value, problems } = readReply(fill(fx.reply), call, ctx, call.schema(ctx));
     if (fx.expect === 'accept') {
       assert.deepEqual(problems, [], `${f}: ${problems.join('; ')}`);
-      for (const [k, v] of Object.entries(fx.canonical || {})) assert.deepEqual(k.split('.').reduce((x, key) => x?.[key], value), v, `${f}: ${k}`);
+      for (const [k, v] of Object.entries(fx.canonical || {})) assert.deepEqual(k.split('.').reduce((x, key) => x?.[key], value), fill(v), `${f}: ${k}`);
     } else {
       assert.ok(problems.length, `${f}: should have been refused`);
       if (fx.problem) assert.ok(problems.some((p) => p.includes(fx.problem)), `${f}: ${problems.join('; ')}`);

@@ -203,6 +203,8 @@ const OWNER = { a: 'lannister', b: 'stark' };
 // story keeps no one alive, so a commander can fall on a field he won
 const arena = (aMen, bMen, ea = {}, eb = {}, { sandbox = false } = {}) => {
   const s = createInitialState('agot_298', 'stark', { seed: 3 });
+  // the arena is the Whitewalls road as it was drawn when these tests were written: the small holdfasts of the lesser houses (G1) that now lie about it would be the Starks' friends' eyes on the field
+  for (const h of Object.values(s.holdings)) if (h.lesser) delete s.holdings[h.id];
   if (sandbox) s.meta.settings = { ...(s.meta.settings || {}), canonGravity: 'sandbox' };
   applyChanges(s, [{ op: 'war', status: 'start', name: 'W', attackers: ['lannister'], defenders: ['stark'] }], { source: 'test' });
   host(s, 'a', 'lannister', [560, 1440], aMen, { standing: 'always', commander: 'tywin_lannister', ...ea });

@@ -3,6 +3,15 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — G1, G2, G3, G5: the roster of the realm
+
+- **A fuller realm.** 290 houses instead of 158: the lesser lords of every region (Egen, Lychester, Osgrey of Standfast, Cafferen of Fawnton, the five Goodbrothers of Great Wyk, the Burned Men, the Black Ears and the Thenns, and many more), each with a seat on the map that is on land and a day's ride from every other. **Every landed house has a family**: the head, a spouse and an heir, and 109 people the books name are in their places (Hullen at Winterfell, Mors Crowfood Umber, Robar Royce, Dorna Swyft, the Freys, Black Jack Bulwer and the rangers of the Watch, Rattleshirt and Harma Dogshead, Mero of the Second Sons…). There are 1,011 people and 335 holdings at the start.
+- **The Wall's other castles** stand on the map as ruins (the Nightfort, Sable Hall, Greyguard…), with Mole's Town and Winter Town and ports and market towns across the realm.
+- **The Second Sons and the Stormcrows** can be hired like the Golden Company. **Mance Rayder's gathering starts at 8,000** and grows by the moon toward the host of the year 300 (it started at 60,000). The great houses' marriages (Stark–Tully, Tully–Arryn, the King and Cersei) are on the Diplomacy list.
+- The great houses' incomes are as they were (the lesser houses' dues are in them, and their lands are small); the lords' weekly wake-up reads a house's own ledger only. A turn takes about a fifth longer.
+- **Found on the way, and fixed:** the order-scribe turned "winter" into "Winter" and could not tell Rodrik from Podrick; a death with no age told no summary; a small card of a quiet week was in the engine's words ("begins works at…"); the interpreter's prompt listed too many bannermen.
+- Tests: `tests/households.test.js` (4); `check-data` holds the land, the spacing and the seats.
+
 ## 2026-10-01 — G4: the small life of the realm, 425 happenings
 
 - **More than twice the small news.** The Meanwhile now draws on 425 happenings (214 before): frost on the vines of the Reach and a fog on the Blackwater, sealers home to the Iron Islands, a tourney in the Vale, a red priest in Pentos, bandits in the Kingswood, a drowned priest at the tideline, widows at a gate in a war, a truce among the clans when the realm is at peace. Every region has its own, in its winter and in its summer, at war and at peace.

@@ -58,7 +58,18 @@ export async function narrateTurn(state, cards, { provider = 'mock', cfg, log, o
   // the small happenings as cards of their own, told by the writer: the raw engine line is kept as the record
   const smallOut = smallCards.map((c) => meanwhileCard(state, c, idsOf, find));
   const written = meanwhileOf(state, smallFacts);
-  if (!stories.length) return { cards: [...cards.filter((c) => !c.bg), ...smallOut], meanwhile: written, record, ranked };
+  // what is left after the stories are told: a card of the engine's whose facts are all of the small news (a lord's small errand, a journey of another house) is a Meanwhile card too, told by the
+  // writer, and so is any small card of a fact that no story took (another house's works begun, a gift sent, a regency begun); any other card no story took stays as the engine made it (a lord's order, its receipt)
+  const tail = (out, replaced) => {
+    const small = new Set(meanwhile.map((f) => f.id));
+    const isSmall = (c) => idsOf(c).length > 0 && idsOf(c).every((id) => small.has(id));
+    const errand = (c) => (c.importance ?? 1) <= 2 && !c.orderId && !c.order && idsOf(c).length > 0;
+    const restAll = cards.filter((c) => !replaced.has(c) && !c.bg);
+    const smallLeft = restAll.filter((c) => isSmall(c) || errand(c)).map((c) => ({ ...meanwhileCard(state, c, idsOf, find), bg: true }));
+    const rest = restAll.filter((c) => !isSmall(c) && !errand(c));
+    return [...rest, ...out, ...smallOut, ...smallLeft].sort((a, b) => (a.day || 0) - (b.day || 0));
+  };
+  if (!stories.length) return { cards: tail([], new Set()), meanwhile: written, record, ranked };
   const tally = (problems) => { record.faults = [...(record.faults || []), ...problems].slice(0, 12); for (const p of problems) { const rule = String(p).split(' — ')[0].split(': ')[1] || 'other'; record.problems[rule] = (record.problems[rule] || 0) + 1; } };
 
   // the model tells the top of the ranking; the writer tells the rest
@@ -105,20 +116,14 @@ export async function narrateTurn(state, cards, { provider = 'mock', cfg, log, o
       title: headline, text: summary,
       told: e && byModel && (mode === 'cards' || scene) ? 'model' : 'writer', kind: w.kind, archetype: w.archetype, who: w.who, tier: r.tier, score: r.score,
       where: s.place, importance: s.importance, type: s.type, houses: s.houses, day: s.days[0], fact: s.facts[0].id, facts: s.facts.map((f) => f.id), narrated: true,
+      ...(r.tier === 'meanwhile' ? { bg: true } : {}), // a story too small to rank above the Meanwhile is a Meanwhile card (the feed holds no other tier in the news)
       // the record keeps the engine's own words, the battle report's (what decided it) among them
       record: mine.map((c) => [c.text, typeof c.details === 'string' ? c.details : ''].filter(Boolean).join(' ')).filter(Boolean),
       ...(s.heard ? { heard: s.heard } : {}), ...(s.late ? { late: true } : {}),
       ...(mine.some((c) => c.mine) ? { mine: true } : {}), ...(order ? { order } : {}), ...(mine.find((c) => c.at)?.at ? { at: mine.find((c) => c.at).at } : {}),
     });
   }
-  // a card of the engine's whose facts are all of the small news (a lord's small errand, a journey of another house) is a Meanwhile card
-  // too, told by the writer; any other card no story took stays as the engine made it (a lord's order, its receipt)
-  const small = new Set(meanwhile.map((f) => f.id));
-  const isSmall = (c) => idsOf(c).length > 0 && idsOf(c).every((id) => small.has(id));
-  const restAll = cards.filter((c) => !replaced.has(c) && !c.bg);
-  const smallLeft = restAll.filter(isSmall).map((c) => ({ ...meanwhileCard(state, c, idsOf, find), bg: true }));
-  const rest = restAll.filter((c) => !isSmall(c));
-  return { cards: [...rest, ...out, ...smallOut, ...smallLeft].sort((a, b) => (a.day || 0) - (b.day || 0)), meanwhile: mw || written, record, ranked };
+  return { cards: tail(out, replaced), meanwhile: mw || written, record, ranked };
 }
 
 /** A small happening as a card of its own: the writer's headline and one plain sentence; the engine's line kept as the record. */
