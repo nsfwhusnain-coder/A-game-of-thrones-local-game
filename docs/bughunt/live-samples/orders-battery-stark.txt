@@ -1,0 +1,93 @@
+> Raise 0 men
+   via=rules actions=["raise_levies:{\"at\":\"stark\"}"] letter=null clarify=null story=false
+   receipt=["OK 1,143 levies muster at Winterfell as The Host of Winterfell; 14,857 more are mustering from the fields (23 knights, 137 riders, 823 foot, 160 archers)."] (0s)
+> Raise 200 men at Winterfell and send them to the Wall
+   via=rules actions=["fund_works:{\"template\":\"walls\",\"holding\":\"stark\"}"] letter=null clarify=null story=false
+   receipt=["OK Work begins: Strengthen the walls at Winterfell (12,000 dragons over 6 moons)."] (0s)
+> Go to King's Landing and bring Sansa and Arya
+   via=rules actions=["send_person:{\"character\":\"sansa_stark\",\"to\":\"baratheon\",\"men\":0}","send_person:{\"character\":\"arya_stark\",\"to\":\"baratheon\",\"men\":0}"] letter=null clarify=null story=false
+   receipt=["OK Sansa Stark sets out for King's Landing (~45 days' ride).","OK Arya Stark sets out for King's Landing (~45 days' ride)."] (0s)
+> I will ride south myself with my daughters
+   via=fallback actions=[] letter=null clarify={"q":"Where should Sansa Stark go?","opts":[]} story=false
+   receipt=["ask Where should Sansa Stark go?"] (9s)
+> Marry Robb to a Frey girl
+   via=model actions=[] letter=null clarify={"q":"Which Frey girl is to be married to Robb?","opts":["Walder Frey's daughter","A daughter of the Frey's kin","A daughter of a Frey's ally","None of the above"]} story=false
+   receipt=["ask Which Frey girl is to be married to Robb?"] (2s)
+> Betroth Sansa to Prince Joffrey
+   via=model actions=[] letter={"to":"joffrey_baratheon"} clarify=null story=false
+   receipt=["OK A raven flies to Joffrey Baratheon (~5 days)."] (3s)
+> Send Jon Snow to the Night's Watch
+   via=rules actions=["send_person:{\"character\":\"jon_snow\",\"to\":\"nights_watch\",\"men\":0}"] letter=null clarify=null story=false
+   receipt=["OK Jon Snow sets out for Castle Black (~18 days' ride)."] (0s)
+> Make Theon my ward's captain
+   via=rules actions=["appoint_office:{\"character\":\"jeyne_poole\",\"role\":\"captain\"}"] letter=null clarify=null story=false
+   receipt=["OK Jeyne Poole is named Captain of the guard of House Stark."] (0s)
+> Execute the deserter in the yard
+   via=fallback actions=[] letter=null clarify=null story=true
+   receipt=["story Left to the story: no one moves and no gold is spent."] (4s)
+> Pardon the poacher
+   via=model actions=[] letter=null clarify=null story=true
+   receipt=["story Left to the story: no one moves and no gold is spent."] (1s)
+> Hold a tourney
+   via=rules actions=["hold_tourney:{}"] letter=null clarify=null story=false
+   receipt=["OK The tourney is held. Ser Barristan Selmy is champion."] (0s)
+> Lower the grain price in Winter Town
+   via=model actions=["set_tax:{\"level\":\"low\"}"] letter=null clarify=null story=false
+   receipt=["OK Low taxes are proclaimed across your lands and on your vassals' dues."] (2s)
+> Build a new granary and a sept
+   via=rules actions=["fund_works:{\"template\":\"granaries\",\"holding\":\"stark\"}"] letter=null clarify=null story=false
+   receipt=["OK Work begins: Fill and expand the granaries at Winterfell (6,000 dragons over 3 moons)."] (0s)
+> Hire 500 sellswords
+   via=rules actions=["hire_men:{\"at\":\"stark\",\"men\":500,\"kind\":\"sellswords\"}"] letter=null clarify=null story=false
+   receipt=["OK 500 sellswords hired at Winterfell for 7,000 dragons; Winterfell Household now 900."] (0s)
+> Buy grain from White Harbor with all our gold
+   via=rules actions=["buy_grain:{\"moons\":2}"] letter=null clarify=null story=false
+   receipt=["OK 2 moons of grain bought for 17,328 dragons; the granaries hold more."] (0s)
+> Tell Maester Luwin to write to the Citadel about the long summer
+   via=rules actions=[] letter={"to":"luwin"} clarify=null story=false
+   receipt=["OK A raven flies to Maester Luwin (~1 day)."] (0s)
+> Declare war on the Lannisters
+   via=rules actions=["declare_war:{\"house\":\"lannister\",\"reason\":\"\"}"] letter=null clarify=null story=false
+   receipt=["OK War is declared on House Lannister."] (0s)
+> Make peace with the Greyjoys
+   via=model actions=[] letter={"to":"balon_greyjoy"} clarify=null story=false
+   receipt=["OK A raven flies to Balon Greyjoy (~4 days)."] (3s)
+> Do nothing and rest
+   via=model actions=[] letter=null clarify=null story=true
+   receipt=["story Left to the story: no one moves and no gold is spent."] (1s)
+> Prepare for winter
+   via=model actions=["buy_grain:{\"moons\":2}","set_tax:{\"level\":\"high\"}"] letter=null clarify=null story=false
+   receipt=["OK 2 moons of grain bought for 17,328 dragons; the granaries hold more.","OK Heavy taxes are proclaimed across your lands and on your vassals' dues."] (3s)
+> Send my son Bran to foster at the Eyrie
+   via=rules actions=["send_person:{\"character\":\"bran_stark\",\"to\":\"arryn\",\"men\":0}","send_person:{\"character\":\"robb_stark\",\"to\":\"arryn\",\"men\":0}"] letter=null clarify=null story=false
+   receipt=["OK Brandon Stark sets out for The Eyrie (~39 days' ride).","OK Robb Stark sets out for The Eyrie (~39 days' ride)."] (0s)
+> Ask Robert for his help against the Free Folk
+   via=model actions=[] letter={"to":"robert_baratheon"} clarify=null story=false
+   receipt=["OK A raven flies to Robert Baratheon (~5 days)."] (3s)
+> Spy on the King's court
+   via=model actions=["plant_spy:{\"house\":\"baratheon\"}"] letter=null clarify=null story=false
+   receipt=["OK Your hired men has placed eyes in House Baratheon of King's Landing. Their hosts will be known to you wherever they march."] (2s)
+> Poison the Lannister envoy
+   via=model actions=[] letter=null clarify={"q":"How shall the envoy be poisoned?","opts":["A poisoner shall be sent to the envoy","The wine offered to the envoy shall be poisoned","The envoy's food shall be poisoned","The envoy shall be intercepted and poisoned"]} story=false
+   receipt=["ask How shall the envoy be poisoned?"] (4s)
+> Give 5000 dragons to the Night's Watch
+   via=rules actions=["send_gift:{\"to\":\"nights_watch\",\"gold\":5000}"] letter=null clarify=null story=false
+   receipt=["OK Jeor Mormont is much pleased (relations +25)."] (0s)
+> Fortify Moat Cailin
+   via=model actions=["fund_works:{\"template\":\"walls\",\"holding\":\"moat_cailin\"}"] letter=null clarify=null story=false
+   receipt=["OK Work begins: Strengthen the walls at Moat Cailin (12,000 dragons over 6 moons)."] (3s)
+> Raise 5 men
+   via=model actions=["raise_levies:{\"at\":\"stark\",\"men\":5}"] letter=null clarify=null story=false
+   receipt=["NO Too few men to be worth the muster."] (2s)
+> Raise a hundred thousand men
+   via=rules actions=["raise_levies:{\"at\":\"stark\",\"men\":100}"] letter=null clarify=null story=false
+   receipt=["OK 50 levies muster at Winterfell as The Host of Winterfell; 50 more are mustering from the fields (1 knights, 6 riders, 36 foot, 7 archers)."] (0s)
+> Summon Lord Bolton and Lord Umber to a council at Winterfell
+   via=rules actions=["call_banners:{\"vassals\":[\"bolton\",\"umber\"],\"at\":\"stark\"}"] letter=null clarify=null story=false
+   receipt=["OK The banners are called: 2 sworn houses summoned to muster at Winterfell (Bolton, Umber); each answers in their own time and temper.","OK If all answer, about 4,500 men; the last expected in ~47 days."] (0s)
+> Name Ser Rodrik commander of the host and march on the Twins
+   via=model actions=["appoint_office:{\"character\":\"rodrik_cassel\",\"role\":\"commander\"}","march_host:{\"army\":\"winterfell_guard\",\"to\":\"frey\"}"] letter=null clarify=null story=false
+   receipt=["OK Ser Rodrik Cassel is named Commander of House Stark.","OK Winterfell Household (400 men under Ser Rodrik Cassel) marches for The Twins — ~1,012 miles, ~58 days."] (4s)
+> Sell the grain to the Reach
+   via=model actions=[] letter=null clarify={"q":"Which amount of grain is to be sold?","opts":[]} story=false
+   receipt=["ask Which amount of grain is to be sold?"] (3s)
