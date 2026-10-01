@@ -78,6 +78,7 @@ export const DEFAULT_CONFIG = {
   keepRecentTurns: 4,                 // how many recent turns stay verbatim in the prompt
   minds: 6,                           // how many lords of the realm have a mind each week (3 | 6 | 10 | 'off' for the old Hand; 04 §5.1)
   director: 'light',                  // 'light' = a story hook at most once a fortnight when the weeks run thin; 'lively' = weekly; 'off' = only the quiet-week guarantee (04 §7)
+  weaver: false,                      // true = once a game month the model may turn a lasting thing the story made into a custom of one lord's house, checked in the rules' sandbox (04 §10; off by default)
   narrator: 'on',                     // 'on' = the narrator tells the turn from its facts, checked against them (04 §6); 'off' = the old Bard
   promptDetail: 'full',               // 'full' = every house & character each turn; 'lean' = only what's relevant (much faster on laptops)
   extraBody: {},                      // merged into the request body (e.g. {"top_p":0.9,"min_p":0.05})

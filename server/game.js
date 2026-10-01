@@ -31,6 +31,7 @@ import { carryOutOrders, readOrders, answerOrder, orderEvents } from './orders.j
 import { interpretOrder } from './orders/interpret.js';
 import { runMinds, knownTo } from './minds.js';
 import { directWeek, thinWeek } from './director.js';
+import { weaveWeek } from './weaver.js';
 import { relevantMemory, chronicleNotes } from './ai/context/memory.js';
 import { narrateTurn, narratorOn } from './narrator.js';
 import { cardOf } from '../public/js/engine/facts/headline.js';
@@ -342,13 +343,13 @@ export async function answerOrderQuestion(id, orderId, option) {
  * Let the days pass (03 §6.2). opts: { span ('auto' = until something happens), orders, onSegment(segment) — each
  * week as soon as it is told (the SSE stream), stopWanted() → the day the lord asked to stop on, if he has }.
  */
-export async function advance(id, { span = 'auto', orders, onSegment = null, stopWanted = null, stopAt = null, replayMinds = null, replayHooks = null } = {}) {
+export async function advance(id, { span = 'auto', orders, onSegment = null, stopWanted = null, stopAt = null, replayMinds = null, replayHooks = null, replayWeaver = null } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
   // everything the engine rolls this turn comes from this save's dice (server/dice.js), awaits and all
-  return withDice(state, () => advanceWith(id, state, cfg, { span, orders, onSegment, stopWanted, stopAt, replayMinds, replayHooks }));
+  return withDice(state, () => advanceWith(id, state, cfg, { span, orders, onSegment, stopWanted, stopAt, replayMinds, replayHooks, replayWeaver }));
 }
 
 /**
@@ -364,9 +365,9 @@ export async function stopHere(id, day) {
   const days = spanOf(t.span).days;
   if (d < 1 || d >= days) throw httpError(400, `the turn ran ${days} day${days > 1 ? 's' : ''}: stop on one of days 1–${days - 1}`);
   await undo(id, { turns: 1 });
-  return advance(id, { span: t.span, stopAt: d, replayMinds: t.minds || [], replayHooks: t.hooks || [] });
+  return advance(id, { span: t.span, stopAt: d, replayMinds: t.minds || [], replayHooks: t.hooks || [], replayWeaver: t.weaver || [] });
 }
-async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replayMinds = null, replayHooks = null, onSegment = null, stopWanted = null }) {
+async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replayMinds = null, replayHooks = null, replayWeaver = null, onSegment = null, stopWanted = null }) {
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o.text) })).filter((o) => o.text.trim()); }
   // the world as it stands before the turn is kept for undo, orders and all (they come back to be changed and given
   // again); the old single undo point of earlier versions is no longer needed
@@ -396,7 +397,7 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   // asked (the mock's choices do not read it), over the last few moons of the log and the chronicle's notes
   const remember = cfg.provider === 'mock' ? () => '' : memoryOf(id, state);
   const deliver = async (st) => [...deliverReplies(st), ...await deliverLetters(st, { provider: cfg.provider, cfg, log, known, memory: (c, words) => remember(c, { words }) }).catch((e) => { console.warn('letters:', e.message); return []; })];
-  const touched = new Set(); const applied = [], rejected = [], cards = [], mindsRecord = [], hooksRecord = [], segments = [], narrated = [], meanwhile = [];
+  const touched = new Set(); const applied = [], rejected = [], cards = [], mindsRecord = [], hooksRecord = [], weaverRecord = [], segments = [], narrated = [], meanwhile = [];
   const eyes = { foes: sightedFoes(state) };
   // news of an earlier turn that only now reaches the house (a raven, a rumour) is told from the fact log: its facts are not in `state.facts` any more
   const oldFacts = new Map();
@@ -425,6 +426,10 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
       const hooked = await directWeek(state, { cfg, provider: cfg.provider, log, replay: replayHooks?.filter((h) => h.segment === seg) || null })
         .catch((e) => { console.warn('director:', e.message); return { cards: [], record: [] }; });
       hooksRecord.push(...hooked.record.map((r) => ({ ...r, segment: seg })));
+      // ── THE WEAVER (04 §10; server/weaver.js): rare, optional, off by default — a custom for a lord's house, in the rules' sandbox
+      const woven = await weaveWeek(state, { cfg, provider: cfg.provider, log, replay: replayWeaver?.filter((w) => w.segment === seg) || null })
+        .catch((e) => { console.warn('weaver:', e.message); return { record: [] }; });
+      weaverRecord.push(...woven.record.map((r) => ({ ...r, segment: seg })));
       const segCards = [...minds.cards, ...hooked.cards].map((c) => ({ ...c, day: ran + 1 }));
       // ── THE DAYS (server/turn/day.js): the engine's rules, one day at a time
       state.meta.clock = { turn, from: day0 + 1, to: segFrom };
@@ -501,7 +506,7 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   // (the digest is the turn's summary now; `summary` keeps its name for what reads it: the world log, the bench, the playtest)
   const summary = digest.text;
   const record = {
-    carried, ...(mindsRecord.length ? { minds: mindsRecord } : {}), ...(hooksRecord.length ? { hooks: hooksRecord } : {}), turn, dateFrom, date: dateStr(state.meta.date), span: `${days}d`,
+    carried, ...(mindsRecord.length ? { minds: mindsRecord } : {}), ...(hooksRecord.length ? { hooks: hooksRecord } : {}), ...(weaverRecord.length ? { weaver: weaverRecord } : {}), turn, dateFrom, date: dateStr(state.meta.date), span: `${days}d`,
     ...(stopped ? { until: stopped.text, stopped: stopped.major ? 'major' : 'minor' } : until ? { until } : {}), ...(stopAt ? { stoppedAt: days } : {}),
     segments, orders: state.orders, summary: stripForeignScript(summary), digest, ...(narration ? { narration } : {}), ...(meanwhile.length ? { meanwhile: meanwhile.join(' ') } : {}),
     events, applied, rejected, ledger: state.houses[p].ledger.at(-1), ms: { ...ms, total: Date.now() - t0 },

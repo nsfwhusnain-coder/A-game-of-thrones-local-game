@@ -16,6 +16,7 @@ export const CALL_DEFAULTS = {
   interpret:   { temperature: 0.2, budget: { in: 3000, out: 400 }, deadline: 90 },
   mind:        { temperature: 0.6, budget: { in: 3000, out: 250 }, deadline: 90 },
   director:    { temperature: 0.8, budget: { in: 4000, out: 300 }, deadline: 90 },
+  weaver:      { temperature: 0.3, budget: { in: 3500, out: 400 }, deadline: 90 },  // rare, optional, off by default: a rule is written in a checked language, so it is asked cool (04 §10)
   narrate:     { temperature: 0.85, budget: { in: 7000, out: 1600 }, deadline: 300 },
   audience:    { temperature: 0.8, budget: { in: 6000, out: 700 }, deadline: 180 },
   letter:      { temperature: 0.8, budget: { in: 3000, out: 400 }, deadline: 120 },
