@@ -3,6 +3,13 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — H1: sound follows the story
+
+- **The music knows where you are:** the title's theme, the colour of your region (north, Reach, Dorne, the Iron Islands), war, tension while the days pass (twenty seconds at most), a lament when someone of your family dies, the quiet of a matter being read, winter's colder mix — each plays the folder of your own music with that name (`public/music/war/`, `tension/`, `lament/`, `winter/`, `north/`…), or the nearest fitting one.
+- **Facts have sounds:** a letter for you is a raven's caw and parchment, a battle a horn and a clash, a fallen castle a low horn, a muster two short horns, a great lord's death a single deep bell, a wedding or a feast a lute, winter's coming a wind — never more than one in 400 ms, and each lowers the music a little.
+- **Settings → Sound & voices:** *The chronicle is read aloud* (the narrator reads each great story as it is told, and the days wait for it) and *Letters are read in their sender's voice*. **296 characters have their own voices** (every persona; the household and cousins by type); the first time natural voices are wanted, the game asks before a 90 MB download (download now / the browser's voices / none).
+- Tests: `tests/audio-map.test.js` (8); nothing here was listened to — the owner judges by ear.
+
 ## 2026-10-02 — G1, G2, G3, G5: the roster of the realm
 
 - **A fuller realm.** 290 houses instead of 158: the lesser lords of every region (Egen, Lychester, Osgrey of Standfast, Cafferen of Fawnton, the five Goodbrothers of Great Wyk, the Burned Men, the Black Ears and the Thenns, and many more), each with a seat on the map that is on land and a day's ride from every other. **Every landed house has a family**: the head, a spouse and an heir, and 109 people the books name are in their places (Hullen at Winterfell, Mors Crowfood Umber, Robar Royce, Dorna Swyft, the Freys, Black Jack Bulwer and the rangers of the Watch, Rattleshirt and Harma Dogshead, Mero of the Second Sons…). There are 1,011 people and 335 holdings at the start.

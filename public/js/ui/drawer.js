@@ -228,7 +228,12 @@ async function renderLetters(body) {
   const wing = lettersOnTheWing(s).map((l) => `<div class="errand wing" data-letter="${esc(l.id)}"><span class="ost underway">${icon('raven', 'ost-ico')} On the wing</span><div class="grow"><b>To ${esc(l.toName)}</b> <span class="muted">· sent ${esc(l.sent)} · ${esc(landsWord(l.days))}</span><div class="muted" style="font-size:max(0.8rem,12px)">${esc(l.text.slice(0, 140))}${l.text.length > 140 ? '…' : ''}</div></div></div>`).join('');
   const sent = (s.post || []).filter((x) => !x.reply && x.status !== 'in flight').slice(0, 12).map((x) => { const [c, l] = LABEL[x.status] || ['', x.status]; return `<div class="errand"><span class="ost ${c}">${l}</span><div class="grow"><b>To ${esc(x.toName)}</b> <span class="muted">· sent ${esc(x.sent.replace(/, \d+ AC$/, ''))}${x.status === 'in flight' ? ` · lands in ~${Math.max(1, x.arriveDay - today)} ${x.arriveDay - today === 1 ? 'day' : 'days'}` : ''}</span><div class="muted" style="font-size:max(0.8rem,12px)">${esc(x.text.slice(0, 140))}${x.text.length > 140 ? '…' : ''}</div></div></div>`; }).join('');
   body.innerHTML = `${wing ? `<h4>On the wing</h4>${wing}` : ''}<h4${wing ? ' style="margin-top:1rem"' : ''}>Received</h4>${s.ravens.map(ravenHtml).join('') || '<p class="muted">No ravens have come.</p>'}${sent ? `<h4 style="margin-top:1rem">Sent</h4>${sent}` : ''}`;
+  const fresh = s.ravens.filter((r) => !r.read).slice(0, 3); // WP H1: a letter opened is read in its sender's voice (Settings → Sound: Letters are read in their sender's voice), the newest three, one after another
   if (s.ravens.some((r) => !r.read)) { try { const r = await api(`/games/${app.saveId}/ravens/read`, { body: {} }); s.ravens = r.ravens; app.renderTop?.(); } catch { /* */ } }
+  if (fresh.length && voiceSettings().letters && voiceSettings().engine !== 'off') {
+    const token = beginScene(); warmVoices();
+    for (const r of fresh.reverse()) { if (sceneToken() !== token || app.drawerTab !== 'letters') return; await speak(String(r.text || '').replace(/<[^>]+>/g, ' '), s.characters[r.from] || { id: r.from || 'maester', age: 45 }, { keep: true }); }
+  }
 }
 
 // ───────────── audiences ─────────────

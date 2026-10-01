@@ -31,7 +31,7 @@ try {
       for (const [w, h] of [[1920, 1080], [1366, 768]]) {
         const page = await browser.newPage({ viewport: { width: w, height: h } }); page.setDefaultTimeout(120000);
         await page.emulateMedia({ reducedMotion: 'reduce' });
-        await page.addInitScript(() => { try { localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); localStorage.setItem('wc.welcomed.' + new URLSearchParams(location.search).get('game'), '1'); } catch { /* */ } });
+        await page.addInitScript(() => { try { localStorage.setItem('voice-download', '"off"'); localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); localStorage.setItem('wc.welcomed.' + new URLSearchParams(location.search).get('game'), '1'); } catch { /* */ } });
         await page.goto(`http://127.0.0.1:${PORT}/?dev&game=${id}`);
         await page.waitForFunction(() => window.__wc?.map && document.querySelector('#map-loading')?.classList.contains('hidden'), null, { timeout: 240000, polling: 500 });
         await page.waitForTimeout(2500);

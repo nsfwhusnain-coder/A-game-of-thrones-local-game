@@ -3,7 +3,10 @@
 import { app, $, foldText, toast } from './common.js';
 import { SPANS, spanOf } from '../shared/world.js';
 import { storyEvents, setDrawer } from './drawer.js';
-import { sfx } from './sfx.js';
+import { sfx, cue } from './sfx.js';
+import { cueForCard } from './audio-map.js';
+import { toldCard } from './scene.js';
+import { speak, stopSpeaking, voiceSettings } from './voice.js';
 import { planPlayback, runPlan, changedHoldings } from './choreo.js';
 import { reducedMotion } from './motion.js';
 
@@ -44,8 +47,14 @@ export async function playTurn(turn, { onDone } = {}) {
     holdings: s.holdings, onScreen: (p) => !map || map.onScreen(p), seat: seatPos ? seat : null, reduced,
     changed: [...(map?.staged?.ids || [])], words: (e) => (e.headline || e.title || '').length + (e.summary ?? e.text ?? '').length + foldText(e).length * 0.5,
   });
+  let reading = null; // the narrator's reading of the card being told: the days hold until it ends (or until the lord skips, steps on, or turns the reading off)
+  const holdWait = async (ms) => {
+    await wait(ms, ctl);
+    while (reading && !ctl.skip && !ctl.next && voiceSettings().readAloud) { if (ctl.paused) { await wait(200, ctl); continue; } await Promise.race([reading, new Promise((r) => setTimeout(r, 250))]); }
+    if (reading && (ctl.skip || ctl.next || !voiceSettings().readAloud)) { stopSpeaking(); reading = null; }
+  };
   const io = {
-    fly: (p, d) => map?.flyTo(p, d), cut: (p, d) => map?.cutTo(p, d), pulse: (p) => map?.flash?.(p), reveal: (ids) => map?.reveal(ids), wait: (ms) => wait(ms, ctl),
+    fly: (p, d) => map?.flyTo(p, d), cut: (p, d) => map?.cutTo(p, d), pulse: (p) => map?.flash?.(p), reveal: (ids) => map?.reveal(ids), wait: (ms) => holdWait(ms),
     home: (p, d, how) => (how === 'cut' ? map?.cutTo(p, d) : map?.flyTo(p, d)),
     show: (st, i) => {
       const e = evs[i]; ctl.next = false;
@@ -59,7 +68,12 @@ export async function playTurn(turn, { onDone } = {}) {
       if (card) { card.classList.remove('unrevealed'); card.classList.add('arrive'); setTimeout(() => card.classList.remove('arrive'), 3000); }
       if (body) body.scrollTo({ top: 0, behavior: 'smooth' }); // the newest is always at the top
       if (map) map.reelF = span > 3 ? Math.min(1, (e.day || 1) / span) : (i + 1) / (evs.length + 1);
-      sfx(e.importance >= 4 && e.type === 'war' ? 'horn' : 'open');
+      // the sound of the story (ui/audio-map.js): the cue of its fact, a lament for a death in the family, and — if the chronicle is read aloud — the narrator reading a great story, which the days wait for
+      cue(cueForCard(e, { state: s, player: s.meta.player })); toldCard(e, st.hold);
+      if (voiceSettings().readAloud && voiceSettings().engine !== 'off' && (e.importance >= 4 || e.tier === 'great' || e.tier === 'major')) {
+        const line = [e.headline || e.title, e.summary ?? e.text].filter(Boolean).join('. ');
+        reading = speak(line, null, { narrator: true }).catch(() => {}).finally(() => { reading = null; });
+      }
     },
   };
   await runPlan(plan, ctl, io, s.holdings);

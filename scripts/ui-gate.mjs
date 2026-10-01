@@ -238,7 +238,7 @@ async function probeFirstRun(browser, w, h) {
   const { id } = await api('/games', { scenario: 'agot_298', house: 'stark', seed: 298 });
   const page = await browser.newPage({ viewport: { width: w, height: h } }); page.setDefaultTimeout(120000);
   const errors = []; page.on('pageerror', (e) => errors.push(e.message)); await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.addInitScript(() => { try { localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); } catch { /* */ } });
+  await page.addInitScript(() => { try { localStorage.setItem('voice-download', '"off"'); localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); } catch { /* */ } });
   const boot = async () => { await page.goto(`http://127.0.0.1:${PORT}/?dev&game=${id}`); await page.waitForFunction(() => window.__wc?.map && document.querySelector('#map-loading')?.classList.contains('hidden'), null, { timeout: 240000, polling: 500 }); await page.waitForTimeout(1200); await page.evaluate(() => window.__wc?.map?.renderer?.setAnimationLoop?.(null)); await page.evaluate(`(${pageLib.toString()})()`); };
   const mark = () => page.evaluate(() => document.querySelector('#coach .wc-coach')?.dataset.mark || null);
   const slip = () => page.evaluate(() => { const s = document.querySelector('#coach .wc-slip'); if (!s) return null; const r = s.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; });
@@ -443,7 +443,7 @@ async function measure(browser, id, w, h, turn) {
   const errors = []; page.on('pageerror', (e) => errors.push(e.message));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   // the map is not what is measured: the cheap settings keep SwiftShader from drawing a forest every frame while we ask questions
-  await page.addInitScript((gid) => { try { localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); localStorage.setItem('wc.welcomed.' + gid, '1'); localStorage.setItem('wc.coach.' + gid, JSON.stringify(['command', 'turn', 'realm'])); } catch { /* private mode */ } }, id);
+  await page.addInitScript((gid) => { try { localStorage.setItem('voice-download', '"off"'); localStorage.setItem('gfx-quality', 'fast'); localStorage.setItem('map-life', '0'); localStorage.setItem('wc.welcomed.' + gid, '1'); localStorage.setItem('wc.coach.' + gid, JSON.stringify(['command', 'turn', 'realm'])); } catch { /* private mode */ } }, id);
   await page.goto(`http://127.0.0.1:${PORT}/?dev&game=${id}`);
   say('page loading'); await page.waitForFunction(() => window.__wc?.map && document.querySelector('#map-loading')?.classList.contains('hidden'), null, { timeout: 240000, polling: 500 });
   say('map ready'); await page.waitForTimeout(2000);
