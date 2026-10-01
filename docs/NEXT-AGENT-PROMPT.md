@@ -1,5 +1,7 @@
 # Prompt for the next lead agent
 
+> **Superseded (2026-10-02):** the work this prompt hands over (Phases N, U and R) is done, and so is the rest of the plan (Phases E, F, G and H). The state of things is in [`HANDOFF.md`](HANDOFF.md); the plan is [`gdd/`](gdd/README.md). Kept for history.
+
 *The owner pastes the text below into a new session. It is kept in the repo so it versions with the plan. Written
 2026-09-29, at the end of the session that began Phases N, U and R. This agent runs **on the owner's Windows PC**.*
 

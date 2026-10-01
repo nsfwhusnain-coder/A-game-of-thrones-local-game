@@ -1,5 +1,7 @@
 # Agent playbook — running Westeros Chronicles with subagents
 
+> **Kept for reference, not binding (2026-10-02):** this describes running the work with subagents; the owner asked that Phases N–H be done without them (see [`HANDOFF.md`](HANDOFF.md) §0), and they were. Its rules about tests, screenshots, PRs and merging still hold. The plan itself is [`gdd/`](gdd/README.md).
+
 *For the lead agent (Opus, extra-high effort). You decide, review and merge; Sonnet subagents read, write, test and
 look. Read `CLAUDE.md`, `docs/HANDOFF.md` §0, `docs/NEXT-AGENT-PROMPT.md` and `docs/gdd/16-roadmap.md` ("Phases N, U,
 R") first; this file is how to run them. Prompts below are copy-paste templates: fill the `{placeholders}`, paste
