@@ -23,11 +23,13 @@ test.after(() => fs.rmSync(process.env.WC_SAVES, { recursive: true, force: true 
 
 const TURNS = Number(process.env.REALM_SOAK_TURNS) || 24;
 const GAMES = [['stark', 7], ['lannister', 11], ['tyrell', 23]];
-// start the three games now; they run while the audit's own tests do
+// start the three games now; they run while the audit's own tests do. A game of 24 moons is five minutes of the engine's work on a quick machine, and three of them run
+// beside every other test file on a two-core runner, so the wait is long: three-quarters of an hour is a hang, not a slow box (a kill at fifteen minutes read as a crash).
+const WAIT = 2700000;
 const runs = GAMES.map(([house, seed]) => new Promise((resolve, reject) => {
-  execFile(process.execPath, [path.join(ROOT, 'scripts', 'realm-dump.js'), '--soak', '--json', '--house', house, '--seed', String(seed), '--turns', String(TURNS)], { cwd: ROOT, maxBuffer: 1 << 26, timeout: 900000 }, (err, stdout, stderr) => {
+  execFile(process.execPath, [path.join(ROOT, 'scripts', 'realm-dump.js'), '--soak', '--json', '--house', house, '--seed', String(seed), '--turns', String(TURNS)], { cwd: ROOT, maxBuffer: 1 << 26, timeout: WAIT }, (err, stdout, stderr) => {
     const line = String(stdout).trim().split('\n').filter(Boolean).at(-1);
-    try { resolve(JSON.parse(line)); } catch { reject(new Error(`the soak of ${house} gave no result: ${err?.message || ''} ${stderr}`.slice(0, 600))); }
+    try { resolve(JSON.parse(line)); } catch { reject(new Error(`the soak of ${house} gave no result (${err?.killed ? `killed after ${WAIT / 60000} minutes` : err?.signal ? `signal ${err.signal}` : `exit ${err?.code}`}): ${stderr} ${(err?.message || '').slice(-300)}`.slice(0, 900))); }
   });
 }));
 runs.forEach((p) => p.catch(() => {})); // (reported by the tests below, not as an unhandled rejection)
@@ -85,7 +87,7 @@ test('hideTruth changes what the viewer cannot know and leaves what it can', asy
 // ── The soak ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 for (const [i, [house, seed]] of GAMES.entries()) {
-  test(`${TURNS} moons of ${house} (seed ${seed}): every figure within its tier's bound, no number where there is none, bands that hold, and no leak`, { timeout: 900000 }, async () => {
+  test(`${TURNS} moons of ${house} (seed ${seed}): every figure within its tier's bound, no number where there is none, bands that hold, and no leak`, { timeout: WAIT }, async () => {
     const r = await runs[i];
     assert.equal(r.turns, TURNS);
     assert.ok(r.cells > 20000, `${r.cells} cells held against the truth`);

@@ -19,7 +19,7 @@ import { hash32 } from '../rng.js';
 import { standing } from '../../shared/standing.js';
 import { holdingRevenue } from '../economy/ledger.js';
 import { ECONOMY } from '../../../data/balance.js';
-import { FIELDS, figuresOf, holdingsIndex } from './figures.js';
+import { FIELDS, figuresOf, figuresIndex } from './figures.js';
 
 const KEEP = 24;
 
@@ -64,9 +64,9 @@ const wealthWord = (rank) => { const w = WEALTH[rank]; return w == null ? 'unkno
 // ── what a pass over the realm needs, made once ──────────────────────────────────────────────────────────────────────
 /** Holdings by owner, vassals by liege, the viewer's friends, and the truth figures of the houses the viewer may read live (each once). */
 export function realmContext(state, viewer = state.meta.player) {
-  const vassals = new Map(); const figs = new Map(); const held = holdingsIndex(state);
+  const vassals = new Map(); const figs = new Map(); const ix = figuresIndex(state); const held = ix.holds; // (the index: each house's figures are then worked from lists made once, not from a scan of the world apiece)
   for (const h of Object.values(state.houses)) if (h.liege) { const l = vassals.get(h.liege); if (l) l.push(h.id); else vassals.set(h.liege, [h.id]); }
-  return { viewer, held, vassals, friends: friendsOf(state, viewer), figuresOf: (id) => { if (!figs.has(id)) figs.set(id, figuresOf(state, id, held)); return figs.get(id); } };
+  return { viewer, held, vassals, friends: friendsOf(state, viewer), figuresOf: (id) => { if (!figs.has(id)) figs.set(id, figuresOf(state, id, ix)); return figs.get(id); } };
 }
 
 /** Whether the viewer may list a house at all: its own, its sworn, the houses of standing that all the realm has heard of, and any it has had word of. */
