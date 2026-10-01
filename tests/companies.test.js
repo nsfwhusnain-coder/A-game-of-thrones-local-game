@@ -78,3 +78,15 @@ test("the Night's Watch takes recruits and no side", () => {
   days(s, 60); assert.ok(nw.men >= men + 40, `two moons of recruits (${men} → ${nw.men})`);
   assert.equal(perform(s, 'declare_war', { params: { house: 'nights_watch' } }).ok, false);
 });
+
+test('the Second Sons and the Stormcrows (WP G1) are for hire like the others: raised at their camp, paid a moon on signing, turncoats to a higher bid', () => {
+  for (const [id, men] of [['second_sons', 500], ['stormcrows', 500]]) {
+    const s = world(); const gold0 = s.houses.lannister.figures.treasury.v;
+    assert.ok(s.houses[id] && s.holdings[`${id}_camp`], `${id} has a house and a camp`);
+    assert.equal(priceOf(s, id), men * 2, `${id}: two dragons a man a moon`);
+    const r = perform(s, 'hire_company', { params: { company: id } }); assert.ok(r.ok, JSON.stringify(r.receipt));
+    const p = companyHost(s, id); assert.equal(p.serving, 'lannister'); assert.equal(p.men, men);
+    assert.equal(s.houses.lannister.figures.treasury.v, gold0 - men * 2);
+    assert.ok(s.characters[s.houses[id].lord], `${id} has a captain`);
+  }
+});
