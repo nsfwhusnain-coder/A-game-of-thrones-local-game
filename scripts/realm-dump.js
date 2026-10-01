@@ -55,11 +55,11 @@ async function soak() {
   if (friends.length) { const w = JSON.parse(JSON.stringify(last)); w.houses[friends[0]].figures.treasury.v = (w.houses[friends[0]].figures.treasury.v || 100) * 10 + 5000; teeth.sworn = audit.readings(w, viewer) !== base; }
   const mean = (x) => x.reduce((p, q) => p + q, 0) / Math.max(1, x.length);
   const cost = { viewMean: mean(ms.view), viewMax: Math.max(...ms.view), sampleMean: mean(ms.sample), sampleMax: Math.max(...ms.sample) };
-  const result = { house, seed, turns, ms: Date.now() - t0, cost, cells: total.cells, violations: total.violations.slice(0, 50), violationCount: total.violations.length, kinds: total.kinds, bands: total.bands, thinBands: audit.thinBands(total), leaks, hid, hidTurns, teeth };
+  const result = { house, seed, turns, ms: Date.now() - t0, peakMb: Math.round(process.resourceUsage().maxRSS / 1024), cost, cells: total.cells, violations: total.violations.slice(0, 50), violationCount: total.violations.length, kinds: total.kinds, bands: total.bands, thinBands: audit.thinBands(total), leaks, hid, hidTurns, teeth };
   if (args.json) { console.log(JSON.stringify(result)); return; }
   console.log(audit.auditReport(total, { title: `Realm audit — ${house}, seed ${seed}, ${turns} moons` }));
   console.log(`\nWhat the viewer cannot know was changed in ${hidTurns} of ${turns} moons (${Object.entries(hid).map(([k, n]) => `${k} ${n}`).join(', ')}): ${leaks.length ? `THE LEDGER MOVED in turns ${leaks.map((l) => l.turn).join(', ')}` : 'the ledger, the brief and the summary did not move by one byte'}.`);
-  console.log(`Cost: the view ${cost.viewMean.toFixed(0)} ms on average (${cost.viewMax.toFixed(0)} at most), the turn's sample ${cost.sampleMean.toFixed(0)} ms (${cost.sampleMax.toFixed(0)}).`);
+  console.log(`Memory: the most this process held was ${result.peakMb} MB. Cost: the view ${cost.viewMean.toFixed(0)} ms on average (${cost.viewMax.toFixed(0)} at most), the turn's sample ${cost.sampleMean.toFixed(0)} ms (${cost.sampleMax.toFixed(0)}).`);
   console.log(`Teeth: your own coffers move the ledger ${teeth.own ? 'yes' : 'NO'}${'sworn' in teeth ? `; a sworn house's ${teeth.sworn ? 'yes' : 'NO'}` : ''}. ${(result.ms / 1000).toFixed(0)} s.`);
   process.exitCode = total.violations.length || leaks.length || result.thinBands.length || !teeth.own ? 1 : 0;
 }
