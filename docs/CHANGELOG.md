@@ -3,6 +3,11 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — H5: the README and the handoff
+
+- **The README is rewritten** for what the game is now (290 houses, the engine that decides and the model that tells, the 64k profile, Mock mode, how to play, what the checks are and what each costs), with the sound and voices section saying plainly that **no voice is cloned**.
+- **`docs/HANDOFF.md` is the owner's**: where things stand, the checklist of what only the owner can verify (the model, the ear, a long play), the model guidance with the llama-swap flags and the routing block, the fine-tune recommendation (what to tune first, and that not before the bench asks), the known limits and what comes next. The Phase G handoff is kept in `docs/archive/`; the prompt for the next lead agent and the subagent playbook are marked as history.
+
 ## 2026-10-02 — H4: the recipe for the next fine-tune
 
 - **`scripts/finetune/`**: play with `"logCalls": true`, and the game's own call log becomes the training data — the replies the game itself accepted (clean of a foreign script, a game word, a phrase from after 298), and, as preference pairs, the answers it refused beside the ones it accepted when it asked again. A trainer, the GGUF export and the llama-swap entry (64k, adapter on and off) follow, and the README says what to tune first and how to know it was worth it (the bench, the playtest, the coherence check, before and after). Nothing here runs in the game; CI runs the dry runs on a tiny fixture. No GPU was used: the first real run is the trainer's test.
