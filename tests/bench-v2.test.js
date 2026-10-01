@@ -158,6 +158,19 @@ test('what a house does as a house is done by its regent while the lord is a pri
   assert.deepEqual(d.actors, [lord], 'what is done to a man is still his');
 });
 
+test('the lord\'s own word is history too: a command the story tells nothing of has a card with a fact behind it (the live playtest found it without)', async () => {
+  const { id } = game.newGame('agot_298', 'stark', { seed: 7 });
+  const text = 'Let it be known throughout the North that House Stark mourns the old Hand.';
+  game.setOrders(id, [{ id: 't1o0', text }]);
+  await game.advance(id, { span: '7d', orders: game.loadState(id).orders }); await game.settled(id);
+  const g = readGame(game, id);
+  const given = g.facts.filter((f) => f.kind === 'order_given');
+  assert.ok(given.length >= 1 && given.every((f) => f.cause?.type === 'order' && f.houses.includes('stark') && f.actors.includes('eddard_stark')), JSON.stringify(given));
+  const card = g.turns[0].events.find((e) => e.orderId === 't1o0');
+  assert.ok(card?.fact && given.some((f) => f.id === card.fact), `the card of the command names its fact: ${JSON.stringify(card?.fact)}`);
+  assert.deepEqual(coherence(g).A, []);
+});
+
 // ── the audience suite ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 test('the audience suite: eighty lines, labelled with the engine\'s own verdicts (a changed weighing shows here), ten kinds of words to eight people', () => {
