@@ -54,8 +54,7 @@ const MUSTER_SHARE = { crown: 0.036, paramount: 0.066, major: 0.026, minor: 0.00
  * share for one house in ten, and always for the Watch and the Golden Company, who raise none). The swords are the levies, the men-at-arms and the hosts:
  * never below a third of the share, and a lesser house may raise up to three times it.
  */
-const LEVY_REACH = [0, 2.4], SWORD_REACH = [0.4, 3];
-/** The coin a house is reputed to hold by its rank (the Crown's debts are the realm's gossip): all a house knows of another's coffers until a spy has counted them. */
+const LEVY_REACH = [0, 2.4], SWORD_REACH = [0.4, 3];/** The coin a house is reputed to hold by its rank (the Crown's debts are the realm's gossip): all a house knows of another's coffers until a spy has counted them. */
 const WEALTH = { crown: 0, paramount: 150000, city_state: 300000, major: 30000, minor: 6000, order: 2000, company: 10000, tribe: 0, exile: 0 };
 /** Living kin a house is reputed to have, by rank: a great house's household is large, a minor lord's small. */
 const KIN = { crown: 9, paramount: 6, major: 2, minor: 1, city_state: 1, company: 2, tribe: 3, exile: 6, order: 8 };
@@ -135,10 +134,16 @@ export function observe(state, viewer = state.meta.player) {
     if (friends.has(a.owner) || (a.serving && friends.has(a.serving)) || !(a.men > 0)) continue;
     if (seesParty(state, viewer, a, E)) { const o = at(a.owner); o.seen += a.men; if (a.kind === 'fleet') o.ships += a.ships || 0; eyed.add(a.id); }
   }
+  // what was heard: the hosts word came of in one week are as many hosts (two at once are two), but word of a host in another week may be of the same
+  // host moved, merged or renamed, so the weeks are not added to one another — the week's fullest picture stands. "At least" may fall short of the
+  // truth, never double it.
+  const weeks = new Map();
   for (const [id, rep] of Object.entries(k.parties)) {
     if (eyed.has(id) || !rep.owner || friends.has(rep.owner) || t - rep.turn > 4) continue;
-    at(rep.owner).said += rep.men || 0;
+    let w = weeks.get(rep.owner); if (!w) weeks.set(rep.owner, w = new Map());
+    w.set(rep.turn, (w.get(rep.turn) || 0) + (rep.men || 0));
   }
+  for (const [owner, w] of weeks) at(owner).said += Math.max(...w.values());
   // what was taught: a fact carrying `figure = { house, field, value }`, noted once
   const taught = new Map();
   for (const n of Object.values(k.facts)) {

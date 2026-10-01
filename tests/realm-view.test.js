@@ -226,6 +226,18 @@ test('a host seen raises swords ≥ with the report\'s age', () => {
   assert.equal(c2.mark, '≥'); assert.ok(c2.v >= 0.9 * 5000, 'the last word of it stands'); assert.equal(c2.age, 2, 'and it is two turns old');
 });
 
+test('word of a house\'s host in different weeks is not added up (the same host may have moved, merged or been renamed); two heard of in one week are two', () => {
+  const s = world(); const t = s.meta.turn; const pos = [...s.holdings.martell.pos]; const reports = K.knowledgeOf(s, 'stark').parties;
+  const word = (id, men, turn) => { reports[id] = { pos: [...pos], men, turn, source: 'word from afar', owner: 'martell', name: id }; };
+  const swords = () => { withRng(s, () => K.updateKnowledge(s, 'stark')); return rowOf(view(s), 'martell').cells.swords; };
+  word('van_b', 3000, t); const b = swords();
+  assert.equal(b.mark, '≥'); assert.ok(b.v >= 2900, `the host heard of this week stands (≥ ${b.v})`);
+  word('van_a', 3000, t - 1); const a = swords();
+  assert.equal(a.v, b.v, `the same size, heard of a week before, is the same host as far as the ledger can tell (${a.v} against ${b.v})`);
+  word('van_a', 3000, t); const c = swords();
+  assert.ok(c.v >= b.v + 2000, `two hosts heard of in one week are both counted (≥ ${c.v}, from ${b.v})`);
+});
+
 test('a spy fact teaching a treasury shows a ~ number dated; without it gold is a word', () => {
   const s = mature(2);
   const WORDS = ['sound', 'modest', 'pressed', 'unknown'];

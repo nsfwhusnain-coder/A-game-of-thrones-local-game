@@ -3,6 +3,13 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-01 — G4: the small life of the realm, 425 happenings
+
+- **More than twice the small news.** The Meanwhile now draws on 425 happenings (214 before): frost on the vines of the Reach and a fog on the Blackwater, sealers home to the Iron Islands, a tourney in the Vale, a red priest in Pentos, bandits in the Kingswood, a drowned priest at the tideline, widows at a gate in a war, a truce among the clans when the realm is at peace. Every region has its own, in its winter and in its summer, at war and at peace.
+- **Each one is told in its own words.** A happening had a generic line ("Rumour spreads at Sunflower Hall") for most of the old ones; every one of the 425 now has its own headline and summary, which the headline scorer passes at every place it can fall. A happening of a person is told of that person (Arya at the butts is Arya's, not whoever the writer found).
+- **Two faults found on the way, fixed:** the State of the Realm counted a house's host twice when it had merged or been renamed ("at least 6,900 swords" of a house with 3,600 — now the fullest week's word, never two weeks added); a succession in a city-state wrote the engine's line into the chronicle — the writer's card is there now.
+- Tests: `tests/happenings-content.test.js` (5), `tests/realm-view.test.js` (+1), `tests/turn-cards.test.js` (+1).
+
 ## 2026-10-01 — F9: the keyboard, reduced motion, small text and the checklist
 
 - **The map has keys:** **[** and **]** step through what is on it (matters, news, hosts, places), **Enter** opens the one you are on, **Esc** lets go; it is announced for a screen reader and ringed on screen. **Esc closes a panel and focus goes back to what opened it.** Every row, card and plate can be reached with Tab and pressed with Enter; the command field shows where your words will go.

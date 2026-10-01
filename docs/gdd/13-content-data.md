@@ -126,7 +126,7 @@ Stark–Arryn marriages, Lannister–Baratheon (the royal marriage), the Crown's
 
 | File | Now | Target | Notes |
 |---|---|---|---|
-| `data/happenings.js` | ~190 | ~400 | cover every region × season × war/peace; each with conditions, variants, small effects, cooldown; half set on lesser houses' lands so every region has its own small life |
+| `data/happenings.js` + `data/happenings/*.js` | **425 (G4 ✅, D-098)** | ~400 | cover every region × season × war/peace; each with conditions, variants, small effects, cooldown; half set on lesser houses' lands so every region has its own small life |
 | `data/matters.js` (new, from `petitions.js`) | ~12 kinds | ~70 templates | [10](10-narrative-events.md) §6 |
 | `data/hooks.js` (new) | 0 | ~80 | [10](10-narrative-events.md) §7 |
 | `data/beats/*.js` (new, from `plots.js`) | 11 threads | 10 §4 in full (~60 beats) | |

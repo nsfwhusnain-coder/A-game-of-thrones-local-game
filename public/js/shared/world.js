@@ -542,7 +542,7 @@ export function resolveSuccessions(state) {
       state.characters[c.id] = c; h.lord = c.id;
       text = elected ? `SUCCESSION: the magisters of ${h.name} choose ${c.name} to rule after ${lord?.name || 'the last'}` : `SUCCESSION: the main line of House ${h.name} has failed; a cousin, ${c.name}, claims the seat`;
     }
-    state.chronicle.push({ date, text });
+    // (the chronicle's line of it is the writer's, made where the turn's cards are: server/game.js; the engine's own line is the op's record)
     // the fact falls on the day the old head died, if that was this turn
     const died = lord && (state.facts || []).findLast((f) => f.actors[0] === lord.id && ['death', 'slain_in_battle', 'executed'].includes(f.kind));
     const f = emit(state, 'succession', { actors: [h.lord, lord?.id], houses: [h.id], place: h.seat || null, title: `A new head of House ${h.name}`, text: text.replace(/^SUCCESSION: /, '').replace(/^./, (x) => x.toUpperCase()) + '.', importance: h.id === state.meta.player ? 5 : 4, data: { heir: h.lord, prev: lord?.id || null }, cause: { type: 'rule', ref: 'succession' }, ...(died ? { on: died.day - (state.meta.clock?.from ?? died.day) + 1, alongside: died.id } : {}) });

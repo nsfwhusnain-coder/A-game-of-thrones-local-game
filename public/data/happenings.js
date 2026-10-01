@@ -13,6 +13,7 @@
 //
 // Canon is respected: nothing here states as fact what happens after 298 AC; later things appear only as rumour.
 
+import { MORE } from './happenings/index.js';
 const H = (id, where, imp, type, t, x, o = {}) => ({ id, where, imp, type, t, x, ...o });
 
 export const REGION_LABEL = { north: 'the North', wall: 'the Wall', beyond: 'beyond the Wall', iron_islands: 'the Iron Islands', riverlands: 'the riverlands', vale: 'the Vale', westerlands: 'the westerlands', crownlands: 'the crownlands', reach: 'the Reach', stormlands: 'the stormlands', dorne: 'Dorne', essos: 'Essos' };
@@ -45,7 +46,7 @@ export const NAMES = {
   default: ['a crofter', 'a hedge knight', 'a travelling septon', 'a peddler', 'a smith'],
 };
 
-export const HAPPENINGS = [
+const BASE = [
   // ════════ People, doing what they do ════════
   H('p_arya', 'c:arya_stark', 1, 'court', 'Arya at the archery butts', 'Arya Stark was caught at the archery butts again when she should have been at her needlework; Septa Mordane is beside herself. || Arya Stark beat the butcher\'s boy in a fight with sticks in the yard; Jon laughed, Septa Mordane did not.', { when: ['alive:arya_stark'], cd: 8 }),
   H('p_sansa', 'c:sansa_stark', 1, 'court', 'Sansa\'s stitches', 'Sansa Stark finished a tapestry of the Kingsguard in white; Septa Mordane calls it the finest work in Winterfell. || Sansa Stark sings a song of Florian and Jonquil in the solar and dreams of the south.', { when: ['alive:sansa_stark'], cd: 8 }),
@@ -290,3 +291,6 @@ export const HAPPENINGS = [
   H('e_summer_isles', 'r:essos|reach', 1, 'economy', 'Swan ships from the Summer Isles', 'A Summer Islander swan ship has come in with {goods}, green parrots and a feathered cloak for the lord.'),
   H('e_valyria', 'r:essos', 1, 'rumor', 'The Smoking Sea', 'A Tyroshi galley that tried to sail through the Smoking Sea came back with no crew and blackened sails. Valyria is still cursed.', { cd: 16 }),
 ];
+
+/** Every happening: the first library above, and the regional ones of data/happenings/ (WP G4). */
+export const HAPPENINGS = [...BASE, ...MORE];
