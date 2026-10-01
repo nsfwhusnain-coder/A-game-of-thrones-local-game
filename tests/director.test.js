@@ -73,8 +73,8 @@ test('no whole week is empty: each has three facts of note in the realm, or a ho
   const cfg = game.loadState(id);
   for (let i = 0; i < 6; i++) await game.advance(id, { span: '7d' });
   const facts = fs.readFileSync(path.join(game.SAVES, id, 'facts.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
-  const day0 = dayNumber(cfg.meta.date);
-  for (let w = 0; w < 6; w++) {
+  const day0 = dayNumber(cfg.meta.date); const played = dayNumber(game.loadState(id).meta.date); // (a jump stops early for a raven or a camp: a week not wholly played is not judged)
+  for (let w = 0; w < 6 && day0 + w * 7 + 7 <= played; w++) {
     const week = facts.filter((f) => f.day > day0 + w * 7 && f.day <= day0 + w * 7 + 7);
     const noted = week.filter((f) => f.importance >= 2).length;
     assert.ok(noted >= 3 || week.some((f) => f.kind === 'hook'), `week ${w + 1}: ${noted} facts of note and no hook`);

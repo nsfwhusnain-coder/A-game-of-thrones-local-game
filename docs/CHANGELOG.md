@@ -3,6 +3,15 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — H7: what the owner found playing
+
+- **The tip about the menu no longer covers it.** It sat under the menu button, where the menu opens, and hid the doors. It now sits under the bar, to the left of the menu; it never takes a click; and it is put away the moment you open the menu.
+- **The ring that crossed the screen is gone.** The ring that grows where news happens was thrown in from the top left corner of the screen toward the place each time (the map writes the ring's place into its transform, and the ring's own animation overrode it). It now grows where it is.
+- **The little brown boxes in the mountains** were carts that were given a straight line across the map when the roads had not all been found yet, and kept it. A cart now waits for its road, and where the ground gives none (an island, the far shore of a lake) there is no cart: it does not sail.
+- **The King no longer holds a tourney from the road.** A feast or a tourney is held by someone at the hall: a lord on his progress, a guest at another castle, a regent in another place cannot. And the Crown's own tourney waits for the Hand's (the story's beat) until the twelfth moon — and so does its feast at King's Landing: on the first day of a new game the King's mind is asked before his progress is on the road, and the chronicle told "King Robert feasts 33 lords at King's Landing" beside "King Robert passes the Twins".
+- **The screen is set out more evenly:** a slimmer bar, a smaller command box and headline strip, and a bigger face for the lord at the bottom right; the windows and the map's key clear the larger ruler. The End-turn line is cut to a line.
+- Tests: `tests/h7-fixes.test.js` (5).
+
 ## 2026-10-02 — H6: played on Maester-12B
 
 - **The game has been played on the model made for it**: twelve turns as Stark and twelve as Blackwood, then the five bench suites. A seven-day jump takes about 19 seconds and a thirty-day jump 39; the suites meet their gates (interpret 95 %, mind 86 %, narrate 95 % true first time, the pace of the design) except the audience's 100 % (two lines in eighty: a persona, insulted or pleaded with, answers with a refusal in words after the engine settled *obey* or *agree*). The report is `docs/local-ai/PLAYTEST-2026-10-02.md`.

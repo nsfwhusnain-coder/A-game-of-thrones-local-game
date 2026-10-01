@@ -51,8 +51,8 @@ export function showCoach() {
   const n = doneList().length;
   el.innerHTML = `<div class="wc-coach" data-mark="${mark.id}"><span class="wc-coach__dot"></span><div class="wc-slip" role="note"><span class="wc-kicker">Tip · ${n + 1} of 3</span>${esc(mark.text)}</div></div>`;
   const box = el.firstElementChild, slip = box.querySelector('.wc-slip');
-  const p = placeCoach({ x0: r.left, y0: r.top, x1: r.right, y1: r.bottom }, { w: slip.offsetWidth, h: slip.offsetHeight }, { w: window.innerWidth, h: window.innerHeight }, mark.side);
-  slip.style.cssText = `position:fixed;left:${p.left}px;top:${p.top}px;--arrow-x:${p.arrowX}px`; slip.dataset.arrow = p.arrow === 'up' ? 'up' : 'down';
+  const p = placeCoach({ x0: r.left, y0: r.top, x1: r.right, y1: r.bottom }, { w: slip.offsetWidth, h: slip.offsetHeight }, { w: window.innerWidth, h: window.innerHeight }, mark.side, 14, 8, (mark.clear || 0) * parseFloat(getComputedStyle(document.documentElement).fontSize));
+  slip.style.cssText = `position:fixed;left:${p.left}px;top:${p.top}px;--arrow-x:${p.arrowX}px;--arrow-y:${p.arrowY ?? 16}px;pointer-events:none`; if (p.arrow) slip.dataset.arrow = p.arrow; else delete slip.dataset.arrow; // (a note, never a lid: a click goes through it to what is under it)
   const dot = box.querySelector('.wc-coach__dot'); dot.style.cssText = `position:fixed;left:${p.dot.x - 8}px;top:${p.dot.y - 8}px`;
   current = mark.id;
 }

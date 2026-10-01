@@ -127,9 +127,10 @@ label { font-size: max(0.82rem, 12px); color: var(--muted); display: block; marg
 @keyframes pin-ask { 0% { box-shadow: 0 0 0 0 rgba(242,204,85,0.55); } 70% { box-shadow: 0 0 0 0.7rem rgba(242,204,85,0); } 100% { box-shadow: 0 0 0 0 rgba(242,204,85,0); } }
 .pin-n { position: absolute; top: -0.45rem; right: -0.5rem; min-width: 1rem; height: 1rem; padding: 0 0.2rem; border-radius: 0.5rem; background: var(--red); color: #fff; font: 700 max(0.75rem, 12px)/1rem var(--serif); text-align: center; }
 .lbl.event.imp4, .lbl.event.imp5, .lbl.event.battle { border-color: #ff6a4a; box-shadow: 0 0 14px rgba(255,90,60,0.7); }
-.lbl.pulse { width: 2rem; height: 2rem; border-radius: 50%; border: 3px solid var(--gold2); animation: pulse 1.4s ease-out 3; }
+.lbl.pulse { width: 2rem; height: 2rem; border-radius: 50%; border: 3px solid var(--gold2); animation: pulse 1.4s ease-out 3; pointer-events: none; }
 @keyframes bob { 50% { margin-top: -0.3rem; } }
-@keyframes pulse { from { transform: translate(var(--x), var(--y)) scale(0.3); opacity: 1; } to { opacity: 0; width: 5rem; height: 5rem; } }
+/* the ring grows where the news is: with the independent scale, never the transform (the map writes the label's screen place into the transform each frame, and an animation of it threw the ring in from the top left corner) */
+@keyframes pulse { from { scale: 0.3; opacity: 1; } to { scale: 2.6; opacity: 0; } }
 .map-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; background: radial-gradient(ellipse, #2a1d10, #080604); z-index: 50; font-family: var(--display); color: var(--gold2); }
 .loading-title { font-family: 'Cinzel Decorative', var(--display); font-size: 2.4rem; }
 .map-loading .bar { width: 22rem; max-width: 70vw; height: 0.4rem; background: #2a2018; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }

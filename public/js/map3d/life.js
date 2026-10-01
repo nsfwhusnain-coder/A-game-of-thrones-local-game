@@ -34,6 +34,7 @@ export class LivingMap {
     this.scene = scene; this.o = opts;
     this.groups = {};
     this.entities = [];
+    this.noRoad = new Set(); // pairs of places with no road between them
     this.enabled = opts.enabled !== false;
     const dummy = new THREE.Object3D(); this.dummy = dummy;
     for (const [kind, k] of Object.entries(KINDS)) {
@@ -70,12 +71,15 @@ export class LivingMap {
     const want = (id, kind, from, to, extra = {}) => {
       const old = keep.get(id);
       if (old && old.kind === kind && dist2(old.to, to) < 4) { Object.assign(old, extra); next.push(old); return; }
-      // A ravens flies straight; everyone else follows the ground. Pathfinding is capped per sync
-      // so a realm in chaos cannot cost a frame: the rest walk the straight road.
-      const path = kind === 'raven' || budget.n <= 0
-        ? [[...from], [...to]]
-        : (budget.n--, this.o.grid.find(from, to, 'land'));
-      if (!path || path.length < 2) return;
+      // A raven flies straight; everyone else follows the ground. Pathfinding is capped per sync
+      // so a realm in chaos cannot cost a frame: the rest are given their roads at the next.
+      // (a walker whose road is not found yet waits for the next sync: the straight line it used to take was kept, and crossed the mountains and the lakes)
+      if (kind !== 'raven' && budget.n <= 0) { if (old && old.kind === kind) next.push(old); return; }
+      // (and a road the ground does not give — an island, a lake's far shore — is no road at all: a cart does not sail, and the search that finds none is not made twice)
+      const key = `${kind}|${Math.round(from[0])},${Math.round(from[1])}|${Math.round(to[0])},${Math.round(to[1])}`;
+      if (this.noRoad.has(key)) return;
+      const path = kind === 'raven' ? [[...from], [...to]] : (budget.n--, this.o.grid.find(from, to, 'land', { strict: true }));
+      if (!path || path.length < 2) { if (kind !== 'raven') { if (this.noRoad.size > 2000) this.noRoad.clear(); this.noRoad.add(key); } return; }
       // an A* path can be hundreds of points; walking it every frame for hundreds of entities is
       // needless work, so each road is thinned to at most 64 waypoints once, here
       next.push({ id, kind, from: [...from], to: [...to], path: thin(path, 64), t: old?.t ?? hash(id), ...extra });

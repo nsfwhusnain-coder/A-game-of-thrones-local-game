@@ -61,10 +61,10 @@ test('a coach mark\'s slip is placed beside its target and on the screen, at bot
     const targets = { command: { x0: 0.34 * W, y0: H - 4.4 * 21, x1: 0.66 * W, y1: H - 14 }, turn: { x0: 0.64 * W, y0: 14, x1: 0.95 * W, y1: 60 }, realm: { x0: W - 60, y0: 14, x1: W - 12, y1: 60 } };
     for (const c of F.COACH) {
       const size = { w: 260, h: 70 }; const t = targets[c.id];
-      const p = F.placeCoach(t, size, { w: W, h: H }, c.side);
+      const p = F.placeCoach(t, size, { w: W, h: H }, c.side, 14, 8, (c.clear || 0) * 21);
       assert.ok(p.left >= 8 && p.top >= 8 && p.left + size.w <= W - 8 && p.top + size.h <= H - 8, `${c.id} inside ${W}×${H}`);
       const hit = p.left < t.x1 && p.left + size.w > t.x0 && p.top < t.y1 && p.top + size.h > t.y0; assert.ok(!hit, `${c.id}: the slip does not cover its target`);
-      assert.equal(p.arrow, c.side === 'below' ? 'up' : 'down', `${c.id}: the arrow points at the target`);
+      assert.equal(p.arrow, c.side === 'below' ? 'up' : c.side === 'below-left' ? null : 'down', `${c.id}: the arrow points at the target (none for a slip set beside the menu's door)`);
       assert.ok(p.arrowX >= 16 && p.arrowX <= size.w - 16);
     }
   }

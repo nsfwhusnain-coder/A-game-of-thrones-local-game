@@ -7,7 +7,7 @@
    Sizes are in rem, so the screen scales exactly as the rest of the game does (a root size of min(1.1vw, 2vh): the game is
    ~91 × 51 rem at every window size, and the bar is 2.6 rem, which is 55 px at 1920 and 39 px at 1366).
    ═══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
-:root { --hud-gap: .6rem; --hud-bar: 2.6rem; --hud-min: max(.66rem, 13px); --panel-w: min(30rem, 36vw); }
+:root { --hud-gap: .6rem; --hud-bar: 2.25rem; --hud-min: max(.66rem, 13px); --panel-w: min(30rem, 36vw); }
 
 /* ───────────────────────────── the top bar ───────────────────────────── */
 #hud-top { position: absolute; top: var(--hud-gap); left: var(--hud-gap); right: var(--hud-gap); height: var(--hud-bar); z-index: 10; display: flex; justify-content: space-between; align-items: stretch; gap: 1rem; padding: 0; background: none; pointer-events: none; }
@@ -30,9 +30,9 @@
 /* the three vitals: what a lord glances at (Coin, Men, Food); a click opens the ledger where it is explained */
 .wc-vitals--bar { height: var(--hud-bar); padding: 0 .3rem; }
 .wc-vital { height: 100%; margin: 0; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; text-align: left; border-radius: var(--radius-btn); }
-.wc-vitals--bar .wc-vital { padding: 0 .85rem; gap: .5rem; }
-.wc-vitals--bar .wc-vital > .ico { width: 1.3rem; height: 1.3rem; }
-.wc-vitals--bar .wc-vital b { font-size: 1.12rem; white-space: nowrap; }
+.wc-vitals--bar .wc-vital { padding: 0 .7rem; gap: .45rem; }
+.wc-vitals--bar .wc-vital > .ico { width: 1.1rem; height: 1.1rem; }
+.wc-vitals--bar .wc-vital b { font-size: 1rem; white-space: nowrap; }
 .wc-vitals--bar .wc-vital b em { font-size: max(.72em, 12px); font-style: italic; font-weight: 500; color: var(--bone-dim); letter-spacing: 0; }
 .wc-vitals--bar .wc-vital small { margin-top: .16rem; font-size: var(--hud-min); }
 .wc-vital__txt { display: block; }
@@ -53,11 +53,11 @@
 
 /* End turn: the iron plate, and beside it what the turn is waiting for */
 .wc-endturn--bar { flex-direction: row; align-items: center; width: auto; height: var(--hud-bar); padding: 0 .8rem 0 .4rem; gap: .8rem; }
-.wc-endturn--bar .wc-plate { width: auto; min-height: 0; height: 2rem; padding: 0 1.55rem; font-size: max(.9rem, 14px); }
+.wc-endturn--bar .wc-plate { width: auto; min-height: 0; height: 1.75rem; padding: 0 1.25rem; font-size: max(.9rem, 14px); white-space: nowrap; }
 .wc-endturn--bar .wc-plate .ico { width: 1rem; height: 1rem; }
 .wc-endturn--bar .wc-endturn__why { font-size: max(.8rem, 13px); text-align: left; white-space: nowrap; }
 .hud-right > #menu-btn { flex: none; height: var(--hud-bar); width: var(--hud-bar); }
-.hud-right > #menu-btn .ico { width: 1.3rem; height: 1.3rem; }
+.hud-right > #menu-btn .ico { width: 1.15rem; height: 1.15rem; }
 
 /* ───────────────────────────── the little popovers ───────────────────────────── */
 #menu-pop, #inbox, #mapmode-list { z-index: 30; }
@@ -94,7 +94,8 @@
 #mapmode-list button.active { color: var(--gold-flat); box-shadow: inset .2rem 0 0 var(--bronze); }
 
 /* ───────────────────────────── the headline strip ───────────────────────────── */
-#strip { position: absolute; left: var(--hud-gap); bottom: var(--hud-gap); z-index: 10; width: 27rem; padding: .6rem .75rem .55rem 1rem; }
+#strip { position: absolute; left: var(--hud-gap); bottom: var(--hud-gap); z-index: 10; width: 24rem; padding: .5rem .65rem .45rem .9rem; }
+#strip-head { white-space: nowrap; }
 .wc-strip__head { padding-right: .1rem; }
 .wc-strip__all { padding: 0; margin: 0; background: none; border: 0; cursor: pointer; color: var(--bone-dim); font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .1em; }
 .wc-strip__all:hover { color: var(--gold-flat); }
@@ -122,7 +123,7 @@ body.has-drawer #strip { display: none; }
 
 /* ───────────────────────────── your orders ───────────────────────────── */
 /* centred, and narrow enough to clear the strip on its left and an open window on its right */
-#command-bar { position: absolute; left: 50%; bottom: var(--hud-gap); transform: translateX(-50%); z-index: 11; width: 29.5rem; }
+#command-bar { position: absolute; left: 50%; bottom: var(--hud-gap); transform: translateX(-50%); z-index: 11; width: 25rem; }
 #command-bar.wc-cmd { padding: .5rem .65rem .55rem; }
 .wc-cmd__orders { flex-direction: column; flex-wrap: nowrap; gap: .3rem; max-height: min(26vh, 14rem); overflow: auto; }
 .wc-cmd__orders:empty { display: none; }
@@ -158,13 +159,13 @@ body.has-drawer #strip { display: none; }
 /* ───────────────────────────── the ruler ───────────────────────────── */
 #hud-player { position: absolute; left: auto; right: var(--hud-gap); bottom: var(--hud-gap); z-index: 12; display: flex; flex-direction: row; align-items: center; gap: .5rem; pointer-events: none; }
 #hud-player > * { pointer-events: auto; }
-#hud-player .wc-medallion { width: 5.6rem; height: 5.6rem; padding: .66rem; }
+#hud-player .wc-medallion { width: 7.6rem; height: 7.6rem; padding: .85rem; }
 #hud-player .wc-medallion::before { display: none; }
-#hud-player .wc-medallion__jewel { width: 1.05rem; height: 1.05rem; right: .2rem; bottom: .4rem; }
+#hud-player .wc-medallion__jewel { width: 1.2rem; height: 1.2rem; right: .3rem; bottom: .5rem; }
 #hud-player .wc-medallion__face { padding: 0; cursor: pointer; border: 0; }
 #hud-player .wc-medallion__face:focus-visible { outline: .14rem solid var(--ochre); outline-offset: .3rem; }
 #hud-player .wc-medallion__face img { transform: scale(1.3); }
-#player-name { max-width: 17rem; padding: .45rem 1rem .45rem 1.15rem; order: -1; }
+#player-name { max-width: 14rem; padding: .35rem .85rem .35rem 1rem; order: -1; }
 #player-name b { font-size: max(.95rem, 14px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #player-name small { font-size: max(.85rem, 13px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #player-name .regency-note { display: inline-flex; margin-left: .35rem; color: var(--ochre); vertical-align: middle; }
@@ -172,12 +173,12 @@ body.has-drawer #strip { display: none; }
 #player-name .regency-note .ico { width: 1rem; height: 1rem; }
 
 /* ───────────────────────────── the windows and the sheet: they open on the right, above the ruler ───────────────────────────── */
-.window { left: auto; right: var(--hud-gap); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 1.6rem); bottom: 7.6rem; width: var(--panel-w); z-index: 14; }
+.window { left: auto; right: var(--hud-gap); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 1.6rem); bottom: 9.5rem; width: var(--panel-w); z-index: 14; }
 .sheet, .sheet.solo { left: auto; right: var(--hud-gap); top: calc(var(--hud-gap) + var(--hud-bar) + var(--hud-gap) + 1.6rem); bottom: auto; width: var(--panel-w); max-height: calc(100% - 15rem); z-index: 15; } /* a sheet takes a window's place (U4): one panel at a time */
 .sheet.solo { right: var(--hud-gap); }
 body:has(#window:not(.hidden)) .mapmode, body:has(#sheet:not(.hidden)) .mapmode { right: calc(var(--panel-w) + var(--hud-gap) * 2); }
 body:has(#window:not(.hidden)) .mapmode { z-index: 9; }
-.map-legend { right: var(--hud-gap); bottom: 7.6rem; }
+.map-legend { right: var(--hud-gap); bottom: 9.5rem; }
 body:has(#window:not(.hidden)) .map-legend, body:has(#sheet:not(.hidden)) .map-legend { right: calc(var(--panel-w) + var(--hud-gap) * 2); }
 
 /* ───────────────────────────── the day being written: a card at the map's corner ───────────────────────────── */
@@ -191,16 +192,16 @@ body:has(#window:not(.hidden)) .map-legend, body:has(#sheet:not(.hidden)) .map-l
 /* ───────────────────────────── a narrow window: the bar keeps what matters ───────────────────────────── */
 @media (max-width: 1100px) {
   .wc-endturn--bar .wc-endturn__why { display: none; }
-  #command-bar { width: 24rem; }
+  #command-bar { width: 21rem; }
 }
 @media (prefers-reduced-motion: reduce) { .window, .sheet { animation: none; } }
 
 /* ───────────────────────────── the quill and the microphone (WP Q1) ───────────────────────────── */
 /* one button sends — a quill in gold; beside it the microphone; nothing else is asked of the lord */
 #command-bar .wc-cmd__row { align-items: flex-end; }
-#command-bar .wc-cmd__row .wc-btn--icon { flex: none; width: 2.7rem; height: 2.7rem; min-height: 0; }
-#command-bar .wc-btn--gold .ico { color: var(--gold-flat); width: 1.65rem; height: 1.65rem; stroke-width: 1.5; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .8)); }
-#command-bar #listen-btn .ico { width: 1.4rem; height: 1.4rem; color: var(--bone); }
+#command-bar .wc-cmd__row .wc-btn--icon { flex: none; width: 2.35rem; height: 2.35rem; min-height: 0; }
+#command-bar .wc-btn--gold .ico { color: var(--gold-flat); width: 1.4rem; height: 1.4rem; stroke-width: 1.5; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .8)); }
+#command-bar #listen-btn .ico { width: 1.2rem; height: 1.2rem; color: var(--bone); }
 #send-btn[aria-busy='true'] .ico { animation: wc-write .45s ease-in-out infinite alternate; transform-origin: 20% 90%; }
 #command-bar.is-scribing .wc-input { opacity: .75; }
 /* listening: the microphone breathes in wax while the lord speaks; hearing: the box says what is being done */
@@ -210,7 +211,7 @@ body:has(#window:not(.hidden)) .map-legend, body:has(#sheet:not(.hidden)) .map-l
 @keyframes wc-write { from { transform: rotate(-9deg) translate(-1px, 1px); } to { transform: rotate(7deg) translate(1px, -1px); } }
 @keyframes wc-rec { 0%, 100% { box-shadow: inset 1px 2px 4px rgba(0, 0, 0, .7), 0 0 0 0 rgba(168, 69, 58, .55); } 50% { box-shadow: inset 1px 2px 4px rgba(0, 0, 0, .7), 0 0 0 .32rem rgba(168, 69, 58, 0); } }
 @media (prefers-reduced-motion: reduce) { #listen-btn.is-rec, #send-btn[aria-busy='true'] .ico { animation: none; } #listen-btn.is-rec { box-shadow: inset 0 0 0 .14rem var(--madder-lit); } }
-#command-bar .wc-input { min-height: 2.7rem; }
+#command-bar .wc-input { min-height: 2.35rem; }
 
 /* ───────────────────────────── the window's tabs, and a sheet's way back (WP U4) ───────────────────────────── */
 .win-tabs { flex-wrap: wrap; row-gap: .2rem; padding: 0; margin: -.1rem 0 .55rem; border-bottom: 1px solid rgba(0, 0, 0, .55); }

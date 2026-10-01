@@ -55,11 +55,12 @@ export class PathGrid {
   }
 
   /** Returns a list of [x,y] world points, or a straight line if no path. */
-  find(from, to, mode = 'land') {
+  /** The cheapest way over the ground (or the water). With `strict`, no way found is `null`; without it, a straight line [from, to] (a march drawn across the sea is better than none for an army that must go). */
+  find(from, to, mode = 'land', { strict = false } = {}) {
     const cost = mode === 'sea' ? this.seaCost : this.landCost;
     const s = this.nearestPassable(this.idx(from[0], from[1]), cost);
     const t = this.nearestPassable(this.idx(to[0], to[1]), cost);
-    if (s < 0 || t < 0) return [from, to];
+    if (s < 0 || t < 0) return strict ? null : [from, to];
     const W = this.gw, n = W * this.gh;
     const gScore = new Float32Array(n).fill(Infinity), came = new Int32Array(n).fill(-1), closed = new Uint8Array(n);
     const tx = t % W, ty = Math.floor(t / W);
@@ -79,7 +80,7 @@ export class PathGrid {
         if (g < gScore[nb]) { gScore[nb] = g; came[nb] = cur; heap.push(nb, g + Math.hypot(nx - tx, ny - ty) * 0.45); }
       }
     }
-    if (!found) return [from, to];
+    if (!found) return strict ? null : [from, to];
     const cells = []; for (let c = t; c !== -1; c = came[c]) cells.push(c);
     cells.reverse();
     const pts = [from, ...cells.map((c) => [(c % W + 0.5) * this.cell, (Math.floor(c / W) + 0.5) * this.cell]), to];
