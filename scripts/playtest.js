@@ -81,8 +81,8 @@ for (let t = 1; t <= turns; t++) {
   log(`- state: treasury ${Math.round(h.figures.treasury.v)} · food ${h.figures.food.v} · levies ${h.figures.levies.v} · hosts ${Object.values(s2.parties).filter((a) => a.owner === house).map((a) => `${a.name} ${a.men}`).join(', ') || 'none'} · pending decisions ${(s2.decisions || []).filter((d) => d.status === 'pending').map((d) => d.title).join(' | ') || 'none'}`);
 }
 // the coherence of the game just played: what the story told against what the world kept
-const { coherence, coherenceReport, readGame } = await import(pathToFileURL(path.join(ROOT, 'bench', 'lib', 'coherence.js')).href);
-try { out.push('\n' + coherenceReport(coherence(readGame(game, id)), { title: 'Coherence' })); } catch (e) { out.push(`\n## Coherence\n\nThe check could not run: ${e.message}`); }
+// (loaded inside the try: a copy of this script without the bench folder still plays and writes its report)
+try { const { coherence, coherenceReport, readGame } = await import(pathToFileURL(path.join(ROOT, 'bench', 'lib', 'coherence.js')).href); out.push('\n' + coherenceReport(coherence(readGame(game, id)), { title: 'Coherence' })); } catch (e) { out.push(`\n## Coherence\n\nThe check could not run: ${e.message}`); }
 const dir = typeof args.out === 'string' ? path.resolve(args.out) : path.join(ROOT, 'playtest'); fs.mkdirSync(dir, { recursive: true });
 const file = path.join(dir, `${house}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.md`);
 fs.writeFileSync(file, out.join('\n') + '\n');
