@@ -1,0 +1,18 @@
+{
+  "_comment": "Hyperparameters for train.py (--config this-file). These are the settings that worked for the 12B-class run recorded in docs/local-ai/TRAINING.md; every key is optional (train.py has the same defaults). sft = the replies the game accepted; dpo = the pairs (the answer the game refused, the one it accepted), a small second stage from the sft adapter.",
+  "rank": 32,
+  "alpha": 32,
+  "dropout": 0.0,
+  "lr": 0.0001,
+  "dpo_lr": 0.000005,
+  "beta": 0.1,
+  "epochs": 2,
+  "batch": 1,
+  "accum": 8,
+  "max_seq": 3400,
+  "warmup": 0.06,
+  "weight_decay": 0.001,
+  "seed": 3407,
+  "load_4bit": true,
+  "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+}
