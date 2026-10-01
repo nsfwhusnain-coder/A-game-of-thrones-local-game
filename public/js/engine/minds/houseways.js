@@ -198,6 +198,12 @@ const WAYS = {
   stone_crows: [
     ['clans', (w, f) => w.threatened.length && f('raise_levies'), () => 'The Stone Crows take what passes on the high road.', 'pressing'],
   ],
+  // the other clans of the Mountains of the Moon, and the Thenns beyond the Wall: a people who answer a threat with their spears, and a rich road with the same
+  burned_men: [['the_burned', (w, f) => w.threatened.length && f('raise_levies'), () => 'The Burned Men have been burned before: stand at the pass, and let no one through.', 'pressing']],
+  black_ears: [['the_ears', (w, f) => w.threatened.length && f('raise_levies'), () => 'The Black Ears hear what others do not: raise the men when a stranger comes up the road.', 'pressing']],
+  moon_brothers: [['the_moon', (w, f) => w.threatened.length && f('raise_levies'), () => 'The Moon Brothers keep to their peaks, and come down only to take.', 'pressing']],
+  painted_dogs: [['the_dogs', (w, f) => w.threatened.length && f('raise_levies'), () => 'The Painted Dogs run in packs: call every spear when a rival comes near.', 'pressing']],
+  thenns: [['the_magnar', (w, f) => w.threatened.length && f('raise_levies'), () => 'The Thenns follow their magnar in all things, and bronze answers every threat.', 'pressing']],
 };
 
 // ── lords without a house's ways of their own play their nature (engine/minds/goals.js archetype) ──

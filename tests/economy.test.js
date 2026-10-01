@@ -18,7 +18,8 @@ test('Q10: every great house within ±15 % of its income, the Crown in deficit, 
 
 test('the people of the realm: each region as §4 counts it, the great cities their own', () => {
   const s = createInitialState('agot_298', 'stark', { seed: 1 });
-  const by = {}; for (const h of Object.values(s.holdings)) by[h.region] = (by[h.region] || 0) + h.population;
+  // the books' counts are for the first roster; the lesser houses (G1) hold small domains over and above them
+  const by = {}; for (const h of Object.values(s.holdings)) if (!h.lesser) by[h.region] = (by[h.region] || 0) + h.population;
   for (const [r, n] of Object.entries(ECONOMY.population)) if (by[r]) assert.ok(Math.abs(by[r] - n) / n < 0.01, `${r}: ${by[r]} of ${n}`);
   assert.equal(s.holdings.baratheon.population, 500000, "King's Landing");
   assert.equal(s.holdings.hightower.population, 500000, 'Oldtown');

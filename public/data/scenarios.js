@@ -50,7 +50,11 @@ export const SCENARIOS = {
       mormont: { ships: 6 }, celtigar: { ships: 10 }, sunderland: { ships: 8 }, farman: { ships: 6 }, hewett: { ships: 5 },
       serry: { ships: 5 }, grimm: { ships: 5 }, estermont: { ships: 4 },
       nights_watch: { treasury: 2000, levies: 0, menAtArms: 950, guard: 0, ships: 3, food: 12 },
-      free_folk: { treasury: 0, levies: 90000, menAtArms: 0, guard: 0, ships: 0, food: 3 },
+      free_folk: { treasury: 0, levies: 12000, menAtArms: 0, guard: 0, ships: 0, food: 3 }, // Mance's gathering in 298: ~8,000 at the Frostfangs, growing by the moon toward the host that comes against the Wall in 300 (07 §10; companies.js)
+      // the clans of the Mountains of the Moon and the Thenns, whose war-bands the books count in hundreds and low thousands (WP G1 gave the clans their own camps)
+      stone_crows: { treasury: 0, levies: 3000, menAtArms: 0, guard: 0, ships: 0, food: 3 }, burned_men: { treasury: 0, levies: 2500, menAtArms: 0, guard: 0, ships: 0, food: 3 }, black_ears: { treasury: 0, levies: 2000, menAtArms: 0, guard: 0, ships: 0, food: 3 },
+      moon_brothers: { treasury: 0, levies: 2000, menAtArms: 0, guard: 0, ships: 0, food: 3 }, painted_dogs: { treasury: 0, levies: 1500, menAtArms: 0, guard: 0, ships: 0, food: 3 }, thenns: { treasury: 0, levies: 2500, menAtArms: 0, guard: 0, ships: 0, food: 3 },
+      second_sons: { treasury: 20000, levies: 0, menAtArms: 500, guard: 0, ships: 0, food: 3 }, stormcrows: { treasury: 15000, levies: 0, menAtArms: 500, guard: 0, ships: 0, food: 3 },
       braavos: { treasury: 10000000, levies: 20000, menAtArms: 3000, ships: 600, food: 12 },
       pentos: { treasury: 1500000, levies: 4000, menAtArms: 2000, ships: 60, food: 12 },
       myr: { treasury: 900000, levies: 8000, menAtArms: 2000, ships: 60, food: 12 },
@@ -72,7 +76,7 @@ export const SCENARIOS = {
       { id: 'iron_fleet', owner: 'greyjoy', name: 'The Iron Fleet', commander: 'victarion_greyjoy', at: 'pyke', men: 6000, ships: 100, kind: 'fleet', composition: 'Longships and war galleys crewed by ironborn reavers' },
       { id: 'redwyne_fleet', owner: 'redwyne', name: 'Redwyne Fleet', commander: 'paxter_redwyne', at: 'the_arbor', men: 12000, ships: 200, kind: 'fleet', composition: 'Galleys and great cogs' },
       { id: 'nw_garrison', owner: 'nights_watch', name: 'Garrison of Castle Black', commander: 'jeor_mormont', at: 'castle_black', men: 600, kind: 'garrison', composition: 'Rangers, builders and stewards in black' },
-      { id: 'free_folk_host', owner: 'free_folk', name: 'The Host of Mance Rayder', commander: 'mance_rayder', at: 'free_folk', men: 60000, kind: 'host', composition: 'Wildling raiders, spearwives, Thenns, a few giants and mammoths; many non-combatants' },
+      { id: 'free_folk_host', owner: 'free_folk', name: 'The Host of Mance Rayder', commander: 'mance_rayder', at: 'free_folk', men: 8000, kind: 'host', composition: 'Wildling raiders, spearwives, Thenns, a few giants and mammoths; many non-combatants' },
       { id: 'drogo_khalasar', owner: 'dothraki', name: 'Khalasar of Drogo', commander: 'khal_drogo', at: 'dothraki', men: 40000, kind: 'host', composition: 'Dothraki screamers — horse archers' },
       { id: 'golden_company_host', owner: 'golden_company', name: 'The Golden Company', commander: 'harry_strickland', at: 'golden_company', men: 10000, kind: 'host', composition: 'Heavy horse, sellsword foot, elephants' },
       { id: 'braavosi_fleet', owner: 'braavos', name: 'Braavosi War Fleet', commander: 'ferrego_antaryon', at: 'braavos', men: 20000, ships: 300, kind: 'fleet', composition: 'Purple-hulled war galleys' },
@@ -100,6 +104,10 @@ export const SCENARIOS = {
       { id: 'targ_drogo', type: 'marriage', a: 'targaryen', b: 'dothraki', terms: 'Daenerys to wed Khal Drogo in exchange for an army to retake the Iron Throne (promised by Viserys).', status: 'pending' },
       { id: 'crown_debt_lannister', type: 'loan', a: 'baratheon', b: 'lannister', terms: 'The crown owes Casterly Rock ~3,000,000 dragons.', status: 'active' },
       { id: 'crown_debt_braavos', type: 'loan', a: 'baratheon', b: 'braavos', terms: 'The crown owes the Iron Bank of Braavos a great sum.', status: 'active' },
+      // the marriages that bind the great houses in 298 (WP G5; the ties are also in `relations` above)
+      { id: 'stark_tully_marriage', type: 'marriage', a: 'stark', b: 'tully', terms: 'Lord Eddard wed Catelyn Tully of Riverrun in 283, after the Rebellion.', status: 'active' },
+      { id: 'tully_arryn_marriage', type: 'marriage', a: 'tully', b: 'arryn', terms: 'Lysa Tully wed Lord Jon Arryn of the Eyrie; their son, Robert, is the Lord of the Eyrie now.', status: 'active' },
+      { id: 'royal_marriage', type: 'marriage', a: 'baratheon', b: 'lannister', terms: 'King Robert wed Cersei Lannister in 284 to bind Casterly Rock to the Throne.', status: 'active' },
       { id: 'reach_arbor_trade', type: 'trade', a: 'tyrell', b: 'lannister', terms: 'Arbor wine, Reach grain and Lannisport goods flow freely.', status: 'active' },
     ],
   },

@@ -32,20 +32,20 @@ DATE: 1 8th moon, 298 AC. Summer.
 THE LORD: House Stark; the realm is at war.
 OF NOTE LATELY: little.
 HOOKS YOU MAY CHOOSE (id: what it is — its places):
-- tourney_called: … calls a tourney at … — locke (Oldcastle), manderly (White Harbor), mormont (Bear Island), baratheon_se (Storm's End), beesbury (Honeyholt), belmore (Strongsong)
-- melee_quarrel: A quarrel after the melee at … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
-- weirwood_cut: A heart tree cut down near … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), mallister (Seagard), mooton (Maidenpool), piper (Pinkmaiden)
-- pilgrims_throng: Pilgrims throng the roads to … — trant (Gallowsgrey), tully (Riverrun), tyrell (Highgarden), vance (Wayfarer's Rest), velaryon (High Tide), waxley (Wickenden)
-- red_priest: A red priest preaches at … — baratheon (King's Landing), baratheon_se (Storm's End), caswell (Bitterbridge), footly (Tumbleton), goodbrook (Saltpans), hightower (The Hightower)
-- mill_dispute: A quarrel over a mill near … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
-- boundary_stone: A boundary stone moved near … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
-- cattle_raid: Cattle stolen from … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), santagar (Spottswood), selmy (Harvest Hall), smallwood (Acorn Hall)
-- hostage_insult: An insult at the high table of … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
-- reconciliation_feast: … and … feast together — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
-- vassal_grievance: A sworn lord airs his grievances — moat_cailin (Moat Cailin), stark (Winterfell)
-- maester_dies: The maester of … is failing — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
-- comet_rumour: Strange lights over … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
-- old_map: An old map is found at … — moat_cailin (Moat Cailin), mormont (Bear Island), norrey (The Norrey), blacktyde (Blacktyde), blackwood (Raventree Hall), bloody_gate (The Bloody Gate)
+- tourney_called: … calls a tourney at … — mormont (Bear Island), norrey (The Norrey), reed (Greywater Watch), norcross (Norcross Keep), norridge (Norridge Tower), oakheart (Old Oak)
+- melee_quarrel: A quarrel after the melee at … — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), ashford (Ashford), baelish (The Fingers), banefort (The Banefort)
+- weirwood_cut: A heart tree cut down near … — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), butterwell (Whitewalls), darry (Darry), deddings (Deddings Tower)
+- pilgrims_throng: Pilgrims throng the roads to … — footly (Tumbleton), fossoway (Cider Hall), fossoway_nb (New Barrel), frey (The Twins), garner (Garner Hold), gaunt (Gaunt Hold)
+- red_priest: A red priest preaches at … — hightower (The Hightower), mooton (Maidenpool), mummers_ford (Mummer's Ford), rykker (Duskendale), sallydance (Sallydance), sows_horn (Sow's Horn)
+- mill_dispute: A quarrel over a mill near … — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), ashford (Ashford), baelish (The Fingers), banefort (The Banefort)
+- boundary_stone: A boundary stone moved near … — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), ashford (Ashford), baelish (The Fingers), banefort (The Banefort)
+- cattle_raid: Cattle stolen from … — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), fell (Felwood), fowler (Skyreach), frey (The Twins)
+- hostage_insult: An insult at the high table of … — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), ashford (Ashford), baelish (The Fingers), banefort (The Banefort)
+- reconciliation_feast: … and … feast together — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), ashford (Ashford), baelish (The Fingers), banefort (The Banefort)
+- vassal_grievance: A sworn lord airs his grievances — moat_cailin (Moat Cailin), stark (Winterfell), winter_town (Winter Town)
+- maester_dies: The maester of … is failing — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), ashford (Ashford), baelish (The Fingers), banefort (The Banefort)
+- comet_rumour: Strange lights over … — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), ashford (Ashford), baelish (The Fingers), banefort (The Banefort)
+- old_map: An old map is found at … — locke (Oldcastle), magnar (Kingshouse), manderly (White Harbor), ashford (Ashford), baelish (The Fingers), banefort (The Banefort)
 
 Choose one hook.
 
@@ -90,35 +90,19 @@ Choose one hook.
      "place": {
       "type": "string",
       "enum": [
-       "locke",
-       "manderly",
        "mormont",
-       "baratheon_se",
-       "beesbury",
-       "belmore",
-       "moat_cailin",
        "norrey",
-       "blacktyde",
-       "blackwood",
-       "bloody_gate",
-       "mallister",
-       "mooton",
-       "piper",
-       "trant",
-       "tully",
-       "tyrell",
-       "vance",
-       "velaryon",
-       "waxley",
-       "baratheon",
-       "caswell",
-       "footly",
-       "goodbrook",
-       "hightower",
-       "santagar",
-       "selmy",
-       "smallwood",
-       "stark"
+       "reed",
+       "norcross",
+       "norridge",
+       "oakheart",
+       "locke",
+       "magnar",
+       "manderly",
+       "ashford",
+       "baelish",
+       "banefort",
+       "… 32 members"
       ]
      },
      "why": {

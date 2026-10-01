@@ -39,7 +39,7 @@ export function resilience(c) {
 }
 
 /** The pressures on one person this period, each with the reason it is there. */
-export function stressors(state, c, days) {
+export function stressors(state, c, days, ix = null) { // `ix`: the tick's one reckoning of who holds what, who leads which host and who died lately (psycheTick), not asked of every person again
   const out = [];
   const add = (v, why) => { if (v) out.push({ v, why }); };
   const house = state.houses?.[c.house];
@@ -58,7 +58,7 @@ export function stressors(state, c, days) {
 
   // in the field: campaigning is cold, wet, and full of other people's dying
   const withArmy = isForce(partyOf(state, c)) ? partyOf(state, c) : null;
-  const commands = forces(state).find((a) => a.commander === c.id);
+  const commands = ix ? ix.leads.get(c.id) : forces(state).find((a) => a.commander === c.id);
   const army = withArmy || commands;
   if (army) {
     add(5 * moons, 'on campaign');
@@ -70,14 +70,14 @@ export function stressors(state, c, days) {
   const seat = house?.seat && state.holdings?.[house.seat];
   if (seat && /besieg/i.test(seat.status || '')) add(12 * moons, 'his own walls invested');
   if (house?.figures?.food?.v != null && house.figures.food.v < 2) add(6 * moons, 'the granaries near empty');
-  const mine = Object.values(state.holdings || {}).filter((h) => h.owner === c.house);
+  const mine = ix ? ix.held.get(c.house) || [] : Object.values(state.holdings || {}).filter((h) => h.owner === c.house);
   const unrest = mine.length ? mine.reduce((a, h) => a + h.unrest, 0) / mine.length : 0;
   if (unrest > 55) add(4 * moons, 'his own smallfolk muttering');
   if ((house?.figures?.debt?.v || 0) > (house?.figures?.treasury?.v || 0) * 2 && (house?.figures?.debt?.v || 0) > 2000) add(4 * moons, 'debts he cannot pay');
 
   // blood: the dead of one's own house are not a statistic
   const turn = state.meta?.turn ?? 0;
-  const recent = Object.values(state.characters || {}).filter((d) => !d.alive && d.diedTurn != null && turn - d.diedTurn <= 2);
+  const recent = ix ? ix.recent : Object.values(state.characters || {}).filter((d) => !d.alive && d.diedTurn != null && turn - d.diedTurn <= 2);
   for (const d of recent) {
     if (d.id === c.spouse) add(28, 'his wife dead' );
     else if (d.father === c.id || d.mother === c.id) add(34, 'a child buried');
@@ -94,7 +94,7 @@ export function stressors(state, c, days) {
 }
 
 /** What eases a mind: home, family, a full granary, a feast, and nothing happening for a while. */
-function reliefs(state, c, days) {
+function reliefs(state, c, days, ix = null) {
   const moons = days / 30;
   // A man in a cell, a hostage in another hall, an exile or a host in the field gets none of the
   // things that mend a mind: his own bed, his wife, his children, his own gods.
@@ -106,7 +106,7 @@ function reliefs(state, c, days) {
   if (atHome && !/besieg/i.test(state.holdings?.[house.seat]?.status || '')) r += 4 * moons;
   const spouse = c.spouse && state.characters?.[c.spouse];
   if (spouse?.alive && together(state, spouse, c)) r += 2.5 * moons;
-  const kids = Object.values(state.characters || {}).filter((x) => x.alive && (x.father === c.id || x.mother === c.id) && together(state, x, c));
+  const kids = (ix ? ix.kids.get(c.id) || [] : Object.values(state.characters || {}).filter((x) => x.alive && (x.father === c.id || x.mother === c.id))).filter((x) => together(state, x, c));
   if (kids.length) r += Math.min(3, kids.length) * moons;
   if (/pious|septon|faith/.test(String(c.traits || '').toLowerCase())) r += 1.5 * moons;
   return r;
@@ -119,12 +119,20 @@ function reliefs(state, c, days) {
 export function psycheTick(state, days) {
   const events = []; const applied = [];
   const player = state.meta?.player;
+  // one reckoning for the whole tick of what each person's pressures ask of the world (it was asked of every person: a thousand people, a thousand scans)
+  const ix = { held: new Map(), leads: new Map(), recent: [], kids: new Map() }; const turnNow = state.meta?.turn ?? 0;
+  for (const h of Object.values(state.holdings || {})) { const l = ix.held.get(h.owner); if (l) l.push(h); else ix.held.set(h.owner, [h]); }
+  for (const a of forces(state)) if (a.commander && !ix.leads.has(a.commander)) ix.leads.set(a.commander, a);
+  for (const d of Object.values(state.characters || {})) {
+    if (!d.alive && d.diedTurn != null && turnNow - d.diedTurn <= 2) ix.recent.push(d);
+    if (d.alive) for (const p of [d.father, d.mother]) if (p) { const l = ix.kids.get(p); if (l) l.push(d); else ix.kids.set(p, [d]); }
+  }
   for (const c of Object.values(state.characters || {})) {
     if (!c.alive) continue;
     const before = c.stress ?? 0;
     const beforeP = c.paranoia ?? 0;
-    const load = stressors(state, c, days).reduce((a, x) => a + x.v, 0) * resilience(c);
-    const ease = reliefs(state, c, days);
+    const load = stressors(state, c, days, ix).reduce((a, x) => a + x.v, 0) * resilience(c);
+    const ease = reliefs(state, c, days, ix);
     const stress = clamp(before + load - ease, 0, 100);
 
     // Paranoia is slower than stress, and it never quite goes away. It is fed by being lied to,

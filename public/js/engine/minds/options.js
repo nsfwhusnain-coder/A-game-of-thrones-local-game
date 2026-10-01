@@ -59,8 +59,9 @@ export function worldView(state, actorId) {
   const near = (pos, mi) => foeHosts.filter((a) => miles(a.pos, pos) <= mi);
   const threatened = holdings.filter((id) => near(state.holdings[id].pos, 70).length);
   const besieged = holdings.filter((id) => ['besieged', 'under siege'].includes(state.holdings[id].status));
-  const prisoners = Object.values(state.characters).filter((c) => c.alive && /imprisoned|captive|hostage/.test(c.status || '') && holdings.includes(resolvePlaceId(c.loc)));
-  const kinHeld = Object.values(state.characters).filter((c) => c.alive && c.house === hid && /imprisoned|captive/.test(c.status || '') && !holdings.includes(resolvePlaceId(c.loc)));
+  const held = Object.values(state.characters).filter((c) => c.alive && c.status !== 'free' && /imprisoned|captive|hostage/.test(c.status || '')); // (the few who are not free, looked at once)
+  const prisoners = held.filter((c) => holdings.includes(resolvePlaceId(c.loc)));
+  const kinHeld = held.filter((c) => c.house === hid && /imprisoned|captive/.test(c.status || '') && !holdings.includes(resolvePlaceId(c.loc)));
   const captors = [...new Set(kinHeld.map((c) => state.holdings[resolvePlaceId(c.loc)]?.owner).filter((h) => h && h !== hid))];
   const rel = (b) => getRelation(state, hid, b);
   const others = Object.values(state.houses).filter((h) => h.id !== hid && state.characters[h.lord]?.alive && h.seat && state.holdings[h.seat]);

@@ -6,4 +6,6 @@
 export const COMPANIES = {
   golden_company: { name: 'the Golden Company', price: 2.5, desertAfter: 1, turncoat: false, home: 'golden_company_camp', motto: 'Beneath the gold, the bitter steel' },
   brave_companions: { name: 'the Brave Companions', price: 3, desertAfter: 1, turncoat: true, home: 'myr', men: 200, composition: 'Sellswords of every land, mounted: the Bloody Mummers' },
+  second_sons: { name: 'the Second Sons', price: 2, desertAfter: 1, turncoat: true, home: 'second_sons_camp', men: 500, composition: 'Free-city sellswords, foot and horse, who go to the highest bidder' },
+  stormcrows: { name: 'the Stormcrows', price: 2, desertAfter: 1, turncoat: true, home: 'stormcrows_camp', men: 500, composition: 'Free-city sellswords, mostly horse, who sell their swords and their loyalty alike' },
 };

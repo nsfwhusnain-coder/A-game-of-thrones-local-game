@@ -64,8 +64,11 @@ YOUR PEOPLE (where they are):
 - Mikken [mikken] — Winterfell
 - Hallis Mollen [hallis_mollen|hallis] (captain of the guard) — Winterfell
 - Jeyne Poole [jeyne_poole] (your ward) — Winterfell
-YOUR SWORN HOUSES: Bolton [bolton|house_bolton], Karstark [karstark|house_karstark], Umber [umber|house_umber], Mormont [mormont|house_mormont], Glover [glover|house_glover], Manderly [manderly|house_manderly], Reed [reed|house_reed], Tallhart [tallhart|house_tallhart], Hornwood [hornwood|house_hornwood], Cerwyn [cerwyn|house_cerwyn], Dustin [dustin|house_dustin], Ryswell [ryswell|house_ryswell], Flint [flint|house_flint], Locke [locke|house_locke], Forrester [forrester|house_forrester], Wull [wull|house_wull], Norrey [norrey|house_norrey], Liddle [liddle|house_liddle], Crowl [crowl|house_crowl]
-PLACES OFTEN NAMED: Winterfell [stark|winterfell] · Castle Black [nights_watch|castle_black] · Riverrun [tully|riverrun] · Moat Cailin [moat_cailin|the_moat_cailin] · The Dreadfort [bolton|dreadfort] · Karhold [karstark|karhold] · Last Hearth [umber|last_hearth] · Bear Island [mormont|bear_island] · Deepwood Motte [glover|deepwood_motte] · White Harbor [manderly|white_harbor] · Greywater Watch [reed|greywater_watch] · Torrhen's Square [tallhart|torrhens_square] · Hornwood [hornwood|the_hornwood] · Castle Cerwyn [cerwyn|castle_cerwyn] · Barrowton [dustin|barrowton] · The Rills [ryswell|rills] · Widow's Watch [widows_watch|the_widows_watch] · Oldcastle [locke|oldcastle] · Ironrath [forrester|ironrath] · Wull Mountains [wull|wull_mountains] · The Norrey [norrey|the_norrey] · Liddle Hills [liddle|liddle_hills] · Deepdown [crowl|deepdown] · King's Landing [baratheon|kings_landing] · Pyke [greyjoy|pyke] · The Eyrie [arryn|eyrie] · Casterly Rock [lannister|casterly_rock] · Highgarden [tyrell|highgarden]
+- Hullen [hullen] — Winterfell
+- Harwin [harwin] — Winterfell
+- Joseth [joseth] — Winterfell
+YOUR SWORN HOUSES: Bolton [bolton|house_bolton], Karstark [karstark|house_karstark], Manderly [manderly|house_manderly], Umber [umber|house_umber], Burley of Wolf's Den [burley|burley_of_wolfs_den], Cerwyn [cerwyn|house_cerwyn], Crowl [crowl|house_crowl], Dustin [dustin|house_dustin], Flint [flint|house_flint], Flint of Flint's Finger [the_flint_of_flints_fingers], Forrester [forrester|house_forrester], Glover [glover|house_glover], Harclay of Harclay Hall [harclay|harclay_of_harclay_hall], Hornwood [hornwood|house_hornwood] · and 14 lesser houses, whom you may name
+PLACES OFTEN NAMED: Winterfell [stark|winterfell] · Castle Black [nights_watch|castle_black] · Riverrun [tully|riverrun] · Winter Town [winter_town|the_winter_town] · Moat Cailin [moat_cailin|the_moat_cailin] · The Dreadfort [bolton|dreadfort] · Karhold [karstark|karhold] · White Harbor [manderly|white_harbor] · Last Hearth [umber|last_hearth] · Wolf's Den [burley|wolfs_den] · Castle Cerwyn [cerwyn|castle_cerwyn] · Deepdown [crowl|deepdown] · Barrowton [dustin|barrowton] · Widow's Watch [flint|widows_watch] · Flint's Finger [the_flints_finger] · Ironrath [forrester|ironrath] · Deepwood Motte [glover|deepwood_motte] · Harclay Hall [harclay|harclay_hall] · Hornwood [hornwood|the_hornwood] · King's Landing [baratheon|kings_landing] · Pyke [greyjoy|pyke] · The Eyrie [arryn|eyrie] · Casterly Rock [lannister|casterly_rock] · Highgarden [tyrell|highgarden] · Storm's End [storms_end|the_storms_end]
 YOUR TREASURY: 120,000 dragons · unraised levies 16,000
 ACTIONS ALLOWED:
 - call_banners: summon sworn lords to muster at [at] (all of them, or the [houses] named)
@@ -166,15 +169,15 @@ Turn the order into actions.
        "arya_stark",
        "bran",
        "bran_stark",
-       "brandon",
        "brandon_stark",
        "cat",
        "catelyn",
        "catelyn_stark",
        "eddard",
        "eddard_stark",
+       "gage",
        "hallis",
-       "… 44 members"
+       "… 49 members"
       ]
      },
      "subject": {
@@ -189,36 +192,36 @@ Turn the order into actions.
       "type": "string",
       "enum": [
        "acorn_hall",
+       "algood",
+       "algood_hall",
        "allyrion",
+       "amberly",
+       "ambrose",
+       "ambrose_keep",
        "antlers",
+       "appleton",
+       "appleton_keep",
        "ar_noy",
        "arbor",
-       "arryn",
-       "ashemark",
-       "ashford",
-       "baelish",
-       "baelish_keep",
-       "bandallon",
-       "banefort",
-       "… 591 members"
+       "… 1009 members"
       ]
      },
      "to": {
       "type": "string",
       "enum": [
        "acorn_hall",
+       "algood",
+       "algood_hall",
        "allyrion",
+       "amberly",
+       "ambrose",
+       "ambrose_keep",
        "antlers",
+       "appleton",
+       "appleton_keep",
        "ar_noy",
        "arbor",
-       "arryn",
-       "ashemark",
-       "ashford",
-       "baelish",
-       "baelish_keep",
-       "bandallon",
-       "banefort",
-       "… 591 members"
+       "… 1009 members"
       ]
      },
      "person": {
@@ -230,13 +233,13 @@ Turn the order into actions.
        "aeron",
        "aeron_damphair",
        "aeron_greyjoy",
-       "alannys",
+       "aggo",
        "alannys_harlaw",
-       "alekyne_beesbury",
-       "alekyne_serry",
-       "alequo",
-       "alequo_lys",
-       "… 829 members"
+       "alannys_stonetree",
+       "alannys_tawney",
+       "alannys_weaver",
+       "alaric_hornwood",
+       "… 1703 members"
       ]
      },
      "houses": {
@@ -244,19 +247,19 @@ Turn the order into actions.
       "items": {
        "type": "string",
        "enum": [
+        "algood",
+        "algoods",
         "allyrion",
         "allyrions",
+        "ambrose",
+        "ambroses",
+        "appleton",
+        "appletons",
         "arryn",
         "arryns",
         "ashford",
         "ashfords",
-        "baelish",
-        "baelishs",
-        "banefort",
-        "baneforts",
-        "bar_emmon",
-        "bar_emmons",
-        "… 650 members"
+        "… 1173 members"
        ]
       },
       "maxItems": 6
@@ -286,7 +289,7 @@ Turn the order into actions.
        "concede",
        "crushing",
        "demand",
-       "… 60 members"
+       "… 62 members"
       ]
      },
      "note": {

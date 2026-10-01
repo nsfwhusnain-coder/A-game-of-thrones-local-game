@@ -6,7 +6,9 @@ import { random } from '../rng.js';
 import { actorOf, worldView, miles } from './options.js';
 import { dayNumber } from '../time.js';
 import { goalsOf } from './goals.js';
+import { ledgerFlags } from '../realm/brief.js';
 
+const lesserHouse = (state, id) => !!state.holdings?.[state.houses[id]?.seat]?.lesser;
 const RANK = { crown: 40, paramount: 30, major: 18, order: 18, tribe: 18, exile: 14, minor: 8, city_state: 8, company: 8 };
 
 /**
@@ -34,7 +36,7 @@ export function scoreActors(state, { player = state.meta.player } = {}) {
     if (w.liege && w.me.obligations?.levies === 'called') add(15, 'their liege has called the banners');
     if (w.atWar) add(10, 'at war');
     // what the ledger says of the house (engine/realm: the flags it would read itself): a granary nearly empty, holdings lost (an empty purse is not one: the Crown is always in debt)
-    const flags = w.ledger.flags;
+    const flags = lesserHouse(state, c.house) ? [] : ledgerFlags(state, c.house); // (a holdfast's ledger is not read each week: the hundred and thirty lesser houses are woken by what befalls them)
     if (flags.includes('hungry')) add(15, 'the granaries are nearly empty', false);
     if (flags.includes('reeling')) add(20, 'holdings have been lost');
     // a great aim of their own (data/goals.js): the story's movers are weighed a little higher

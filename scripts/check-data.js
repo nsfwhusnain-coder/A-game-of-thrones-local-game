@@ -1,7 +1,7 @@
 // Sanity-checks the world data: every reference resolves, ids are unique, positions are in bounds.
 import { HOUSES, EXTRA_HOLDINGS } from '../public/data/houses.js';
 import { CHARACTERS } from '../public/data/characters.js';
-import { WORLD } from '../public/data/geography.js';
+import { WORLD, LAND, LAKES } from '../public/data/geography.js';
 import { SCENARIOS } from '../public/data/scenarios.js';
 import { createInitialState, resolvePlaceId } from '../public/js/shared/world.js';
 import { validate } from '../public/js/engine/state/validate.js';
@@ -19,6 +19,14 @@ for (const h of HOUSES) {
   const [x, y] = h.pos; if (x < 0 || y < 0 || x > WORLD.w || y > WORLD.h) bad(`${h.id}: position out of bounds`);
 }
 for (const e of EXTRA_HOLDINGS) if (!houseIds.has(e[4])) bad(`holding ${e[0]}: unknown owner ${e[4]}`);
+// GDD 13 §7 rules 1 and 3: every seat is on land (a harbour may stand within three units of the coast) and no two seats lie closer than five units (a day's ride on the map)
+const inPoly = (x, y, pts) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+const coastDist = (x, y) => { let best = Infinity; for (const l of LAND) for (let i = 0; i < l.pts.length; i++) { const a = l.pts[i], b = l.pts[(i + 1) % l.pts.length]; const dx = b[0] - a[0], dy = b[1] - a[1]; const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy || 1))); best = Math.min(best, Math.hypot(x - (a[0] + t * dx), y - (a[1] + t * dy))); } return best; };
+const seats = [...HOUSES.filter((h) => h.pos).map((h) => [h.id, ...h.pos]), ...EXTRA_HOLDINGS.map((e) => [e[0], e[2], e[3]])];
+for (const [id, x, y] of seats) if (!LAND.some((l) => inPoly(x, y, l.pts)) && coastDist(x, y) > 3) bad(`${id}: (${x}, ${y}) is not on land`);
+const landed = seats.filter(([id]) => !HOUSES.some((h) => h.id === id && h.landless)); // a landless house is where its camp is
+for (let i = 0; i < landed.length; i++) for (let j = i + 1; j < landed.length; j++) if (Math.hypot(landed[i][1] - landed[j][1], landed[i][2] - landed[j][2]) < 5) bad(`${landed[i][0]} and ${landed[j][0]} lie closer than five units`);
+const seatNames = new Map(); for (const h of HOUSES) if (h.seat && !h.landless) { const k = h.seat.toLowerCase(); if (seatNames.has(k)) bad(`${h.id} and ${seatNames.get(k)} share the seat "${h.seat}"`); seatNames.set(k, h.id); }
 const charIds = new Set();
 for (const c of CHARACTERS) {
   if (charIds.has(c.id)) bad('duplicate character ' + c.id);

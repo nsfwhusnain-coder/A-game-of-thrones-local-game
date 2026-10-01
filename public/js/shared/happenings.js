@@ -54,9 +54,12 @@ export function fits(s, tpl, h, lord) {
   return true;
 }
 
+// where life goes on: not a holding that is ruined, and not the Watch's empty castles on the Wall (nobody keeps them)
+const happens = (s) => (h) => h.status !== 'ruined' && s.houses[h.owner] && !(h.type === 'ruin' && h.region === 'wall');
+
 // Where a happening may take place
-export function placesFor(s, tpl) {
-  const all = Object.values(s.holdings).filter((h) => h.status !== 'ruined' && s.houses[h.owner]);
+export function placesFor(s, tpl, held = null) {
+  const all = held || Object.values(s.holdings).filter(happens(s)); // (`held`: the pass's one list, for the library of four hundred asked of every holding)
   const w = tpl.where;
   if (w === 'any') return all.filter((h) => !['essos', 'beyond', 'wall'].includes(h.region));
   if (w.startsWith('r:')) { const rs = w.slice(2).split('|'); return all.filter((h) => rs.includes(h.region)); }
@@ -88,6 +91,17 @@ function rivalOf(s, house) {
 }
 // whether a house has anyone to be rival to (no dice drawn: the check only asks if there is one)
 const hasRival = (s, house) => Object.keys(s.houses).some((k) => k !== house && s.houses[k].seat && getRelation(s, house, k) < -15) || Object.values(s.houses).some((x) => x.id !== house && x.region === s.houses[house]?.region && x.seat);
+// who has a rival, who has a friend: read once from the relations that exist (a pair with none is at nought), not asked of every pair of houses. The same answers as hasRival and friendOf above
+function relationIndex(s) {
+  const bad = new Set(), good = new Set(); const seated = (id) => !!s.houses[id]?.seat;
+  for (const [key, rel] of Object.entries(s.relations || {})) {
+    const [a, b] = key.split('|'); if (a === b || !s.houses[a] || !s.houses[b]) continue; const v = rel?.v ?? 0;
+    if (v < -15) { if (seated(b)) bad.add(a); if (seated(a)) bad.add(b); }
+    if (v > 15) { if (seated(b)) good.add(a); if (seated(a)) good.add(b); }
+  }
+  const seatsIn = {}; for (const h of Object.values(s.houses)) if (h.seat) seatsIn[h.region] = (seatsIn[h.region] || 0) + 1;
+  return { rival: (house) => bad.has(house) || (seatsIn[s.houses[house]?.region] || 0) - (s.houses[house]?.seat ? 1 : 0) > 0, friend: (house) => good.has(house) };
+}
 function friendOf(s, house) {
   let best = null, v = 15;
   for (const k of Object.keys(s.houses)) { if (k === house || !s.houses[k].seat) continue; const x = getRelation(s, house, k); if (x > v) { v = x; best = k; } }
@@ -131,16 +145,18 @@ export function happenings(state, days, r = random) {
   const want = happeningCount(days, r);
   const usedPlaces = new Set();
   // one reckoning of a house's rivals and friends for the whole pass (they are asked of every template)
-  const rv = new Map(), fr = new Map();
-  const rivalAny = (h) => (rv.has(h) ? rv.get(h) : (rv.set(h, hasRival(s, h)), rv.get(h)));
-  const friendAny = (h) => (fr.has(h) ? fr.get(h) : (fr.set(h, !!friendOf(s, h)), fr.get(h)));
+  const idx = relationIndex(s); const rivalAny = idx.rival, friendAny = idx.friend;
+  const held = Object.values(s.holdings).filter(happens(s));
+  // a happening of one season is not tried in another: the season is asked of the template before it is asked of every holding
+  const season = s.world?.season || 'summer';
+  const seasonOk = (tpl) => (tpl.when || []).every((w) => !((w === 'winter' && season !== 'winter') || (w === 'cold' && !['autumn', 'winter'].includes(season)) || (w === 'warm' && !['summer', 'spring'].includes(season)) || (w === 'summer' && season !== 'summer') || (w === 'autumn' && season !== 'autumn')));
   // gather everything the world fits now, with its weight
   const cands = [];
   for (const tpl of HAPPENINGS) {
-    if (turn - (cd[tpl.id] ?? -99) < (tpl.cd ?? 6)) continue;
+    if (turn - (cd[tpl.id] ?? -99) < (tpl.cd ?? 6) || !seasonOk(tpl)) continue;
     // a happening that names a rival or a friend needs the house to have one
     const needR = /\{rival\}/.test(tpl.t + tpl.x), needF = /\{friend\}/.test(tpl.t + tpl.x);
-    const places = placesFor(s, tpl).filter((h) => fits(s, tpl, h, lordOf(s, h)) && (!needR || rivalAny(h.owner)) && (!needF || friendAny(h.owner)));
+    const places = placesFor(s, tpl, held).filter((h) => fits(s, tpl, h, lordOf(s, h)) && (!needR || rivalAny(h.owner)) && (!needF || friendAny(h.owner)));
     if (!places.length) continue;
     // the player's own lands and region come up a little more often: that is where they are listening
     const pr = s.holdings[s.houses[s.meta.player]?.seat]?.region;

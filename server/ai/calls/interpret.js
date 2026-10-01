@@ -185,10 +185,13 @@ export default {
     const fleet = hosts.some((a) => a.kind === 'fleet'); const siege = hosts.some((a) => a.besieging);
     const atWar = (state.wars || []).some((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].includes(house));
     const verbs = verbsFor(p).filter((v) => (!VERBS[v].who || VERBS[v].who(state, { house, verb: v, actor: lord?.id })) && (fleet || !FLEET_VERBS.has(v)) && (siege || !SIEGE_VERBS.has(v)) && (atWar || !WAR_VERBS.has(v)));
-    const sworn = Object.values(state.houses).filter((h) => h.liege === house);
+    // the great bannermen are named in the prompt, best first; the lesser ones (a Stark has twenty-odd) are in the schema's enum, where the lord may name any of them
+    const RANK_ORDER = ['crown', 'paramount', 'major', 'city_state', 'order', 'company', 'tribe', 'minor'];
+    const swornAll = Object.values(state.houses).filter((h) => h.liege === house).sort((x, y) => RANK_ORDER.indexOf(x.rank) - RANK_ORDER.indexOf(y.rank) || (x.id < y.id ? -1 : 1));
+    const sworn = swornAll.slice(0, 14);
     const prisoners = Object.values(state.characters).filter((c) => c.alive && /imprisoned|captive|hostage/.test(c.status || '') && (resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner === house));
     // the places the order most likely means: those it names, the lord's own, his lords' seats, the great seats
-    const near = [...new Set([resolvePlaceId(lord?.loc), ...p.found.places, ...p.found.houses.map((h) => state.houses[h]?.seat), ...Object.values(state.holdings).filter((h) => h.owner === house).map((h) => h.id), ...sworn.map((h) => h.seat), ...Object.values(state.houses).filter((h) => ['paramount', 'crown'].includes(h.rank)).map((h) => h.seat)])].filter((id) => id && state.holdings[id]).slice(0, 28);
+    const near = [...new Set([resolvePlaceId(lord?.loc), ...p.found.places, ...p.found.houses.map((h) => state.houses[h]?.seat), ...Object.values(state.holdings).filter((h) => h.owner === house).map((h) => h.id), ...sworn.map((h) => h.seat), ...Object.values(state.houses).filter((h) => ['paramount', 'crown'].includes(h.rank)).map((h) => h.seat)])].filter((id) => id && state.holdings[id]).slice(0, 25);
     const ex = EXAMPLES[house === 'tully' ? 'arryn' : 'tully'];
     return {
       text: String(text || ''), house, addressee, parse: p, verbs, foes: foes.map((a) => 'party:' + a.id),
@@ -199,8 +202,8 @@ export default {
         `THE LORD: ${lord ? `${lord.name} [${lord.id}]` : '—'}, at ${lord ? whereabouts(state, lord).text : '—'}. Head of House ${me?.name}. Today: ${dateStr(state.meta.date)}.`,
         `HOSTS AND COMPANIES YOU COMMAND:\n${hosts.map((a) => `- ${a.id} — "${a.name}": ${n(a.men)}${a.at ? ` at ${placeName(state, a.at)}` : ' in the field'}${a.commander ? ` under ${state.characters[a.commander]?.name}` : ''}${a.march?.to ? `, marching to ${placeName(state, a.march.to)}` : ''}${a.kind === 'garrison' ? ' (the garrison)' : a.kind === 'fleet' ? ' (ships)' : ''}`).join('\n') || '- none: to fight, raise your levies first'}`,
         foes.length ? `ENEMY HOSTS YOU KNOW OF: ${foes.map((a) => `party:${a.id} — "${a.name}" (House ${state.houses[a.owner]?.name}) ${n(a.men)}${a.at ? ` at ${placeName(state, a.at)}` : ''}`).join(' · ')}` : null,
-        `YOUR PEOPLE (where they are):\n${people.filter((c) => c.id !== lord?.id).slice(0, 24).map((c) => `- ${label(c.name, c.id, own)}${kinOf(state, c, lord) ? ` (${kinOf(state, c, lord)})` : ''} — ${whereabouts(state, c).text}`).join('\n')}`,
-        sworn.length ? `YOUR SWORN HOUSES: ${sworn.map((h) => label(h.name, h.id, houses)).join(', ')}` : null,
+        `YOUR PEOPLE (where they are):\n${people.filter((c) => c.id !== lord?.id).slice(0, 21).map((c) => `- ${label(c.name, c.id, own)}${kinOf(state, c, lord) ? ` (${kinOf(state, c, lord)})` : ''} — ${whereabouts(state, c).text}`).join('\n')}`,
+        sworn.length ? `YOUR SWORN HOUSES: ${sworn.map((h) => label(h.name, h.id, houses)).join(', ')}${swornAll.length > sworn.length ? ` · and ${swornAll.length - sworn.length} lesser houses, whom you may name` : ''}` : null,
         prisoners.length ? `PRISONERS YOU HOLD: ${prisoners.map((c) => label(c.name, c.id, persons)).join(', ')}` : null,
         `PLACES OFTEN NAMED: ${near.map((id) => label(state.holdings[id].name, id, places)).join(' · ')}`,
         `YOUR TREASURY: ${n(me?.figures?.treasury?.v)} dragons · unraised levies ${n(me?.figures?.levies?.v)}`,

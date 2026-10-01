@@ -206,6 +206,8 @@ async function probeCards(page) {
   const seat = await page.evaluate(() => { const s = window.__wc.state; const h = s.holdings[s.houses[s.meta.player].seat]; const p = window.__wc.map.screenOf(h.pos[0], h.pos[1]); return p ? { id: h.id, x: p.x, y: p.y } : null; });
   if (seat) {
     await page.evaluate(() => document.activeElement?.blur?.());
+    // a news pin may stand on the seat (the week's news was told there): a click on a pin opens the story, not the castle — the probe asks about the castle
+    await page.evaluate(() => document.querySelectorAll('.lbl.event, .lbl.pulse').forEach((e) => { e.style.pointerEvents = 'none'; }));
     await page.mouse.click(seat.x, seat.y); await page.waitForTimeout(500);
     const card = await rects('#card'); out.cardOpens = !!card;
     if (card) {

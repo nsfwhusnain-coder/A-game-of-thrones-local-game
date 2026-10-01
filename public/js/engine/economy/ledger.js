@@ -21,9 +21,9 @@ export function distributePopulation(state) {
     const fixed = hs.filter((h) => E.cities[h.id] != null);
     const rest = hs.filter((h) => E.cities[h.id] == null);
     const left = Math.max(0, target - fixed.reduce((n, h) => n + E.cities[h.id], 0));
-    const w = (h) => E.domainOf[h.id] ?? E.domain[h.type] ?? 2; const total = rest.reduce((n, h) => n + w(h), 0) || 1;
+    const w = (h) => E.domainOf[h.id] ?? E.domain[h.type] ?? 2; const total = rest.filter((h) => !h.lesser).reduce((n, h) => n + w(h), 0) || 1; // the lesser houses' domains are over and above (ECONOMY.lesserDomain)
     for (const h of fixed) h.population = E.cities[h.id];
-    for (const h of rest) h.population = Math.round(left * w(h) / total / 100) * 100;
+    for (const h of rest) h.population = Math.round(left * w(h) * (h.lesser ? E.lesserDomain : 1) / total / 100) * 100;
     grew[region] = hs.reduce((n, h) => n + h.population, 0) / before;
   }
   return grew;

@@ -33,6 +33,7 @@ const COMMON = new Set(('a about above after again against all also although alw
   'need never new next no nor not now of off on once one only or other our out over own same see she should since so some still such take than that the their them then there these they this those ' +
   'through to too two under until up upon us very want was we well were what when where which while who whom why will with without would year yes you your ' +
   'lord lady ser king queen prince house north south east west near far high low old young great small big long short strong weak fast slow ready safe sure dead alive free hold held word words ' +
+  'winter summer autumn spring camp valley point sound sept ford harbor harbour moon brothers burned painted dogs sons second ears crows pass weaver shepherd humble hasty gaunt wells broom hunt hunter yew ' +
   'gold food men host hosts sword swords shield shields horse horses ship ships boat boats road roads land lands town towns keep tower towers hall halls gate gates wall walls river hill hills field fields ' +
   'give tell ask say said send sent bring brought take took find found leave left stay stand stood wait watch fight fought win won lose lost kill killed die died live lived meet met talk speak spoke write wrote ' +
   'marsh sand snow ice fire blood iron stone wood water salt wine bread grain corn crown throne realm peace war truce oath vow debt gift gifts tax taxes moon moons week weeks month months ' +
@@ -58,13 +59,14 @@ export function distance(a, b, max = Infinity) {
 }
 const limitFor = (len) => (len >= 9 ? 2 : len >= 6 ? 1 : 0);
 /** The one candidate nearest to `word` within `max` slips, or null when none is, or two are equally near. */
-function nearest(word, list, max, keep) {
-  let best = null, bestD = max + 1, tie = false;
+function nearest(word, list, max, keep, prefer = null) {
+  let best = null, bestD = max + 1, tie = false; let tied = [];
   for (const c of list) {
     if (keep && !keep(c)) continue;
     const d = distance(word, c.toLowerCase(), max); if (d > max) continue;
-    if (d < bestD) { best = c; bestD = d; tie = false; } else if (d === bestD && c.toLowerCase() !== best.toLowerCase()) tie = true;
+    if (d < bestD) { best = c; bestD = d; tie = false; tied = [c]; } else if (d === bestD && c.toLowerCase() !== best.toLowerCase()) { tie = true; tied.push(c); }
   }
+  if (tie && prefer) { const mine = tied.filter((c) => prefer.has(c)); if (mine.length === 1) return mine[0]; } // two names as near: the lord's own household's wins ("rodrick" is Ser Rodrik, not Podrick of the Rock)
   return best && !tie ? best : null;
 }
 /** A plain inflection of a word already right ("harbors", "raised", "mustering") is no slip: it is left as it was. */
@@ -89,6 +91,7 @@ export function fixOrder(text, { names = [], spoken = false } = {}) {
   if (spoken) s = s.replace(FILLERS, ' ').replace(/^(?:i['’]m|i am|and)\s+(?=(?:send|call|march|raise|hold|gather|summon|ride|sail|hire|buy|build|seize|give|bring|take|tell|write|ask|order|have|let|make|marry|host|muster)\b)/i, '').replace(/\s+/g, ' ').trim();
   const words = nameWords(names).filter((w) => !COMMON.has(w.toLowerCase())); const byLower = new Map(words.map((w) => [w.toLowerCase(), w]));
   const vocab = new Set(VOCAB);
+  const prefer = names.own ? new Set(nameWords(names.slice(0, names.own))) : null; // `names.own`: how many of the names, from the first, are the lord's own people (lexiconOf)
   // word by word: letters only, so numbers, quotes and the marks between words are left as they are
   const known = (x) => COMMON.has(x) || vocab.has(x);
   s = s.replace(/\p{L}[\p{L}'’]*/gu, (w) => {
@@ -99,7 +102,7 @@ export function fixOrder(text, { names = [], spoken = false } = {}) {
     if (known(lower) || inflected(lower, known)) return w;
     if (lower.length >= 6) {
       const capital = w[0] === w[0].toUpperCase();
-      const name = nearest(lower, words, capital && lower.length >= 7 ? 2 : limitFor(lower.length), (c) => !COMMON.has(c.toLowerCase()));
+      const name = nearest(lower, words, capital && lower.length >= 7 ? 2 : limitFor(lower.length), (c) => !COMMON.has(c.toLowerCase()), prefer);
       if (name && (capital || distance(lower, name.toLowerCase(), 2) <= 1)) return name;
     }
     // an order's own words: a slip of a letter in a long one, or two neighbours swapped in any
@@ -122,10 +125,13 @@ export function fixOrder(text, { names = [], spoken = false } = {}) {
 
 /** The names a lord has been sent — the holdings, houses and people of the state the browser holds — for the scribe to put a misspelt name right toward. */
 export function lexiconOf(state) {
-  const out = [];
+  const player = state?.meta?.player; const people = Object.values(state?.characters || {}).filter((c) => c?.name);
+  const own = people.filter((c) => player && c.house === player).map((c) => c.name);
+  const out = [...own];
   for (const h of Object.values(state?.holdings || {})) if (h?.name) out.push(h.name);
   for (const h of Object.values(state?.houses || {})) if (h?.name) out.push(h.name);
-  for (const c of Object.values(state?.characters || {})) if (c?.name) out.push(c.name);
+  for (const c of people) if (!(player && c.house === player)) out.push(c.name);
+  out.own = own.length; // the lord's own people come first, and break a tie between two names as near a slip
   return out;
 }
 
