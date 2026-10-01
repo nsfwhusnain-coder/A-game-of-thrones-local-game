@@ -440,7 +440,11 @@ function findArmy(state, id) {
 export function sendHome(state, c, place) {
   const here = charPos(state, c), there = placePos(place, state.holdings);
   if (!c.alive || !here || !there || Math.hypot(there[0] - here[0], there[1] - here[1]) * MILES_PER_UNIT < 30) { setLoc(state, c, place); return; }
-  try { startRide(state, c, place); } catch { setLoc(state, c, place); } // no way at all: they find one
+  try {
+    const p = startRide(state, c, place);
+    // the ride is in the log, quietly (a host that is disbanded sends its lords home one by one): a man who reaches his gate has been seen to set out
+    emit(state, 'set_out', { actors: [c.id], houses: [c.house], pos: p.pos, importance: 1, data: { party: p.id, to: place, days: Math.max(1, Math.ceil(p.route?.days || 1)), returning: true }, text: `${c.name} sets out for ${placeName(state, place)}.` });
+  } catch { setLoc(state, c, place); } // no way at all: they find one
 }
 /** The ride a person makes on their own (a rider party they lead), if they are on the road. */
 export const rideOf = (state, c) => { const p = partyOf(state, c); return p?.kind === 'rider' ? p : null; };
@@ -916,12 +920,14 @@ function applyOne(state, ch, ctx) {
       const held = (x) => /imprisoned|captive|hostage/.test(x || '');
       const why = `${ch.cause || ''} ${ch.note || ''}`;
       if (was.alive && !c.alive) {
+        for (const p of Object.values(state.parties || {})) if (p.commander === c.id) p.commander = null; // what he led goes on without him
         const kind = /battle|victory|slain|the field|fell /i.test(why) ? 'slain_in_battle' : /execut|behead|hanged|headsman/i.test(why) ? 'executed' : 'death';
         // the slots a headline is written from, when the caller knows them: who did it, how, in which battle
         note(kind, { ...f, data: { cause: ch.cause || null, ...(ch.by ? { by: ch.by } : {}), ...(ch.how ? { how: ch.how } : {}), ...(kind === 'slain_in_battle' && ch.battle ? { battle: ch.battle } : {}) } });
       } else if (c.alive) {
         // a captive of the field is held by the host's commander (or, failing him, its house); one taken at a castle, by its lord's house
         const inBattle = /battle/i.test(why);
+        if (held(c.status) && !held(was.status)) for (const p of Object.values(state.parties || {})) if (p.commander === c.id) p.commander = null; // a prisoner leads no one: what he led goes on without him
         if (held(c.status) && !held(was.status)) note(inBattle ? 'captured_in_battle' : 'captured', { ...f, ...(inBattle && !f.place && ch.place ? { place: ch.place } : {}), data: { by: (inBattle ? ch.by : null) ?? (resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner || null), note: ch.note || null, ...(inBattle && ch.battle ? { battle: ch.battle } : {}) } });
         else if (held(was.status) && !held(c.status)) note(/ransom/i.test(why) ? 'ransomed' : 'released', f);
         if (c.status === 'wounded' && was.status !== 'wounded') note('wounded', { ...f, data: { note: ch.note || null } });

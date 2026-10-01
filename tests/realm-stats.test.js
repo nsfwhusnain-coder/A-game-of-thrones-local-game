@@ -123,8 +123,12 @@ test('the index of a pass over many houses changes no figure of any house, and t
   const s = world('stark', 7); const ix = figuresIndex(s);
   for (const house of Object.keys(s.houses)) assert.deepEqual(figuresOf(s, house, ix), figuresOf(s, house), `${house}: the same figures with the index`);
   assert.deepEqual(standing(s, 'stark', ix), standing(s, 'stark'));
-  // 290 houses made one scan of the world each took a tenth of a second; the index makes the pass a few milliseconds (a loose guard: CI boxes are slow)
-  const c = JSON.parse(JSON.stringify(s)); const t0 = performance.now(); sampleRealm(c); assert.ok(performance.now() - t0 < 60, `the sample took ${(performance.now() - t0).toFixed(0)} ms`);
+  // 290 houses made one scan of the world each took a tenth of a second; the index makes the pass a few milliseconds. Held against the plain way on the same machine and the same moment, never against a clock: a loaded CI box slows both.
+  const time = (f) => { const t = performance.now(); f(); return performance.now() - t; };
+  const ids = Object.keys(s.houses);
+  const plain = Math.min(...[1, 2].map(() => time(() => { for (const h of ids) figuresOf(s, h); })));
+  const indexed = Math.min(...[1, 2, 3].map(() => time(() => { const x = figuresIndex(s); for (const h of ids) figuresOf(s, h, x); })));
+  assert.ok(indexed * 4 < plain, `the pass took ${indexed.toFixed(1)} ms with the index and ${plain.toFixed(1)} ms without`);
 });
 
 test('own power equals state.standing.score exactly after a turn (and every house\'s power is standing\'s score)', async () => {

@@ -3,6 +3,13 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — H3: the bench, and a check that the story agrees with the world
+
+- **`npm run coherence -- --play stark --turns 12`** (or a save's id) reads a game and says where the story contradicted the world: a dead man acting, a prisoner holding a feast, a party arriving that never set out, a letter before it could land, a card with no fact behind it, a game word in a headline, a title a man does not hold, a rumour told as fact, a place named that is not on the road. The playtest report now ends with it.
+- **What it found is mended:** a lord taken captive or killed no longer leads the hosts he led (they go on without him); a captive vassal no longer rides at the head of the host his house musters (his regent does, or no one is named); a house's gifts, feasts, works, dues and levies are done in the regent's name while the lord is in a cell.
+- **`npm run bench -- --suite interpret,mind,narrate,audience,latency`** runs the five suites in turn and writes `bench/<date>.md` with every report, for the owner to paste back. New: the **audience** suite (eighty lines; does the reply keep to the verdict the engine settled) and the **latency** suite (the pace the game promises, by phase and by call).
+- Tests: `tests/bench-v2.test.js` (planted faults caught, a clean game quiet, a real mock game at Class A zero, the audience labels held to the engine's verdicts, the scorer seeing an overturned verdict, the latency report, the scripts end to end).
+
 ## 2026-10-02 — H2: the Weaver, optional
 
 - **Off unless you turn it on** (Settings → Model): when the story makes something that lasts — a smuggling ring after an embargo, informants after a bribe, a toll on roads the outlaws hold — the model may turn it into a small custom of that lord's house, once a month at most, never your own house. The custom's rule is written in the game's checked language and is tested before it is kept; the steward's ledger for that house carries its line. With no model, the game reads the same facts plainly and does the same.

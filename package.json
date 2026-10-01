@@ -15,6 +15,7 @@
     "soak": "node scripts/soak.js",
     "bench": "node scripts/bench.js",
     "playtest": "node scripts/playtest.js",
+    "coherence": "node scripts/coherence.js",
     "model:check": "node scripts/model-check.js",
     "headlines:check": "node scripts/headlines-check.js",
     "realm:dump": "node scripts/realm-dump.js",
