@@ -3,6 +3,11 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — H2: the Weaver, optional
+
+- **Off unless you turn it on** (Settings → Model): when the story makes something that lasts — a smuggling ring after an embargo, informants after a bribe, a toll on roads the outlaws hold — the model may turn it into a small custom of that lord's house, once a month at most, never your own house. The custom's rule is written in the game's checked language and is tested before it is kept; the steward's ledger for that house carries its line. With no model, the game reads the same facts plainly and does the same.
+- Tests: `tests/weaver.test.js` (5): the rules' sandbox, the call's schema and check, the facts it is offered, the cadence, the replay, the wiring.
+
 ## 2026-10-02 — H1: sound follows the story
 
 - **The music knows where you are:** the title's theme, the colour of your region (north, Reach, Dorne, the Iron Islands), war, tension while the days pass (twenty seconds at most), a lament when someone of your family dies, the quiet of a matter being read, winter's colder mix — each plays the folder of your own music with that name (`public/music/war/`, `tension/`, `lament/`, `winter/`, `north/`…), or the nearest fitting one.

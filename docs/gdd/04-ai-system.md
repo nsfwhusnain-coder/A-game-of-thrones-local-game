@@ -613,3 +613,5 @@ stark --turns 12` (writes a report with every call's prompt, reply, latency and 
 `docs/HANDOFF.md`. The agent's final handoff states which model and llama-swap profile to use, the exact server flags,
 per-call routing, and — if the owner's bench results fall below the §11.4 thresholds — the fine-tuning recipe, ready
 to run.
+
+*(H2, implemented: `server/ai/calls/weaver.js` (the call: schema over the facts offered, `check` runs `compileRule`'s parser and dry run, mock and fallback are the engine's own plain reading), `server/weaver.js` (the jump's cadence: config `weaver: true`, one a game month, an ordinary `inject_rule`, a replay asks nothing), Settings → Model has the switch. DECISIONS D-101.)*

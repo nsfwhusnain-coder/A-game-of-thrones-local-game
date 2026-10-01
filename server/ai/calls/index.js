@@ -9,5 +9,6 @@ import council from './council.js';
 import director from './director.js';
 import consolidate from './consolidate.js';
 import scribe from './scribe.js';
+import weaver from './weaver.js';
 
-export const CALLS = { probe, interpret, mind, narrate, audience, council, director, consolidate, scribe };
+export const CALLS = { probe, interpret, mind, narrate, audience, council, director, consolidate, scribe, weaver };
