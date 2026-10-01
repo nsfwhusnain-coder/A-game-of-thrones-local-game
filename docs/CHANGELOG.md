@@ -7,7 +7,7 @@ for the player, and what the owner should verify.
 
 - **The tip about the menu no longer covers it.** It sat under the menu button, where the menu opens, and hid the doors. It now sits under the bar, to the left of the menu; it never takes a click; and it is put away the moment you open the menu.
 - **The ring that crossed the screen is gone.** The ring that grows where news happens was thrown in from the top left corner of the screen toward the place each time (the map writes the ring's place into its transform, and the ring's own animation overrode it). It now grows where it is.
-- **The little brown boxes in the mountains** were carts that were given a straight line across the map when the roads had not all been found yet, and kept it. A cart now waits for its road.
+- **The little brown boxes in the mountains** were carts that were given a straight line across the map when the roads had not all been found yet, and kept it. A cart now waits for its road, and where the ground gives none (an island, the far shore of a lake) there is no cart: it does not sail.
 - **The King no longer holds a tourney from the road.** A feast or a tourney is held by someone at the hall: a lord on his progress, a guest at another castle, a regent in another place cannot. And the Crown's own tourney waits for the Hand's (the story's beat) until the twelfth moon.
 - **The screen is set out more evenly:** a slimmer bar, a smaller command box and headline strip, and a bigger face for the lord at the bottom right; the windows and the map's key clear the larger ruler. The End-turn line is cut to a line.
 - Tests: `tests/h7-fixes.test.js` (5).

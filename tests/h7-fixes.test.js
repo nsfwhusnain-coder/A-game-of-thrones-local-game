@@ -39,11 +39,20 @@ test('the ring that grows where the news is does not own the label\'s transform 
   assert.match(css, /\.lbl\.pulse \{[^}]*pointer-events: none/, 'a ring is not a thing to click');
 });
 
-test('the carts and the refugees walk only the roads that were found: no straight line over the mountains is made, kept or reused', () => {
+test('the carts and the refugees walk only the roads that were found: no straight line over the mountains or the sea is made, kept or reused', async () => {
   const src = read('public/js/map3d/life.js');
-  assert.ok(!/budget\.n <= 0\s*\n?\s*\? \[\[\.\.\.from\], \[\.\.\.to\]\]/.test(src), 'the straight-line fallback is gone');
-  assert.match(src, /if \(kind !== 'raven' && budget\.n <= 0\) \{ if \(old && old\.kind === kind\) next\.push\(old\); return; \}/);
-  assert.match(src, /const path = kind === 'raven' \? \[\[\.\.\.from\], \[\.\.\.to\]\] : \(budget\.n--, this\.o\.grid\.find\(from, to, 'land'\)\)/, 'a raven flies straight, the rest follow the ground');
+  assert.ok(!src.includes("budget.n <= 0 ? [[...from], [...to]]"), 'the straight-line fallback is gone');
+  assert.ok(src.includes("if (kind !== 'raven' && budget.n <= 0) { if (old && old.kind === kind) next.push(old); return; }"), 'a walker whose road is not found yet waits');
+  assert.ok(src.includes("grid.find(from, to, 'land', { strict: true })"), 'a raven flies straight, the rest follow the ground — and only the ground');
+  // the grid itself: two islands have no road between them; strict says so, the old way (a march that must be drawn) still gives the line
+  const { PathGrid } = await import('../public/js/map3d/pathfind.js');
+  const W = 200, H = 100; const land = new Uint8Array(W * H); const height = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) land[y * W + x] = (x < 80 || x >= 120) ? 1 : 0; // two shores, a sea between
+  const g = new PathGrid({ W, H, scale: 1, land, height }, 5);
+  const a = [20, 50], b = [180, 50], c = [60, 30];
+  assert.equal(g.find(a, b, 'land', { strict: true }), null, 'no road across the sea');
+  assert.deepEqual(g.find(a, b, 'land'), [a, b], 'an army that must go is still drawn a line');
+  const ok = g.find(a, c, 'land', { strict: true }); assert.ok(Array.isArray(ok) && ok.length >= 2, 'a road on one shore is found');
 });
 
 test('a feast or a tourney is held in a hall: with the lord on the road, or at another castle, it is refused (the King held a tourney at King\'s Landing from the Neck)', () => {
