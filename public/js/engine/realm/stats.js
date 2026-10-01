@@ -5,7 +5,7 @@
 //
 // Only the viewer's own house and its sworn houses are ever read back from here (view.js); every other house is known
 // to the player by what was observed of it (estimate.js). `wars` is the score of each war that is on, `{ [warId]: [[day, score], …] }`, from the attackers' side (WP R6); only a war the viewer is a party to is ever read back.
-import { FIELDS, figuresOf, holdingsIndex } from './figures.js';
+import { FIELDS, figuresOf, figuresIndex } from './figures.js';
 import { dayNumber } from '../time.js';
 
 /** A week is the least between two samples: a shorter turn takes the place of the last one, so a stop-and-go jump adds none. */
@@ -25,8 +25,10 @@ const LISTED = new Set(['crown', 'paramount', 'major', 'order', 'tribe', 'city_s
  */
 export function listedHouses(state) {
   const p = state.meta?.player; const houses = state.houses || {};
+  // a lesser house (WP G1: a holdfast and its villages) is read back only by its own liege's player or an ally, so only those are sampled: the rest are a hundred rows nobody reads, at the turn's cost
+  const mine = new Set([p]); for (const x of state.pacts || []) if (x.status === 'active' && x.type === 'alliance' && (x.a === p || x.b === p)) mine.add(x.a === p ? x.b : x.a);
   return Object.values(houses)
-    .filter((h) => h.status !== 'extinct' && (LISTED.has(h.rank) || h.id === p || (h.rank === 'minor' && LISTED.has(houses[h.liege]?.rank))))
+    .filter((h) => h.status !== 'extinct' && (state.holdings?.[h.id]?.lesser ? mine.has(h.id) || h.liege === p : LISTED.has(h.rank) || h.id === p || (h.rank === 'minor' && LISTED.has(houses[h.liege]?.rank))))
     .map((h) => h.id).sort();
 }
 
@@ -44,7 +46,7 @@ export function thin(samples) {
  */
 export function sampleRealm(state) {
   const R = state.realmStats = state.realmStats || { v: 1, fields: [...FIELDS], samples: [], wars: {} };
-  const day = dayNumber(state.meta.date); const held = holdingsIndex(state);
+  const day = dayNumber(state.meta.date); const held = figuresIndex(state);
   const h = {};
   for (const id of listedHouses(state)) { const f = figuresOf(state, id, held); h[id] = FIELDS.map((k) => f[k]); }
   const sample = { day, turn: state.meta.turn, h };

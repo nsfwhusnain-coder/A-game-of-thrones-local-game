@@ -138,22 +138,29 @@ const tributeShare = (liege) => ECONOMY.tribute[liege?.rank] ?? 0.2;
 /** Debt a house owes beyond its named loans (a shortfall borrowed to pay its way), and what it costs a moon. */
 const looseDebt = (state, id, f) => Math.max(0, (Number(f.debt?.v) || 0) - (state.economy?.loans || []).filter((l) => l.debtor === id).reduce((n, l) => n + l.amount, 0));
 
-/** Expected monthly figures for a house (used for projections in the UI and the prompt). */
-export function project(state, houseId) {
+/**
+ * Expected monthly figures for a house (used for projections in the UI and the prompt). `ix` is an optional `figuresIndex(state)`
+ * (engine/realm/figures.js) for a pass over many houses: holdings, vassals, hosts and alms made once, a house's revenue worked once.
+ */
+export function project(state, houseId, ix = null) {
   const house = state.houses[houseId]; if (!house) return null;
-  const revenueOf = (id) => houseHoldings(state, id).reduce((s, h) => s + holdingYield(state, h).total, 0);
+  const revenueOf = (id) => {
+    if (!ix) return houseHoldings(state, id).reduce((s, h) => s + holdingYield(state, h).total, 0);
+    let r = ix.revenue.get(id); if (r === undefined) { r = (ix.holds.get(id) || []).reduce((s, h) => s + holdingYield(state, h).total, 0); ix.revenue.set(id, r); }
+    return r;
+  };
   const own = revenueOf(houseId);
   let tribute = 0; const vassals = [];
-  for (const v of Object.values(state.houses)) {
+  for (const v of ix ? ix.vassals.get(houseId) || [] : Object.values(state.houses)) {
     if (v.liege !== houseId) continue;
     const vg = revenueOf(v.id); const share = tributeShare(house);
     const st = v.obligations?.tribute || 'paying';
     const exp = st === 'paying' ? vg * share : st === 'reduced' ? vg * share * 0.5 : st === 'late' ? vg * share * 0.4 : 0;
     tribute += exp; vassals.push({ id: v.id, expected: Math.round(exp), status: st });
   }
-  const armies = forces(state).filter((a) => a.owner === houseId);
+  const armies = ix ? ix.forces.get(houseId) || [] : forces(state).filter((a) => a.owner === houseId);
   const upkeep = armies.reduce((s, a) => s + armyUpkeep(a), 0);
-  const alms = almsFor(state).find((x) => x.id === houseId)?.amount || 0;
+  const alms = ix ? ix.alms.get(houseId) || 0 : almsFor(state).find((x) => x.id === houseId)?.amount || 0;
   const household = wagesOf(houseId, house) + alms;
   const court = householdCost(state, houseId);
   const it = interestOf(state, houseId);
@@ -161,7 +168,7 @@ export function project(state, houseId) {
   const projects = (state.projects || []).filter((p) => p.house === houseId && p.status === 'active').reduce((s, p) => s + p.perMonth, 0);
   const liege = house.liege ? state.houses[house.liege] : null;
   const owed = liege && (house.obligations?.tribute === 'paying') ? own * tributeShare(liege) : 0;
-  const income = own + tribute + it.received + (houseId === 'nights_watch' ? almsFor(state).reduce((a, x) => a + x.amount, 0) : 0);
+  const income = own + tribute + it.received + (houseId === 'nights_watch' ? (ix ? [...ix.alms.values()] : almsFor(state).map((x) => x.amount)).reduce((a, x) => a + x, 0) : 0);
   const expenses = upkeep + household + court + interest + projects + owed;
   return { own: Math.round(own), tribute: Math.round(tribute), vassals, upkeep: Math.round(upkeep), household: Math.round(household), court: Math.round(court), interest: Math.round(interest), accrues: Math.round(it.accrues), projects: Math.round(projects), owed: Math.round(owed), income: Math.round(income), expenses: Math.round(expenses), net: Math.round(income - expenses), low: Math.round(income * 0.8 - expenses), high: Math.round(income * 1.15 - expenses) };
 }
