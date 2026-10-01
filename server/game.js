@@ -847,8 +847,9 @@ export async function council(id, members, message, { advisor = false } = {}) {
   return withDice(state, () => councilWith(id, state, cfg, members, message, { advisor }));
 }
 async function councilWith(id, state, cfg, members, message, { advisor = false } = {}) {
-  const ids = (members || []).filter((m) => state.characters[m]?.alive);
-  if (!ids.length) throw httpError(400, 'no one to hold council with');
+  // only the lord's own people sit at his council: a counsellor of another house would answer from that house's books (the playtest of a Blackwood game, asked by name for Winterfell's maester, was given Winterfell's coin)
+  const ids = (members || []).filter((m) => state.characters[m]?.alive && state.characters[m].house === state.meta.player);
+  if (!ids.length) throw httpError(400, 'no one of yours to hold council with');
   const listening = !String(message || '').trim();
   // the advisor: the one whose office knows the matter best answers at length (04 §8.4)
   const who = advisor ? [advisorFor(state, ids, message)] : ids;

@@ -171,6 +171,14 @@ test('the lord\'s own word is history too: a command the story tells nothing of 
   assert.deepEqual(coherence(g).A, []);
 });
 
+test('only the lord\'s own people sit at his council: another house\'s maester is not asked, and so tells no house\'s books (found by the live playtest of a Blackwood game)', async () => {
+  const { id } = game.newGame('agot_298', 'blackwood', { seed: 7 });
+  await assert.rejects(game.council(id, ['luwin', 'rodrik_cassel', 'catelyn_stark'], 'How much coin have we?'), /no one of yours/);
+  const own = Object.values(game.loadState(id).characters).find((c) => c.house === 'blackwood' && c.alive);
+  const r = await game.council(id, [own.id], 'How fares the house?');
+  assert.ok(r.replies.length >= 1 && r.replies.every((x) => x.speaker === own.id), JSON.stringify(r.replies.map((x) => x.speaker)));
+});
+
 // ── the audience suite ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 test('the audience suite: eighty lines, labelled with the engine\'s own verdicts (a changed weighing shows here), ten kinds of words to eight people', () => {
