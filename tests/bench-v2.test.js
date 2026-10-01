@@ -158,6 +158,27 @@ test('what a house does as a house is done by its regent while the lord is a pri
   assert.deepEqual(d.actors, [lord], 'what is done to a man is still his');
 });
 
+test('the lord\'s own word is history too: a command the story tells nothing of has a card with a fact behind it (the live playtest found it without)', async () => {
+  const { id } = game.newGame('agot_298', 'stark', { seed: 7 });
+  const text = 'Let it be known throughout the North that House Stark mourns the old Hand.';
+  game.setOrders(id, [{ id: 't1o0', text }]);
+  await game.advance(id, { span: '7d', orders: game.loadState(id).orders }); await game.settled(id);
+  const g = readGame(game, id);
+  const given = g.facts.filter((f) => f.kind === 'order_given');
+  assert.ok(given.length >= 1 && given.every((f) => f.cause?.type === 'order' && f.houses.includes('stark') && f.actors.includes('eddard_stark')), JSON.stringify(given));
+  const card = g.turns[0].events.find((e) => e.orderId === 't1o0');
+  assert.ok(card?.fact && given.some((f) => f.id === card.fact), `the card of the command names its fact: ${JSON.stringify(card?.fact)}`);
+  assert.deepEqual(coherence(g).A, []);
+});
+
+test('only the lord\'s own people sit at his council: another house\'s maester is not asked, and so tells no house\'s books (found by the live playtest of a Blackwood game)', async () => {
+  const { id } = game.newGame('agot_298', 'blackwood', { seed: 7 });
+  await assert.rejects(game.council(id, ['luwin', 'rodrik_cassel', 'catelyn_stark'], 'How much coin have we?'), /no one of yours/);
+  const own = Object.values(game.loadState(id).characters).find((c) => c.house === 'blackwood' && c.alive);
+  const r = await game.council(id, [own.id], 'How fares the house?');
+  assert.ok(r.replies.length >= 1 && r.replies.every((x) => x.speaker === own.id), JSON.stringify(r.replies.map((x) => x.speaker)));
+});
+
 // ── the audience suite ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 test('the audience suite: eighty lines, labelled with the engine\'s own verdicts (a changed weighing shows here), ten kinds of words to eight people', () => {
@@ -227,6 +248,14 @@ test('bench --suite a,b runs each in turn and writes one report with them all', 
   const bad = await run(process.execPath, [path.join(ROOT, 'scripts', 'bench.js'), '--suite', 'audience,nonesuch', '--mock', '--out', out], { cwd: ROOT, env: { ...process.env, WC_PROVIDER: 'mock' } }).catch((e) => e);
   assert.equal(bad.code, 2); assert.match(String(bad.stderr), /No such suite: nonesuch/);
   fs.rmSync(out, { recursive: true, force: true });
+});
+
+test('a suite writes its report into a folder that is not there yet (the live run of the interpret suite into a new folder failed at the last step)', async () => {
+  const out = path.join(tmp(), 'not', 'there', 'yet');
+  const r = await run(process.execPath, [path.join(ROOT, 'scripts', 'bench.js'), '--suite', 'interpret', '--reader', 'rules', '--out', out], { cwd: ROOT, env: { ...process.env, WC_PROVIDER: 'mock', WC_SAVES: '' }, maxBuffer: 1 << 24, timeout: 300000 }).catch((e) => e);
+  assert.ok(!r.code || r.code === 1, String(r.stderr).slice(0, 400)); // (1: a gate of the pre-parser missed; 0: met; a crash is anything else)
+  assert.ok(fs.readdirSync(out).some((f) => f.startsWith('interpret-rules')), fs.existsSync(out) ? fs.readdirSync(out).join() : 'no folder');
+  fs.rmSync(path.dirname(path.dirname(path.dirname(out))), { recursive: true, force: true });
 });
 
 test('scripts/coherence.js plays a game on the mock and checks it: the report, the JSON, the file', async () => {

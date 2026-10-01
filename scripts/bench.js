@@ -56,6 +56,7 @@ const SUITES = { interpret: interpretBench, mind: mindBench, narrate: narrateBen
 if (args.suite) await runSuites(String(args.suite).split(',').map((x) => x.trim()).filter(Boolean));
 async function runSuites(names) {
   const bad = names.filter((n) => !SUITES[n]); if (bad.length) { console.error(`No such suite: ${bad.join(', ')} (there are ${Object.keys(SUITES).join(', ')})`); process.exit(2); }
+  fs.mkdirSync(OUT, { recursive: true }); // (the interpret, mind and narrate suites write their report without making the folder: the live run of them into a new folder found it)
   const ran = [];
   for (const n of names) { console.log(`\n=== ${n} ===`); ran.push(await SUITES[n]()); }
   if (names.length > 1) {

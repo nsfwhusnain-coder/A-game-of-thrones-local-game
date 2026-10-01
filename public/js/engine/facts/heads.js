@@ -57,7 +57,7 @@ export const ARCHETYPE = {
   letter_sent: 'letter', letter_arrived: 'letter', letter_intercepted: 'letter', envoy_arrived: 'letter', audience_held: 'letter', gift: 'letter', loan_taken: 'court', loan_repaid: 'court', debt_called: 'court', loan_defaulted: 'court',
   grain_bought: 'works', bribe: 'plot', bribe_refused: 'plot', ransom_demanded: 'capture', embargo: 'court', peace_sued: 'court', cold_war: 'court', commitment_made: 'court', commitment_kept: 'court', commitment_broken: 'court',
   rumour: 'letter', secret_revealed: 'plot', scheme_discovered: 'plot',
-  feast: 'feast', tourney: 'feast', tourney_result: 'feast', judgement: 'court', petition: 'court', tax_changed: 'works', works_begun: 'works', works_done: 'works', ledger: 'works',
+  feast: 'feast', tourney: 'feast', tourney_result: 'feast', judgement: 'court', order_given: 'court', petition: 'court', tax_changed: 'works', works_begun: 'works', works_done: 'works', ledger: 'works',
   unrest_rising: 'other', rising: 'other', famine: 'harvest', plague: 'other', season_turned: 'omen', custom_created: 'feast', canon_beat: 'court',
   happening: 'omen', hook: 'court', behaviour: 'other', weather: 'omen', legacy: 'other',
 };
@@ -71,7 +71,7 @@ export const LEDE = {
   ransomed: 57, hostage_taken: 56, ransom_demanded: 55, tourney: 54, terms_refused: 54, terms_offered: 53, raid: 52, blockade: 52, village_burned: 51, ambush: 51, sally: 50, desertion: 50, host_hungry: 49,
   land_stripped: 48, camp_fever: 48, unrest_rising: 47, outlaws_rise: 46, letter_intercepted: 46, peace_sued: 45, envoy_arrived: 44, call_delayed: 43, levies_called: 42, call_answered: 41, host_formed: 40,
   sellswords_hired: 40, embarked: 39, landed: 39, crossed: 38, arrived: 37, host_joined: 36, host_disbanded: 36, delayed: 35, turned_back: 35, set_out: 34, wounded: 34, illness: 33, birth: 33, regency_begun: 33,
-  regency_ended: 32, came_of_age: 32, bribe: 31, bribe_refused: 31, judgement: 30, petition: 30, tax_changed: 29, gift: 29, loan_taken: 28, loan_repaid: 28, commitment_made: 27, commitment_kept: 27, cold_war: 26,
+  regency_ended: 32, came_of_age: 32, bribe: 31, bribe_refused: 31, judgement: 30, order_given: 30, petition: 30, tax_changed: 29, gift: 29, loan_taken: 28, loan_repaid: 28, commitment_made: 27, commitment_kept: 27, cold_war: 26,
   embargo: 26, audience_held: 25, letter_arrived: 25, letter_sent: 24, met_on_road: 23, outlaws_scattered: 23, men_hired: 22, ward_fostered: 22, recovered: 21, works_done: 21, feast: 20, custom_created: 20, hook: 19,
   works_begun: 18, host_split: 18, muster_grew: 17, siege_tick: 16, season_turned: 16, grain_bought: 15, returned: 15, rumour: 14, ledger: 12, happening: 11, weather: 10, behaviour: 9, legacy: 8,
 };
@@ -648,6 +648,7 @@ export const HEAD = {
     return c.pick(f, [`${a} wins the tourney${at}`, `${a} takes the tourney prize${at}`, `${a} claims the champion's prize${at}`]);
   },
   judgement: (f, s, c) => { const [a, b] = pair(c, f); return b ? c.pick(f, [`${a} judges ${b}${c.at(f.place)}`, `${a} passes judgement on ${b}${c.at(f.place)}`]) : `${a} sits in judgement${c.at(f.place)}`.replace('sits in judgement', 'passes judgement'); },
+  order_given: (f, s, c) => { const [a] = pair(c, f); return c.pick(f, [`${a} gives an order${c.at(f.place)}`, `${a} gives a command${c.at(f.place)}`]); },
   petition: (f, s, c) => { const [a, b] = pair(c, f); return b ? c.pick(f, [`${a} petitions ${b}`, `${a} brings a petition to ${b}`]) : `${a} brings a petition${c.at(f.place)}`; },
   tax_changed: (f, s, c) => {
     const d = f.data || {}; const a = c.subj(f);
@@ -1113,6 +1114,7 @@ export const SUM = {
   tourney: (f) => { const d = f.data || {}; const n = say(d.guests); return sentences(n ? `${cap1(n)} houses are asked to send knights` : 'Knights are called to the lists'); },
   tourney_result: (f, s, c) => { const own = s.characters?.[(f.actors || [])[0]]?.house; const h = c.known.house(own) ? own : (f.houses || []).find((x) => c.known.house(x)); const P = pro(c, f); return h ? sentences(`${P.He} rides for ${c.hs(h)}`) : sentences(`${P.He} is the champion of the lists`); },
   judgement: (f) => { const v = String(f.data?.verdict || '').trim(); return v ? sentences(`The verdict is ${v}`) : ''; },
+  order_given: () => sentences('The word goes out under his seal'),
   petition: () => '',
   tax_changed: () => '',
   works_begun: (f) => { const d = f.data || {}; return d.months ? sentences(`It will take ${span(d.months * 30)}`) : ''; },

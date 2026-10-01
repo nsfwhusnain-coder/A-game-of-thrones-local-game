@@ -3,6 +3,12 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — H6: played on Maester-12B
+
+- **The game has been played on the model made for it**: twelve turns as Stark and twelve as Blackwood, then the five bench suites. A seven-day jump takes about 19 seconds and a thirty-day jump 39; the suites meet their gates (interpret 95 %, mind 86 %, narrate 95 % true first time, the pace of the design) except the audience's 100 % (two lines in eighty: a persona, insulted or pleaded with, answers with a refusal in words after the engine settled *obey* or *agree*). The report is `docs/local-ai/PLAYTEST-2026-10-02.md`.
+- **What playing found, mended:** the card for a matter you answered (or a command the story told nothing of) now has a fact behind it; a council seats only your own people (the server took any name, and answered from that house's books); the bench makes the folder it writes to; an amused refusal is not counted as a yes.
+- Tests: `tests/bench-v2.test.js` (19): the command's fact, the council, the folder.
+
 ## 2026-10-02 — H5: the README and the handoff
 
 - **The README is rewritten** for what the game is now (290 houses, the engine that decides and the model that tells, the 64k profile, Mock mode, how to play, what the checks are and what each costs), with the sound and voices section saying plainly that **no voice is cloned**.

@@ -146,6 +146,7 @@ export const KINDS = {
   plague: K(4, 'disaster'),
   season_turned: K(5, 'court'),
   custom_created: K(2, 'court', 'houses'),
+  order_given: K(3, 'court', 'houses'),   // the lord's own command or answer to a matter that no other fact tells (server/orders.js orderEvents): the card of it has a fact behind it
   canon_beat: K(4, 'court'),        // a great matter of the story (shared/plots.js) — its own words, its thread
   // ── Ambient ──
   happening: K(1, 'court', 'local'),

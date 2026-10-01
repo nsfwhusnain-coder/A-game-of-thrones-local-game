@@ -197,6 +197,7 @@ const SYN = {
   tourney: [() => G('g-tourney-01', 'tourney')],
   tourney_result: [() => G('g-tourney-01', 'tourney_result')],
   judgement: { actors: ['eddard_stark', 'roose_bolton'], houses: ['stark', 'bolton'], place: 'stark', data: { verdict: 'guilty' } },
+  order_given: { actors: ['eddard_stark'], houses: ['stark'], place: 'stark' },
   petition: { actors: ['robert_baratheon', 'eddard_stark'], houses: ['stark', 'baratheon'], data: { matter: 'hand_offer_d6_11' } },
   tax_changed: { actors: ['mace_tyrell'], houses: ['tyrell'], place: 'tyrell', data: { tax: 'high', was: 'normal' } },
   works_begun: [() => G('g-works-01', 'works_begun'), () => G('g-works-02', 'works_begun')],

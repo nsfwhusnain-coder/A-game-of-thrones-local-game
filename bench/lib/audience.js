@@ -31,8 +31,9 @@ const REFUSING = new Set(['refuse', 'rage', 'dismiss']);
 const HOLDING = new Set(['stall', 'bargain']);
 const AGREEING = new Set(['agree', 'obey', 'yield']);
 const ASSENT = /\b(very well|you have my word|so be it|gladly|it shall be done|i agree|as you wish|you may count on me|consider it done|i will do it|i shall do it|agreed)\b/i;
-const NO = /\b(i will not|i won'?t|i shall not|i refuse|never|out of the question|you ask too much)\b/i;
-const WARM = new Set(['warm', 'amused']);
+// a refusal opens a sentence ("I will not."), not "I will not forget it" or "I shall never fail you": a loose "never" or mid-sentence "will not" is not a no
+const NO = /(?:^|[.!?"“*]\s*)(?:i (?:will|shall) not(?! forget| fail| betray| let you| be late| speak of)|i won'?t|i refuse)\b|\bout of the question\b|\byou ask too much\b/i;
+const WARM = new Set(['warm']); // (an amused refusal is a mocking one: the live run's Walder Frey, insulted, dismissed with a laugh)
 
 /**
  * Does a reply keep to the verdict? `asked` is what the lord asked that the verdict lets them promise (the call's `may`).
@@ -72,7 +73,7 @@ export async function runAudienceSuite(read, { suites = loadAudienceSuite(), onl
     const state = worldFor(it); const stance = stanceOf(state, it);
     const r = await read(state, it, stance);
     const o = obeys(r.value, stance.verdict, { asked: r.ctx?.may || [] });
-    const row = { id: it.id, house: it.house, who: it.who, words: it.words, verdict: stance.verdict, labelled: it.verdict ?? null, labelOk: it.verdict == null || it.verdict === stance.verdict, ok: o.ok, why: o.why, via: r.via, ms: r.ms ?? 0, problems: r.problems || [] };
+    const row = { id: it.id, house: it.house, who: it.who, words: it.words, verdict: stance.verdict, labelled: it.verdict ?? null, labelOk: it.verdict == null || it.verdict === stance.verdict, ok: o.ok, why: o.why, via: r.via, ms: r.ms ?? 0, problems: r.problems || [], said: (r.value?.beats || []).filter((b) => b.kind === 'speech').map((b) => b.text).join(' ').slice(0, 200) };
     if (judge && r.value) { try { const j = await judge(it, stance, r.value); if (Number.isFinite(j?.score)) row.score = j.score; } catch { /* a judge that fails scores nothing */ } }
     items.push(row); onItem?.(row);
   }
@@ -106,7 +107,7 @@ export function audienceReport(r, { reader = '' } = {}) {
     '| gate | got | needs | |', '|---|---|---|---|', ...v.map((x) => `| ${x.name} | ${x.got} | ${x.gate} | ${x.ok ? 'ok' : 'FAIL'} |`), '',
     `${r.n} lines. First try (the reply passed the call's own checks): ${r.firstTry} (${pct(r.firstTry, r.n)} %); the plain fallback was used for ${r.fallback}. Time per reply: p50 ${Math.round(r.ms.p50)} ms, p95 ${Math.round(r.ms.p95)} ms.${r.labelOff ? ` **${r.labelOff} lines whose verdict is no longer the one the suite was labelled with** (the engine's weighing changed: relabel, or find out why).` : ''}`, '',
     '| verdict | lines | kept |', '|---|---|---|', ...Object.entries(r.by).sort().map(([k, x]) => `| ${k} | ${x.n} | ${x.ok} (${pct(x.ok, x.n)} %) |`), '',
-    ...(bad.length ? ['## Replies that did not keep to the verdict', '', ...bad.slice(0, 40).map((x) => `- ${x.id} (${x.who}, ${x.verdict}): ${x.why} — "${String(x.words).slice(0, 80)}"`), ...(bad.length > 40 ? [`- … and ${bad.length - 40} more`] : []), ''] : []),
+    ...(bad.length ? ['## Replies that did not keep to the verdict', '', ...bad.slice(0, 40).map((x) => `- ${x.id} (${x.who}, ${x.verdict}): ${x.why} — to "${String(x.words).slice(0, 80)}" said "${x.said || ''}"`), ...(bad.length > 40 ? [`- … and ${bad.length - 40} more`] : []), ''] : []),
   ].join('\n');
 }
 
