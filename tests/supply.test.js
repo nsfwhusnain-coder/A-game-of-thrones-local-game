@@ -90,11 +90,12 @@ test('the land heals when the foragers are gone — slowly, and not at all in wi
   assert.equal(s.holdings.darry.devastation, d, 'nothing grows in winter');
 });
 
-test('a camp that sits still sickens: the flux, told once a week', () => {
+test('a camp that sits still sickens: the flux, told once a moon with the moon\'s sick (WD5: it was told every week of a camp that sat)', () => {
   const s = world(); const p = host(s, 'h', 'lannister', 'lannister', 20000);
   days(s, 35);
   assert.ok(p.men < 20000 && p.men > 19000, `about 2% a moon in summer (${p.men})`);
-  assert.ok(factsOf(s, 'camp_fever').length >= 3, 'the fever is told week by week');
+  const told = factsOf(s, 'camp_fever'); assert.ok(told.length >= 1 && told.length <= 2, `the fever is told once a moon (${told.length} in five weeks)`);
+  assert.ok(Number(told[0].data?.men ?? told[0].text.match(/: ([\d,]+) men/)?.[1]?.replace(/,/g, '')) >= 100, 'with what the moon cost, not a week\'s handful');
   const w = world(); w.world.season = 'winter'; const q = host(w, 'h', 'lannister', 'lannister', 20000); days(w, 35);
   assert.ok(q.men < p.men, 'winter is worse');
 });

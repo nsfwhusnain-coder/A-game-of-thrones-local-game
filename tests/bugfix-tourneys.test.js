@@ -88,7 +88,8 @@ test('ST2: the lords of the region ride in only while the call is fresh, and sta
     // the day loop itself (server/turn/day.js): the parties walk, the lords are sent out, the lists are run
     s.meta.date = dateOfDay(called + d - 1); s.meta.clock = { turn: 1, from: called + d - 1, to: called + 45 };
     await withRng(s, () => engineDay(s, { deliver: async () => [], touched: new Set() }));
-    for (const f of s.facts) if (f.kind === 'set_out' && /tourney/i.test(`${f.text} ${f.data?.why || ''}`) && !f.seen) { f.seen = true; rides.push({ day: f.day - called, text: f.text }); }
+    // (the tourney of this call: another house of the region may call its own in the forty-five days, and its guests ride on their own days)
+    for (const f of s.facts) if (f.kind === 'set_out' && /tourney/i.test(`${f.text} ${f.data?.why || ''}`) && new RegExp(`tourney at ${s.holdings[seat].name}`).test(`${f.text} ${f.data?.why || ''}`) && !f.seen) { f.seen = true; rides.push({ day: f.day - called, text: f.text }); }
     for (const f of s.facts) if (f.kind === 'set_out' && f.data?.returning && f.place === seat && !f.seen) { f.seen = true; home.push({ day: f.day - called, text: f.text }); }
   }
   assert.ok(rides.length >= 3, `the region's lords ride in (${rides.length})`);
@@ -98,7 +99,7 @@ test('ST2: the lords of the region ride in only while the call is fresh, and sta
   assert.ok(arrived.length >= 1, 'some have arrived by the day of the lists');
   // none of them rides home before the lists are run, whatever its stay was: the lists are told on day LISTS_AFTER
   assert.ok(home.every((x) => x.day >= LISTS_AFTER), `no guest rides home before the lists (${home.map((x) => x.day).join(',')})`);
-  const res = kinds(s, 'tourney_result'); assert.equal(res.length, 1); assert.equal(res[0].day - called, LISTS_AFTER);
+  const res = kinds(s, 'tourney_result').filter((f) => f.place === seat); assert.equal(res.length, 1); assert.equal(res[0].day - called, LISTS_AFTER);
 });
 
 test('ST3: a name-day tourney is called before it is run: no result of a tourney nobody called, and the champion was there', () => {

@@ -62,8 +62,8 @@ export function lifeTick(state, r, { spared = new Set() } = {}) {
     // fevers and frailty: reckoned once a week; the old, the ailing, and everyone in winter
     if (!weekly) continue;
     const age = c.age ?? 30; const ailing = /ailing|dying|sick|abed|frail/i.test(`${c.traits || ''} ${c.bio || ''}`);
-    // (the old die of their years in the year's turn, ageRisk; the week's own are the ailing, the chill of winter on the old and the very young)
-    const risk = (winter && age >= 60 ? 0.0004 + 0.0002 * (age - 60) / 5 : 0) + (ailing ? 0.003 : 0) + (winter && age < 6 ? 0.0008 : 0);
+    // (the old die of their years in the year's turn, ageRisk; the week's own are a fever now and then (one in a hundred a year past sixty), the ailing, the chill of winter on the old and the very young)
+    const risk = (age >= 60 ? 0.0002 : 0) + (winter && age >= 60 ? 0.0004 + 0.0002 * (age - 60) / 5 : 0) + (ailing ? 0.003 : 0) + (winter && age < 6 ? 0.0008 : 0);
     if (!risk || r() >= risk || !mayDie(state, c, spared)) continue;
     const cause = winter ? 'a winter chill' : ailing ? 'a long illness' : 'a fever';
     events.push(fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}${c.title ? `, ${c.title},` : ''} has died of ${cause}, aged ${age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause, age, how: winter ? 'winter' : ailing ? 'illness' : 'fever' }, cause: { type: 'rule', ref: 'life' } }));
