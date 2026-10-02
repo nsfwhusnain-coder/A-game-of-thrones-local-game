@@ -1144,7 +1144,7 @@ export const SUM = {
   feast: (f, s, c) => {
     const d = f.data || {}; const guests = (f.actors || []).slice(1).filter((id) => c.known.person(id)).slice(0, 3).map((id) => c.nm(id));
     if (d.brawl) { const [x, y] = (d.brawlers || []).filter((id) => c.known.person(id)); return sentences(x && y ? `${c.lordly(x)} and ${c.lordly(y)} come to blows${d.over ? ` over ${d.over}` : ''}` : 'Guests come to blows before the night is over'); }
-    return guests.length ? sentences(`${list(guests)} sit at the table`) : sentences('It is a feast for the household, with no great guests');
+    return guests.length ? sentences(`${list(guests)} ${guests.length === 1 ? 'sits' : 'sit'} at the table`) : sentences('It is a feast for the household, with no great guests');
   },
   tourney: (f) => { const d = f.data || {}; const n = say(d.guests); return sentences(n ? `${cap1(n)} houses are asked to send knights` : 'Knights are called to the lists'); },
   tourney_result: (f, s, c) => { const own = s.characters?.[(f.actors || [])[0]]?.house; const h = c.known.house(own) ? own : (f.houses || []).find((x) => c.known.house(x)); const P = pro(c, f); return h ? sentences(`${P.He} rides for ${c.hs(h)}`) : sentences(`${P.He} is the champion of the lists`); },

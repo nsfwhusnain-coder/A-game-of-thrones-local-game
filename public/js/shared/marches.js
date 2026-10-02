@@ -72,7 +72,7 @@ export function marchTick(state, { span, turnStart }) {
         }
         const reach = Math.min(span, born + Math.max(1, Math.round(days * 0.6)));
         for (const e of toll.events) events.push(fact(state, 'crossed', { ...e, day: reach, importance: mine ? Math.max(3, e.importance) : e.importance }, { actors: [a.commander], data: { party: a.id, men: a.men } }));
-        for (const mt of toll.met) applied.push({ op: 'chokepoint', text: `${a.name} at ${mt.name}: ${mt.gated ? 'passed' : 'forced the crossing'}${mt.lost ? `, ${mt.lost.toLocaleString('en-GB')} men lost` : ''}${mt.days ? `, ${mt.days} days` : ''}` });
+        for (const mt of toll.met) applied.push({ op: 'chokepoint', text: `${a.name} at ${mt.name}: ${mt.gated ? 'passed' : 'forced the crossing'}${mt.lost ? `, ${mt.lost.toLocaleString('en-GB')} ${mt.lost === 1 ? 'man' : 'men'} lost` : ''}${mt.days ? `, ${mt.days} ${mt.days === 1 ? 'day' : 'days'}` : ''}` });
         r.paid = [...new Set([...(r.paid || []), ...toll.met.map((m) => m.id)])];
       }
     }
@@ -118,9 +118,9 @@ export function marchTick(state, { span, turnStart }) {
 }
 
 // the barriers a march crosses on the ground it covers this turn, each paid once per road
-function tollAlong(state, a, pts, days) {
+export function tollAlong(state, a, pts, days) {
   const out = { days: 0, losses: 0, morale: 0, gold: 0, events: [], met: [] };
-  const paid = new Set(a.route?.paid || []);
+  const paid = new Set([...(a.route?.paid || []), ...(a.march?.paid || [])]);
   for (let i = 0; i + 1 < pts.length; i++) {
     const t = chokepointToll(state, a, pts[i], pts[i + 1], days);
     if (!t.met.length || t.met.every((m) => paid.has(m.id))) continue;
@@ -128,5 +128,8 @@ function tollAlong(state, a, pts, days) {
     out.met.push(...t.met); out.days += t.days; out.losses += t.losses; out.morale += t.morale; out.gold += t.gold; out.events.push(...t.events);
   }
   out.days = round1(out.days);
+  // The order remembers what was paid, not only the road: a host that follows another host has its road planned again every day (the quarry having moved), and a barrier "paid once per
+  // road" was paid again each day the host waited out its delay: a company of fifty lost every man at the Golden Tooth over seventy days (bug hunt N-004)
+  if (a.march && out.met.length) a.march.paid = [...paid];
   return out;
 }
