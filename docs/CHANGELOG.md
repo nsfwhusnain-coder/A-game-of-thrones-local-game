@@ -41,6 +41,17 @@ for the player, and what the owner should verify.
 - **A long stretch of days says so.** A turn of two weeks or more tells you the chronicler may take minutes. *Owner check on the model: how long a 30-day turn takes on the 12B.*
 - Tests: `tests/bugfix-letters.test.js` (7).
 
+## 2026-10-02 — Bug hunt fixes ST10, ST12, ST13, ST14, TX4, TX5, TX9: the words of the chronicle
+
+- **"Lysa Arryn takes the regency" is no longer news in the first week of every game.** The minorities the tale starts with (Edric Dayne's, Robert Arryn's) have their regents in place from the start; a regency that begins later is still told.
+- **A voyage is told as a voyage.** "Maege Mormont rides for Deepwood Motte" while the engine had her at sea: a journey with a sea leg now reads "sails for", "takes ship for".
+- **A man worn past bearing is found where he is**, not always "on the floor of the solar at dawn": in his cell if he is a prisoner, in his tent with a host, in his cabin at sea, at the roadside on the road; and the maester speaks of it only where there is one.
+- **The small news of the week knows where it is.** No more "Merchants of Castle Black talk of prices and tolls" or "pilgrims and septons stir at Norvos": the Wall's brothers count their stores, a castle's steward reckons the stock, the priests of a free city keep their rites, the North honours its old gods.
+- **House names read as names.** "House The Free Folk calls up 12,000 levies", "House Baratheon of King's Landing sends 500 gold dragons", "Host of House Woolfield of Woolfield" are now "The Free Folk calls up…", "The Crown sends…", "Host of House Woolfield": every sentence the engine writes about a house passes one tidy-up as the fact is made or the receipt told. (The crest and the Realm window still say "House The Free Folk": the interface group.)
+- **Cards that stopped at their headline say something more.** A change of taxes says what it does to the people, a late or withheld due what it means for the liege, an office is "named captain of the guard at Winterfell" (of what, where), and a command that came to nothing says why ("The steward could not tell what was meant, and nothing was done") instead of "The word goes out under his seal".
+- **The realm briefing counts "21st", "22nd", "31st"**, never "21th".
+- Tests: `tests/bugfix-text.test.js` (9).
+
 ## 2026-10-02 — Bug hunt fixes OR2–OR11: the steward reads more of what you say, and says what it could not
 
 - **A summons to a council is a raven to each lord named.** "Summon Lord Bolton and Lord Umber to a council at Winterfell" used to be read as a call to arms and raised the banners. It now sends a letter to every lord named (the same words, each in his own temper); "to arms" and "call the banners" are still a call to arms.

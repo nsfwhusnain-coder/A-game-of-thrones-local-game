@@ -248,11 +248,11 @@ export function orderEvents(state, orders, modelEvents) {
     }
     const place = r.lines.map((l) => l.match(/\b(?:for|to|at) ([A-Z][\w' ]+?)(?: \(|,|$| with| —|\.)/)?.[1]).map((x) => x && resolvePlaceId(x)).find(Boolean) || resolvePlaceId(lord?.loc) || state.houses[p].seat;
     const head = (r.kind === 'refused' ? `${lord?.name || 'The lord'}'s command comes to nothing` : r.lines[0] || `${lord?.name || 'The lord'} gives ${lord && isFemale(lord) ? 'her' : 'his'} command`).split(/(?<=[.!?])\s/)[0].replace(/\s*\([^)]*\)/g, '').replace(/[.!]+$/, '').slice(0, 90);
-    out.push({ day: 1, title: head.charAt(0).toUpperCase() + head.slice(1), text: r.kind === 'story' ? `${lord?.name || 'The lord'} commands: “${said}”` : `${lord?.name || 'The lord'} commanded: “${said.replace(/[.!]+$/, '')}.” ${r.lines.join('; ').replace(/[.!]+$/, '')}.`, where: place, importance: 3, type: r.kind === 'refused' ? 'court' : /march|rides|host|men/i.test(r.lines.join(' ')) ? 'war' : /raven|letter/i.test(r.lines.join(' ')) ? 'diplomacy' : 'court', houses: [p], mine: true, orderId: o.id });
+    out.push({ day: 1, ...(r.kind === 'refused' ? { refused: r.lines[0] || 'it could not be done' } : {}), title: head.charAt(0).toUpperCase() + head.slice(1), text: r.kind === 'story' ? `${lord?.name || 'The lord'} commands: “${said}”` : `${lord?.name || 'The lord'} commanded: “${said.replace(/[.!]+$/, '')}.” ${r.lines.join('; ').replace(/[.!]+$/, '')}.`, where: place, importance: 3, type: r.kind === 'refused' ? 'court' : /march|rides|host|men/i.test(r.lines.join(' ')) ? 'war' : /raven|letter/i.test(r.lines.join(' ')) ? 'diplomacy' : 'court', houses: [p], mine: true, orderId: o.id });
   });
   // facts are the only history: the lord's own word — a command the story told nothing of, one that came to nothing, a matter he answered — is one too, so its card has a fact behind it
   for (const c of out) {
-    const f = emit(state, 'order_given', { actors: lord ? [lord.id] : [], houses: [p], place: c.where || null, on: 1, importance: 3, cause: { type: 'order', ref: c.orderId }, text: `${c.title}. ${c.text}`.replace(/\s+/g, ' ').slice(0, 400) });
+    const f = emit(state, 'order_given', { actors: lord ? [lord.id] : [], houses: [p], place: c.where || null, on: 1, importance: 3, cause: { type: 'order', ref: c.orderId }, ...(c.refused ? { data: { refused: true, why: String(c.refused).slice(0, 160) } } : {}), text: `${c.title}. ${c.text}`.replace(/\s+/g, ' ').slice(0, 400) });
     c.fact = f.id; c.facts = [f.id];
   }
   return out;

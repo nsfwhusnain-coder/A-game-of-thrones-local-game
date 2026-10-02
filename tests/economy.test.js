@@ -85,7 +85,7 @@ test('the Iron Bank lends by what it thinks of you, and will have its due: a loa
 test('Tywin calls in the Crown\'s debt: three million within three moons, or the Crown defaults on House Lannister', () => {
   const s = createInitialState('agot_298', 'lannister', { seed: 3 });
   const r = perform(s, 'call_debt', { house: 'lannister', params: { debtor: 'baratheon', months: 3 } });
-  assert.ok(r.ok, r.refusal?.text); assert.match(r.receipt[0].text, /House Baratheon of King's Landing must repay 3,000,000 dragons within 3 moons/);
+  assert.ok(r.ok, r.refusal?.text); assert.match(r.receipt[0].text, /The Crown must repay 3,000,000 dragons within 3 moons/);
   assert.ok(s.facts.some((f) => f.kind === 'debt_called' && f.vis.scope === 'public'));
   const rel = s.relations[['baratheon', 'lannister'].sort().join('|')]?.v ?? 0;
   at(s, 91); lendersTick(s);

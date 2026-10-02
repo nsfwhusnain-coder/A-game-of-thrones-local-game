@@ -6,9 +6,10 @@ import { realmViewFor } from './view.js';
 import { cellText, provenance, warLine, strengthLine } from './words.js';
 import { friendsOf } from '../knowledge.js';
 import { houseLabel } from '../facts/label.js';
+import { ordinal as digits } from '../time.js';
 
 const ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
-const ordinal = (n) => ORD[n] || `${n}th`;
+const ordinal = (n) => ORD[n] || digits(n); // ("21st", "22nd", "23rd", "31st": the one function of the calendar, TX9)
 const T = (cell, field) => cellText(cell, field).text;
 
 /**

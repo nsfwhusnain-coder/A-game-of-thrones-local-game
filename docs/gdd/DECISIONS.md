@@ -1592,6 +1592,14 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **A boy leads no party (ST11).** `retinues.js` sends no lord under fifteen (the regent could go; none is sent).
 - **Not changed:** the Winterfell beat's gating on the men in the hall is D-109. The coherence check's class A is the guard for ST8; its other classes are untouched.
 
+## D-111 · 2026-10-02 · The words of the chronicle (bug hunt ST10, ST12, ST13, ST14, TX4, TX5, TX9)
+
+- **House names are mended at the door (TX4).** The engine writes `House ${house.name}` in about 270 sentences, and the data's names are its own ("The Free Folk", "Baratheon of King's Landing", "Khalasar of Drogo"). Rather than find each, `tidyHouseNames` (`engine/facts/tidy.js`) turns a sentence's "House <data name>" into the house's label (`houseLabel`: "the Crown", "the Free Folk", "House Woolfield") and is applied where a sentence is made: a fact's title and text (`emit`), a verb's receipt (`perform`) and a party's name (`army_create`). A sentence that names no such house is returned as it is; a name at the start of a sentence is capitalised.
+- **A starting minority is a condition, not news (ST10).** On turn 0 a house under a boy gets its regent without a `regency_begun` fact; every later regency is told as before.
+- **A voyage (ST12)** carries `data.sea` when the route has a sea leg (and the writer also reads the party's route): "sails for", "takes ship for". **A collapse (ST13)** is told where the man is (`collapseText`). **The Meanwhile (ST14)** has place-aware small news (`TALK_AT`: the Wall, the free cities, the North, a castle's steward).
+- **Slots for the second line (TX5).** `tax_changed` says what the rate does (or what a late or withheld due means), `office_granted` names the office as it is ("captain of the guard") and its hall, and a refused command is an `order_given` fact with `data.refused` and the steward's reason, told "X's command comes to nothing — … and nothing was done".
+- **TX9:** the realm briefing's ordinals past the tenth are the calendar's (`engine/time.js` `ordinal`).
+
 ## D-112 · 2026-10-02 · The order reader answers what it can, asks which when it must, and says what it left (bug hunt OR2–OR11)
 
 - **The fault.** The rule reader (`server/orders/parse.js`, shared by every model) turned some orders into the wrong thing (a council into a call to arms, "0 men" into a levy, "my son Bran" into all the sons) and dropped others without a word (a first name two people share, a clause it could not read, a letter to a man in the same hall).

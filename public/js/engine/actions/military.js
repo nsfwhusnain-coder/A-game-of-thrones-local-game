@@ -248,7 +248,7 @@ export const MILITARY = [
       a.march = { to, since: state.meta.turn }; planRoute(state, a, placePos(to, state.holdings), to, { toName: placeName(state, to) }); settle(state, a);
       // the one the order names leads it, and rides with it
       const cmd = i.params.commander && state.characters[i.params.commander]; if (cmd) { a.commander = cmd.id; joinParty(state, cmd, a); }
-      emit(state, 'set_out', { actors: [a.commander], houses: [a.owner, a.serving], pos: a.pos, data: { party: a.id, to, days: m?.days }, cause: i.source });
+      emit(state, 'set_out', { actors: [a.commander], houses: [a.owner, a.serving], pos: a.pos, data: { party: a.id, to, days: m?.days, ...(a.route?.sea ? { sea: true } : {}) }, cause: i.source });
       return { host: a.id, to, miles: m?.miles, days: m?.days };
     },
     receipt: (state, i, d) => { const a = state.parties[d.host]; return [{ ok: true, text: `${a.name} (${fmtN(a.men)} men${a.commander ? ` under ${state.characters[a.commander]?.name}` : ''}) marches for ${placeName(state, d.to)}${d.miles ? ` — ~${fmtN(d.miles)} miles, ~${d.days} days` : ''}.`, eta: d.days ?? null }]; },

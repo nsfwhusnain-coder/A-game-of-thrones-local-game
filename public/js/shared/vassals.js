@@ -9,6 +9,7 @@ import { pronouns, isFemale } from './people.js';
 import { needsShips } from './sea.js';
 import { random } from '../engine/rng.js';
 import { fact, shown } from '../engine/facts/log.js';
+import { tidyHouseNames } from '../engine/facts/tidy.js';
 import { answer, joined, gathering } from '../engine/military/muster.js';
 import { foldTrain } from '../engine/military/supply.js';
 
@@ -299,7 +300,8 @@ export function answerCall(state, how) {
     const heir = Object.values(state.characters).find((c) => c.alive && c.house === p && c.status === 'free' && c.age >= 16 && /heir|knight/.test((c.roles || []).join(' ')));
     applyChanges(state, [{ op: 'army_create', owner: p, name, at: me.seat, men, commander: heir?.id || me.lord, composition: `Levies of House ${me.name}${how === 'answer' && maa > 100 ? ', with knights and men-at-arms' : ''}`, status: 'marching to muster' },
       { op: 'figure', house: p, field: 'levies', delta: -Math.round(men * 0.85), source: 'Muster rolls' }]);
-    const a = Object.values(state.parties).filter((x) => x.owner === p && x.name === name).at(-1);
+    const told = tidyHouseNames(state, name); // (army_create tells a party's name as a herald would, so it is looked for as told)
+    const a = Object.values(state.parties).filter((x) => x.owner === p && x.name === told).at(-1);
     if (a && ob.muster && ob.muster !== me.seat) { a.march = { to: ob.muster, since: state.meta.turn }; settle(state, a); }
     ob.levies = 'answered';
     out.push(`${men.toLocaleString()} men march for ${state.holdings[ob.muster]?.name || 'the muster'}`);

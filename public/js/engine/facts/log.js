@@ -6,6 +6,7 @@
 // replay makes the same ones); the turn's record flushes them to the save's facts.jsonl (server/game.js).
 import { KINDS, templateText } from './kinds.js';
 import { dayNumber } from '../time.js';
+import { tidyHouseNames } from './tidy.js';
 
 const GREAT = new Set(['crown', 'paramount']);
 const today = (state) => dayNumber(state.meta.date);
@@ -61,8 +62,9 @@ export function emit(state, kind, f = {}) {
   fact.importance = f.importance != null ? clamp(Math.round(f.importance)) : weigh(state, K.importance, actors, houses);
   if (f.thread) fact.thread = f.thread;
   if (f.alongside) fact._alongside = f.alongside; // part of that fact's moment: it moves with it (redate), for this turn only
-  if (f.title) fact.title = f.title;
-  fact.text = f.text || templateText(fact, state) || f.title || kind.replace(/_/g, ' ');
+  if (f.title) fact.title = tidyHouseNames(state, f.title);
+  // (the engine writes "House ${house.name}" in hundreds of sentences; a house's name in the data is not always what a herald says, TX4)
+  fact.text = tidyHouseNames(state, f.text || templateText(fact, state) || f.title || kind.replace(/_/g, ' '));
   if (f.playback) fact.playback = f.playback;
   state.facts.push(fact);
   return fact;
