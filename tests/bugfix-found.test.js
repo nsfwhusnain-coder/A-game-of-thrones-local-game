@@ -15,7 +15,7 @@ const { dateOfDay, dayNumber } = await import('../public/js/engine/time.js');
 const { plural3 } = await import('../public/js/engine/facts/heads.js');
 const { scoreCard } = await import('../server/ai/validate/headline.js');
 const { fact } = await import('../public/js/engine/facts/log.js');
-const { bandNews } = await import('../public/js/shared/psyche.js');
+const { bandNews, strainShown } = await import('../public/js/shared/psyche.js');
 const { chokepointToll } = await import('../public/js/shared/chokepoints.js');
 const { fits } = await import('../public/js/shared/happenings.js');
 const { perform, check, intentFor } = await import('../public/js/engine/actions/registry.js');
@@ -142,7 +142,7 @@ test('N-011: a lord\'s strain is told as it worsens, once at each pitch, and say
   assert.equal(bandNews(c, 'weary', 'strained', 6), false, 'better: not news');
   assert.equal(bandNews(c, 'strained', 'weary', 6), false, 'back across the same line a turn later: the same story');
   assert.equal(bandNews(c, 'fraying', 'strained', 6), true, 'a worse pitch than the one told is news at once');
-  assert.equal(bandNews(c, 'strained', 'weary', 9), true, 'told again after a few turns');
+  assert.equal(bandNews(c, 'strained', 'weary', 9), false, 'not a few turns on'); assert.equal(bandNews(c, 'strained', 'weary', 17), true, 'told again after a year');
   const s = world('stark'); today(s);
   const seen = new Set();
   for (const band of ['weary', 'strained', 'fraying', 'breaking']) {
@@ -213,9 +213,15 @@ test('N-017: the same two hosts fighting again on the next day and the next are 
   assert.match(card.headline, /^The Lannisters? (?:host )?(?:destroys|hunts down)|cut down by/); assert.match(card.summary, /^Four battles in four days\. The Tullys lose many more men than the Lannisters\./);
   assert.ok(scoreCard({ headline: card.headline, summary: card.summary }, run, s).pass, card.headline);
   assert.ok(card.details.length >= 2 && card.details.length <= 4, `the first day and the last, not all four: ${JSON.stringify(card.details)}`);
+  // the days of a fight that reach a far house by raven, one a day, are still one fight
+  s.facts = []; for (const on of [1, 2, 3]) { const f = fight(on); f.heard = { via: 'raven', happened: f.day }; }
+  assert.equal(clusterFacts(s, s.facts).stories.length, 1, 'three ravens, one fight');
+  // two hosts of one house, fighting the same enemy's host on the same day, are one side: one running fight
+  s.facts = []; fight(1, {}, ['lions', 'trouts']); fight(1, {}, ['lions_b', 'trouts']); fight(2, {}, ['lions', 'trouts']);
+  assert.equal(clusterFacts(s, s.facts).stories.length, 1, 'the Lannister hosts and the Tully host are two sides');
   // two different pairs on the same days are not one fight
-  s.facts = []; fight(1); fight(2); fight(1, {}, ['wolves', 'ravens']); fight(2, {}, ['wolves', 'ravens']);
-  for (const st of clusterFacts(s, s.facts).stories) assert.doesNotMatch(cardOf(s, st).summary, /^\w+ battles in /, 'two pairs of hosts are not one running fight');
+  s.facts = []; fight(1); fight(2); fight(1, { winnerHouse: 'stark', loserHouse: 'frey' }, ['wolves', 'ravens']); fight(2, { winnerHouse: 'stark', loserHouse: 'frey' }, ['wolves', 'ravens']);
+  for (const st of clusterFacts(s, s.facts).stories) assert.doesNotMatch(cardOf(s, st).summary, /^\w+ battles in /, 'two pairs of houses are not one running fight');
   // and a draw of the same loss is "about as many", without "than"
   s.facts = []; fight(1, { lost: { lions: 500, trouts: 520 } });
   const one = cardOf(s, storyOf(s)); assert.match(one.summary, /lose about as many men(?! than)/, one.summary);
@@ -261,4 +267,87 @@ test('N-022: the turn\'s Meanwhile does not say the same clause in each of its w
   const weeks = ['Lords ride to feasts across the North; rumour runs at King\'s Landing.', 'Lords ride to hunts across the Reach; the households of Winterfell have small news; rumour runs at King\'s Landing.', 'Rumour runs at King\'s Landing; the households of Winterfell have small news.', 'Rumour runs at King\'s Landing.', ''];
   assert.equal(foldMeanwhile(weeks), 'Lords ride to feasts across the North; rumour runs at King\'s Landing. Lords ride to hunts across the Reach; the households of Winterfell have small news.');
   assert.equal(foldMeanwhile([]), ''); assert.equal(foldMeanwhile(['A lord rides out in Dorne.']), 'A lord rides out in Dorne.');
+});
+
+test('N-023: the steward\'s small events are told as what they are: a fire in the granary, a new vein in the mines, not "inspects its accounts"', async () => {
+  const { ledgerNote } = await import('../server/game.js');
+  const notes = { sickness: 'Hornwood: a sickness among the smallfolk.', outlaws: 'Woolfield Keep: outlaws on the roads.', blight: 'Wull Mountains: blight in the fields.', fire: 'Blackpool: a fire in the granary.', shoals: 'The Dreadfort: fat herring shoals.', fair: 'Deepdown: a great fair drew merchants.', vein: 'Winterfell: a new vein in the mines.', storm: 'Ironrath: a storm wrecked the fishing boats.', harvest: 'Winter Town: a bumper harvest.' };
+  for (const [kind, text] of Object.entries(notes)) {
+    assert.equal(ledgerNote(text), kind, text);
+    const s = world('stark'); today(s); s.facts = [];
+    emit(s, 'ledger', { houses: ['stark'], place: 'stark', importance: 1, data: { note: kind }, text });
+    const card = cardOf(s, { facts: [s.facts[0]] });
+    assert.doesNotMatch(card.headline, /inspects its accounts/, kind); assert.ok(card.summary.length > 10, `${kind}: a line of its own`);
+    assert.ok(scoreCard({ headline: card.headline, summary: card.summary }, { facts: [s.facts[0]], actors: [], houses: ['stark'], place: 'stark', days: [1, 1], importance: 1 }, s).pass, `${kind}: ${card.headline}`);
+  }
+});
+
+test('N-024: the player is told at once of the weariness of his own, and of a lord he merely knows only when it is past weariness', () => {
+  const s = world('stark'); const ned = s.characters.eddard_stark; const robb = s.characters.robb_stark; const tywin = s.characters.tywin_lannister;
+  assert.equal(strainShown(s, ned, 'weary'), true, 'his own lord'); assert.equal(strainShown(s, robb, 'weary'), true, 'his own house');
+  assert.equal(strainShown(s, tywin, 'weary'), false, 'a stranger who sleeps badly is no news');
+  for (const band of ['weary', 'strained', 'fraying', 'breaking']) assert.equal(typeof strainShown(s, tywin, band), 'boolean');
+});
+
+test('N-025: a man who goes to another party leaves the command of the one he left', () => {
+  const s = world('lannister');
+  applyChanges(s, [{ op: 'army_create', id: 'company_a', owner: 'stark', name: 'Company A', at: 'stark', men: 50, commander: 'rodrik_cassel' }, { op: 'army_create', id: 'host_b', owner: 'stark', name: 'Host B', at: 'stark', men: 900, commander: null }]);
+  const rodrik = s.characters.rodrik_cassel;
+  assert.equal(partyOf(s, rodrik)?.id, 'company_a'); assert.equal(s.parties.company_a.commander, 'rodrik_cassel');
+  setLoc(s, rodrik, 'party:host_b');
+  assert.equal(s.parties.company_a.commander, null, 'the company he left has no commander who is elsewhere');
+  setLoc(s, rodrik, 'stark'); // to a hall, from a host he does not command: nothing to clear
+  assert.equal(partyOf(s, rodrik), null);
+});
+
+test('N-026: a host or fleet that sets out has its commander aboard; one who is held, or nowhere near, leads it no more', async () => {
+  const { boardCommanders } = await import('../public/js/engine/parties.js');
+  const s = world('lannister'); const seat = s.holdings.greyjoy;
+  applyChanges(s, [{ op: 'army_create', id: 'sea_wolves', owner: 'greyjoy', name: 'Sea Wolves', at: 'greyjoy', men: 600, commander: 'victarion_greyjoy', kind: 'fleet' }]);
+  const victarion = s.characters.victarion_greyjoy; setLoc(s, victarion, 'greyjoy'); // the fleet is in harbour, its captain in the hall
+  boardCommanders(s); assert.equal(partyOf(s, victarion), null, 'a fleet in harbour is not sailing: he stays in his hall');
+  const fleet = s.parties.sea_wolves; fleet.at = null; fleet.pos = [seat.pos[0] + 3, seat.pos[1]]; fleet.march = { to: 'flint_finger', since: 1 };
+  boardCommanders(s); assert.equal(partyOf(s, victarion)?.id, 'sea_wolves', 'it sailed with him');
+  // a commander far away, or a prisoner, leads it no more
+  const host = (id, who) => { applyChanges(s, [{ op: 'army_create', id, owner: 'stark', name: id, at: 'stark', men: 100, commander: who }]); const p = s.parties[id]; setLoc(s, s.characters[who], s.characters[who].loc && !String(s.characters[who].loc).startsWith('party:') ? s.characters[who].loc : 'stark'); p.commander = who; return p; };
+  const far = host('far_host', 'robb_stark'); setLoc(s, s.characters.robb_stark, 'tyrell'); far.at = null; far.pos = [...s.holdings.stark.pos]; far.march = { to: 'moat_cailin', since: 1 };
+  boardCommanders(s); assert.equal(far.commander, null, 'Robb is at Highgarden, and Winterfell\'s host marches without his name');
+});
+
+test('N-027: the realm\'s ambient feast between two lords is not told of a host who is on the road with his muster', async () => {
+  const { worldTick } = await import('../public/js/shared/plots.js');
+  const feasts = (s, rounds) => { let n = 0; for (let i = 0; i < rounds; i++) n += withRng(s, () => worldTick(s, 30)).events.filter((e) => /feasts .* for a fortnight/.test(`${e.text || ''} ${e.summary || ''}`)).length; return n; };
+  const home = world('stark', 11); assert.ok(feasts(home, 60) >= 1, 'with the lords in their halls the realm feasts');
+  const away = world('stark', 11); for (const h of Object.values(away.houses)) if (h.lord && away.characters[h.lord]) away.characters[h.lord].loc = 'party:nowhere';
+  assert.equal(feasts(away, 60), 0, 'with every lord on the road there is no one to feast anyone');
+});
+
+test('N-028: a death is a blow once: a widower is not struck by it every week of three moons', async () => {
+  const { psycheTick } = await import('../public/js/shared/psyche.js');
+  const s = world('stark', 3); s.meta.turn = 5;
+  const ned = s.characters.eddard_stark; const cat = s.characters.catelyn_stark; ned.status = 'free'; cat.alive = false; cat.status = 'dead'; cat.diedTurn = 5; cat.diedDay = dayNumber(s.meta.date);
+  // a quiet world: no war, no siege, nothing but the grief
+  s.wars = []; ned.stress = 0; ned.traits = 'calm';
+  const before = ned.stress;
+  for (let week = 0; week < 8; week++) withRng(s, () => psycheTick(s, 7));
+  assert.ok(ned.stress > 3, `he grieves (${ned.stress})`); assert.ok(ned.stress <= 45, `once, not every week of eight: ${ned.stress} (it was a hundred)`);
+  assert.deepEqual(ned.grieved, ['catelyn_stark']);
+  assert.ok(before === 0);
+});
+
+test('N-029: a child born in play is told with whose child it is, not as a bare name', () => {
+  const s = world('stark'); today(s); s.facts = [];
+  emit(s, 'birth', { actors: ['bran_stark', 'catelyn_stark', 'eddard_stark'], houses: ['stark'], place: 'stark', importance: 2, data: { mother: 'catelyn_stark', father: 'eddard_stark', sex: 'f' }, text: 'x' });
+  const card = cardOf(s, storyOf(s));
+  assert.equal(card.summary, 'A daughter of Eddard Stark and Catelyn Stark.', card.summary);
+  s.facts = []; emit(s, 'birth', { actors: ['bran_stark', 'catelyn_stark'], houses: ['stark'], place: 'stark', importance: 2, data: { mother: 'catelyn_stark', father: 'robert_baratheon', posthumous: true, sex: 'm' }, text: 'x' });
+  assert.equal(cardOf(s, storyOf(s)).summary, 'A son of the late King Robert and Catelyn Stark.');
+});
+
+test('N-030: a castle that has fallen is not also "shut in"', () => {
+  const s = world('stark'); today(s); const hold = Object.values(s.holdings).find((h) => h.owner === 'tully' && h.name);
+  emit(s, 'siege_begun', { actors: [], houses: ['lannister'], place: hold.id, importance: 3, data: { by: 'lannister', holding: hold.id }, text: 'x' });
+  emit(s, 'holding_fell', { actors: [], houses: ['lannister'], place: hold.id, importance: 4, data: { by: 'lannister', holding: hold.id }, text: 'x' });
+  const st = clusterFacts(s, s.facts).stories.find((x) => x.facts.length === 2) || { facts: s.facts };
+  const card = cardOf(s, st); assert.doesNotMatch(card.summary, /shut in/, `${card.headline} / ${card.summary}`);
 });

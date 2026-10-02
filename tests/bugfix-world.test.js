@@ -72,7 +72,7 @@ test('WD5: the same steward\'s note is told once a moon, and a card says what th
   setDay(s, 107600 + 28); assert.equal(week().length, 2, 'told again after a moon');
   setDay(s, 107600 + 35); assert.equal(freshNotes(s, [note('Hunger stalks the lands of House Karstark. The granaries are nearly empty.'), { house: 'umber', text: 'Hunger stalks the lands of House Umber. The granaries are nearly empty.' }]).length, 1, 'another house\'s note is its own');
   assert.equal(freshNotes(s, [{ house: 'karstark', text: 'The steward of House Karstark bought 9.9 moons of grain for 1,000 dragons.' }]).length, 0, 'the same note with other figures is the same note');
-  assert.deepEqual(['Hunger stalks the lands of House Karstark.', 'Famine in the lands of House Karstark: the old die first.', 'The steward of House Karstark bought 2.5 moons of grain for 9,000 dragons.', 'House Karstark withholds its dues from House Stark.', 'Rookery is complete.', 'Winterfell: a bumper harvest.'].map(ledgerNote), ['hunger', 'famine', 'grain', 'dues', 'works', null]);
+  assert.deepEqual(['Hunger stalks the lands of House Karstark.', 'Famine in the lands of House Karstark: the old die first.', 'The steward of House Karstark bought 2.5 moons of grain for 9,000 dragons.', 'House Karstark withholds its dues from House Stark.', 'Rookery is complete.', 'Winterfell: a bumper harvest.', 'Winterfell: a quiet week.'].map(ledgerNote), ['hunger', 'famine', 'grain', 'dues', 'works', 'harvest', null]);
   for (const [note2, re] of [['hunger', /goes hungry/], ['famine', /faces famine/], ['grain', /buys grain/], ['dues', /withholds its dues/], ['works', /finishes its works/]]) {
     const t = world('stark', 5); setDay(t, 107700); t.meta.clock = { turn: 1, from: 107700, to: 107700 };
     emit(t, 'ledger', { houses: ['stark'], place: 'stark', importance: 3, data: { note: note2 }, text: 'x' });
@@ -107,4 +107,14 @@ test('N-015: word of a host a few moons old is noted with its own age, not as th
   k.parties.host_b = { owner: 'brax', men: 3000, turn: 9 }; // a fuller, fresh word
   observe(s, 'tyrell');
   assert.equal(age(), 0, 'fresh word is this week\'s');
+});
+
+test('N-032: the old word of a host that has joined one the viewer sees is not added to what it sees', () => {
+  const s = world('tyrell', 23); const k = knowledgeOf(s, 'tyrell'); s.meta.turn = 9;
+  applyChanges(s, [{ op: 'army_create', id: 'banners_brax', owner: 'brax', name: 'Banners', at: 'brax', men: 3000, commander: null }]);
+  const seen = s.parties.banners_brax; seen.pos = [...s.holdings.tyrell.pos]; // in plain sight of the viewer's own seat
+  k.parties.piece_of_it = { owner: 'brax', men: 2600, turn: 8 }; // heard of last moon, a host that has since joined the banners
+  observe(s, 'tyrell');
+  const note = (knowledgeOf(s, 'tyrell').realm?.brax?.obs || []).filter((o) => o.v.swords != null).at(-1);
+  assert.ok(note && note.v.swords < 4000, `what it sees, 3,000, not that and 2,600 again (${note?.v?.swords})`);
 });

@@ -113,7 +113,7 @@ The facts of a feast, a judgement and a decision were worded with the lord's own
 In the realm view a report of a vassal's host was noted afresh each week for four, whether or not the host was still there: Blackwood's 2,993 joined the Tully banners and the ledger went on saying "at least 2,600" for a moon against a truth of 1,432. Found by the realm soak (Tyrell, seed 23) once the game's path moved.
 **Where:** `engine/realm/estimate.js` `observe`; `bench/lib/realm-audit.js` (the "at least" bound did not count a house's men serving in its liege's host).
 **Repro:** `WC_PROVIDER=mock node scripts/realm-dump.js --soak --json --house tyrell --seed 23 --turns 24` with N-013 in.
-**FIXED** (`tests/bugfix-world.test.js`): word of a host stands only while it is still the house's; the audit counts a house's contingent in another's host as its own.
+**FIXED** (`tests/bugfix-world.test.js`): word of a host is noted with its own age (`news`); the audit holds an "at least" to the most the truth was since the word came (`peakSince`: a host broken up, merged or lost in a battle that turn), with room for a report's hundred-man floor.
 
 ### N-016 · S2 · The Father's feast at Oldtown is "Rumour spreads at the Hightower. It is only talk."
 The days of the realm's calendar (the turning of the year, the Maiden's Day, the harvest fires, the old gods' night, the small council's moon) were told as the generic rumour of their place, and the card's real name and words were thrown away. Found reading a mock game's cards by eye (Stark, moon 12: "Rumour spreads at King's Landing" for the Stranger's eve).
@@ -125,7 +125,7 @@ The days of the realm's calendar (the turning of the year, the Maiden's Day, the
 In a Stark game the Lannister and Tully hosts met on the same ground seven days running (and in the same game four times more, in runs of four, four and five): a routed host stays in contact and is fought again at every day's end, until it is destroyed. Each day was a card ("The Lannister host beats the Tully host", "defeats", "crushes", "breaks"…), each with the same summary.
 **Where:** `engine/facts/cluster.js`, `engine/facts/headline.js` (`rollOf`), `engine/facts/heads.js` (`RUN`). The engine itself is untouched: it is a pursuit, and Q9's battles are as they were.
 **Repro:** `node scripts/bughunt/probe-simul.mjs stark 101 14`, then read turns 13 and 14 (or any game of a long war).
-**FIXED** (`tests/bugfix-found.test.js`): battles of the same two hosts within two days of each other are one story, told as one card ("The Lannister host destroys the Tully host near Wayfarer's Rest. Seven battles in seven days. …"), with its first day's losses and its last.
+**FIXED** (`tests/bugfix-found.test.js`): battles of the same two houses (two hosts of one house are one side) within two days of each other are one story, told as one card ("The Lannister host destroys the Tully host near Wayfarer's Rest. Seven battles in seven days. …"), with its first day's losses and its last.
 
 ### N-018 · S3 · "The Tullys lose about as many men than the Lannisters"
 The battle summary's comparison of losses had no form for equal losses that read.
@@ -153,6 +153,57 @@ A turn's Meanwhile is a sentence for each week, and the same small clause ("rumo
 **Where:** `server/game.js` (the weeks joined as they came), `engine/facts/headline.js`.
 **FIXED** (`tests/bugfix-found.test.js`): `foldMeanwhile` leaves out a clause an earlier week of the turn has said.
 
+### N-023 · S3 · Eighteen cards in fourteen moons say "House Forrester inspects its accounts" and nothing else
+The steward's book keeps small events of a house's lands ("Blackpool: a fire in the granary", "Winterfell: a new vein in the mines", "Deepdown: a great fair drew merchants", blight, a sickness, outlaws, a storm, shoals, a bumper harvest). Only the notes about hunger, grain, dues and works were known to the writer; the rest were its generic "inspects its accounts", with no line, and the event was lost.
+**Where:** `server/game.js` (`ledgerNote`), `engine/facts/heads.js` (`HEAD.ledger`, `SUM.ledger`).
+**FIXED** (`tests/bugfix-found.test.js`): nine more kinds of note, each told by its own head and line.
+
+### N-024 · S3 · "X has not been sleeping" fifty times in fourteen moons
+With N-011 each band of a lord's strain has its own card; the weakest (weary: "looks worn", "has not been sleeping") was told of every lord the player knew of, 51 cards in a game.
+**Where:** `shared/psyche.js` (`strainShown`).
+**FIXED** (`tests/bugfix-found.test.js`): weariness is news of the player's own house and lord only; of others known to him, from strain upwards.
+
+### N-025 · S2 · Rodrik Cassel's company marches under his name while he is in the muster's host
+When Stark answered a call, its leader (Rodrik, the regent) was put in the new host while the company he commanded (twenty men on the road to Deddings) kept his name as its commander and went on without him. `probe-simul`: `commander-not-with-host`.
+**Where:** `engine/parties.js` `setLoc` (any man who goes to another party: the muster's lead, a rider's own journey, a host that joins another).
+**FIXED** (`tests/bugfix-found.test.js`): the party he left is left without a commander who is elsewhere.
+
+### N-026 · S2 · The Iron Fleet reaves the Flint coast, and Victarion sits at Pyke
+In several games the Iron Fleet raided Flint's Finger again and again with its commander in the hall at Pyke; the Baratheon host marched with Renly at Highgarden. Nothing took the captain aboard when his fleet or host set out (`probe-simul`: `commander-not-with-host`, in four games of six).
+**Where:** `engine/parties.js` (`boardCommanders`), `server/turn/day.js` (before the march of the day); `setLoc`.
+**FIXED** (`tests/bugfix-found.test.js`): a host or fleet that has set out has its commander aboard if he is free and within twenty map units of it; if he is held or far away, he leads it no more (it goes on under no name that is elsewhere).
+
+### N-027 · S2 · Walder Frey "feasts Jonos Bracken for a fortnight" at the Twins, with his muster on the road to Riverrun
+The realm's ambient news (`shared/plots.js` `churn`: "a feast and a match") told two lords at table without asking whether the host was in his hall: Walder Frey had set out three weeks before with his levies (and again a fortnight after) and Yohn Royce had ridden out the week before. (Found by `probe-simul`: `acts-on-the-road`. The same class as the King "holding a tourney at King's Landing" on his progress, which the verbs already refuse.)
+**Where:** `shared/plots.js` `churn`.
+**FIXED** (`tests/bugfix-found.test.js`): the feast's host is in his hall and his guest is not on the road with a host.
+
+### N-028 · S2 · Everyone is at a hundred: every death struck a mind every week for three moons
+A 42-turn Stark game had 144 of 1,003 living people at the top of the strain scale (children among them), 421 cards of lords "close to breaking" and 366 collapses. The grief terms of `stressors` (a wife dead 28, a child buried 34, a parent 16, another of the house 5) were applied at each weekly tick for the three turns after a death, about thirteen times over, and a house after a battle went to a hundred together. A death is now a blow once (`grieved` on the person), and the same pitch of strain is told again only after a year (`TOLD_AGAIN_TURNS` 12). The war's own load on a lord (7 a moon for each war against a relief of about 7 at home) still carries a lord at war to a hundred in a year or two; that is a calibration question for the owner (below), not changed here.
+**Where:** `shared/psyche.js` (`griefOf`, `stressors`, `psycheTick`).
+**Repro:** `node ~/…/keep-run.mjs stark 108 42 <dir>`, then count `behaviour` and `illness` facts; or read the stress of the living after twenty moons of any war.
+**FIXED** (`tests/bugfix-found.test.js`): after 30 turns, 77 of 989 at the top (it was 144 of 1,003 by turn 42), 174 behaviour cards (it was 421 in 42) and 144 collapses (366).
+
+### N-029 · S4 · "House Ruthermont welcomes Elbert Ruthermont", and nothing else
+A child born in play was a headline and an empty line: whose child, and a son or a daughter, was in the fact and not on the card.
+**Where:** `engine/facts/heads.js` (`SUM.birth`).
+**FIXED** (`tests/bugfix-found.test.js`): "A daughter of Eddard Stark and Catelyn Stark." ("the late" for a child born after its father's death).
+
+### N-030 · S4 · "Wayfarer's Rest falls to the Lannisters. … Wayfarer's Rest is shut in."
+When a siege was begun and ended in one story, the card for the fall added that the castle was shut in.
+**Where:** `engine/facts/heads.js` (`ALSO.siege_begun`).
+**FIXED** (`tests/bugfix-found.test.js`).
+
+### N-031 · S2 · The running fight, heard by raven, was seven cards again
+N-017's merge held only for news seen; at a far seat (the Chronicle of a Stark game) each day's battle at Nayland Hold arrived by its own raven with its own day, and "never one story" (the clusterer's rule for news of different arrival) kept them apart: four to six cards a moon with the same sentence. A battle's raven is one arrival for the clusterer, whatever the day it tells of.
+**Where:** `engine/facts/cluster.js` (`arrivalOf`), and `fightKey` (two houses, not two hosts: two Lannister hosts at one Tully host on the same day are one fight).
+**FIXED** (`tests/bugfix-found.test.js`).
+
+### N-032 · S3 · "At least 8,200" of a house of 3,400: the pieces of a host counted with the host
+The realm view added to what the viewer sees of a house's hosts the old word of hosts of that house that had since joined one it now sees: the same men twice. (The realm soak, Stark seed 7, as the game's path moved; with the audit's own bound, which held an old report to the truth of now and not to what it was when the word came.)
+**Where:** `engine/realm/estimate.js` `observe`.
+**FIXED** (`tests/bugfix-world.test.js`): word of a host that no longer exists is not added when a host of the house is in sight.
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
@@ -164,5 +215,8 @@ A turn's Meanwhile is a sentence for each week, and the same small clause ("rumo
 - `probe-simul`'s "acts-on-the-road" for a vassal's lord whose host was beaten and joined another host: the road was ended by the join, which the probe did not read until it learned `host_joined`.
 
 ## Seen, and left alone
+
+- `probe-simul`'s "acts-on-the-road" for a bride whose company halts at a hall (Jeyne Westerling at Crane): the company is camped there, so she is in the hall, and the road fact has no arrival to read. A wedding in the hall of the one who stays is the rule.
+- S4: the Targaryen start has two canon-data oddities `probe`s print: Obara Sand born twelve years after her father Oberyn, and Cassana Estermont too young to be Robert's mother by the start's own birth years. Both are the data's, from the books' loose ages; left.
 
 - S4. A neighbour riding to pay his respects at the player's seat is a `[war]` card (a set out is a march in the clusterer's archetypes, and the small rides of other houses are typed `court` only when they are background). Retyping them means changing the roll-up of rides ("Six lords ride for Winterfell"); left for the owner to judge.

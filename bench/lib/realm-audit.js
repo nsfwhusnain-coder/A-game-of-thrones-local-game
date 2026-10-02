@@ -17,6 +17,8 @@ import { figuresOf } from '../../public/js/engine/realm/figures.js';
 import { realmBrief, realmSummary } from '../../public/js/engine/realm/brief.js';
 import { cellText } from '../../public/js/engine/realm/words.js';
 import { forces } from '../../public/js/engine/parties.js';
+import { seriesOf } from '../../public/js/engine/realm/stats.js';
+import { dayNumber } from '../../public/js/engine/time.js';
 import * as K from '../../public/js/engine/knowledge.js';
 
 export const LENSES = ['strength', 'economy', 'land'];
@@ -28,11 +30,15 @@ export const BAND_COVERAGE = 0.85;
  * A `≥` figure may overstate by this much of the truth. A report is up to a quarter off (knowledge.js), a host that has since bled in a battle is
  * smaller, and a report of a host that merged into another lingers until someone sees the empty field (up to six turns), so two reports can stand for
  * one body of men: the soak measured +52 % in a moon of Frey's muster; and a host may be broken up the very turn it is reported (a Smallwood host of 430 went home, "at least 400" of a house
- * with 200). The bound catches a broken sum (a figure past double the truth), not that staleness (which the age shows).
+ * with 200). It is held to the most the truth was since the word came (`peakSince`: a host broken up or lost in a battle that turn); the bound catches a broken sum, not that staleness (which the age shows).
  */
-export const LEAST_OVER = 1;
-/** Men of a house now serving in another house's host (a vassal's host joined its liege's): `host.contingents` keeps them by the house they came from. */
-const lentOf = (state, house) => Object.values(state.parties || {}).reduce((n, a) => n + (a.owner !== house ? a.contingents?.[house] || 0 : 0), 0);
+export const LEAST_OVER = 0.6;
+export const LEAST_SLACK = 100; // a report of a host is never under a hundred men (knowledge.js), so a house of fifty is "at least 160" of a host it has lost
+/** The most a figure of a house was at a sample since a cell of `age` turns was noted (the truth series, a sample a week), and now. */
+function peakSince(state, house, field, now, age) {
+  const since = dayNumber(state.meta.date) - 30 * ((age ?? 0) + 1);
+  return Math.max(now, ...seriesOf(state, house, field).filter(([day]) => day >= since).map(([, v]) => v));
+}
 /** A figure this many turns old or less is fresh. */
 export const FRESH = 1;
 const MARKS = { self: [''], sworn: ['~', '≈'], seen: ['~', '≈', '≥'], reported: ['~', '≈', '≥'], rumour: ['~', '≈'], learned: ['~'] };
@@ -76,8 +82,8 @@ export function auditView(state, viewer, { lenses = LENSES, scope = 'all', viewO
         if (cell.mark === '~' && BOUNDS[cell.via] && !(t === 0 && cell.via === 'rumour')) {
           if (Math.abs(cell.v - t) > room(t, BOUNDS[cell.via], field)) bad(who, field, cell.via, `${cell.via} ${field} ${cell.v} against the truth ${t} (${(rel * 100).toFixed(1)} %, the bound is ±${BOUNDS[cell.via] * 100} %)`);
         }
-        // (a host reported may since have joined its liege's: those men are the house's still, and stand in the liege's host as its contingent)
-        if (cell.mark === '≥' && cell.v > (t + (field === 'swords' ? lentOf(state, row.house) : 0)) * (1 + LEAST_OVER) + 50) bad(who, field, 'least', `"at least ${cell.v}" ${field} where the truth is ${t}`);
+        // (a host reported may have been broken, merged or lost to a battle in the turns since the word came: "at least" is held to the most the truth was in that time)
+        if (cell.mark === '≥' && cell.v > peakSince(state, row.house, field, t, cell.age) * (1 + LEAST_OVER) + LEAST_SLACK) bad(who, field, 'least', `"at least ${cell.v}" ${field} where the truth is ${t}`);
       }
     }
   }

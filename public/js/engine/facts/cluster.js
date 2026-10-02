@@ -25,7 +25,7 @@
 // first, the weightier first on a day, facts in a story by day then id, ids S1…Sk in that order. The list's own order never
 // matters: the same facts in any order make the same stories.
 import { KINDS } from './kinds.js';
-import { ARCHETYPE, LEDE } from './heads.js';
+import { ARCHETYPE, LEDE, fightKey } from './heads.js';
 import { MILES_PER_UNIT } from '../../../data/geography.js';
 
 const CAUSED = new Set(['order', 'intent', 'beat']); // causes that bind (a rule, like "the muster", runs everywhere at once)
@@ -60,7 +60,7 @@ function byId(a, b) {
 const byDay = (a, b) => a.day - b.day || byId(a, b);
 const archetypeOf = (f) => ARCHETYPE[f.kind] || 'other';
 /** How a fact reached the chronicle: seen, or heard by a word on a day. Facts of different arrival are never one story. */
-const arrivalOf = (f) => (f.heard ? `${f.heard.via}|${f.heard.happened}` : 'seen');
+const arrivalOf = (f) => (f.heard ? `${f.heard.via}|${f.kind === 'battle' || f.kind === 'rout' ? '' : f.heard.happened}` : 'seen'); // (the days of a running fight reach a far house one raven at a time: they are still one fight)
 /** The weightiest fact, then the kind that reads as the news, then the earliest: the lead of a story (C4). */
 const byLead = (a, b) => b.importance - a.importance || (LEDE[b.kind] ?? 0) - (LEDE[a.kind] ?? 0) || byId(a, b);
 const leadOf = (facts) => [...facts].sort(byLead)[0];
@@ -123,7 +123,7 @@ export function clusterFacts(state, facts, { together = [] } = {}) {
   const lastFight = new Map();
   news.forEach((f, i) => {
     if (f.kind !== 'battle' || !f.data?.attacker || !f.data?.defender) return;
-    const pair = [f.data.attacker, f.data.defender].sort().join('|'); const prev = lastFight.get(pair);
+    const pair = fightKey(f); const prev = lastFight.get(pair);
     const run = prev && f.day - prev.day <= RUN_GAP ? prev.run : `${pair}@${f.day}`;
     lastFight.set(pair, { day: f.day, run }); link(`b:${run}`, i);
   });

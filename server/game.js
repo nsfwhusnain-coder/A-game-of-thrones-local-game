@@ -816,8 +816,12 @@ export function freshNotes(state, notes) {
 /** What a steward's note is about, for the card that tells it (the writer says it in its own words: engine/facts/heads.js ledger). */
 export function ledgerNote(text) {
   const t = String(text || '');
-  return /^Hunger stalks/.test(t) ? 'hunger' : /^Famine in the lands/.test(t) ? 'famine' : /bought [\d.]+ moons of grain/.test(t) ? 'grain' : /withholds its dues/.test(t) ? 'dues' : /is complete\.$/.test(t) ? 'works' : null;
+  const found = /^Hunger stalks/.test(t) ? 'hunger' : /^Famine in the lands/.test(t) ? 'famine' : /bought [\d.]+ moons of grain/.test(t) ? 'grain' : /withholds its dues/.test(t) ? 'dues' : /is complete\.$/.test(t) ? 'works' : null;
+  return found || EVENT_NOTES.find(([re]) => re.test(t))?.[1] || null;
 }
+/** The small events of a house's lands the steward's book keeps (a fire in the granary, a new vein in the mines): told as what they are, not as "inspects its accounts". */
+const EVENT_NOTES = [[/sickness among the smallfolk/i, 'sickness'], [/outlaws on the roads/i, 'outlaws'], [/blight in the fields/i, 'blight'], [/fire in the granary/i, 'fire'], [/shoals/i, 'shoals'],
+  [/great fair|rich market season/i, 'fair'], [/new vein/i, 'vein'], [/storm wrecked/i, 'storm'], [/bumper harvest/i, 'harvest']];
 
 // Sworn lords answering the call on the same day are one piece of news, not a flood of cards
 function foldAnswers(evs) {
