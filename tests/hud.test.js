@@ -280,13 +280,15 @@ test('on a real three-turn game the strip shows only what the chronicle told, th
   const { id } = game.newGame('agot_298', 'stark', { seed: 298 });
   for (let i = 0; i < 3; i++) await game.advance(id, { span: '10d' });
   const s = game.loadState(id);
-  const told = s.history.flatMap((t) => (t.events || []).filter((e) => (e.importance || 0) >= 3).map((e) => e.headline || e.title));
+  // (news is what the strip counts as news: a tier of news or above, or importance three for a card of the old shape; a minor card is not)
+  const news = (e) => !e.bg && (e.tier ? ['news', 'major', 'great'].includes(e.tier) : (e.importance || 0) >= 3);
+  const told = s.history.flatMap((t) => (t.events || []).filter(news).map((e) => e.headline || e.title));
   const out = hud('stripOf')(s.history);
   assert.equal(out.length, Math.min(3, told.length), `three, or as many as there are (${told.length} told)`);
   for (const x of out) assert.ok(told.includes(x.text), `"${x.text}" is a headline or title from the record`);
   if (out.length) {
-    const last = s.history.filter((t) => (t.events || []).some((e) => (e.importance || 0) >= 3)).at(-1);
-    const lastTexts = last.events.filter((e) => (e.importance || 0) >= 3).map((e) => e.headline || e.title);
+    const last = s.history.filter((t) => (t.events || []).some(news)).at(-1);
+    const lastTexts = last.events.filter(news).map((e) => e.headline || e.title);
     assert.ok(lastTexts.includes(out[0].text), 'the first headline is from the latest turn that had one');
   }
 });

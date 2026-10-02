@@ -80,9 +80,9 @@ export function retinueTick(state, days, r = random) {
 function sendOut(state, r) {
   const p = state.meta.player;
   const home = (h) => h.seat && state.holdings[h.seat];
-  // the people a near beat of the story needs stay where they are (engine/world/beats.js; B-10)
+  // a child lord (a boy of six at the Eyrie) does not ride out with his household knights to hunt in the country (ST11); the people a near beat of the story needs stay where they are (engine/world/beats.js; B-10)
   const locked = canonLocked(state);
-  const lords = Object.values(state.houses).filter((h) => h.id !== p && h.lord && home(h) && SIZE[h.rank] && state.characters[h.lord]?.alive && state.characters[h.lord].status === 'free' && state.characters[h.lord].loc === h.seat && home(h).status !== 'besieged' && !dutyBound(state, h) && !locked.has(h.lord) && canAttend(state, state.characters[h.lord], 'attending'));
+  const lords = Object.values(state.houses).filter((h) => h.id !== p && h.lord && home(h) && SIZE[h.rank] && state.characters[h.lord]?.alive && state.characters[h.lord].status === 'free' && (state.characters[h.lord].age ?? 30) >= 15 && state.characters[h.lord].loc === h.seat && home(h).status !== 'besieged' && !dutyBound(state, h) && !locked.has(h.lord) && canAttend(state, state.characters[h.lord], 'attending'));
   if (!lords.length) return null;
   // the player's own region is where the eye rests: its lords go out more often
   const mine = state.holdings[state.houses[p]?.seat]?.region;
