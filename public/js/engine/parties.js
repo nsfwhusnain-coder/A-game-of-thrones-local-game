@@ -14,6 +14,8 @@ export const KINDS = ['host', 'fleet', 'garrison', 'retinue', 'progress', 'envoy
 export const STATES = ['forming', 'mustering', 'marching', 'camped', 'besieging', 'engaged', 'routed', 'embarked', 'staying', 'returning', 'disbanded'];
 // the kinds that carry no fighting men of their own: a rider is a person on a horse, not a host
 export const TRAVELLERS = new Set(['rider', 'envoy']);
+/** The kinds of party that never give battle (battle.js: they withdraw) or sit in a castle: no lord's levy joins them as "the great host", and no call gathers to them. */
+export const NOT_A_FIELD_HOST = new Set(['fleet', 'garrison', 'progress', 'retinue', 'caravan', 'envoy', 'rider']);
 
 /** `party:<id>` for a party id. */
 export const ref = (id) => PREFIX + id;
@@ -67,7 +69,8 @@ const BOARD_RANGE = 20; // map units (~36 miles): how near a commander stands to
 export function boardCommanders(state) {
   for (const p of forces(state)) {
     if (!p.commander || p.at != null || !p.pos) continue;
-    const c = state.characters?.[p.commander]; if (!c || !c.alive || partyOf(state, c)) continue; // (aboard this host or another: setLoc has dealt with that)
+    const c = state.characters?.[p.commander]; if (!c || !c.alive) continue;
+    const aboard = partyOf(state, c); if (aboard) { if (aboard !== p) p.commander = null; continue; } // (riding with another party, he does not command this one as it sets out: the Iron Fleet reaved the coast with Victarion at the head of his own riders)
     const held = /imprisoned|captive|hostage/.test(c.status || ''); const home = state.holdings?.[c.loc]?.pos;
     if (home && !held && Math.hypot(home[0] - p.pos[0], home[1] - p.pos[1]) <= BOARD_RANGE) joinParty(state, c, p);
     else if (held || home) p.commander = null;
