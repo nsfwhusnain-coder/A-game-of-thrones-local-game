@@ -166,7 +166,9 @@ function viewOf(state, story) {
   const said = []; const strs = (v) => { if (typeof v === 'string') said.push(v); else if (Array.isArray(v)) v.forEach(strs); else if (v && typeof v === 'object') Object.values(v).forEach(strs); };
   for (const f of story.facts || []) strs([f.title, f.text, f.data]);
   const admit = (e) => { for (const id of e.ids) (e.kind === 'person' ? people : e.kind === 'place' ? places : e.kind === 'party' ? parties : houses).add(id); };
-  for (const t of said) for (const x of sentencesIn(t)) entitiesIn(state, x).forEach(admit);
+  // (an office the story's own words name -- "the Hand's chair", "the King wants a tourney" -- is the story's: a great matter tells itself in them, ST1)
+  const officesSaid = new Set();
+  for (const t of said) for (const x of sentencesIn(t)) for (const e of entitiesIn(state, x)) { admit(e); const o = e.kind === 'office' ? e.ids[0] : e.kind === 'person' ? officeOf(e.text) : null; if (o) officesSaid.add(o); }
   for (const m of story.must || []) {
     entitiesIn(state, m, { start: true }).forEach(admit);
     const h = keys.get(slug(m).replace(/^the_/, '')); if (h) h.ids.forEach((id) => houses.add(id));
@@ -175,15 +177,15 @@ function viewOf(state, story) {
   // the numbers the writer's own roughly() makes of the story's ("nearly two thousand" for 1,796): a rounding of the story's, not an invention
   const rough = new Set(W.numbers.flatMap((x) => numbersIn(roughly(x))));
   const offices = Object.fromEntries(Object.entries(OFFICES).map(([k, o]) => [k, new Set([...people].filter((id) => o.title.test(state.characters[id]?.title || '')))]));
-  return { W, people, places, parties, houses, rough, offices };
+  return { W, people, places, parties, houses, rough, offices, officesSaid };
 }
 
 // whether the story holds what an entity names: its person (or, for "the Queen", whoever of its people holds the office), its
 // place, house or party; a free city is house and holding at once ("Pentos", "Braavos"), so the story's house or place is either
 function holds(V, state, e) {
   const id = e.ids[0];
-  if (e.kind === 'office') return V.offices[id].size > 0;
-  if (e.kind === 'person') { const o = officeOf(e.text); return V.people.has(id) || !!(o && V.offices[o].size); }
+  if (e.kind === 'office') return V.offices[id].size > 0 || V.officesSaid.has(id);
+  if (e.kind === 'person') { const o = officeOf(e.text); return V.people.has(id) || !!(o && (V.offices[o].size || V.officesSaid.has(o))); }
   if (e.kind === 'party') return V.parties.has(id);
   const city = state.houses?.[id]?.rank === 'city_state' && !!state.holdings?.[id];
   return e.kind === 'place' ? V.places.has(id) || (city && V.houses.has(id)) : V.houses.has(id) || (city && V.places.has(id));

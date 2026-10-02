@@ -794,10 +794,10 @@ const HOOK = {
   red_priest: [['A red priest speaks at {P}'], 'He preaches of a war between light and dark, and the septons want him gone.'],
   silent_sisters: [['The silent sisters reach {P}'], 'They have come to take the dead of a fever house for burial.'],
   mill_dispute: [['{hs} quarrels over a mill near {P}'], 'Its men have come to blows.'],
-  boundary_stone: [['A boundary stone is moved near {P}'], 'It was done in the night, and a hundred acres changed hands by morning.'],
+  boundary_stone: [['A boundary stone is moved near {P}'], 'It was done in the night, and a whole field changed hands by morning.'],
   cattle_raid: [['Raiders steal cattle near {P}'], 'They came by night, and the tracks lead towards a rival.'],
   hostage_insult: [['A feast at {P} ends in drawn blades'], 'A son of a rival mocked the lord before the maester stepped in.'],
-  reconciliation_feast: [['{hs} feasts with an old rival at {P}'], 'Old debts are forgiven and a cask of Arbor gold is broached.'],
+  reconciliation_feast: [['{hs} feasts with an old rival at {P}'], 'Old debts are forgiven and the best wine of the cellar is broached.'],
   vassal_grievance: [['A sworn knight speaks out against {A}'], 'He says the lord favours others at court.'],
   citadel_letter: [['A letter from the Citadel reaches {P}'], 'The archmaesters write that a white raven may come early this year.'],
   maester_dies: [['The maester of {P} sickens'], 'The old maester is failing, and another has been sent for from Oldtown.'],
@@ -817,7 +817,7 @@ const HOOK = {
   great_storm: [['A great storm strikes {P}'], 'It tore the roofs from the town and sank half the fishing boats.'],
   early_frost: [['An early frost strikes {P}'], 'The late crops are blackened, and the smallfolk are salting what meat they have.'],
   mine_collapse: [['Miners are buried near {P}'], 'A gallery fell in, and the ore has stopped.'],
-  fire_granary: [['The granary of {P} burns'], 'It was taken in the night, and a moon of grain is gone.'],
+  fire_granary: [['Fire takes the granary at {P}'], 'It was taken in the night, and a moon of grain is gone.'],
   daughter_elopes: [['A daughter of {hs} elopes'], 'She has run off with a singer, and her father begs the lord to bring her back.'],
   bastard_claims: [['A young man claims kinship with {hs}'], 'He has a ring and a mother who swears to it.'],
   wedding_invitation: [['{hs} invites the realm to a wedding'], 'Ravens bid the lords of the region to a wedding before the season turns.'],
@@ -825,7 +825,7 @@ const HOOK = {
   heir_fever: [['The heir of {hs} sickens'], 'The maester sits up with the child each night.'],
   match_offered: [['{hs} is offered a match'], 'The ravens have gone back and forth all moon.'],
   wildling_raid: [['Wildlings raid near {P}'], 'They came over the ice or through the Gift and burned a steading.'],
-  ranger_word: [['A ranger of the Watch tells of empty villages'], 'He speaks of wildlings moving south in numbers.'],
+  ranger_word: [['A ranger of the Watch brings word of empty villages to {P}'], 'He speaks of wildlings moving south in numbers.'],
   watch_recruiter: [['A black brother recruits at {P}'], "He has come to take men for the Wall from the lord's dungeons."],
   deserter_caught: [['A deserter of the Watch is taken near {P}'], 'He fled the Wall, and the law is death.'],
   kingsmoot_whispers: [['Captains whisper of reaving at {P}'], 'They say the old way is dying under the green-land peace.'],
@@ -842,7 +842,7 @@ const HOOK = {
   dowry_dispute: [['{hs} quarrels over a dowry'], 'One side says it was never paid in full; the other says it was paid twice.'],
   smallfolk_petition: [['Smallfolk petition {A} at {P}'], 'They ask for justice, or for bread.'],
   rebel_hedge: [['A hedge knight raises a rabble near {P}'], 'He speaks against the lord and finds men to listen.'],
-  village_feud: [['Two villages feud near {P}'], 'It is an old quarrel over water and grazing.'],
+  village_feud: [['Two villages quarrel near {P}'], 'It is an old quarrel over water and grazing.'],
   wolf_packs: [['Wolves grow bold near {P}'], 'A pack has followed a party to the gates.'],
   fair_announced: [['A fair is announced at {P}'], 'Merchants are bidden from far and near.'],
   essos_war_rumour: [['Word of war across the sea reaches {P}'], 'Merchants and sailors tell it differently.'],
@@ -876,7 +876,32 @@ function hookHead(f, s, c) {
   const id = f.data?.hook; const e = HOOK[id]; const t = e ? c.pick(f, e[0]) : '{A} deals with a small matter at {P}';
   return fillTpl(t, f, c);
 }
-/** The great matters of the story (shared/plots.js): the King's ride is told by its own stage; any other by its people. */
+/**
+ * What a great matter says of itself (ST1): the headline its beat gave it, in the fact's slot `data.head` ("Bran Stark is found broken
+ * beneath the old tower"); '' for a fact made before beats had one (it is told by the old line). Like every other slot it is read from
+ * `data`, never from the fact's title or text, which the writer does not read.
+ */
+const beatTitle = (f) => String(f.data?.head || '').trim();
+const TALE_SKIP = new Set('a an the of at to in on by for with from and or but as is are was were be been his her their its this that it he she they them him who which near into onto after before over under out up down'.split(' '));
+const bareWords = (t) => (String(t).toLowerCase().match(/[a-z][a-z'’-]*/g) || []).map((w) => w.replace(/['’]s?$/, '')).filter((w) => w && !TALE_SKIP.has(w));
+/**
+ * A great matter's subtitle, from its own telling (the slot `data.tale`, the beat's text, or the `data.sum` it gave): its sentences that do
+ * not say the headline again (the telling usually has the deed in it, and the card must not say it twice), at most two and 320 characters.
+ */
+function beatTale(f) {
+  const own = String(f.data?.sum || '').trim();
+  const parts = (own || String(f.data?.tale || '')).trim().split(/(?<=[.!?…]["”’]?)\s+/).filter(Boolean);
+  if (!parts.length) return '';
+  const H = new Set(bareWords(beatTitle(f)));
+  const again = (p) => H.size > 0 && bareWords(p).filter((w) => H.has(w)).length / H.size >= 0.5;
+  let rest = own ? parts : parts.filter((p) => !again(p));
+  if (!rest.length) rest = parts.length > 1 ? parts.slice(1) : parts;
+  const out = [];
+  for (const p of rest) { if (out.length >= 2 || [...out, p].join(' ').length > 320) break; out.push(p); }
+  const t = (out.length ? out.join(' ') : rest[0].slice(0, 300).replace(/[,;—\s][^,;—]*$/, '')).trim();
+  return /[.!?]["”’]?$/.test(t) ? t : `${t}.`;
+}
+/** The great matters of the story (shared/plots.js): the King's ride is told by its own stage; any other in the words it was written with. */
 function beatHead(f, s, c) {
   const d = f.data || {}; const a = c.subj(f);
   if (f.thread === 'kings_ride') {
@@ -885,6 +910,7 @@ function beatHead(f, s, c) {
     if (d.stage === 'progress') return P ? c.pick(f, [`${K} rides on from ${P}`, `${K} passes ${P} on his progress`]) : `${K} rides on with the court`;
     if (d.stage === 'arrival' && c.pl(f.place)) return c.pick(f, [`${K} reaches ${c.pl(f.place)}`, `${K} arrives at ${c.pl(f.place)}`]);
   }
+  const own = beatTitle(f); if (own) return own;
   const p = c.pl(f.place);
   return (f.actors || []).some((id) => c.known.person(id)) ? `Grave news reaches ${a}${c.at(f.place)}` : `Grave news reaches ${p || a}`;
 }
@@ -1130,9 +1156,9 @@ export const SUM = {
   plague: () => sentences('Fever and flux run through the town'),
   season_turned: () => sentences('The maesters of the Citadel have marked the change'),
   custom_created: (f) => { const cu = String(f.data?.custom || '').trim(); return cu ? sentences(`The custom is ${cu}`) : ''; },
-  canon_beat: (f, s, c) => {
-    if (f.thread === 'kings_ride') return sentences("The King's progress is on the road, and the whole realm watches it pass".replace("The King's progress", 'The royal progress'));
-    return sentences('The ravens carry the word across the realm');
+  canon_beat: (f) => {
+    if (f.thread === 'kings_ride' && f.data?.stage === 'progress') return sentences('The royal progress is on the road, and the whole realm watches it pass');
+    return beatTale(f) || sentences('The ravens carry the word across the realm');
   },
   happening: (f, s, c) => { const id = f.data?.tpl; const [, sum] = TPL[id] || HAP_HEADS[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor; return sentences(sum); },
   hook: (f, s, c) => { const e = HOOK[f.data?.hook]; return e ? sentences(e[1]) : ''; },
