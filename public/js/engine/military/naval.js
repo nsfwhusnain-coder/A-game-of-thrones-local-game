@@ -211,7 +211,7 @@ export function seaTick(state, days, r) {
     if (atSea && chance && r() < chance) {
       const n = Math.max(1, Math.round(f.ships * rnd(SEA.stormLoss[0], SEA.stormLoss[1], r)));
       const men = f.men + carriedOf(state, f); shipsLost(state, f, n); const drowned = men - f.men - carriedOf(state, f);
-      events.push(fact(state, 'lost_at_sea', { title: `A storm scatters ${f.name}`, text: `An ${season} gale falls on ${f.name}: ${n} ships founder, and ${fmt(drowned)} men with them.`, where: nearestCoast(state, f.pos), importance: mine(state, f.owner) ? 4 : 3, houses: [f.owner], day: 1 }, { actors: [f.commander], data: { party: f.id, ships: n, drowned }, pos: f.pos, cause: { type: 'rule', ref: 'weather' } }));
+      events.push(fact(state, 'lost_at_sea', { title: `A storm scatters ${f.name}`, text: `${/^[aeiou]/i.test(season) ? 'An' : 'A'} ${season} gale falls on ${f.name}: ${n} ${n === 1 ? 'ship founders' : 'ships founder'}, and ${fmt(drowned)} men with them.`, where: nearestCoast(state, f.pos), importance: mine(state, f.owner) ? 4 : 3, houses: [f.owner], day: 1 }, { actors: [f.commander], data: { party: f.id, ships: n, drowned }, pos: f.pos, cause: { type: 'rule', ref: 'weather' } }));
       applied.push({ op: 'naval', text: `${f.name}: ${n} ships lost in a storm` });
       if (f.ships <= 0) { sink(state, f, 'lost in a storm'); continue; }
     }

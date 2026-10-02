@@ -94,7 +94,7 @@ function churn(s, days) {
       out.changes.push({ op: 'holding', id: h.id, prosperity: Math.max(0, (h.prosperity || 50) - 5) });
     },
     () => { // a name-day tourney: called now, and run in three weeks among the knights who are there (shared/tourney.js)
-      const a = pick(great.filter((h) => ['paramount', 'major', 'crown'].includes(h.rank) && h.seat && s.holdings[h.seat] && speakerFor(s, h.id)?.loc === h.seat && !listsPending(s, h.seat) && (s.wars || []).every((w) => w.status === 'ended' || !w.attackers.concat(w.defenders).includes(h.id)))); if (!a) return;
+      const a = pick(great.filter((h) => ['paramount', 'major', 'crown'].includes(h.rank) && h.seat && s.holdings[h.seat] && speakerFor(s, h.id)?.loc === h.seat && !listsPending(s, h.seat) && !canonLocked(s).has(speakerFor(s, h.id)?.id) && (s.wars || []).every((w) => w.status === 'ended' || !w.attackers.concat(w.defenders).includes(h.id)))); if (!a) return;
       const hall = s.holdings[a.seat].name; const L = scheduleLists(s, a.seat, a.id, { nameDay: true });
       out.events.push({ ...ev(`${lordName(a)} calls a tourney for a name-day`, `${lordName(a)} has named a day for jousts at ${hall} and asks the knights of the country to ride in.`, a.seat, 1, 'court', [a.id]), kind: 'tourney', actors: [a.lord], data: { cost: 0, nameDay: true, lists: L.on } });
     },

@@ -409,3 +409,27 @@ test('N-037: the banners raised at a seat while the first host is away are a sec
   assert.ok((s.parties.tully_banners_tully.members || []).includes('edmure_tully'));
   assert.ok(Object.values(s.parties).some((p) => p.id !== 'tully_banners_tully' && p.owner === 'tully' && p.men >= 700), 'the late comers are a host of their own');
 });
+
+test('N-038: a house whose lord the story needs elsewhere calls no feast or lists for him to leave', async () => {
+  const { storyNeeds } = await import('../public/js/engine/actions/court.js');
+  const s = world('lannister');
+  assert.equal(storyNeeds(s, 'baratheon')?.code, 'story', 'the King is on the road to Winterfell by the story');
+  assert.equal(storyNeeds(s, 'lannister'), null, 'the player\'s own house is its own'); assert.equal(storyNeeds(s, 'greyjoy'), null, 'a lord the story has no use for is free');
+  s.meta.settings = { ...(s.meta.settings || {}), canonGravity: 'sandbox' }; assert.equal(storyNeeds(s, 'baratheon'), null, 'and in a sandbox the story needs no one');
+});
+
+test('N-039: "1 ship founders", "A winter gale", not "1 ships founder" and "An winter gale"', () => {
+  const s = world('stark'); today(s); s.facts = [];
+  emit(s, 'lost_at_sea', { actors: [], houses: ['greyjoy'], place: 'greyjoy', importance: 3, data: { ships: 1, drowned: 60 }, text: 'x' });
+  const card = cardOf(s, { facts: [s.facts[0]] }); assert.ok(card.details.some((d) => /\b1 ship lost\b/.test(d)), JSON.stringify(card.details)); assert.ok(card.details.every((d) => !/\b1 ships\b/.test(d)));
+});
+
+test('N-040: a good harvest or a blight in the realm is told as that, not as "Rumour spreads at …"', () => {
+  for (const harvest of ['good', 'blight']) {
+    const s = world('stark'); today(s); s.facts = [];
+    emit(s, 'happening', { actors: [], houses: ['stark'], place: 'stark', importance: 2, data: { harvest }, text: 'x' });
+    const st = storyOf(s); const card = cardOf(s, st);
+    assert.doesNotMatch(`${card.headline} ${card.summary}`, /Rumour|only talk/, harvest); assert.match(card.headline, harvest === 'good' ? /harvest/i : /Blight/);
+    assert.ok(scoreCard({ headline: card.headline, summary: card.summary }, st, s).pass, `${harvest}: ${card.headline}`);
+  }
+});

@@ -3,6 +3,14 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-03 — What the sixth look found: the Hand's tourney, the harvest, the ship
+
+Eight more games and probes on the Crown that fights.
+
+- The realm's gossip no longer calls a feast or lists for a house whose lord the story needs elsewhere within the moon: the Hand rode south six days before the lists at Winterfell (N-038).
+- A good harvest or a blight in the realm is told as that, not as "Rumour spreads at …" (seven cards a game; N-040); "1 ship founders", "A winter gale" (N-039).
+- Tests: `tests/bugfix-found.test.js` (N-038 to N-040). The findings are in `docs/bughunt/FOUND.md`.
+
 ## 2026-10-03 — What the fifth look found: the Crown takes the field
 
 The same hunt on six other houses, the Chronicle read from other seats, and a sweep for text that leaks or does not parse.
