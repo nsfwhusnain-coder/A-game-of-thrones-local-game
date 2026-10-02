@@ -1590,3 +1590,13 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **Said, not dropped.** `res.unread` (clauses the rules could not read) and `res.said` (a man in the hall, told aloud) ride with the reading into the receipt: "Left to the story: ..." and "X is here and told in person: no raven flies". The story still reads them; the lord is told that it will.
 - **A model is held to the words.** The interpreter's check refuses a `set_tax` when the order says nothing of taxes. This is the only part of OR9 a rule can hold; the rest needs a live model and is an owner check in `docs/HANDOFF.md`.
 - **Not done.** `betroth`, `foster` and `marry` verbs belong with the births and marriages of the living world (WD1) and are added there. "I will ride south myself" with no place named asks where.
+
+## D-115 · 2026-10-02 · What the map does with the keyboard and where it looks (bug hunt UI1, UI2, UI3, UI5, UI6)
+
+- **UI1.** `map3d/keys.js` (`holdKeys`) owns the held keys: a key with Cmd, Ctrl or Alt is not held (and lets go of the rest), and the set is cleared on window blur and when the tab is hidden. It is wired from `MapScene` and tested without a browser.
+- **UI2.** `map3d/home.js`: a house's home is its seat, else the holding its lord is in, else where he rides, else the middle of what it holds. The first view, the Home key and the camera's return after a long turn use it.
+- **UI3.** `houseHeading` (`engine/facts/label.js`) is a house's name as a title: the label of the sentence with its first letter raised, and `House <name>` for the crown in its own crest. The windows' mid-sentence uses (`Held by …`, `in the pay of …`) use `houseLabel`.
+- **UI5.** A journey's road is drawn at every zoom for the party in hand and from `ROUTES_FROM` (level 1.6, about 675 map units out) for all of them.
+- **UI6.** The server answers the optional sigil index with an empty object.
+- **Not done:** UI4 (small controls: each needs a look in a browser at 1366 × 768) and UI7 (the frame cost grows with the armies; no leak was shown).
+

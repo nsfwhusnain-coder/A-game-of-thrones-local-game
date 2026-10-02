@@ -2,6 +2,7 @@
 // from the view, the request (`q`) and the page's own facts (`env`: a house's crest and name, and which house is the player's), so node can run it on a view full of hostile names.
 // Every name and every line of words the server sent goes through `esc`. It adds nothing to what it was sent.
 import { icon } from './icons.js';
+import { houseHeading } from '../engine/facts/label.js';
 import { LENS_LABEL, SCOPE_LABEL, FIELD_LABEL, COLUMNS, cellText, provenance, wordChip, sparkPath, sparkLabel, changeWord, warLine, strengthLine, sortRows } from './realm-fmt.js';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -99,7 +100,7 @@ function detailBlock(v, q) {
   const cells = Object.entries(d.cells || {}).filter(([k]) => FIELD_LABEL[k]).map(([k, c]) => { const t = cellText(c, k); return `<div class="realm-cell"><span class="wc-label">${esc(FIELD_LABEL[k])}</span><span class="rc rc--${t.kind}${t.stale ? ' is-stale' : ''}" title="${esc(t.title)}">${esc(t.text)}</span></div>`; }).join('');
   const w = row ? wordChip(row.word) : null;
   const inWar = (v.wars || []).filter((x) => [...x.sides.A, ...x.sides.D].includes(d.house)).map((x) => esc(x.name));
-  return `<section class="realm-detail"><div class="realm-detail__h">${crest(d.house)}<div><h3>${you ? 'Your house' : `House ${esc(d.name)}`}</h3><span class="wc-none">${esc(d.lord || '')}${d.liege ? ` · sworn to ${esc(nameOf(d.liege))}` : ''}${row ? ` · ${esc(provenance(row))}` : ''}</span></div>
+  return `<section class="realm-detail"><div class="realm-detail__h">${crest(d.house)}<div><h3>${you ? 'Your house' : esc(houseHeading({ houses: { [d.house]: { id: d.house, name: d.name, rank: d.rank } } }, d.house))}</h3><span class="wc-none">${esc(d.lord || '')}${d.liege ? ` · sworn to ${esc(nameOf(d.liege))}` : ''}${row ? ` · ${esc(provenance(row))}` : ''}</span></div>
     ${w ? `<span class="wc-chip wc-chip--${w.cls === 'up' ? 'gain' : w.cls === 'down' ? 'loss' : 'flat'}" title="${esc(w.title)}">${esc(w.text)}</span>` : ''}${q.house ? '<button class="wc-btn wc-btn--small" data-back>Back to your house</button>' : ''}</div>
     ${row?.flags?.length ? `<div class="realm-flags">${row.flags.map((f) => `<span class="realm-flag realm-flag--${esc(f.id)}">${esc(f.id)}: ${esc(f.text)}</span>`).join('')}</div>` : ''}
     <div class="realm-cells">${cells}</div>${inWar.length ? `<p class="wc-none">At war: ${inWar.join(', ')}</p>` : ''}${multiples(v, q)}</section>`;

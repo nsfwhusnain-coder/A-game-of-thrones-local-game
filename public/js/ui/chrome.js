@@ -8,6 +8,7 @@ import { vitalsOf, inboxOf, stripOf, seasonOf, MENU } from './hud.js';
 import { decisionDaysLeft, leftWord } from '../shared/pins.js';
 import { ordinal, MONTHS } from '../engine/time.js';
 import { sigilSrc } from '../sigils.js';
+import { houseLabel, houseHeading } from '../engine/facts/label.js';
 import { openWindow } from './windows.js';
 import { openDrawer, openChat, decisionsHtml, wireDecisions, openNews } from './drawer.js';
 import { sfx } from './sfx.js';
@@ -19,7 +20,7 @@ const TREND = { up: ['up', 'up'], down: ['down', 'down'], steady: ['flat', null]
 
 export function renderCrest() {
   const s = app.state, h = player(); const se = seasonOf(s);
-  $('#crest').innerHTML = `<span class="wc-ribbon"><img src="${sigilSrc(h, 64)}" alt=""></span><div class="wc-crest__text"><div class="wc-label">House ${esc(h.name)}</div><div class="wc-crest__date" title="${esc(se.label)}: ${esc(se.note)}">${esc(crestDate(s.meta.date))}<span class="wc-crest__season" title="${esc(se.label)}: ${esc(se.note)}">${icon(se.icon)}</span></div></div>`;
+  $('#crest').innerHTML = `<span class="wc-ribbon"><img src="${sigilSrc(h, 64)}" alt=""></span><div class="wc-crest__text"><div class="wc-label">${esc(houseHeading(s, h.id))}</div><div class="wc-crest__date" title="${esc(se.label)}: ${esc(se.note)}">${esc(crestDate(s.meta.date))}<span class="wc-crest__season" title="${esc(se.label)}: ${esc(se.note)}">${icon(se.icon)}</span></div></div>`;
 }
 export function renderVitals() {
   $('#vitals').innerHTML = vitalsOf(app.state, app.state.meta.player).map((v) => {

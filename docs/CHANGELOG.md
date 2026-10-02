@@ -3,6 +3,15 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — Bug hunt fixes UI1, UI2, UI3, UI5, UI6: the map's keys, where it opens, the crest and the dashes
+
+- **The map stops when you let go.** A key pressed with Cmd, Ctrl or Alt (Cmd+S, Cmd+D, Cmd+A) is the browser's, not the map's, and everything the map held is let go when the window loses the keyboard or the tab is hidden: on a Mac the camera no longer drifts on after Cmd+D.
+- **Exiles open on their lord.** Viserys in Pentos and the Golden Company open the map over Pentos and over their camp, not over the North, and the Home key goes there. After a long turn the camera returns to the lord's hall too.
+- **The crest names a faction as a faction**: "The Free Folk", "The Golden Company", "Braavos", "The Night's Watch", and "House Stark" for a house; the same in the house windows, cards and the Realm.
+- **The dashes are read close in.** From the middle zoom out only the road of the party you have selected (or are following) is drawn; at the default zoom every road is.
+- **No 404 on every page load.** The sigil artwork's index is an empty list when no artwork is installed.
+- Tests: `tests/bugfix-ui.test.js` (8). *Not done:* UI4 (small controls at 1366 × 768), UI7 (frame cost in a war) — see the issue.
+
 ## 2026-10-02 — Bug hunt fixes OR2–OR11: the steward reads more of what you say, and says what it could not
 
 - **A summons to a council is a raven to each lord named.** "Summon Lord Bolton and Lord Umber to a council at Winterfell" used to be read as a call to arms and raised the banners. It now sends a letter to every lord named (the same words, each in his own temper); "to arms" and "call the banners" are still a call to arms.

@@ -11,6 +11,8 @@ import { forces, isForce } from '../engine/parties.js';
 import { stretch } from '../engine/movement.js';
 import { viewOfArmies, ageText } from '../engine/knowledge.js';
 import { LivingMap } from './life.js';
+import { homeOf } from './home.js';
+import { holdKeys } from './keys.js';
 
 const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
@@ -29,7 +31,7 @@ const hexToRgb = (hex) => { let h = String(hex || '#888').replace('#', ''); if (
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // the camera's levels of detail, framing and pan bounds (11 §2–3): map3d/lod.js
-import { LOD, lodOf, layerAlpha, tokenCap, HOME_BOX, KNOWN_BOX, L0_CENTRE } from './lod.js';
+import { LOD, lodOf, layerAlpha, tokenCap, HOME_BOX, KNOWN_BOX, L0_CENTRE, ROUTES_FROM } from './lod.js';
 import { Effects } from './effects.js';
 import { dayNumber } from '../engine/time.js';
 import { PRESETS, presetOf, weatherOf } from './states.js';
@@ -280,8 +282,7 @@ export class MapScene {
     if (first) this.buildPlaces();
     if (first) {
       this.drawRoads();
-      const seat = state.holdings[state.houses[state.meta.player]?.seat];
-      const p = seat?.pos || [500, 1000];
+      const p = homeOf(state) || [500, 1000]; // (a house with no seat opens on its lord, not on the North)
       this.target.set(p[0], 0, p[1]); this.dist = 520;
     }
   }
@@ -825,9 +826,16 @@ export class MapScene {
     this.renderer.setSize(r.width, r.height);
     this.camera.aspect = r.width / Math.max(1, r.height); this.camera.updateProjectionMatrix();
   }
+  /** A journey's dashed road is read close in: from far out only the road of the party in hand (selected, or followed) is drawn (bug hunt UI5: from the middle zoom the North was a tangle of dashes). */
+  syncRouteVisibility() {
+    const far = this.lod < ROUTES_FROM;
+    for (const [id, rec] of this.armyObjs) if (rec.route) rec.route.visible = !far || id === this.selectedArmy || id === this.follow;
+    for (const r of this.riderRoutes || []) r.visible = !far;
+  }
   updateCamera() {
     this.dist = clamp(this.dist, LOD[3], LOD[0]);
     this.lod = lodOf(this.dist);
+    this.syncRouteVisibility();
     // the pan bounds: at L0 the centre stays on Westeros (≥ 40 % of the screen on land); from L1 down, the Known World
     const w = clamp(this.lod, 0, 1); const lerp = THREE.MathUtils.lerp;
     this.target.x = clamp(this.target.x, lerp(HOME_BOX.x0, KNOWN_BOX.x0, w), lerp(HOME_BOX.x1, KNOWN_BOX.x1, w));
@@ -935,20 +943,22 @@ export class MapScene {
     window.addEventListener('blur', () => this.clearHover());
     el.addEventListener('dblclick', (e) => { if (e.target.closest('.lbl')) return; const r = el.getBoundingClientRect(); const g = this.screenToGround(e.clientX - r.left, e.clientY - r.top); this.flyTo([g.x, g.z], Math.max(120, this.dist * 0.5)); });
     this.keys = new Set();
+    // the keys held (map3d/keys.js: not with Cmd, Ctrl or Alt, and let go when the window loses the keyboard; bug hunt UI1)
+    const typing = () => /input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
+    holdKeys({ win: window, doc: document, keys: this.keys, accept: () => !typing() });
     window.addEventListener('keydown', (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (/input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;
       const k = e.key.toLowerCase();
       // Home: back to your seat (twice: the whole realm); G: go with the selected party (11 §2; F is focus mode)
-      if (k === 'home') { const seat = this.state?.holdings[this.state.houses[this.state.meta.player]?.seat]; const near = seat && Math.hypot(this.target.x - seat.pos[0], this.target.z - seat.pos[1]) < 20 && Math.abs(this.dist - LOD[2]) < 40; if (seat && !near) this.flyTo(seat.pos, LOD[2]); else this.home(); return; }
+      if (k === 'home') { const at = this.state && homeOf(this.state); const near = at && Math.hypot(this.target.x - at[0], this.target.z - at[1]) < 20 && Math.abs(this.dist - LOD[2]) < 40; if (at && !near) this.flyTo(at, LOD[2]); else this.home(); return; }
       if (k === 'g') { this.follow = this.follow ? null : this.selectedArmy || null; return; }
       // the keyboard's way round the map (F9): [ and ] step through what is on it, Enter opens the one in hand, Escape lets it go
       if (k === '[' || k === ']') { e.preventDefault(); this.stepPlace(k === ']' ? 1 : -1); return; }
       if (k === 'enter' && this.kbdKey && (document.activeElement === document.body || document.activeElement?.id === 'map-wrap')) { e.preventDefault(); this.openPlace(); return; }
       if (k === 'escape' && this.kbdKey) this.clearPlace();
       if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.tween = null; this.follow = null; this.clearHover(); }
-      this.keys.add(k);
     });
-    window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
     void cv;
   }
   // ── the keyboard's way round the map (docs/gdd/12-ui-ux.md §13; WP F9) ──

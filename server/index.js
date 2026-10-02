@@ -239,6 +239,8 @@ const server = http.createServer(async (req, res) => {
     if (!file.startsWith(base)) return send(res, 403, 'forbidden', 'text/plain');
     
     if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
+    // the sigil artwork is optional (npm run fetch-sigils): with none installed its index is empty, not a 404 the browser logs on every page load (bug hunt UI6)
+    if (rel === '/assets/sigils/index.json' && !fs.existsSync(file)) return send(res, 200, {});
     if (!fs.existsSync(file)) return send(res, 404, 'not found', 'text/plain');
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
     fs.createReadStream(file).pipe(res);
