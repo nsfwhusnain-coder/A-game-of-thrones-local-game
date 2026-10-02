@@ -12,6 +12,7 @@ import { marchTick } from '../../public/js/shared/marches.js';
 import { seasonTick } from '../../public/js/shared/economy.js';
 import { psycheTick } from '../../public/js/shared/psyche.js';
 import { retinueTick } from '../../public/js/shared/retinues.js';
+import { listsTick } from '../../public/js/shared/tourney.js';
 import { vassalTick, gatherMusters, fieldService } from '../../public/js/shared/vassals.js';
 import { worldTick, canonAhead } from '../../public/js/shared/plots.js';
 import { lifeTick, mayDie } from '../../public/js/engine/people/life.js';
@@ -89,6 +90,8 @@ export async function engineDay(state, ctx) {
   // wounds heal or fester; fevers, winter chills and great age (engine/people/life.js)
   { const r = lifeTick(state, random, { spared: sparedBy(state) }); cards.push(...r.events); if (r.changes.length) applied.push(...applyChanges(state, r.changes, { source: 'Life', spanDays: 1, told: ['character'], cause: { type: 'rule', ref: 'life' } }).applied); }
   cards.push(...retinueTick(state, 1).events);
+  // the tourneys whose day has come: the lists are run among the knights who are there (shared/tourney.js)
+  listsTick(state);
   // the realm's calendar and its courts: flavour for the chronicle's Meanwhile (data/calendar.js)
   for (const c of [...CALENDAR.filter((x) => x.month === state.meta.date.month && x.day === state.meta.date.day), ...COURTS.filter((x) => x.day === state.meta.date.day)]) {
     if (c.when && !c.when(state)) continue; const where = resolvePlaceId(c.where);

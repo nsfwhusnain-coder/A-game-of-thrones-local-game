@@ -37,6 +37,7 @@ const { vassalTemper } = await import('../public/js/shared/vassals.js');
 const { newsOf } = await import('../public/js/engine/knowledge.js');
 const { perform } = await import('../public/js/engine/actions/registry.js');
 const { engineDay } = await import('../server/turn/day.js');
+const { listsTick, LISTS_AFTER } = await import('../public/js/shared/tourney.js');
 const { withDice } = await import('../server/dice.js');
 test.after(() => fs.rmSync(process.env.WC_SAVES, { recursive: true, force: true }));
 
@@ -372,11 +373,12 @@ test('executed: by is the lord who gave the order (through the court\'s own verb
   assert.ok(r.ok, r.refusal?.text);
   const f = s.facts.find((x) => x.kind === 'executed'); assert.ok(f, 'the execution is a fact'); noUndefined(f);
   assert.equal(f.data.by, s.houses.stark.lord, 'the lord of the house that judged'); assert.match(f.data.cause, /executed by order of House Stark/, 'the cause stays');
-  // the lists: one tourney in eight or so kills a knight (seed 4 is one; the search goes on if the dice are drawn otherwise)
+  // the lists (run three weeks after the call): one tourney in eight or so kills a knight (the search goes on until the dice are drawn so)
   let d = null;
   for (const seed of [4, ...Array.from({ length: 400 }, (_, i) => i + 1)]) {
     const t = createInitialState('agot_298', 'stark', { seed: 5 }); t.meta.rngState = seedState(seed); t.facts = [];
-    withRng(t, () => perform(t, 'hold_tourney', { house: 'stark', params: {} })); d = t.facts.find((x) => x.kind === 'death'); if (d) break;
+    withRng(t, () => { perform(t, 'hold_tourney', { house: 'stark', params: {} }); const n = dayNumber(t.meta.date) + LISTS_AFTER; t.meta.date = dateOfDay(n); t.meta.clock = { turn: 2, from: n, to: n }; listsTick(t); });
+    d = t.facts.find((x) => x.kind === 'death'); if (d) break;
   }
   assert.ok(d, 'a knight dies in the lists within four hundred tourneys'); noUndefined(d);
   assert.match(d.data.cause, /in the lists/); assert.equal(d.data.how, 'wound');

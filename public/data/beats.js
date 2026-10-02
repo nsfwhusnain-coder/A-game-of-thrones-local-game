@@ -10,6 +10,8 @@ import { random } from '../js/engine/rng.js';
 import { dayNumber } from '../js/engine/time.js';
 import { YM, C, alive, free, at, flag, player, plays, inWar, ev } from '../js/engine/world/beatkit.js';
 
+// the men who hold a place against a night's work: its garrison and whatever hosts have come to it (the attackers' own never count)
+const menHolding = (s, place, against) => Object.values(s.parties || {}).filter((p) => p.at === place && ['garrison', 'host'].includes(p.kind) && p.owner !== against && p.men > 0).reduce((n, p) => n + p.men, 0);
 // the King's Hand is at court: canon keeps the boar and the tourney waiting for him while he is on the kingsroad
 const handAtCourt = (s) => !flag(s, 'ned_hand') || !free(s, 'eddard_stark') || at(s, 'eddard_stark', 'baratheon');
 // whether a thread has gone past a beat (fired, bent or lapsed): the boar waits for the Riverlands to burn, as in the books
@@ -677,7 +679,7 @@ export const THREADS = [
       },
       {
         // W10: while the Iron Fleet holds the north's attention, Theon takes Winterfell by night
-        id: 'winterfell_taken', at: YM(299, 6), grace: 2, needs: (s) => free(s, 'theon_greyjoy') && inWar(s, 'greyjoy', 'stark') && s.holdings.stark?.owner === 'stark' && !plays(s, 'stark', 'greyjoy'),
+        id: 'winterfell_taken', at: YM(299, 6), grace: 2, needs: (s) => free(s, 'theon_greyjoy') && inWar(s, 'greyjoy', 'stark') && s.holdings.stark?.owner === 'stark' && !plays(s, 'stark', 'greyjoy') && menHolding(s, 'stark', 'greyjoy') <= 700, // (thirty ironmen and a rope take a hall of its few defenders, not one with a host inside: ST15)
         fire: (s) => ({
           events: [ev('Winterfell taken', 'With thirty ironmen and a rope over the walls in the dark, Theon Greyjoy takes Winterfell from its few defenders. Days later two small heads are set above the gates, and Theon says they are Bran and Rickon Stark.', 'stark', 5, 'war', ['greyjoy', 'stark'])],
           flags: { winterfell_taken: true },

@@ -3,6 +3,16 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — Bug hunt fixes ST2, ST3, ST4, ST9, ST15: tourneys with days in them, lords at home, a beat that looks at the army
+
+- **A tourney is called, the lords ride in, and the lists are run three weeks on.** Before, ordering a tourney won it on the spot, its champion was any knight in the world (Rakharo, Drogo's bloodrider, won at Starfall; Ser Barristan won the lists at Winterfell in week one), and the lords of the region set out for it after it was over. Now the order is a call ("The tourney is called: 28 houses are asked to send knights, and the lists will be run at Riverrun in three weeks"); the lords of the region set out in the ten days that follow and stay for the lists; on the day, the champion is chosen among the knights who are at the hall and the guests who have arrived, and the result is told on that day.
+- **A knight killed in the lists dies there**, told at the lists, not at the post he held far away.
+- **Name-day tourneys** are called and run like any other: no more "Ser X is champion at Y" for a tourney that nobody called.
+- **A lord on the road decrees nothing that needs his hall.** In the report's games a lord set out and a day or ten later proclaimed heavy taxes at his own castle, began works there, sent a gift, held a feast or judged a prisoner. The realm's lords now take such decisions (taxes, dues, works, hiring, offices, grants, prisoners, gifts, grain, feasts, tourneys) only when they are at their seat; on the road, or a guest in another castle, they keep to the road's business. (Your own orders are yours to give wherever you are.)
+- **Winterfell is not taken by thirty men from under an army.** The ironborn's night raid on Winterfell (the story's own beat) waited only for the war; it fired on the day a Stark host of nineteen thousand came inside, and the host "sat before the walls" of its own castle. It now needs the hall to have few defenders (700 men or fewer, whatever the sides), and waits, within its window, until it has.
+- **Old saves** play on (a tourney already won stays won).
+- Tests: `tests/bugfix-tourneys.test.js` (9), `tests/bugfix-decrees.test.js` (4).
+
 ## 2026-10-02 — Bug hunt fix OR1: "send them to the Wall" no longer builds walls
 
 - **"Raise 200 men at Winterfell and send them to the Wall"** raises the men and sends them to the Wall. The reader had taken "the Wall" for a fortification and "raise" for a works verb, dropped the levy and spent 12,000 dragons on walls at Winterfell. Now "raise" is a works verb only when what is raised is not men, and "the Wall" (or "to the wall", "guard the wall") is a place an order goes to, never the walls of a castle. "Strengthen the walls at Winterfell" and "Build a wall at Winterfell" are still works.
