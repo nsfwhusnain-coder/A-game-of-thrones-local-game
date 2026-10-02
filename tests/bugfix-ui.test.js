@@ -104,3 +104,11 @@ test('UI5: at the default zoom every journey shows its road; from the middle zoo
   assert.ok(lodOf(460) >= ROUTES_FROM && lodOf(160) >= ROUTES_FROM, 'and closer in');
   assert.ok(lodOf(700) < ROUTES_FROM && lodOf(1400) < ROUTES_FROM && lodOf(3500) < ROUTES_FROM, 'the middle and far levels of the report (700, 1400) draw only the road in hand');
 });
+
+test('UI4: the small controls of the interface have a hit area of their own (the report measured 13 pixels)', () => {
+  const css = ['hud', 'ledger', 'chronicle', 'theme', 'style'].map((f) => fs.readFileSync(path.join(ROOT, 'public', 'css', `${f}.css`), 'utf8')).join('\n');
+  const rule = (sel) => { const m = css.match(new RegExp(`(?:^|\\n)${sel.replace(/[.[\]]/g, '\\$&')}\\s*\\{([^}]*)\\}`)); return m?.[1] || ''; };
+  for (const sel of ['.realm-sort', '.wc-strip__all', '.wc-card__more']) assert.match(rule(sel), /padding:\s*\.[56]\d?rem/, `${sel} carries its hit area as padding`);
+  assert.match(rule('.wc-chip'), /min-height:\s*1\.6rem/, 'a chip is at least 25 pixels high');
+  assert.match(css, /input\[type=checkbox\][^{]*\{[^}]*width:\s*1\.5rem/, 'a box to tick is not the browser\'s 13 pixels');
+});

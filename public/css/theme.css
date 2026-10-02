@@ -329,7 +329,7 @@
 
 /* ───────────────────────────── chips: a strip of vellum or oak with a cut end ───────────────────────────── */
 .wc-chip {
-  display: inline-flex; align-items: center; gap: .3rem; padding: .18rem .95rem .18rem .6rem; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: .3rem; min-height: 1.6rem; padding: .18rem .95rem .18rem .6rem; white-space: nowrap;
   font: 600 var(--wc-min)/1.1 var(--wc-display); letter-spacing: .09em; color: var(--bone-dim);
   background: linear-gradient(180deg, rgba(255, 226, 170, .06), rgba(0, 0, 0, .16)), var(--oak-edge);
   border-block: 1px solid rgba(0, 0, 0, .55); border-left: 1px solid rgba(0, 0, 0, .55);

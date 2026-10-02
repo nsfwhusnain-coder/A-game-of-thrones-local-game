@@ -13,14 +13,15 @@ for the player, and what the owner should verify.
 - **A boy does not lead a party.** Robert Arryn, six, no longer "leaves the Eyrie with 180 knights and riders to hunt in the country".
 - Tests: `tests/bugfix-prisoners.test.js` (8).
 
-## 2026-10-02 — Bug hunt fixes UI1, UI2, UI3, UI5, UI6: the map's keys, where it opens, the crest and the dashes
+## 2026-10-02 — Bug hunt fixes UI1 to UI6: the map's keys, where it opens, the crest, the dashes, and controls you can hit
 
 - **The map stops when you let go.** A key pressed with Cmd, Ctrl or Alt (Cmd+S, Cmd+D, Cmd+A) is the browser's, not the map's, and everything the map held is let go when the window loses the keyboard or the tab is hidden: on a Mac the camera no longer drifts on after Cmd+D.
 - **Exiles open on their lord.** Viserys in Pentos and the Golden Company open the map over Pentos and over their camp, not over the North, and the Home key goes there. After a long turn the camera returns to the lord's hall too.
 - **The crest names a faction as a faction**: "The Free Folk", "The Golden Company", "Braavos", "The Night's Watch", and "House Stark" for a house; the same in the house windows, cards and the Realm.
 - **The dashes are read close in.** From the middle zoom out only the road of the party you have selected (or are following) is drawn; at the default zoom every road is.
 - **No 404 on every page load.** The sigil artwork's index is an empty list when no artwork is installed.
-- Tests: `tests/bugfix-ui.test.js` (7). *Not done:* UI4 (small controls at 1366 × 768), UI7 (frame cost in a war) — see the issue.
+- **Small controls are bigger to hit, not to look at** (UI4): the strip's "All", the Realm's sort headings, a card's "Details" and the thread list had a hit area of 13 pixels at 1366 × 768; each now carries 30 or more as padding with a negative margin, so the page looks as it did. A chip is 25 pixels high; a box to tick is 24, not the browser's 13. Measured in the browser at 1366 × 768 over the main screen, the Realm, People, Chronicle, Settings and How to play: nothing under 22 pixels remains but the box in the People list (23).
+- Tests: `tests/bugfix-ui.test.js` (8). Screenshots in `docs/screens/bugfix/`. *Not done:* UI7 (frame cost in a war: no leak was shown) — see the issue.
 
 ## 2026-10-02 — Bug hunt fixes OR2–OR11: the steward reads more of what you say, and says what it could not
 

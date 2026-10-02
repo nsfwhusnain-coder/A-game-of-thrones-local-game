@@ -1608,5 +1608,6 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **UI3.** `houseHeading` (`engine/facts/label.js`) is a house's name as a title: the label of the sentence with its first letter raised, and `House <name>` for the crown in its own crest. The windows' mid-sentence uses (`Held by …`, `in the pay of …`) use `houseLabel`.
 - **UI5.** A journey's road is drawn at every zoom for the party in hand and from `ROUTES_FROM` (level 1.6, about 675 map units out) for all of them.
 - **UI6.** The server answers the optional sigil index with an empty object.
-- **Not done:** UI4 (small controls: each needs a look in a browser at 1366 × 768) and UI7 (the frame cost grows with the armies; no leak was shown).
+- **UI4.** The hit area of a control that is small to the eye is padding with a negative margin (`.realm-sort`, `.wc-strip__all`, `.wc-card__more`), so the layout is unchanged; chips have `min-height: 1.6rem`; boxes to tick 1.5rem. Checked in a browser, not by a gate: a 24-pixel rule would also catch the glyph buttons of the windows' corners, which are fine.
+- **Not done:** UI7 (the frame cost grows with the armies in a war; no leak was shown; nothing to fix without a profile on the owner's GPU).
 

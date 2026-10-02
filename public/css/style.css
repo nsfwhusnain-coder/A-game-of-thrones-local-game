@@ -853,3 +853,7 @@ body:has(#window:not(.hidden)) .mapmodes { right: calc(min(30rem, 36vw) + 1.6rem
 .lbl.army.stack { border-color: #c9a44a; border-style: double; border-width: 3px; }
 .lbl.army.stack .stackflag { background: repeating-linear-gradient(90deg, #8a6a3a 0 3px, #3a2a18 3px 5px); }
 .lbl.eta { font-family: var(--serif); font-size: max(0.75rem, 12px); color: #f6e27a; font-style: italic; }
+
+/* a box to tick is a target of its own (UI4: the 13-pixel boxes of the people list and the settings): the browser's default is the size of its text */
+input[type=checkbox], input[type=radio] { width: 1.5rem; height: 1.5rem; }
+label:has(> input[type=checkbox]), label:has(> input[type=radio]) { min-height: 1.6rem; }
