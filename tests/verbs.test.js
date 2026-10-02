@@ -98,8 +98,8 @@ const CASES = {
   pay_ransom: { ok: (s) => { Object.assign(s.characters.jory_cassel, { status: 'imprisoned', loc: 'lannister' }); return { character: 'jory_cassel' }; }, no: () => [{ character: 'jon_snow' }, 'not_held'] },
   send_letter: { ok: () => ({ to: 'lysa_arryn', text: 'Sister, what did Jon Arryn say in his last days?' }), no: () => [{ to: 'lysa_arryn', text: '   ' }, 'empty'] },
 };
-// what a verb may bring about besides its own facts (the people it touches ride home; a tourney may kill a knight)
-const ALSO = { judge_prisoner: ['set_out', 'arrived'], pay_ransom: ['set_out', 'arrived'], hold_tourney: ['death'], answer_matter: null /* the matter's effects are its own */ };
+// what a verb may bring about besides its own facts (the people it touches ride home; a tourney is called, and its lists, run three weeks on, may kill a knight)
+const ALSO = { judge_prisoner: ['set_out', 'arrived'], pay_ransom: ['set_out', 'arrived'], hold_tourney: [], answer_matter: null /* the matter's effects are its own */ };
 
 test('every verb has a case here', () => assert.deepEqual(Object.keys(VERBS).filter((v) => !CASES[v]), []));
 

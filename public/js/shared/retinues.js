@@ -11,6 +11,7 @@ import { random } from '../engine/rng.js';
 import { temperament } from './temperament.js';
 import { canonLocked } from './plots.js';
 import { dayNumber } from '../engine/time.js';
+import { tourneyNow } from './tourney.js';
 
 // why a lord rides out (09 §3.1): each purpose weighted, and weighted again by the lord's nature and the season
 const PURPOSES = [
@@ -28,8 +29,7 @@ const PURPOSES = [
 ];
 const PILGRIM = ['hightower', 'isle_of_faces', 'baratheon']; // the Starry Sept, the Isle of Faces, the Great Sept of Baelor
 const MAX_ABROAD = 20, MAX_TOURNEY = 30;
-// a tourney held in the last moon draws the lords of its region (hold_tourney's `tourney` fact)
-const tourneyNow = (state) => { const today = dayNumber(state.meta.date); return Object.entries(state.plots?.tourneys || {}).filter(([, d]) => today - d <= 30).map(([seat]) => seat); };
+// a tourney called in the last days draws the lords of its region, and they stay for its lists (shared/tourney.js: ST2)
 const pick = (r, a) => a[Math.floor(r() * a.length)];
 const weighted = (r, list) => { const t = list.reduce((n, x) => n + x.w, 0); let k = r() * t; for (const x of list) { k -= x.w; if (k <= 0) return x; } return list[0]; };
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -61,7 +61,7 @@ export function retinueTick(state, days, r = random) {
     if (a.march) continue;
     if (!P.returning && a.at === P.dest) {
       P.stay -= days;
-      if (P.stay <= 0) home('done');
+      if (P.stay <= 0 && !(P.until && dayNumber(state.meta.date) <= P.until)) home('done'); // (a tourney's guests stay for its lists)
     } else if (P.returning && a.at === P.home) {
       emit(state, 'returned', { actors: [a.commander], houses: [a.owner], place: P.home, pos: a.pos, data: { party: a.id }, cause: { type: 'rule', ref: 'retinues' } });
       disband(state, a, P.home);
@@ -87,14 +87,17 @@ function sendOut(state, r) {
   // the player's own region is where the eye rests: its lords go out more often
   const mine = state.holdings[state.houses[p]?.seat]?.region;
   const local = lords.filter((x) => home(x).region === mine);
-  const h = r() < 0.55 && local.length ? pick(r, local) : pick(r, lords);
+  // while a tourney is freshly called, the lords of its region are the ones who ride out (most of the days it has to fill its guests)
+  const calls = tourneyNow(state);
+  const invited = calls.length && r() < 0.6 ? lords.filter((x) => calls.some((t) => t !== x.seat && state.holdings[t]?.region === home(x).region)) : [];
+  const h = invited.length ? pick(r, invited) : r() < 0.55 && local.length ? pick(r, local) : pick(r, lords);
   if (!h) return null;
   const seat = home(h); const lord = state.characters[h.lord];
   const T = temperament(lord); const season = state.world?.season || 'summer';
   const tourneys = tourneyNow(state).filter((x) => state.holdings[x]?.region === seat.region);
   const progress = Object.values(state.parties).find((a) => a.kind === 'progress' && a.at && dist(state.holdings[a.at]?.pos || [9e9, 9e9], seat.pos) < 120);
   const purpose = weighted(r, PURPOSES.map((x) => ({ ...x,
-    w: (x.kind === 'tourney' ? (tourneys.length ? 24 : 0) : x.kind === 'king' ? (progress ? 10 : 0) : x.w)
+    w: (x.kind === 'tourney' ? (tourneys.length ? (invited.includes(h) ? 400 : 24) : 0) : x.kind === 'king' ? (progress ? 10 : 0) : x.w)
       * (x.by ? 0.5 + (T[x.by] ?? 0.5) : 1) * (x.feast && season === 'autumn' ? 2 : 1), // the harvest feasts of autumn
   })));
   // no long journeys in a northern winter
@@ -106,7 +109,7 @@ function sendOut(state, r) {
   let id = `party_${lord.id}`; if (state.parties[id]) return null;
   const destLord = state.characters[state.houses[dest.owner]?.lord];
   const why = purpose.why({ place: dest.name, lordName: destLord?.name || `the lord of ${dest.name}`, his: pronouns(lord).his });
-  state.parties[id] = { id, owner: h.id, name: `${lord.name}'s party`, commander: lord.id, at: null, pos: [...seat.pos], men, kind: 'retinue', members: [], composition: 'Household knights and riders, mounted', morale: 75, supply: 90, asOf: dateStr(state.meta.date), public: true, march: { to: dest.id, since: state.meta.turn }, purpose: { dest: dest.id, home: seat.id, stay: purpose.stay[0] + Math.floor(r() * (purpose.stay[1] - purpose.stay[0] + 1)), why } };
+  state.parties[id] = { id, owner: h.id, name: `${lord.name}'s party`, commander: lord.id, at: null, pos: [...seat.pos], men, kind: 'retinue', members: [], composition: 'Household knights and riders, mounted', morale: 75, supply: 90, asOf: dateStr(state.meta.date), public: true, march: { to: dest.id, since: state.meta.turn }, purpose: { dest: dest.id, home: seat.id, stay: purpose.stay[0] + Math.floor(r() * (purpose.stay[1] - purpose.stay[0] + 1)), why, ...(purpose.kind === 'tourney' && state.plots?.lists?.[dest.id] ? { until: state.plots.lists[dest.id].on } : {}) } };
   joinParty(state, lord, state.parties[id]);
   // a wife, a grown son or daughter may ride along (0–3 of the family at the seat)
   const kin = Object.values(state.characters).filter((c) => c.alive && c.house === h.id && c.id !== lord.id && c.loc === h.seat && c.status === 'free' && (c.age ?? 20) >= 12 && !locked.has(c.id) && (c.roles || []).some((x) => ['lady', 'heir', 'family'].includes(x)) && canAttend(state, c, 'attending'));
