@@ -13,6 +13,15 @@ for the player, and what the owner should verify.
 - **A boy does not lead a party.** Robert Arryn, six, no longer "leaves the Eyrie with 180 knights and riders to hunt in the country".
 - Tests: `tests/bugfix-prisoners.test.js` (8).
 
+## 2026-10-02 — Bug hunt fixes SV2, SV3, SV4, SV5, CI1: one thing at a time on a save, and no bad input
+
+- **Two End turns are one.** While a turn is being written, a second End turn, an undo, a conversation, a council, an order, an edit or a delete is refused at once ("The chronicle is busy: a turn is being written. Wait for it to finish.") instead of running on a stale copy and losing, or undoing, the turn. The quiet ones asked in passing (the ravens read, a page of news) are refused the same way; the page already does without them.
+- **A damaged chronicle says so.** A save whose file cannot be read is listed on the title screen as damaged, says why in words when you click it, and can be burned with the ✕. A folder with no save in it is not listed.
+- **Spans and sizes are checked.** `abc`, `-5d`, `0d`, `9999d` and `999999999d` are refused ("use auto, or from 1d to 360d") instead of being played for a minute and more; an order of more than 2,000 characters, more than 60 orders, a message of more than 4,000 characters and a chronicle of more than a million are refused in words rather than cut off in silence.
+- **The page is not sent the dice.** The position of the save's random generator, which would let a page foretell the next roll, stays on the server.
+- **The soak says which game failed.** `tests/soak.test.js` prints the seed and the command that plays that game again, and a card of a rolled-up story is scored against the houses of all its facts (the likeliest cause of the one red run on CI: "Norrey men join the host" failed for want of Norrey).
+- Tests: `tests/bugfix-saves.test.js` (5).
+
 ## 2026-10-02 — Bug hunt fixes ST10, ST12, ST13, ST14, TX4, TX5, TX9: the words of the chronicle
 
 - **"Lysa Arryn takes the regency" is no longer news in the first week of every game.** The minorities the tale starts with (Edric Dayne's, Robert Arryn's) have their regents in place from the start; a regency that begins later is still told.

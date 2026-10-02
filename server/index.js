@@ -118,6 +118,8 @@ route('POST', '/api/games/:id/advance', async (req, p) => game.advance(p.id, awa
 const jobs = new Map(); let jobSeq = 0;
 function startJump(id, body) {
   for (const j of jobs.values()) if (j.game === id && !j.over) throw game.httpError(409, 'the days are already passing');
+  if (game.writingNow(id)) throw game.httpError(409, `The chronicle is busy: ${game.writingNow(id)} is being written. Wait for it to finish.`);
+  game.checkSpan(body?.span); // (a bad span is refused here, not found out in the stream)
   const job = { id: `j${++jobSeq}-${Date.now().toString(36)}`, game: id, sent: [], listeners: new Set(), over: false, stopDay: null };
   const emit = (event, data) => { const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`; job.sent.push(msg); for (const res of job.listeners) res.write(msg); };
   jobs.set(job.id, job);
@@ -154,7 +156,7 @@ route('GET', '/api/games/:id/realm', (req, p) => {
   const q = new URL(req.url, 'http://x').searchParams;
   return game.realmView(p.id, { lens: q.get('lens'), scope: q.get('scope'), realm: q.get('realm') === '1', window: q.get('window'), house: q.get('house') });
 });
-route('POST', '/api/games/:id/talk', async (req, p) => { const b = await readBody(req); return game.talk(p.id, b.character, String(b.message || '').slice(0, 4000)); });
+route('POST', '/api/games/:id/talk', async (req, p) => { const b = await readBody(req); return game.talk(p.id, b.character, String(b.message || '')); });
 route('POST', '/api/games/:id/suggest', (req, p) => game.suggest(p.id));
 // The scribe: the lord's words, spelt and stopped for the steward (rules always; the small CPU model when config names one)
 route('POST', '/api/games/:id/scribe', async (req, p) => { const b = await readBody(req); return game.scribe(p.id, String(b.text || ''), { spoken: !!b.spoken }); });
