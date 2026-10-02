@@ -174,6 +174,18 @@ export function project(state, houseId, ix = null) {
 }
 
 /**
+ * The income a moon that the books show, from what the last stretch of days brought: the net over the months it ran. A stretch of a few days is a noisy sample (a week's
+ * luck, a cargo bought, a project paid), so it is blended with the figure before it by how long it was, and a full week stands alone. Before, it was divided by at least a
+ * quarter of a moon whatever its length, so a turn that ended on a two-day stretch showed a quarter of the true income and the figures never agreed with the coin (bug hunt WD3).
+ */
+export function rateOf(prev, net, months) {
+  const now = net / Math.max(1e-6, months);
+  const w = Math.min(1, Math.max(0.1, months / 0.2)); // a stretch of six days or more counts in full
+  const before = Number(prev);
+  return Number.isFinite(before) ? before * (1 - w) + now * w : now;
+}
+
+/**
  * Settle the books for `days`. Returns the list of notable economic happenings (for the chronicle feed).
  */
 export function settle(state, days) {
@@ -237,7 +249,8 @@ export function settle(state, days) {
   }
   for (const house of Object.values(state.houses)) {
     const L = ledgers[house.id]; const f = house.figures;
-    if (['tribe', 'exile', 'company'].includes(house.rank)) { house.ledger = []; continue; } // they live by raid, patron or contract — the story decides
+    // they live by raid, patron or contract — the story decides; their coin is never touched here, so no income is claimed for them (the Golden Company's "−39,866 a moon" on 60,000 never cost it a dragon: bug hunt WD3)
+    if (['tribe', 'exile', 'company'].includes(house.rank)) { house.ledger = []; if (f.income && f.income.v !== 0) f.income = { ...f.income, v: 0, src: 'By raid, patron or contract', confidence: 'reported' }; continue; }
     const armies = forces(state).filter((a) => a.owner === house.id);
     const upkeep = armies.reduce((s, a) => s + armyUpkeep(a), 0) * months;
     if (upkeep) L.lines.push({ kind: 'expense', label: 'Hosts & fleets in the field', amount: Math.round(upkeep), detail: armies.map((a) => ({ label: a.name, amount: Math.round(armyUpkeep(a) * months) })) });
@@ -296,7 +309,7 @@ export function settle(state, days) {
     const src = steward ? `${steward.name}'s accounts` : 'Ledger';
     const prev = f.treasury?.v || 0;
     f.treasury = { v: Math.round(treasury), asOf: date, src, confidence: 'reported' };
-    f.income = { v: Math.round((income - expense - borrowed) / Math.max(0.25, months)), asOf: date, src, confidence: 'reported' };
+    f.income = { v: Math.round(rateOf(f.income?.v, income - expense - borrowed, months)), asOf: date, src, confidence: 'reported' };
 
     // food stores (nomads, sellswords and exiles live off the land or their paymasters)
     const hs = houseHoldings(state, house.id);

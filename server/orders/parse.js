@@ -18,6 +18,8 @@ import { resolvePlaceId } from '../../public/js/shared/world.js';
 import { partyOf, isForce, together } from '../../public/js/engine/parties.js';
 import { commands, destination } from '../../public/js/engine/actions/military.js';
 import { PROJECT_TEMPLATES, TAX_LEVELS } from '../../public/js/shared/economy.js';
+import { betrothable, mates } from '../../public/js/engine/people/family.js';
+import { houseLabel } from '../../public/js/engine/facts/label.js';
 
 // ── Numbers: digits and the words a lord dictates ("two thousand spears", "a score of knights", "a few men") ──
 const UNITS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
@@ -395,6 +397,18 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     if ((RE.spies.test(t.replace(/\bspymaster\b/, '')) || secretsWords) && !RE.letter.test(t)) {
       const target = housesNamed[0] || others[0]?.house || (places[0] && state.holdings[places[0]]?.owner !== house ? state.holdings[places[0]]?.owner : null);
       if (target) { A(secretsWords && !RE.spies.test(t.replace(/\bspymaster\b/, '')) ? 'gather_secrets' : 'plant_spy', { house: target }); return; }
+    }
+    // "Betroth Sansa to Prince Joffrey", "Marry Robb to a daughter of House Frey", "Arrange a marriage for Robb": a match for one of the lord's own (WD1; it was the story's)
+    if (/\b(betroth\w*|affianc\w*|marry|marries|wed|arrange (?:a )?(?:marriage|match)|find (?:a |him a |her a )?(?:husband|wife|bride|groom|match)|a match (?:for|with))\b/.test(t) && !RE.letter.test(t.replace(/\bmarriage\b/, '')) && !hosts.length) {
+      const mine = own.find((c) => betrothable(state, c)); const theirs = others.find((c) => betrothable(state, c));
+      if (mine && theirs) { A('betroth', { character: mine.id, to: theirs.id }); return; }
+      if (mine) {
+        const who = mates(state, mine, { house: housesNamed[0] || null });
+        need(who.length ? `Whom should ${mine.name} be betrothed to?` : `No match for ${mine.name} offers itself${housesNamed[0] ? ` among House ${state.houses[housesNamed[0]]?.name}` : ' among the houses near'}.`, who.map((c) => ({ label: `${c.name} (${houseLabel(state, c.house)}, ${c.age})`, patch: { to: c.id } })), { verb: 'betroth', params: { character: mine.id } });
+        return;
+      }
+      need('Whom should be betrothed?', Object.values(state.characters).filter((c) => c.house === house && betrothable(state, c) && c.id !== L.lord?.id).sort((a, b) => b.age - a.age).slice(0, 4).map((c) => ({ label: c.name, patch: { character: c.id } })), { verb: 'betroth', params: {} });
+      return;
     }
     if (/\b(?:dismiss|sack|discharge)\b/.test(t) && own.length && !hosts.length && !MY_HOST.test(t) && !/\b(men|host|army|levies|troops|soldiers|banners)\b/.test(t)) { A('dismiss_office', { character: own[0].id }); return; }
     if (/\b(?:my|the|his|her) heir\b/.test(t) && /\b(name|make|declare|proclaim|appoint|choose|set up|recognis\w+|recogniz\w+)\b/.test(t)) {

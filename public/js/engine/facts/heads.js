@@ -675,7 +675,12 @@ export const HEAD = {
     const np = d.building ? lower1(String(d.building)) : worksOf(d)[1];
     return P ? c.pick(f, [`${P} raises ${np}`, `${cap1(np)} rises at ${P}`, `${P} finishes ${np}`]) : c.pick(f, [`${a} finishes ${np}`, `${a} raises ${np}`]);
   },
-  ledger: (f, s, c) => { const h = (f.houses || []).find((x) => c.known.house(x)); return `${h ? cap1(c.hs(h)) : c.subj(f)} inspects its accounts${c.at(f.place)}`; },
+  // (the steward's note, said: a house gone hungry or a fortnight of its dues withheld is not "inspecting its accounts")
+  ledger: (f, s, c) => {
+    const h = (f.houses || []).find((x) => c.known.house(x)); const who = h ? cap1(c.hs(h)) : c.subj(f);
+    const said = { hunger: `${who} goes hungry`, famine: `${who} faces famine`, grain: `${who} buys grain against the hunger`, dues: `${who} withholds its dues`, works: `${who} finishes its works` }[f.data?.note];
+    return said ? `${said}${c.at(f.place)}` : `${who} inspects its accounts${c.at(f.place)}`;
+  },
   unrest_rising: (f, s, c) => {
     const d = f.data || {}; const P = c.pl(f.place); const h = (f.houses || []).find((x) => c.known.house(x)); const where = P || (h ? c.hs(h) : 'the realm');
     return d.outlaws ? `Outlaws gather near ${where}` : c.pick(f, [`Discontent grows at ${where}`, `The smallfolk of ${where} grow restless`]);

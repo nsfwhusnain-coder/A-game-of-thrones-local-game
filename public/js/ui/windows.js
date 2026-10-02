@@ -532,6 +532,8 @@ function characterSheet(id) {
       ${c.alive ? `<span class="k">Health</span><span class="cond ${conditionOf(s, c).tone}">${esc(conditionOf(s, c).word)}</span>` : ''}
       <span class="k">Where</span><span>${esc(whereabouts(s, c).text)}</span>
       ${c.alive && c.status !== 'free' ? `<span class="k">Status</span><span class="pill bad">${esc(c.status)}</span>` : ''}
+      ${c.alive && mine && c.expecting ? `<span class="k">Expecting</span><span>a child, in ${(() => { const m = Math.round((c.expecting.due - dayNumber(s.meta.date)) / 30); return m <= 0 ? 'days' : m === 1 ? 'about a moon' : `about ${m} moons`; })()}</span>` : ''}
+      ${c.alive && c.betrothed && s.characters[c.betrothed] ? `<span class="k">Betrothed</span><span>${esc(s.characters[c.betrothed].name)}${c.wedOn && mine ? `, to be wed ${c.wedOn - dayNumber(s.meta.date) > 400 ? 'when of age' : 'in the coming moons'}` : ''}</span>` : ''}
       ${!mine && c.alive ? `<span class="k">Opinion of you</span><span>${relHtml(c.opinion || 0)}</span>` : ''}
       ${c.alive && c.house !== 'free_folk' ? `<span class="k">Loyalty</span><span>${meter(c.loyalty ?? 60, '#7fb85a')}</span>` : ''}</div>
     </div></div>

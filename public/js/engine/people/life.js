@@ -23,6 +23,13 @@ export function keptByStory(state, c, { playerBattle = false } = {}) {
 /** Whether a death of chance may take this person: not if the story keeps them, nor if a beat still to come needs them. */
 export const mayDie = (state, c, spared = new Set()) => !keptByStory(state, c) && !spared.has(c.id);
 
+/**
+ * The chance that a person of this age does not see the next year, of age alone (bug hunt WD2: it was about three times too high: 42 % a year at seventy-five, 87 % at
+ * ninety-four, from two laws that both took the old, and of the forty over seventy at the start two were alive after four years). A Gompertz curve: 5 % at seventy, 11 % at
+ * eighty, 22 % at ninety, 47 % at a hundred; nothing of age alone before sixty (the fevers and the ailing are the week's, below).
+ */
+export const ageRisk = (age) => (age >= 60 ? Math.min(0.6, 0.05 * Math.exp(0.075 * (age - 70))) : 0);
+
 // a wound: most heal in one to three moons; one in twelve festers, and a festering wound kills unless the story keeps you
 const HEAL = [30, 90];
 const FESTER = 1 / 12;
@@ -55,7 +62,8 @@ export function lifeTick(state, r, { spared = new Set() } = {}) {
     // fevers and frailty: reckoned once a week; the old, the ailing, and everyone in winter
     if (!weekly) continue;
     const age = c.age ?? 30; const ailing = /ailing|dying|sick|abed|frail/i.test(`${c.traits || ''} ${c.bio || ''}`);
-    const risk = (age >= 70 ? 0.0015 * (age - 68) : age >= 60 ? 0.0004 : 0) * (winter ? 2.5 : 1) + (ailing ? 0.003 : 0) + (winter && age < 6 ? 0.0008 : 0);
+    // (the old die of their years in the year's turn, ageRisk; the week's own are a fever now and then (one in a hundred a year past sixty), the ailing, the chill of winter on the old and the very young)
+    const risk = (age >= 60 ? 0.0002 : 0) + (winter && age >= 60 ? 0.0004 + 0.0002 * (age - 60) / 5 : 0) + (ailing ? 0.003 : 0) + (winter && age < 6 ? 0.0008 : 0);
     if (!risk || r() >= risk || !mayDie(state, c, spared)) continue;
     const cause = winter ? 'a winter chill' : ailing ? 'a long illness' : 'a fever';
     events.push(fact(state, 'death', { title: `${c.name} is dead`, text: `${c.name}${c.title ? `, ${c.title},` : ''} has died of ${cause}, aged ${age}.`, where: state.houses[c.house]?.seat || null, importance: state.houses[c.house]?.lord === c.id ? 4 : 2, houses: [c.house] }, { actors: [c.id], data: { cause, age, how: winter ? 'winter' : ailing ? 'illness' : 'fever' }, cause: { type: 'rule', ref: 'life' } }));

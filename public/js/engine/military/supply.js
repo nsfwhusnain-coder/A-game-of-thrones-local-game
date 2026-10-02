@@ -187,8 +187,9 @@ export function supplyTick(state, days = 1) {
     // the week's losses to hunger and sickness, told once on the realm's seventh day
     if (today % 7 === 0) {
       if (p.lostHungry) { events.push(...cardFor(state, p, 'desertion', { title: `Hunger thins ${p.name}`, text: `${fmt(p.lostHungry)} men of ${p.name} die, desert or fall out of the column for want of bread.`, where: land?.id || null, houses: [p.owner] }, { actors: [p.commander], data: { party: p.id, lost: p.lostHungry, men: p.men, cause: 'hunger' }, cause: { type: 'rule', ref: 'supply' } })); applied.push({ op: 'supply', text: `${p.name}: ${fmt(p.lostHungry)} lost to hunger` }); }
-      if (p.lostSick >= 20) { events.push(...cardFor(state, p, 'camp_fever', { title: `Fever in the camp of ${p.name}`, text: `The bloody flux goes through the camp of ${p.name}: ${fmt(p.lostSick)} men are dead or too sick to march.`, where: land?.id || null, houses: [p.owner] }, { actors: [p.commander], data: { party: p.id, lost: p.lostSick, men: p.men }, cause: { type: 'rule', ref: 'supply' } })); applied.push({ op: 'supply', text: `${p.name}: ${fmt(p.lostSick)} lost to fever` }); }
-      delete p.lostHungry; if (p.lostSick >= 20) delete p.lostSick; // a handful are carried into next week's count
+      // (told once a moon with the sum of the moon's sick, not every week of a camp that sits: bug hunt WD5 saw the same host's fever sixteen times in fourteen turns)
+      if (p.lostSick >= 20 && today - (p.feverTold ?? -99) >= 28) { p.feverTold = today; events.push(...cardFor(state, p, 'camp_fever', { title: `Fever in the camp of ${p.name}`, text: `The bloody flux goes through the camp of ${p.name}: ${fmt(p.lostSick)} men are dead or too sick to march.`, where: land?.id || null, houses: [p.owner] }, { actors: [p.commander], data: { party: p.id, lost: p.lostSick, men: p.men }, cause: { type: 'rule', ref: 'supply' } })); applied.push({ op: 'supply', text: `${p.name}: ${fmt(p.lostSick)} lost to fever` }); }
+      delete p.lostHungry; if (p.feverTold === today) delete p.lostSick; // (what was not told is carried into next week's count)
     }
     p.rations = Math.round(clamp(p.rations, 0, trainOf(state, p).capacity));
     p.supply = supplyOf(state, p).supply;

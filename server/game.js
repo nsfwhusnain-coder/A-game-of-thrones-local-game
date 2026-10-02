@@ -518,7 +518,9 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
       updateKnowledge(state); postTick(state);
       const econNotes = settle(state, d);
       const mine = econNotes.filter((n) => n.house === p || state.houses[n.house]?.liege === p || (n.important && n.house === state.houses[p].liege));
-      for (const n of mine.slice(0, 6)) told.push(fact(state, 'ledger', { title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, houses: [n.house], day: ran, ...(n.important ? {} : { bg: true, mine: true }) }, { cause: { type: 'rule', ref: 'economy' } }));
+      // the same note of the same house is told once in a moon, not every week it is still true (bug hunt WD5: "House Magnar inspects its accounts", seventy-four times in thirty turns:
+      // a house that went on buying grain, or going hungry, was a card a week); what the note says is its `data.note`, so the card says it too
+      for (const n of freshNotes(state, mine).slice(0, 6)) told.push(fact(state, 'ledger', { title: n.important ? 'The ledger' : 'From the steward\'s accounts', text: n.text, where: n.holding || null, importance: n.important ? 3 : 1, houses: [n.house], day: ran, ...(n.important ? {} : { bg: true, mine: true }) }, { data: { note: ledgerNote(n.text) }, cause: { type: 'rule', ref: 'economy' } }));
       // ── THE TELLING (04 §6; server/narrator.js): the week's cards gathered into stories and told, held to their facts
       const tn = Date.now(); let segMeanwhile = '';
       if (narratorOn(cfg)) {
@@ -802,6 +804,19 @@ async function talkWith(id, state, cfg, charId, message) {
   if (state.chronicle.length) { appendChronicle(id, state.chronicle.map((x) => `- ${x.date}: ${x.text}`).join('\n') + '\n'); state.chronicle = []; }
   saveState(id, state);
   return { reply, applied, rejected, state, stance: { verdict: stance.verdict, mood: moodWord(stance.mood), patience: stance.mood.patience, full: stance.mood.full, closed: !!stance.mood.closed } };
+}
+
+const LEDGER_REPEAT = 28; // days before the same note of the same house is told again
+/** The steward's notes not told already this moon: the same note of the same house is told once in LEDGER_REPEAT days (and the memory of it is kept in the save, `meta.ledgerSeen`). */
+export function freshNotes(state, notes) {
+  const seen = state.meta.ledgerSeen = state.meta.ledgerSeen || {}; const nowDay = dayNumber(state.meta.date);
+  for (const k of Object.keys(seen)) if (nowDay - seen[k] > 90) delete seen[k];
+  return notes.filter((n) => { const key = `${n.house}|${String(n.text).replace(/[0-9,.]+/g, 'N')}`; if (nowDay - (seen[key] ?? -99) < LEDGER_REPEAT) return false; seen[key] = nowDay; return true; });
+}
+/** What a steward's note is about, for the card that tells it (the writer says it in its own words: engine/facts/heads.js ledger). */
+export function ledgerNote(text) {
+  const t = String(text || '');
+  return /^Hunger stalks/.test(t) ? 'hunger' : /^Famine in the lands/.test(t) ? 'famine' : /bought [\d.]+ moons of grain/.test(t) ? 'grain' : /withholds its dues/.test(t) ? 'dues' : /is complete\.$/.test(t) ? 'works' : null;
 }
 
 // Sworn lords answering the call on the same day are one piece of news, not a flood of cards
