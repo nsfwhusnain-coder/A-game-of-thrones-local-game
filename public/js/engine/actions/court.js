@@ -138,6 +138,51 @@ export const COURT = [
     facts: ['office_granted'], mind: { allowed: true },
   },
   {
+    // an officer is dismissed: he keeps his place in the household, not his office (OR5/OR7: "Dismiss Maester Luwin" sent a host home)
+    id: 'dismiss_office', family: 'court', label: 'Dismiss an officer',
+    params: { character: 'character:own' },
+    legal: (state, i) => {
+      const c = state.characters[i.params.character];
+      if (!c || !c.alive || c.house !== i.house) return { code: 'no_one', text: 'No one of yours by that name.' };
+      if (c.id === state.houses[i.house]?.lord) return { code: 'lord', text: 'You cannot dismiss yourself.' };
+      if (!(c.roles || []).some((r) => ROLES[r])) return { code: 'no_office', text: `${c.name} holds no office of yours to be dismissed from.` };
+      return null;
+    },
+    start: (state, i) => {
+      const c = state.characters[i.params.character]; const me = state.houses[i.house]; const held = (c.roles || []).filter((r) => ROLES[r]);
+      c.roles = c.roles.filter((r) => !ROLES[r]); if (!c.roles.length) c.roles = ['family'];
+      c.opinion = clamp((c.opinion || 0) - 15, -100, 100); c.memories = [...(c.memories || []), `Dismissed as ${held.map((r) => ROLES[r]).join(' and ')} of House ${me.name}.`];
+      emit(state, 'office_stripped', { actors: [c.id, me.lord], houses: [i.house], place: me.seat || null, data: { office: held[0] }, cause: i.source, text: `${c.name} is dismissed as ${ROLES[held[0]]} of House ${me.name}.` });
+      return { name: c.name, offices: held.map((r) => ROLES[r].toLowerCase()) };
+    },
+    receipt: (state, i, d) => [{ ok: true, text: `${d.name} is dismissed as ${d.offices.join(' and ')}.` }],
+    said: (state, i, d) => ({ status: 'done', text: `Dismiss ${d.name} as ${d.offices.join(' and ')}.` }),
+    facts: ['office_stripped'], mind: { allowed: false },
+  },
+  {
+    // the lord names who shall have his house after him (OR7); the succession reads it before the order of birth (`heirOf`, shared/people.js)
+    id: 'name_heir', family: 'court', label: 'Name an heir',
+    params: { character: 'character:own' },
+    legal: (state, i) => {
+      const c = state.characters[i.params.character]; const me = state.houses[i.house];
+      if (!c || !c.alive || c.house !== i.house) return { code: 'no_one', text: 'No one of yours by that name.' };
+      if (c.id === me?.lord) return { code: 'lord', text: 'You are the lord: name someone to come after you.' };
+      if (me?.designated === c.id) return { code: 'already', text: `${c.name} is already your named heir.` };
+      return null;
+    },
+    start: (state, i) => {
+      const c = state.characters[i.params.character]; const me = state.houses[i.house];
+      for (const o of Object.values(state.characters)) if (o.house === i.house && o.id !== c.id && o.roles?.includes('heir')) o.roles = o.roles.filter((r) => r !== 'heir');
+      c.roles = [...new Set([...(c.roles || []), 'heir'])]; me.heir = c.id; me.designated = c.id;
+      c.opinion = clamp((c.opinion || 0) + 15, -100, 100); c.memories = [...(c.memories || []), `Named heir of House ${me.name}.`];
+      emit(state, 'office_granted', { actors: [c.id, me.lord], houses: [i.house], place: me.seat || null, data: { office: 'heir', title: `Heir of House ${me.name}` }, cause: i.source, text: `${c.name} is named heir of House ${me.name}.` });
+      return { name: c.name };
+    },
+    receipt: (state, i, d) => [{ ok: true, text: `${d.name} is named your heir, and the lords will be told.` }],
+    said: (state, i, d) => ({ status: 'done', text: `Name ${d.name} as my heir.` }),
+    facts: ['office_granted'], mind: { allowed: false },
+  },
+  {
     id: 'grant_holding', family: 'court', label: 'Grant a holding to a sworn lord',
     params: { holding: 'holding:own', house: 'house:vassal' },
     legal: (state, i) => {
@@ -182,7 +227,7 @@ export const COURT = [
     params: { character: 'character:captive', verdict: 'enum:release|ransom|wall|execute' },
     legal: (state, i) => {
       const c = state.characters[i.params.character];
-      if (!c?.alive || !/imprisoned|captive|hostage/.test(c.status || '')) return { code: 'no_prisoner', text: 'There is no such prisoner.' };
+      if (!c?.alive || !/imprisoned|captive|hostage/.test(c.status || '')) return { code: 'no_prisoner', text: c?.alive ? `${c.name} is not your prisoner.` : 'There is no such prisoner.' };
       const heldBy = keeperOf(state, c);
       if (heldBy !== i.house && state.houses[heldBy]?.liege !== i.house) return { code: 'not_yours', text: `${c.name} is not your prisoner.` };
       if (!VERDICT[i.params.verdict]) return { code: 'verdict', text: 'Unknown judgement.' };
