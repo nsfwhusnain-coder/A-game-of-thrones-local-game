@@ -2,7 +2,7 @@
 // The simulator can override any of this by changing obligations itself; the engine fills in when it doesn't.
 import { unitsOf, addUnits } from './units.js';
 import { applyChanges, placePos, getRelation, rideOf, sendHome } from './world.js';
-import { ref, isRef, joinParty, moveMembers, membersOf, disband, settle, isForce, sworn } from '../engine/parties.js';
+import { ref, isRef, joinParty, moveMembers, membersOf, disband, settle, isForce, sworn, NOT_A_FIELD_HOST } from '../engine/parties.js';
 import { marchDays, atWar } from './warfare.js';
 import { incapacity } from './regency.js';
 import { pronouns, isFemale } from './people.js';
@@ -164,8 +164,6 @@ export function answerRebel(state, [vid, how]) {
  *  A call to the banners names the host the lords are to join (`obligations.join`). Late banners join THAT host wherever
  *  it has gone — marched on, or arrived somewhere else — so a muster never leaves an orphan host behind at the muster
  *  point (the "they all muster up and stay there" bug). */
-/** The kinds of party that never give battle (battle.js: they withdraw) or sit in a castle: no lord's levy joins them as "the great host". */
-const NOT_A_FIELD_HOST = new Set(['fleet', 'garrison', 'progress', 'retinue', 'caravan', 'envoy', 'rider']);
 export function gatherMusters(state) {
   const events = [];
   const dist = (x, y) => Math.hypot(x.pos[0] - y.pos[0], x.pos[1] - y.pos[1]);

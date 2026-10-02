@@ -2,7 +2,7 @@
 // disbanding hosts, and how openly they go. Each is the one way the engine does the thing, for the player and — once
 // the minds of WP B7 choose verbs — for every other lord; nothing here assumes the actor is the player.
 import { applyChanges, resolvePlaceId, placeName, placePos, slug, dateStr, nearestHolding, sendHome, realmOf } from '../../shared/world.js';
-import { ref, isRef, idOf, partyAt, joinParty, moveMembers, settle, forces, isForce, sworn, membersOf, disband } from '../parties.js';
+import { ref, isRef, idOf, partyAt, joinParty, moveMembers, settle, forces, isForce, sworn, membersOf, disband, NOT_A_FIELD_HOST } from '../parties.js';
 import { planRoute } from '../movement.js';
 import { marchDays, atWar } from '../../shared/warfare.js';
 import { canEmbark, embark, land, aboardOf, sail, raidTargets, startRaid } from '../military/naval.js';
@@ -57,7 +57,7 @@ export function destination(state, text) {
 }
 
 // ── Hosts: one army where the men are, not a new one for every muster ──
-export const fieldHostAt = (state, owner, at) => forces(state).find((x) => x.owner === owner && !['fleet', 'garrison'].includes(x.kind) && x.at === at && !x.march);
+export const fieldHostAt = (state, owner, at) => forces(state).find((x) => x.owner === owner && !NOT_A_FIELD_HOST.has(x.kind) && x.at === at && !x.march); // (the muster is a host that fights: the Martell host marched a hundred and eight days for the King's progress, N-043)
 /** Fold one host into another: men, morale, supply, the banners in it, and the people riding with it. */
 export function foldInto(state, host, other) {
   host.units = addUnits(unitsOf(state, host), unitsOf(state, other));

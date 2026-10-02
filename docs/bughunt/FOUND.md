@@ -243,6 +243,14 @@ The gossip's harvest news had a data slot (`harvest: good|blight`) and no head, 
 ### N-041 · S4 · "Shella Deddings guards Tristan Deddings's seat"
 **Where:** `engine/facts/heads.js` (`regency_begun`). **FIXED** (`tests/bugfix-found.test.js`): "Deddings' seat".
 
+### N-042 · S2 · The Iron Fleet raids for seven turns with Victarion riding with his own company
+At seven-day turns (the game's own default) a fleet whose captain had ridden off with his own company before it sailed still named him its commander: `boardCommanders` skipped a man who was aboard *another* party. (`probe-simul stark 701 60 7d`: `commander-not-with-host` for turns 52 to 58.)
+**Where:** `engine/parties.js` (`boardCommanders`). **FIXED** (`tests/bugfix-found.test.js`): as the fleet or host sets out, a commander riding with another party no longer commands it.
+
+### N-043 · S2 · "The Host of Martell sets out from Sunspear for the King's progress (~108 days)"
+The Crown's call to its banners named as the host to gather to the largest host standing at the muster, which was the King's progress at King's Landing (N-036's other half): the sworn lords marched across the realm for a court that gives no battle and does not stay where it is. They gather to a host that fights now (`NOT_A_FIELD_HOST`, shared with the vassals' join).
+**Where:** `engine/actions/military.js` (`fieldHostAt`), `engine/parties.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

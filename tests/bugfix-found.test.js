@@ -443,3 +443,23 @@ test('N-041: "guards Tristan Deddings\' seat": a regent\'s ward whose name ends 
   s.characters.roose_bolton.name = 'Roose Boltons'; s.facts = []; emit(s, 'regency_begun', { actors: ['catelyn_stark', 'roose_bolton'], houses: ['stark'], place: 'stark', importance: 2, data: {}, text: 'x' });
   const t = cardOf(s, { facts: [s.facts[0]] }, { pin: 1 }).headline; assert.match(t, /Boltons' seat/, t);
 });
+
+test('N-042: a fleet that sets out has no commander who is riding with another party', async () => {
+  const { boardCommanders } = await import('../public/js/engine/parties.js');
+  const s = world('lannister'); const seat = s.holdings.greyjoy;
+  applyChanges(s, [{ op: 'army_create', id: 'sea_wolves', owner: 'greyjoy', name: 'Sea Wolves', at: 'greyjoy', men: 600, commander: 'victarion_greyjoy', kind: 'fleet' }, { op: 'army_create', id: 'his_riders', owner: 'greyjoy', name: 'His riders', at: 'greyjoy', men: 20, commander: null }]);
+  const victarion = s.characters.victarion_greyjoy; setLoc(s, victarion, 'greyjoy'); setLoc(s, victarion, 'party:his_riders'); // the fleet is in harbour, its captain in the hall: he rides off with his own company ...
+  assert.equal(s.parties.sea_wolves.commander, 'victarion_greyjoy', 'the fleet was in harbour: nothing yet says he has left it');
+  const fleet = s.parties.sea_wolves; fleet.at = null; fleet.pos = [seat.pos[0] + 3, seat.pos[1]]; fleet.march = { to: 'flint_finger', since: 1 }; // ... and the fleet sails
+  boardCommanders(s); assert.equal(fleet.commander, null); assert.equal(partyOf(s, victarion)?.id, 'his_riders');
+});
+
+test('N-043: a call to the banners gathers to a host that fights, not to the King\'s progress at the seat', async () => {
+  const { fieldHostAt } = await import('../public/js/engine/actions/military.js');
+  const s = world('lannister');
+  applyChanges(s, [{ op: 'army_create', id: 'royal_progress', owner: 'baratheon', name: 'The King\'s progress', at: 'baratheon', men: 1400, commander: null }]);
+  s.parties.royal_progress.kind = 'progress';
+  assert.equal(fieldHostAt(s, 'baratheon', 'baratheon'), undefined, 'the court at King\'s Landing is no host to muster to');
+  applyChanges(s, [{ op: 'army_create', id: 'gold_host', owner: 'baratheon', name: 'The Crown\'s host', at: 'baratheon', men: 900, commander: null }]);
+  assert.equal(fieldHostAt(s, 'baratheon', 'baratheon')?.id, 'gold_host');
+});
