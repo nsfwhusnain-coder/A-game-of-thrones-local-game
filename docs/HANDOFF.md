@@ -146,6 +146,26 @@ Never train on book text, on anything from after 298, or to clone a voice.
 - From earlier handoffs, still true: the economy settles per week; battle stances and siege terms are rules, not model calls; the realm's lords do not yet carry hosts by sea; outlaw bands are a mark, not a party; the King's progress has no scheduled stops.
 - **`docs/screens/`** is about 70 MB of screenshots (each package's, at both sizes); prune older sets if the repository grows too heavy to clone. **`finetune/westeros/`** keeps the owner's PC paths and is not part of the game.
 
+### The bug hunt of 2026-10-02 (`docs/BUG-HUNT-2026-10-02.md`, `docs/bughunt/FOUND.md`): what the owner should check
+
+Fifty-seven findings in the report and forty-four the hunt added (N-003 to N-046), all on the mock provider; every merge had all eight CI checks green. The harnesses are in `scripts/bughunt/` (README there); `probe-simul.mjs` is the one for a person doing two things that cannot both be true. The hunt stopped when two passes over different houses (fifteen houses, at thirty-day and seven-day turns) found nothing new at S1 or S2.
+
+**Needs the live model (nothing here could be seen on the mock):**
+- **TX10, long turns:** the wait now says a long stretch can take minutes; measure a 30-day jump on Maester-12B and say whether the number is what the wait promises.
+- **TX7, audiences:** the dossier now carries `THE PLACE` (a hall, a camp, a cell) and `HOW YOU ADDRESS THE LORD`; hold an audience with a lord in his hall and one in his camp and see whether the lines are used and not recited.
+- **TX8, the advisor:** the mock lists no more than the lord asked for (`askedCount`); check that the live model keeps to the number.
+- **TX3, garbled replies:** a reply with a glued figure, a broken ellipsis or a chat token is asked for again, then falls back to the mock's plain line; watch for a model that loops on it.
+- **OR2 to OR11, the order reader:** it now asks which, or says what it left; try a long compound order with the interpreter on (a summons, a march, a dismissal, an heir) and see that the clarifying chips are the right ones.
+- **ST1, great matters:** the headline a beat gives its card (`data.head`) is what the narrator is told to tell; read three beats narrated.
+
+**Design questions the hunt left to you:**
+- **WD1:** births (monthly 6 / 4.5 / 2.5 / 0.8 % by age, 51 % sons), matches (a year at 10 / 7 / 3 / 1 %), the marriage age (16) and no dowry are my numbers; a house's lord or heir is never married away (N-021). Do the families of the realm grow at a pace you like?
+- **WD4, WD6:** holdings changing hands (left: the war working), and houses with no named heir, no house words, six one-person city states.
+- **N-028, strain:** a lord at war climbs to the top of the strain scale in a year or two (7 a moon for each war against a relief of about 7 at home). Should a long war wear the nobility down that far, or should the load fall as a war settles into routine?
+- **N-017, a pursuit:** a routed host that cannot get away is fought again every day it stays in contact (told as one card now); should it break contact after a defeat?
+- **N-036, the Crown's army:** the Crown's banners were joining the King's progress, which gives no battle, so the Crown never took the field; they are a host of their own now and the war in the Riverlands is harder on the Starks and the Tullys. Play a war and say whether it is right.
+- **UI7:** frame cost in a war grows with the armies; I found no leak and have no profile of your GPU.
+
 ## 6. What comes next
 
 The plan is done; what follows is the owner's, in this order:
