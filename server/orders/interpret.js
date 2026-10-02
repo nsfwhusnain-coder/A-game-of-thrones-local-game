@@ -8,7 +8,8 @@ import { runCall } from '../ai/client.js';
 import { intentFor, check } from '../../public/js/engine/actions/registry.js';
 import { readingOf } from '../ai/calls/interpret.js';
 
-const keep = (p) => ({ actions: p.actions.map(({ verb, params }) => ({ verb, params })), letter: p.letter?.to ? { to: p.letter.to } : null, clarify: p.clarify, story: p.story });
+// (what the rules could not read, and what was said aloud, ride with their reading so that the receipt can say so: OR8, OR10)
+const keep = (p) => ({ actions: p.actions.map(({ verb, params }) => ({ verb, params })), letter: p.letter?.to ? { to: p.letter.to, ...(p.letter.also?.length ? { also: p.letter.also } : {}) } : null, clarify: p.clarify, story: p.story, ...(p.unread?.length ? { unread: p.unread } : {}), ...(p.said?.length ? { said: p.said } : {}) });
 
 /** The rules' reading of an order, and whether it may skip the model: complete, unambiguous and lawful. */
 export function ruleReading(state, text, { house = state.meta.player, addressee = null } = {}) {
