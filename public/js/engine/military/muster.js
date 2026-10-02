@@ -108,11 +108,23 @@ function adopt(state, v, today) {
   v.obligations.call.arrive = today; v.obligations.stage = 'deliberating'; v.obligations.call.decide = today;
 }
 
-/** Who leads a house's host: its regent while the lord is a captive or a child (the regent rules in his name), else the lord; no one if the lord is a prisoner and there is no regent. */
-const leaderOf = (state, v) => {
-  const r = v.regent && state.characters[v.regent]; if (r?.alive && !/imprisoned|captive|hostage/.test(r.status || '')) return r;
-  const l = state.characters[v.lord]; return l?.alive && !/imprisoned|captive|hostage/.test(l.status || '') ? l : null;
+/**
+ * Who leads a house's host: its regent while the lord is a captive or a child (the regent rules in his name), else the lord; but a man of the books
+ * or of prayer (a maester, a septon) does not lead an army, whatever he rules: then the lord if he is grown and free, else the best fighter of the house
+ * who is free and grown (its commander, its knights, captain, master-at-arms), else no one — the host goes under its banner (ST6: Maester Luwin led
+ * the Stark host and was named the man who took Asha Greyjoy prisoner).
+ */
+const held = (c) => /imprisoned|captive|hostage/.test(c?.status || '');
+const FIGHTERS = { commander: 4, kingsguard: 3, knight: 3, captain: 3, master_at_arms: 3 };
+const mayLead = (c) => c?.alive && !held(c) && (c.age ?? 30) >= 16 && !(c.roles || []).some((r) => ['maester', 'priest', 'servant'].includes(r)) && !/\b(maester|septon|septa)\b/i.test(c.title || '');
+export const hostLeader = (state, v) => {
+  const r = v.regent && state.characters[v.regent]; if (mayLead(r)) return r;
+  const l = state.characters[v.lord]; if (mayLead(l) && !(v.regent && r?.alive && l.age < 16)) return l;
+  const fighters = Object.values(state.characters).filter((c) => c.house === v.id && mayLead(c) && (c.roles || []).some((x) => FIGHTERS[x]));
+  const rank = (c) => Math.max(...(c.roles || []).map((x) => FIGHTERS[x] || 0)) * 100 + (c.skills || []).slice(0, 3).reduce((a, b) => a + b, 0);
+  return fighters.sort((a, b) => rank(b) - rank(a))[0] || null;
 };
+const leaderOf = hostLeader;
 /**
  * A lord answers: his levies begin to gather at his seat today (a host serving his liege, growing day by day), and set
  * out when they are gathered. `now` — he answers at once (the verb answer_call), without the days of thought.

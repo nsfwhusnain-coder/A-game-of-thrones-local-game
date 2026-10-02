@@ -373,7 +373,11 @@ export const HEAD = {
     return c.pick(f, [`${a} joins ${host}${c.at(f.place)}`, own ? `${c.short(own)} men join ${host}${c.at(f.place)}` : `${a} joins ${host}${c.at(f.place)}`, man ? `${a} brings ${c.his(man)} men to ${host}${c.at(f.place)}` : `${a} joins ${host}${c.at(f.place)}`]);
   },
   host_split: (f, s, c) => `${c.subj(f)} splits ${armyOf(c, f)}${c.at(f.place)}`,
-  host_disbanded: (f, s, c) => { const a = c.subj(f); const army = armyOf(c, f); return c.pick(f, [`${a} disbands ${army}`, `${a} sends ${army} home`]); },
+  host_disbanded: (f, s, c) => {
+    const army = armyOf(c, f); const T = c.pl(f.place);
+    if (/overcome/.test(f.data?.why || '')) return T ? `${cap1(army)} is overcome at ${T}` : `${cap1(army)} is overcome`; // (a household of a hall taken by force, ST8)
+    const a = c.subj(f); return c.pick(f, [`${a} disbands ${army}`, `${a} sends ${army} home`]);
+  },
   desertion: (f, s, c) => { const army = armyOf(c, f); return c.pick(f, [`Men desert ${army}${c.at(f.place)}`, `${cap1(army)} bleeds men${c.at(f.place)}`]); },
   host_hungry: (f, s, c) => { const army = armyOf(c, f); return c.pick(f, [`${cap1(army)} runs out of food${c.near(f.place)}`, `${cap1(army)} is left hungry${c.near(f.place)}`]); },
   land_stripped: (f, s, c) => {
@@ -1010,7 +1014,7 @@ export const SUM = {
   host_formed: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return d.men ? sentences(`${P.He} has ${body(d.men)} under ${P.him}`) : sentences(`Men gather under ${P.his} banner`); },
   host_joined: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`The host grows by ${body(d.men)}`) : ''; },
   host_split: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} are split off`) : ''; },
-  host_disbanded: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} go home`) : ''; },
+  host_disbanded: (f, s, c) => { const d = f.data || {}; if (/overcome/.test(d.why || '')) return sentences('The men are cut down or driven out'); return d.men ? sentences(`${cap1(body(d.men))} go home`) : ''; },
   desertion: (f, s, c) => { const d = f.data || {}; return sentences(`Men slip away from the ranks${d.why ? `: ${d.why}` : ''}`); },
   host_hungry: () => sentences('Its wagons and the fields about it are both empty'),
   land_stripped: () => sentences('The foragers have left the province nothing, and the next host through it will starve'),

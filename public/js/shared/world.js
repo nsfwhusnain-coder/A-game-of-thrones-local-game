@@ -439,6 +439,8 @@ function findArmy(state, id) {
  * they ride, as a rider party. No one crosses the realm in a day.
  */
 export function sendHome(state, c, place) {
+  // a prisoner is not sent home: he is held where he is until he is released, ransomed or has escaped (a house's men going home from a host, or a host disbanded, set no captive free: ST5)
+  if (c.alive && /imprisoned|captive|hostage/.test(c.status || '')) return;
   const here = charPos(state, c), there = placePos(place, state.holdings);
   if (!c.alive || !here || !there || Math.hypot(there[0] - here[0], there[1] - here[1]) * MILES_PER_UNIT < 30) { setLoc(state, c, place); return; }
   try {
@@ -841,6 +843,11 @@ function applyOne(state, ch, ctx) {
       const houses = [...new Set([h.owner, was.owner].filter(Boolean))];
       if (h.owner !== was.owner) {
         const taken = /occupied|sacked|taken|storm|fell|siege|captur|conquer/i.test(`${ch.status || ''} ${ch.note || ''}`);
+        // the household of a hall taken by force is overcome in it, or driven out: it does not stay a party of the lost hall's old lord and camp before its own walls (ST8)
+        if (taken) for (const p of Object.values(state.parties || {})) if (p.kind === 'garrison' && p.at === hid && p.owner === was.owner) {
+          note('host_disbanded', { actors: p.commander ? [p.commander] : [], houses: [was.owner, h.owner], place: hid, pos: h.pos, data: { party: p.id, name: p.name, men: p.men, why: 'overcome when the hall fell' }, text: `${p.name} is overcome when ${h.name} falls.` });
+          disband(state, p, hid);
+        }
         note(taken ? 'holding_fell' : 'holding_granted', { actors: [lordOf(h.owner)], houses, place: hid, pos: h.pos, data: { from: was.owner, to: h.owner }, text: taken ? `${h.name} falls to House ${state.houses[h.owner]?.name}.` : `${h.name} passes to House ${state.houses[h.owner]?.name}${ch.note ? ` — ${ch.note}` : ''}.` });
       } else if (h.status !== was.status && /besieged/.test(h.status || '')) note('siege_begun', { houses, place: hid, pos: h.pos, text: `${h.name} is besieged${ch.note ? ` — ${ch.note}` : ''}.` });
       else if (h.status !== was.status && /besieged/.test(was.status || '')) note('siege_lifted', { houses, place: hid, pos: h.pos, text: `The siege of ${h.name} is lifted.` });
