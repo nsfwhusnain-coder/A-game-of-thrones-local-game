@@ -3,6 +3,7 @@
 // the state the player is sent (already what its house knows: no hidden figure is reached for), so node can test them and a test can search
 // their words for what must not be said; ui/card.js draws them and puts them on the screen.
 import { forces, placeOf, statusText } from '../engine/parties.js';
+import { houseLabel, houseHeading } from '../engine/facts/label.js';
 import { garrisonOf } from '../engine/military/siege.js';
 import { guestsAt } from '../shared/retinues.js';
 import { vassalsOf } from '../shared/world.js';
@@ -62,7 +63,7 @@ export function holdingCard(s, id, { history = s.history || [], regionName = (r)
   if (!mine && myHosts.length) actions.push({ id: 'host', label: 'Send a host here', primary: true, attrs: { 'data-order-tpl': `Send ${myHosts[0].name} to ${hd.name} to ` }, hint: 'Writes the order in the box; nothing is sent until you send it' });
   return {
     kind: 'holding', id, crest: owner?.id || null, title: hd.name,
-    sub: `${typeWord(hd.type)}${seat ? ` · seat of House ${owner.name}` : owner ? ` · House ${owner.name}` : ''} · ${regionName(hd.region) || ''}`.replace(/ · $/, ''),
+    sub: `${typeWord(hd.type)}${seat ? ` · seat of ${houseLabel(s, owner.id)}` : owner ? ` · ${houseLabel(s, owner.id)}` : ''} · ${regionName(hd.region) || ''}`.replace(/ · $/, ''),
     rows, news, actions: actions.slice(0, 3), more: true,
     vassals: mine ? vassalsOf(s, p).length : 0,
   };
@@ -78,7 +79,7 @@ export function armyCard(s, id, { known = null, regionName = (r) => r } = {}) {
   const cmd = a.commander ? s.characters[a.commander] : null; const fleet = a.kind === 'fleet';
   const v = known?.get?.(id);
   if (!mine && v?.known === 'reported') {
-    return { kind: 'army', id, crest: h?.id || null, title: fleet ? 'A fleet, unconfirmed' : 'A host, unconfirmed', sub: `Said to fly the banners of House ${h?.name || 'unknown'}`, rows: [{ k: 'Men', text: `~${n0(v.men)}, by report` }, { k: 'Last heard', text: `${v.age ? `${v.age} turn${v.age > 1 ? 's' : ''} ago` : 'this moon'}, by ${v.source || 'a rider'}` }], news: null, actions: [], more: true };
+    return { kind: 'army', id, crest: h?.id || null, title: fleet ? 'A fleet, unconfirmed' : 'A host, unconfirmed', sub: `Said to fly the banners of ${h ? houseLabel(s, h.id) : 'an unknown house'}`, rows: [{ k: 'Men', text: `~${n0(v.men)}, by report` }, { k: 'Last heard', text: `${v.age ? `${v.age} turn${v.age > 1 ? 's' : ''} ago` : 'this moon'}, by ${v.source || 'a rider'}` }], news: null, actions: [], more: true };
   }
   const rows = [{ k: fleet ? 'Crews' : 'Men', text: `${mine ? '' : '~'}${n0(a.men)}${a.ships ? ` · ${n0(a.ships)} ships` : ''}` }];
   if (cmd) rows.push({ k: 'Commander', char: cmd.id, name: cmd.name });
@@ -86,7 +87,7 @@ export function armyCard(s, id, { known = null, regionName = (r) => r } = {}) {
   if (mine) rows.push({ k: 'Morale', text: `${Math.round(a.morale ?? 0)}` });
   const actions = [];
   if (mine && a.owner === p) { actions.push({ id: 'march', label: 'March to…', primary: true, attrs: { 'data-march': a.id }, hint: 'Then click the place on the map' }); actions.push({ id: 'orders', label: 'Give orders…', attrs: { 'data-order-tpl': `${a.name} is to ` }, hint: 'Writes the order in the box' }); }
-  return { kind: 'army', id, crest: h?.id || null, title: a.name, sub: `${fleet ? 'Fleet' : 'Host'} of House ${h?.name || 'unknown'}`, rows, news: null, actions, more: true };
+  return { kind: 'army', id, crest: h?.id || null, title: a.name, sub: `${fleet ? 'Fleet' : 'Host'} of ${h ? houseLabel(s, h.id) : 'an unknown house'}`, rows, news: null, actions, more: true };
 }
 
 const attrsOf = (o, esc) => Object.entries(o || {}).map(([k, v]) => ` ${k}="${esc(v)}"`).join('');

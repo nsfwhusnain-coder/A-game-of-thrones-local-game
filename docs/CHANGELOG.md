@@ -75,6 +75,16 @@ for the player, and what the owner should verify.
 - **Old saves** play on (a tourney already won stays won).
 - Tests: `tests/bugfix-tourneys.test.js` (9), `tests/bugfix-decrees.test.js` (4).
 
+## 2026-10-02 — Bug hunt fixes UI1 to UI6: the map's keys, where it opens, the crest, the dashes, and controls you can hit
+
+- **The map stops when you let go.** A key pressed with Cmd, Ctrl or Alt (Cmd+S, Cmd+D, Cmd+A) is the browser's, not the map's, and everything the map held is let go when the window loses the keyboard or the tab is hidden: on a Mac the camera no longer drifts on after Cmd+D.
+- **Exiles open on their lord.** Viserys in Pentos and the Golden Company open the map over Pentos and over their camp, not over the North, and the Home key goes there. After a long turn the camera returns to the lord's hall too.
+- **The crest names a faction as a faction**: "The Free Folk", "The Golden Company", "Braavos", "The Night's Watch", and "House Stark" for a house; the same in the house windows, cards and the Realm.
+- **The dashes are read close in.** From the middle zoom out only the road of the party you have selected (or are following) is drawn; at the default zoom every road is.
+- **No 404 on every page load.** The sigil artwork's index is an empty list when no artwork is installed.
+- **Small controls are bigger to hit, not to look at** (UI4): the strip's "All", the Realm's sort headings, a card's "Details" and the thread list had a hit area of 13 pixels at 1366 × 768; each now carries 30 or more as padding with a negative margin, so the page looks as it did. A chip is 25 pixels high; a box to tick is 24, not the browser's 13. Measured in the browser at 1366 × 768 over the main screen, the Realm, People, Chronicle, Settings and How to play: nothing under 22 pixels remains but the box in the People list (23).
+- Tests: `tests/bugfix-ui.test.js` (8). Screenshots in `docs/screens/bugfix/`. *Not done:* UI7 (frame cost in a war: no leak was shown) — see the issue.
+
 ## 2026-10-02 — Bug hunt fix ST1: the great matters of the story are told as news
 
 - **Bran's fall, Drogo's wedding, the assassin's knife, Jon taking the black, Catelyn's seizure of Tyrion** and every other great matter of the story now say what happened. Before, 28 of the 30 cards of a game read "Grave news reaches Castle Black — The ravens carry the word across the realm", the same for all of them. Now the card says "Bran Stark is found broken beneath the old tower — He lives, but sleeps and does not wake. Maester Luwin sits by his bed.", "An assassin enters Bran Stark's chamber with a Valyrian blade", "Jon Snow is chosen Lord Commander of the Night's Watch", "King Robert dies of a boar's tusk in the kingswood", and so on for all sixty-nine events of the canon; the line under the headline is the story's own telling, with the sentence that repeats the headline left out. The turn's digest no longer says "Grave news reaches Winterfell" twice for two different events, and the King's ride no longer says "The royal progress is on the road" under the boy's fall.

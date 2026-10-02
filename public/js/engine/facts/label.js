@@ -31,6 +31,13 @@ function partsOf(h) {
 }
 const isHouse = (h) => !h?.rank || HOUSE_RANKS.has(h.rank);
 
+/** A house's name as a heading or a title (the crest, a window): "House Stark", "House Baratheon" (the house on the throne is a house in its own crest), "The Free Folk", "Braavos". UI3: the crest said "House The Free Folk", "House Braavos". */
+export function houseHeading(state, houseId) {
+  const h = state?.houses?.[houseId];
+  const t = h?.rank === 'crown' && partsOf(h).base ? `House ${partsOf(h).base}` : houseLabel(state, houseId);
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 /** How a house is named inside a sentence. Unknown ids come back as their own words, never as "House …". */
 export function houseLabel(state, houseId) {
   const h = state?.houses?.[houseId];

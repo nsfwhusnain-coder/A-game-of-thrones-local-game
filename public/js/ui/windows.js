@@ -1,5 +1,6 @@
 // Side windows & detail sheets (CK3-style panels).
 import { app, $, $$, esc, fmt, placeName, getRelation, api, doVerb, toast, relHtml, sig, banner, por, player, ruler, meter, charRow, houseRow, armyRow, addOrder, modal, closeModal, confirmModal, sparkline, REGION_NAMES, RANK_NAMES } from './common.js';
+import { houseLabel, houseHeading } from '../engine/facts/label.js';
 import { FIGURE_LABELS, realmOf, realmTotals, vassalsOf, childrenOf, siblingsOf, dateStr } from '../shared/world.js';
 import { whereabouts } from '../shared/roads.js';
 import { standing, standingWord } from '../shared/standing.js';
@@ -90,7 +91,7 @@ function realm() {
   const pop = holdings.reduce((a, x) => a + x.population, 0);
   return `
     <div class="detail-hero"><img class="banner" src="${banner(h, 80, 120)}" alt=""><div>
-      <h2>House ${esc(h.name)}</h2><div class="words">${esc(h.words ? '“' + h.words + '”' : '')}</div>
+      <h2>${esc(houseHeading(app.state, h.id))}</h2><div class="words">${esc(h.words ? '“' + h.words + '”' : '')}</div>
       <div class="muted">${esc(h.title || RANK_NAMES[h.rank])} · ${REGION_NAMES[h.region] || ''}</div>
       <div class="muted">Sworn to: ${liege ? `<a href="#" data-house="${liege.id}">${esc(liege.name)}</a>` : '<b>no one</b>'}</div>
       ${regencyLine(s, p) ? `<div class="muted">⚖ ${esc(regencyLine(s, p))}</div>` : ''}</div></div>
@@ -200,7 +201,7 @@ function companiesHtml(s, p) {
   const rows = Object.entries(COMPANIES).filter(([id]) => s.houses[id]).map(([id, C]) => {
     const host = Object.values(s.parties).find((x) => x.owner === id && x.kind === 'host' && x.men > 0);
     const men = host?.men || C.men || 0; const price = Math.round(men * C.price); const by = host?.contract?.by;
-    const status = by === p ? `in your pay · ${fmt(host.contract.price)} a moon` : by ? `in the pay of House ${esc(s.houses[by]?.name)}${C.turncoat ? ` · would come to you for ${fmt(Math.ceil(host.contract.price * 1.5))}` : ' · keeps its contracts'}` : `for hire · ${fmt(price)} a moon`;
+    const status = by === p ? `in your pay · ${fmt(host.contract.price)} a moon` : by ? `in the pay of ${esc(houseLabel(s, by))}${C.turncoat ? ` · would come to you for ${fmt(Math.ceil(host.contract.price * 1.5))}` : ' · keeps its contracts'}` : `for hire · ${fmt(price)} a moon`;
     const act = by === p ? `<button class="btn small" data-dismiss-company="${id}">Pay off</button>` : !by || C.turncoat ? `<button class="btn small" data-hire-company="${id}" data-offer="${by ? Math.ceil(host.contract.price * 1.5) : ''}">Hire</button>` : '';
     return `<div class="row"><div class="grow"><div class="title">${esc(C.name.replace(/^./, (x) => x.toUpperCase()))} <span class="muted">~${fmt(men)} swords</span></div><div class="sub">${status}</div></div>${act}</div>`;
   });
@@ -526,7 +527,7 @@ function characterSheet(id) {
     <div class="char-hero"><img class="por" src="${por(c, 256)}" alt="Portrait of ${esc(c.name)}"><div style="flex:1;min-width:0">
       <h2>${esc(c.name)}</h2>
       <div class="muted">${esc(c.title || c.roles.join(', '))}</div>
-      <div style="margin:0.3rem 0">${sig(h, 1.3)} <a href="#" data-house="${h?.id}">House ${esc(h?.name)}</a></div>
+      <div style="margin:0.3rem 0">${sig(h, 1.3)} <a href="#" data-house="${h?.id}">${esc(houseLabel(app.state, h?.id))}</a></div>
       <div class="kv"><span class="k">Age</span><span>${c.alive ? c.age : `${c.age} (died ${c.died || '?'} AC)`}</span>
       ${c.alive ? `<span class="k">Health</span><span class="cond ${conditionOf(s, c).tone}">${esc(conditionOf(s, c).word)}</span>` : ''}
       <span class="k">Where</span><span>${esc(whereabouts(s, c).text)}</span>
@@ -619,7 +620,7 @@ function siegeHtml(s, hd) {
   if (!hd.siege) return `<div class="muted" style="font-size:max(0.85rem,12px);margin-top:0.3rem">${esc([R.noStorm ? 'It cannot be taken by storm' : '', R.needsSea ? 'fed by sea: starved only with a fleet before it' : '', R.mules ? 'fed by the high road until winter' : '', R.camps ? 'rivers on two sides: besiegers must lie in divided camps' : '', R.causeway ? 'from the south, only a causeway leads to it' : ''].filter(Boolean).join('; '))}.</div>`;
   const v = siegeView(s, hd, bes); const by = s.houses[hd.siege.by];
   const ours = bes.some((a) => a.owner === p || a.serving === p);
-  return `<h4>The siege</h4><div class="kv"><span class="k">Besieged by</span><span>House ${esc(by?.name || '?')}, ${hd.siege.days} day${hd.siege.days === 1 ? '' : 's'}</span>
+  return `<h4>The siege</h4><div class="kv"><span class="k">Besieged by</span><span>${esc(houseLabel(app.state, by?.id))}, ${hd.siege.days} day${hd.siege.days === 1 ? '' : 's'}</span>
     <span class="k">Stores</span><span>~${v.months} moons${v.starve ? ` · ${esc(v.starve)}` : ''}</span>
     <span class="k">A storm</span><span>${esc(v.storm)}</span></div>
     ${ours ? `<div class="row-actions"><select class="terms" data-terms-for="${hd.id}">${Object.entries(TERMS).map(([k, t]) => `<option value="${k}">${esc(t.replace(/^./, (x) => x.toUpperCase()))}</option>`).join('')}</select><button class="btn" data-offer-terms="${hd.id}">Offer terms</button>${R?.noStorm ? '' : `<button class="btn danger" data-storm="${hd.id}" title="Heavy losses; it fails often">Storm the walls</button>`}</div>` : ''}`;
@@ -645,7 +646,7 @@ function holdingSheet(id) {
   return `
     <div class="detail-hero"><img class="banner" src="${banner(owner, 60, 90)}" style="width:4rem" alt=""><div><h2>${esc(hd.name)}</h2>
       <div class="muted">${esc(hd.type.replace('_', ' '))} · ${REGION_NAMES[hd.region] || ''}${hd.coastal ? ' · port' : ''}</div>
-      <div>Held by <a href="#" data-house="${owner.id}">House ${esc(owner.name)}</a>${chain.length ? `<span class="muted"> · sworn to ${chain.map((c) => esc(c.name)).join(' → ')}</span>` : ''}</div></div></div>
+      <div>Held by <a href="#" data-house="${owner.id}">${esc(houseLabel(app.state, owner.id))}</a>${chain.length ? `<span class="muted"> · sworn to ${chain.map((c) => esc(c.name)).join(' → ')}</span>` : ''}</div></div></div>
     <div class="stat-grid">
       <div class="s"><div class="k">Smallfolk</div><div class="v">~${fmt(hd.population)}</div></div>
       <div class="s"><div class="k">Prosperity</div><div class="v">${Math.round(hd.prosperity)}</div>${meter(hd.prosperity, '#7fb85a')}</div>
@@ -657,7 +658,7 @@ function holdingSheet(id) {
     ${siegeHtml(s, hd)}
     <div>${Object.entries(hd.resources || {}).filter(([, v]) => v >= 0.3).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span class="pill" title="${esc(RESOURCES[k]?.desc || '')}">${RESOURCES[k]?.icon || ''} ${esc(RESOURCES[k]?.name || k)} ${v >= 2 ? '●●●' : v >= 1 ? '●●' : '●'}</span>`).join('')}</div>
     ${hd.buildings?.length ? `<div style="margin-top:0.3rem">${hd.buildings.map((b) => `<span class="pill good">${esc(b)}</span>`).join('')}</div>` : ''}
-    ${owner.seat === id ? `<h4>${mine ? 'Your' : 'Rumoured'} strength of House ${esc(owner.name)}</h4><div class="kv"><span class="k">Levies</span><span>${fig('levies')}</span><span class="k">Men-at-arms</span><span>${fig('menAtArms')}</span><span class="k">Ships</span><span>${fig('ships')}</span><span class="k">Treasury</span><span>${fig('treasury')} gd</span></div>` : ''}
+    ${owner.seat === id ? `<h4>${mine ? 'Your' : 'Rumoured'} strength of ${esc(houseLabel(app.state, owner.id))}</h4><div class="kv"><span class="k">Levies</span><span>${fig('levies')}</span><span class="k">Men-at-arms</span><span>${fig('menAtArms')}</span><span class="k">Ships</span><span>${fig('ships')}</span><span class="k">Treasury</span><span>${fig('treasury')} gd</span></div>` : ''}
     ${hd.notes?.length ? `<h4>Recent</h4>${hd.notes.slice(-4).map((n) => `<div class="muted" style="font-size:max(0.85rem,12px)">${esc(n)}</div>`).join('')}` : ''}
     ${(() => { const guests = guestsAt(s, id); const gid = new Set(guests.map((c) => c.id)); const home = here.filter((c) => !gid.has(c.id));
       return `<h4>People here</h4>${home.map((c) => charRow(c)).join('') || '<div class="muted">No one of note.</div>'}${guests.length ? `<h4>Guests at ${esc(hd.name)}</h4>${guests.map((c) => charRow(c)).join('')}` : ''}`; })()}
@@ -682,7 +683,7 @@ function armySheet(id) {
       <p class="muted" style="font-size:max(0.85rem,12px)">No eyes of yours are on this host: it may have moved, grown or dwindled since — or the word may be a lie. Hosts near your lands, your hosts and your allies' are seen as they are. Plant spies in House ${esc(h.name)} (Intrigue) to follow theirs.</p>`;
   }
   return `
-    <div class="detail-hero"><img class="banner" src="${banner(h, 60, 90)}" style="width:4rem" alt=""><div><h2>${a.kind === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</h2><div class="muted"><a href="#" data-house="${h.id}">House ${esc(h.name)}</a> · ${esc(statusText(s, a))}</div></div></div>
+    <div class="detail-hero"><img class="banner" src="${banner(h, 60, 90)}" style="width:4rem" alt=""><div><h2>${a.kind === 'fleet' ? '⛵' : '⚔'} ${esc(a.name)}</h2><div class="muted"><a href="#" data-house="${h.id}">${esc(houseLabel(s, h.id))}</a> · ${esc(statusText(s, a))}</div></div></div>
     <div class="stat-grid">
       <div class="s"><div class="k">${a.kind === 'fleet' ? 'Crews' : 'Men'}</div><div class="v">${mine ? '' : '~'}${fmt(a.men)}</div></div>
       ${a.ships ? `<div class="s"><div class="k">Ships</div><div class="v">${fmt(a.ships)}</div></div>` : ''}
@@ -705,7 +706,7 @@ function armySheet(id) {
       const targets = a.kind === 'fleet' ? [] : Object.values(s.holdings).filter((h) => atWar(s, a.owner, h.owner)).map((h) => ({ h, m: marchDays(a, a.pos, h.pos) })).sort((x, y) => x.m.days - y.m.days).slice(0, 3);
       // what it is made of (seen hosts only), and the banners in it
       const banners = sworn(a).filter(([, n]) => n > 0).map(([h, n]) => `${esc(s.houses[h]?.name || h)} ${n.toLocaleString('en-GB')}`);
-      return (a.kind !== 'fleet' && (a.owner === p || known.get(a.id)?.known === 'seen') ? `<h4>The host</h4><div class="muted" style="font-size:max(0.88rem,12px)">${esc(unitsText(s, a))}${banners.length ? `<br>Banners: House ${esc(s.houses[a.owner]?.name)}, ${banners.join(', ')}` : ''}</div>` : '')
+      return (a.kind !== 'fleet' && (a.owner === p || known.get(a.id)?.known === 'seen') ? `<h4>The host</h4><div class="muted" style="font-size:max(0.88rem,12px)">${esc(unitsText(s, a))}${banners.length ? `<br>Banners: ${esc(houseLabel(s, a.owner))}, ${banners.join(', ')}` : ''}</div>` : '')
         + (with_.length ? `<h4>Riding with the host</h4>${with_.map((c) => charRow(c)).join('')}` : '')
         + (foes.length ? `<h4>War room — enemy hosts</h4>${foes.map(({ b, m, o, seen }) => `<div class="row clickable" data-army="${b.id}">${seen ? sig(s.houses[b.owner]) : '<span class="unknown-dot"></span>'}<div class="grow"><div class="title">${seen ? esc(b.name) : 'An unconfirmed host'} <span class="muted">~${fmt(b.men)}</span></div><div class="sub">${m.days} days' march (${m.miles} mi) · if you attack: <b style="color:${o.attacker >= 60 ? '#a8e08a' : o.attacker >= 40 ? '#ffe0a0' : '#ec9a8a'}">${o.attacker}%</b></div></div></div>`).join('')}` : '')
         + (targets.length ? `<h4>Enemy holdings in reach</h4>${targets.map(({ h, m }) => { const e = siegeEstimate(s, h, [a]); return `<div class="row clickable" data-hold="${h.id}"><div class="grow"><div class="title">${esc(h.name)}</div><div class="sub">${m.days} days · walls ${e.fort}/6 · a siege would take ~${e.months} moons · ${esc(e.storm)}</div></div></div>`; }).join('')}` : '');
@@ -752,7 +753,7 @@ function houseSheet(id) {
   const liege = h.liege ? s.houses[h.liege] : null; const vas = vassalsOf(s, id);
   const tot = realmTotals(s, id); const mine = id === p;
   return `
-    <div class="detail-hero"><img class="banner" src="${banner(h, 80, 120)}" style="width:5rem" alt=""><div><h2>House ${esc(h.name)}</h2><div class="words">${esc(h.words ? '“' + h.words + '”' : '')}</div>
+    <div class="detail-hero"><img class="banner" src="${banner(h, 80, 120)}" style="width:5rem" alt=""><div><h2>${esc(houseHeading(app.state, h.id))}</h2><div class="words">${esc(h.words ? '“' + h.words + '”' : '')}</div>
       <div class="muted">${esc(h.title || RANK_NAMES[h.rank])} · ${REGION_NAMES[h.region] || ''}</div>
       <div class="muted">${liege ? `Sworn to <a href="#" data-house="${liege.id}">${esc(liege.name)}</a>` : 'Answers to no one'}</div></div></div>
     ${!mine ? `<div class="kv" style="margin-top:0.5rem"><span class="k">Relation</span><span>${relHtml(getRelation(s, p, id))}</span>${liege && liege.id === p ? `<span class="k">Obligations</span><span>${obligationPills(h)}</span>` : ''}</div>` : ''}

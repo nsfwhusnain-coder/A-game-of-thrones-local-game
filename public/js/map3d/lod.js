@@ -5,6 +5,8 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // L0 the whole Known World, L1 a region, L2 a few holdings, L3 one castle and its lands: camera distances in map units.
 // The camera never comes closer than L3 (never into the trees) nor goes farther than L0.
 export const LOD = [3500, 1200, 460, 160];
+/** The level of detail from which every journey's road is drawn (about 675 map units out): farther, only the road of the party in hand. */
+export const ROUTES_FROM = 1.6;
 /** The continuous level of detail at a camera distance: 0 (L0) … 3 (L3), fractional between the levels. */
 export function lodOf(d) {
   if (d >= LOD[0]) return 0; if (d <= LOD[3]) return 3;

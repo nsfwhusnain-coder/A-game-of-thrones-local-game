@@ -9,6 +9,7 @@ import { toldCard } from './scene.js';
 import { speak, stopSpeaking, voiceSettings } from './voice.js';
 import { planPlayback, runPlan, changedHoldings } from './choreo.js';
 import { reducedMotion } from './motion.js';
+import { homePlace } from '../map3d/home.js';
 
 const wait = (ms, ctl) => new Promise((r) => { const t0 = performance.now(); const tick = () => { if (ctl.skip || ctl.next) return r(); if (ctl.paused) { requestAnimationFrame(tick); return; } if (performance.now() - t0 >= ms) return r(); requestAnimationFrame(tick); }; tick(); });
 
@@ -42,7 +43,7 @@ export async function playTurn(turn, { onDone } = {}) {
   // changes at the beat that tells it — then on to the next (ui/choreo.js has the rules and tests them)
   const map = app.map; const s = app.state; const body = document.querySelector('#drawer-body');
   const reduced = reducedMotion(); // the system's setting or the game's own (Settings → Display; ui/motion.js)
-  const seat = s.houses[s.meta.player]?.seat; const seatPos = seat && s.holdings[seat]?.pos;
+  const seat = homePlace(s); const seatPos = seat && s.holdings[seat]?.pos; // (the seat, or for a house with none the hall its lord is in)
   const plan = planPlayback(evs, {
     holdings: s.holdings, onScreen: (p) => !map || map.onScreen(p), seat: seatPos ? seat : null, reduced,
     changed: [...(map?.staged?.ids || [])], words: (e) => (e.headline || e.title || '').length + (e.summary ?? e.text ?? '').length + foldText(e).length * 0.5,

@@ -1569,6 +1569,16 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **Held by a test.** `tests/bugfix-headlines.test.js` fires every beat and alternate on the world of eight houses, tells the story as the clusterer makes it (the beat's fact, and what it does to the world), and holds every card to the scorer and against "Grave news"; a beat added later without a head fails it.
 - **Not done:** the King's ride (`progress`, `arrival`) keeps its stage-told headlines ("King Robert passes the Twins on his progress"); the other leads of a story (a battle, a death, an arrival) are untouched and are the subject of other findings (ST9, ST12, ST13, ST14).
 
+## D-115 · 2026-10-02 · What the map does with the keyboard and where it looks (bug hunt UI1, UI2, UI3, UI5, UI6)
+
+- **UI1.** `map3d/keys.js` (`holdKeys`) owns the held keys: a key with Cmd, Ctrl or Alt is not held (and lets go of the rest), and the set is cleared on window blur and when the tab is hidden. It is wired from `MapScene` and tested without a browser.
+- **UI2.** `map3d/home.js`: a house's home is its seat, else the holding its lord is in, else where he rides, else the middle of what it holds. The first view, the Home key and the camera's return after a long turn use it.
+- **UI3.** `houseHeading` (`engine/facts/label.js`) is a house's name as a title: the label of the sentence with its first letter raised, and `House <name>` for the crown in its own crest. The windows' mid-sentence uses (`Held by …`, `in the pay of …`) use `houseLabel`.
+- **UI5.** A journey's road is drawn at every zoom for the party in hand and from `ROUTES_FROM` (level 1.6, about 675 map units out) for all of them.
+- **UI6.** The server answers the optional sigil index with an empty object.
+- **UI4.** The hit area of a control that is small to the eye is padding with a negative margin (`.realm-sort`, `.wc-strip__all`, `.wc-card__more`), so the layout is unchanged; chips have `min-height: 1.6rem`; boxes to tick 1.5rem. Checked in a browser, not by a gate: a 24-pixel rule would also catch the glyph buttons of the windows' corners, which are fine.
+- **Not done:** UI7 (the frame cost grows with the armies in a war; no leak was shown; nothing to fix without a profile on the owner's GPU).
+
 ## D-108 · 2026-10-02 · A tourney is an event with days in it (bug hunt ST2, ST3, ST9)
 
 - **The fault.** `hold_tourney` called a tourney and won it in one step; its champion was any living knight of the host or of a guest house wherever he was (Rakharo, Drogo's bloodrider, won a name-day tourney at Starfall); the lords of the region began to ride for it after it was over (14 set out 5 to 25 days after one had ended); a name-day happening told a result for a tourney nobody called; and a knight killed in the lists was told dead at his post (the Blackfish "at the Bloody Gate", of a lance in the lists at the Eyrie).

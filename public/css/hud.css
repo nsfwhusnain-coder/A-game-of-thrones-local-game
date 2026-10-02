@@ -97,7 +97,7 @@
 #strip { position: absolute; left: var(--hud-gap); bottom: var(--hud-gap); z-index: 10; width: 24rem; padding: .5rem .65rem .45rem .9rem; }
 #strip-head { white-space: nowrap; }
 .wc-strip__head { padding-right: .1rem; }
-.wc-strip__all { padding: 0; margin: 0; background: none; border: 0; cursor: pointer; color: var(--bone-dim); font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .1em; }
+.wc-strip__all { padding: .6rem .5rem; margin: -.6rem -.5rem; /* (a hit area of its own, UI4) */ background: none; border: 0; cursor: pointer; color: var(--bone-dim); font: 600 var(--wc-min)/1 var(--wc-display); letter-spacing: .1em; }
 .wc-strip__all:hover { color: var(--gold-flat); }
 .wc-strip__all::after { content: ' \25B8'; }
 .wc-strip__lines { margin-top: .4rem; }
@@ -148,7 +148,7 @@ body.has-drawer #strip { display: none; }
 .wc-cmd .receipt .rl:not(.ask) > span:last-child { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .wc-cmd .receipt .chip { border-color: var(--rubric); background: rgba(123, 30, 23, .07); color: var(--rubric); font-size: max(.8rem, 13px); }
 .wc-cmd .receipt .chip:hover { background: rgba(123, 30, 23, .16); color: var(--rubric); }
-.wc-order__more, .wc-cmd .errands-chip { align-self: flex-start; margin: 0; padding: .12rem .8rem .12rem .6rem; cursor: pointer; font: 600 var(--wc-min)/1.1 var(--wc-display); letter-spacing: .08em; color: var(--bone-dim); background: linear-gradient(180deg, rgba(255, 226, 170, .06), rgba(0, 0, 0, .16)), var(--oak-edge); border: 1px solid rgba(0, 0, 0, .55); border-radius: 0; box-shadow: inset 0 1px 0 rgba(255, 226, 170, .1); clip-path: polygon(0 0, 100% 0, calc(100% - .45rem) 50%, 100% 100%, 0 100%); }
+.wc-order__more, .wc-cmd .errands-chip { align-self: flex-start; margin: 0; padding: .3rem .8rem .3rem .6rem; cursor: pointer; font: 600 var(--wc-min)/1.1 var(--wc-display); letter-spacing: .08em; color: var(--bone-dim); background: linear-gradient(180deg, rgba(255, 226, 170, .06), rgba(0, 0, 0, .16)), var(--oak-edge); border: 1px solid rgba(0, 0, 0, .55); border-radius: 0; box-shadow: inset 0 1px 0 rgba(255, 226, 170, .1); clip-path: polygon(0 0, 100% 0, calc(100% - .45rem) 50%, 100% 100%, 0 100%); }
 .wc-order__more:hover, .wc-cmd .errands-chip:hover { color: var(--gold-flat); }
 .wc-cmd .errands-chip b { color: var(--madder-lit); font-weight: 600; }
 .wc-cmd .errands-chip .ico { width: .9rem; height: .9rem; }
