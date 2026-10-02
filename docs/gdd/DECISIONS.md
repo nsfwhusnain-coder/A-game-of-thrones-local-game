@@ -1618,3 +1618,7 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **TX8.** The advisor is told how many things the lord asked for (`askedCount`), and the mock lists no more. `suggestionsOf` turns a model's objects into lines.
 - **TX10.** Not a fix of the model's speed: the wait says beforehand that a long stretch can take minutes (`LONG_TURN_DAYS`, 14). The timings on the 12B are an owner check.
 
+## D-117 · 2026-10-02 · A prisoner seized among his own is taken out of their party; a barrier is paid once per order (bug hunt N-003, N-004)
+
+- **N-003.** When a character becomes held (imprisoned, captive, hostage) and is in a party of his own house, he leaves it (`leaveParty`, so he is held at the holding where it stands, or the nearest). A man captured in the field is first brought into his captors' party by the battle code, so this does not touch him. The beats that find a prisoner (`baelors_sept` wants Ned *at* King's Landing) therefore find him.
+- **N-004.** `tollAlong` (shared/marches.js) keeps what a host has paid on its march order as well as on its route: a host marching to another party has its road planned again every day. A new order is a new road and pays again.

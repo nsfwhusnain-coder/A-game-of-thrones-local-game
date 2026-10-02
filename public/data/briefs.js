@@ -97,12 +97,12 @@ export const BRIEFS = {
     hints: ['The villages of the Frostfangs are empty', 'The dead do not stay dead in the far north'],
   },
   targaryen: {
-    situation: 'You are the last of the dragons, living on the charity of a Pentoshi cheesemonger. Your brother Viserys has sold you to a Dothraki khal for an army he has not been given. You have three stone eggs.',
-    strengths: ['The blood of the dragon — and the loyalty it still commands in secret', 'A khal\'s love, if you can win it', 'Friends in Dorne and the shadows'],
-    weaknesses: ['No land, no gold, no army of your own', 'A cruel, desperate brother', 'The Usurper\'s assassins'],
-    goals: ['Survive', 'Win the khalasar', 'Cross the narrow sea one day'],
-    levers: ['The blood', 'Three stone eggs', 'Magister Illyrio\'s plans'],
-    hints: ['Your brother has promised you to Khal Drogo', 'Illyrio says the realm across the sea yearns for its true king'],
+    situation: 'You are Viserys, the Beggar King, last of the dragon kings\' line, living on the charity of a Pentoshi magister. You have no land, no gold and no army, and one coin left to spend: your sister, whom you mean to sell to a Dothraki khal for the horsemen that will take back the Iron Throne.',
+    strengths: ['The blood of the dragon — and the loyalty it still commands in secret', 'A sister to bargain with, and Magister Illyrio\'s purse', 'Friends in Dorne and the shadows'],
+    weaknesses: ['No land, no gold, no army of your own', 'A temper that burns the friends you have', 'The Usurper\'s assassins'],
+    goals: ['Survive', 'Win the khalasar', 'Cross the narrow sea and take the throne'],
+    levers: ['The blood', 'Your sister\'s hand', 'Magister Illyrio\'s plans'],
+    hints: ['Illyrio has found a khal who wants a bride like your sister', 'Illyrio says the realm across the sea yearns for its true king'],
   },
   frey: {
     situation: 'You are Walder Frey, ninety-one, and you have outlived seven wives and every lord who ever mocked you. You hold the only crossing of the Green Fork for a hundred leagues, and everyone must come to you eventually.',
