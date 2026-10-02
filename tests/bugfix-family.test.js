@@ -64,6 +64,16 @@ test('WD1: a woman who is due, at a hall, is brought to bed: a child of the fath
   assert.ok(!w.expecting && w.lastBirth === day, 'she is delivered, and not at once with child again');
 });
 
+test('WD1: a child born after his father\'s death is the late man\'s: he is no actor of the birth, and the words say so', () => {
+  const s = world('stark', 11); const w = s.characters.lyessa_bolton, m = s.characters.roose_bolton;
+  const day = nextSunday(s) + 7; setDay(s, day - 1); s.meta.clock = { turn: 1, from: day - 1, to: day - 1 };
+  w.expecting = { by: m.id, since: day - 270, due: day }; m.alive = false; m.status = 'dead';
+  live(s, 1);
+  const f = s.facts.find((x) => x.kind === 'birth'); if (!f) return; // (one in sixteen is born dead)
+  assert.ok(!f.actors.includes(m.id), 'the dead man does not act'); assert.equal(f.data.father, m.id); assert.equal(f.data.posthumous, true);
+  assert.match(f.text, /of the late Roose Bolton and Lyessa Bolton/);
+});
+
 test('WD1: a child is named by his own people; no living member of the house has his name; the cast of the story is avoided where the pool allows', () => {
   const s = world(); const first = (c) => c.name.split(' ')[0].toLowerCase();
   const cast = new Set(Object.values(s.characters).map(first));

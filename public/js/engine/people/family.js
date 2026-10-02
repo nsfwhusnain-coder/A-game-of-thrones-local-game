@@ -114,7 +114,9 @@ function birth(state, w, m, place, today, seed) {
   let id = slug(`${first}_${surname}`); for (let n = 2; state.characters[id]; n++) id = slug(`${first}_${surname}_${n}`);
   applyChanges(state, [{ op: 'character_new', id, name: `${first} ${surname}`, house, age: 0, sex, loc: place, roles: ['family'], father: m.id, mother: w.id, bio: `${sex === 'm' ? 'Son' : 'Daughter'} of ${m.name} and ${w.name}, born in ${state.meta.date.year} AC.` }], { source: 'The household', spanDays: 1, told: ['character'], cause: { type: 'rule', ref: 'family' } });
   state.characters[id].bornDay = today;
-  return [fact(state, 'birth', { title: `${first} ${surname} is born`, text: `${first} ${surname}, ${sex === 'm' ? 'son' : 'daughter'} of ${m.name} and ${w.name}, is born${place ? ` at ${placeName(state, place)}` : ''}.`, where: place, importance: 2, houses: [...new Set([house, w.house])] }, { actors: [id, w.id, m.id], data: { mother: w.id, father: m.id, sex }, cause: { type: 'rule', ref: 'family' } })];
+  // a child born after his father's death is the late man's: the father is in the slots, not among the actors (a dead man is no one who acts), and the words say so
+  const late = !m.alive;
+  return [fact(state, 'birth', { title: `${first} ${surname} is born`, text: `${first} ${surname}, ${sex === 'm' ? 'son' : 'daughter'} of ${late ? 'the late ' : ''}${m.name} and ${w.name}, is born${place ? ` at ${placeName(state, place)}` : ''}.`, where: place, importance: 2, houses: [...new Set([house, w.house])] }, { actors: [id, w.id, ...(late ? [] : [m.id])], data: { mother: w.id, father: m.id, sex, ...(late ? { posthumous: true } : {}) }, cause: { type: 'rule', ref: 'family' } })];
 }
 
 /** The mother's risk in childbed (about one in fifty), unless the story keeps her. */
