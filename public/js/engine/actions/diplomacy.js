@@ -31,7 +31,7 @@ function scheme(state, house, { house: target, kind }, cause) {
   const sm = spymaster(state, house); const skill = sm?.skills?.[3] ?? 5;
   const chance = Math.max(0.2, Math.min(0.88, 0.3 + skill * 0.035));
   const roll = random();
-  const who = sm ? sm.name : 'Your hired men';
+  const who = sm ? sm.name : 'Your spy'; // (one man, so that "has" and "brings" are right: it was "Your hired men has placed eyes")
   if (roll < chance) {
     if (kind === 'secrets') {
       const lord = state.characters[h.lord];
@@ -79,7 +79,7 @@ export const DIPLOMACY = [
     id: 'declare_war', family: 'diplomacy', label: 'Declare war',
     params: { house: 'house:other', reason: 'text?', goal: 'text?' },
     legal: (state, i) => {
-      const h = state.houses[i.params.house]; if (!h || i.params.house === i.house) return { code: 'no_target', text: 'Declare war on whom?' };
+      const h = state.houses[i.params.house]; if (i.params.house === i.house && h) return { code: 'self', text: 'A house does not declare war on itself.' }; if (!h) return { code: 'no_target', text: 'Declare war on whom?' };
       // the Night's Watch takes no part in the wars of the realm, and no one makes war on it (07 §10)
       if (h.rank === 'order' || state.houses[i.house]?.rank === 'order') return { code: 'watch', text: "The Night's Watch takes no part in the wars of the realm." };
       if ((state.wars || []).some((w) => w.status !== 'ended' && ((w.attackers.includes(i.house) && w.defenders.includes(h.id)) || (w.defenders.includes(i.house) && w.attackers.includes(h.id))))) return { code: 'at_war', text: `You are already at war with House ${h.name}.` };
