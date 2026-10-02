@@ -30,6 +30,17 @@ for the player, and what the owner should verify.
 - **The soak says which game failed.** `tests/soak.test.js` prints the seed and the command that plays that game again, and a card of a rolled-up story is scored against the houses of all its facts (the likeliest cause of the one red run on CI: "Norrey men join the host" failed for want of Norrey).
 - Tests: `tests/bugfix-saves.test.js` (5).
 
+## 2026-10-02 — Bug hunt fixes TX1, TX2, TX3, TX6, TX7, TX8, TX10: letters, audiences and the advisor
+
+- **A letter's card quotes what it says.** "A raven from Riverrun: “Eddard.”" and "A raven from Dragonstone: “Lord Targaryen.”" are gone: the card skips the greeting ("Eddard. My dear Ned, …") and the signature and quotes the first thing the letter says.
+- **No bookkeeping on a letter card.** Illyrio's reply no longer ends "LOAN: Targaryen & Pentos — Agreed in audience …; Illyrio Mopatis opinion 3". What a letter settled is in the loan and the pact themselves; the card is the place and the words.
+- **Garbled words are refused.** A reply with a figure glued to a word ("they1."), an ellipsis broken in two ("the... ...the present") or a stray token of the model's own is asked for again, in an audience, a council and the narration.
+- **A rumour is no part of the muster.** A sworn knight's grievance at Winterfell is its own card, not a detail of "Eddard Stark raises the northern banners".
+- **Audiences know where they are and how to speak.** The dossier of every audience now says what the place is (a city, a camp, a castle) and what can be seen in it, that an exile's house holds no land (no granaries, no levies), and how the lord is addressed ("brother" and "Your Grace" for Viserys, never "Lord Targaryen"). *Owner check on the model: no great hall in a Pentos villa; Jorah and Daenerys do not say "Lord Targaryen".*
+- **The advisor answers the question asked.** "The three gravest dangers" is three headings, not a paragraph; the orphan `/suggest` route returns lines of text, never "[object Object]".
+- **A long stretch of days says so.** A turn of two weeks or more tells you the chronicler may take minutes. *Owner check on the model: how long a 30-day turn takes on the 12B.*
+- Tests: `tests/bugfix-letters.test.js` (7).
+
 ## 2026-10-02 — Bug hunt fixes OR2–OR11: the steward reads more of what you say, and says what it could not
 
 - **A summons to a council is a raven to each lord named.** "Summon Lord Bolton and Lord Umber to a council at Winterfell" used to be read as a call to arms and raised the banners. It now sends a letter to every lord named (the same words, each in his own temper); "to arms" and "call the banners" are still a call to arms.
