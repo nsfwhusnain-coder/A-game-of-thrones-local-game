@@ -544,6 +544,8 @@ async function handleAction(action, el) {
   }
 }
 
+// a stretch of days this long can take the chronicler minutes to write on a slow model (a 30-day turn took 130 seconds on the 12B), and the player is told before he waits (bug hunt TX10)
+const LONG_TURN_DAYS = 14;
 async function advance() {
   if (app.busy || !app.state) return;
   const undecided = (app.state.decisions || []).filter((d) => d.status === 'pending');
@@ -554,7 +556,7 @@ async function advance() {
   await sendOrder(); // (what is written in the box goes down as an order first)
   coachDone('turn');
   const span = 'auto'; const until = nextTurnLength(app.state);
-  busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}…`, { live: true });
+  busy(true, `The days pass${until.days > 1 ? ` — until ${until.reason}` : ''}${until.days >= LONG_TURN_DAYS ? ' (a long stretch: the chronicler may take a few minutes)' : ''}…`, { live: true });
   app.endWait = awaitJump();
   try {
     const unreadBefore = app.state.ravens.filter((x) => !x.read).length;
