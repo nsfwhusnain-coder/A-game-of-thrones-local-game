@@ -3,6 +3,7 @@
 name: CI
 on:
   push:
+    branches-ignore: ['wp/**'] # a work branch is tested once, as its pull request (the push and the pull request were two identical runs of an hour of two machines)
   pull_request:
 jobs:
   test:

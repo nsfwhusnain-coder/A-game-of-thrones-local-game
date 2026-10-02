@@ -501,3 +501,11 @@ test('N-046: a lord who is on a ride of his own does not step from the road into
   setLoc(s, lord, v.seat); // home, the lord leads it
   const t = world('stark', 4); const w = t.houses.blackwood; withRng(t, () => answer(t, w, {})); assert.equal(Object.values(t.parties).find((p) => p.owner === 'blackwood' && p.kind === 'host').commander, w.lord, 'at home, he commands his own host');
 });
+
+test('N-047: a neighbour riding to pay his respects is a card of the court, not of war; a host marching against a foe still is', () => {
+  const s = world('stark'); today(s); s.facts = [];
+  emit(s, 'set_out', { actors: ['rodrik_cassel'], houses: ['stark'], place: 'stark', importance: 3, data: { party: 'p1', to: 'stark', why: 'to pay his respects to Eddard Stark at Winterfell' }, text: 'x' });
+  assert.equal(clusterFacts(s, s.facts).stories[0].type, 'court');
+  s.facts = []; emit(s, 'set_out', { actors: ['rodrik_cassel'], houses: ['stark'], place: 'stark', importance: 3, data: { party: 'p2', to: 'stark', against: 'p3' }, text: 'x' });
+  assert.equal(clusterFacts(s, s.facts).stories[0].type, 'war');
+});

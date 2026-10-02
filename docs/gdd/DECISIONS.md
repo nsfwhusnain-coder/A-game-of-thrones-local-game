@@ -1679,4 +1679,5 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **N-044.** A mind is "on campaign" (5 a moon, and a host's relief of 1) only with a host, a fleet or a band in the field (`campaigning`, psyche.js): not with the King's progress, a retinue or a garrison. The war's load on a lord at war stays (D-118's question stands).
 - **N-045.** `listsTick` puts the lists off `POSTPONE_DAYS` (7) at a time while the speaker of the house is alive and not at the seat on their day, at most `POSTPONE_MAX` (8) times, then drops them without a card. The tourney's guests keep their own stay (`until`). A host who is a prisoner or dead with no regent runs them as before.
 - **N-046.** The host a call gathers at a seat has as its commander (and as the one who rides in it) the first of the house's regent, lord and best fighters who is at the seat; if none is, none. Its words still name the house's lord.
+- **N-047.** A story's card type is its lead fact's kind's, except for a ride with a `why` that is no campaign (not against, a raid, or a fall back): the court's. CI (`ci.yml`) ignores pushes to `wp/**` branches: a work branch is tested once, as its pull request.
 

@@ -203,6 +203,8 @@ export function clusterFacts(state, facts, { together = [] } = {}) {
   return { stories, meanwhile: meanwhile.sort(byDay), rest: [] };
 }
 
+/** The card's type: a march is war, but a neighbour's household riding to pay his respects, to feast or to hunt (a `why` on a ride that is no campaign) is the court's. */
+const typeOf = (f) => (f.kind === 'set_out' && f.data?.why && !f.data.against && !f.data.raid && !f.data.fallback ? 'court' : KINDS[f.kind]?.type || 'court');
 /** One story from its facts (already in the order of their days). */
 function story(state, facts, clock) {
   const top = leadOf(facts);
@@ -211,7 +213,7 @@ function story(state, facts, clock) {
   const actors = [...count.keys()].sort((a, b) => count.get(b) - count.get(a) || (a < b ? -1 : 1));
   const places = facts.map((f) => f.place).filter(Boolean);
   const day = (f) => Math.max(1, f.day - (clock.from ?? f.day) + 1);
-  const type = KINDS[top.kind]?.type || 'court';
+  const type = typeOf(top);
   const kind = rollKind(facts);
   // hosts that ride to one place are told at that place (the pins, the prompt); else where the lead was
   const ends = new Set(facts.filter((f) => f.kind === kind).map((f) => f.data?.to));

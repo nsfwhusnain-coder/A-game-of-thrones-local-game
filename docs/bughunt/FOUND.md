@@ -266,6 +266,10 @@ When a vassal answered the call, the host that gathered at his seat was given hi
 **Where:** `engine/military/muster.js` (`answer`, `leaderAt`).
 **FIXED** (`tests/bugfix-found.test.js`): the host is led by the first of the house's leaders who is at the seat (its regent, its lord, then its best fighters), and by none if none is there.
 
+### N-047 · S4 · A neighbour riding to pay his respects at your seat is a `[war]` card
+The story's type came from its lead fact's kind, and a march is war; the small rides of other houses were `court` only as background. A household riding to feast, hunt or pay respects (a `why` on a ride that is no campaign) is the court's now.
+**Where:** `engine/facts/cluster.js` (`typeOf`). **FIXED** (`tests/bugfix-found.test.js`).
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
@@ -286,4 +290,3 @@ When a vassal answered the call, the host that gathered at his seat was given hi
 - `probe-simul`'s "acts-on-the-road" for a bride whose company halts at a hall (Jeyne Westerling at Crane): the company is camped there, so she is in the hall, and the road fact has no arrival to read. A wedding in the hall of the one who stays is the rule.
 - S4: the Targaryen start has two canon-data oddities `probe`s print: Obara Sand born twelve years after her father Oberyn, and Cassana Estermont too young to be Robert's mother by the start's own birth years. Both are the data's, from the books' loose ages; left.
 
-- S4. A neighbour riding to pay his respects at the player's seat is a `[war]` card (a set out is a march in the clusterer's archetypes, and the small rides of other houses are typed `court` only when they are background). Retyping them means changing the roll-up of rides ("Six lords ride for Winterfell"); left for the owner to judge.
