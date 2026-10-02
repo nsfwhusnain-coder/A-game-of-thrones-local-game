@@ -7,9 +7,10 @@ for the player, and what the owner should verify.
 
 The same hunt on six other houses, the Chronicle read from other seats, and a sweep for text that leaks or does not parse.
 
+- **A host no longer vanishes when a second host is raised at its seat** (N-037): the banners raised while the first were camped elsewhere took the first one's name and replaced it, with its men and everyone who rode with it. The Crown's host is "The Banners of the Crown".
 - **The Crown takes the field.** Its banners were joining the King's progress, his court, which gives no battle: the whole levy of the realm, 56,000 men with the Queen and the royal children among them, sat at King's Landing under a name for a procession. They are a host of their own now (N-036).
 - "Lysa Arryn calls a tourney" while she marches (N-033); "Arya's direwolf wounds Prince Joffrey" in a game where he is already King (N-034); "about 1 days" and "Oldflowers's party" (N-035).
-- Tests: `tests/bugfix-found.test.js` (N-033 to N-036). The findings are in `docs/bughunt/FOUND.md`.
+- Tests: `tests/bugfix-found.test.js` (N-033 to N-037). The findings are in `docs/bughunt/FOUND.md`.
 
 ## 2026-10-03 — What the fourth look found: a fleet sails with its captain, a death is one blow, the steward's news is told
 

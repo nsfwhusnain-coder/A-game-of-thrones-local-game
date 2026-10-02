@@ -222,6 +222,12 @@ When the Crown called its banners, every vassal's host "joined the liege's great
 **FIXED** (`tests/bugfix-found.test.js`): the progress is not a host a lord's levy joins; the Crown's banners are a host of their own ("The Banners of the Crown").
 **Owner check:** the Crown's war now has an army: the war's course in the Riverlands will differ from before (a real Crown host against the Tullys and the Starks).
 
+### N-037 · S1 · A host is overwritten by the next host raised at its seat, with its men and its people
+When the banners of a liege were raised at a seat while the first banners were camped elsewhere, the second was given the first's id and *replaced* it: its 4,000 to 13,000 men were gone from the world and everyone who rode with it (the Crown's captives, Sandor Clegane and Janos Slynt among them; lords of three houses) kept a `loc` that named a party that no longer listed them (25 invariants broken a turn, 75 over three; the canon playtest's world checks). Found by the canon playtest on a second house once N-036 made the Crown's banners a host of their own; the same collision was possible for every liege (Tully's, Greyjoy's…) and is probably behind some "the host that vanished" cards of the first rounds.
+**Where:** `shared/vassals.js` `gatherMusters`.
+**Repro:** `node scripts/canon.js --houses redwyne --moons 14 --seed 41` (invariants broken: 75), or `probe-simul.mjs redwyne 41 14` (`unlisted-member`).
+**FIXED** (`tests/bugfix-found.test.js`): a banners host with an id in use takes the next (`_2`); the Crown's is named "The Banners of the Crown", not "of Baratheon of King's Landing".
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

@@ -196,8 +196,9 @@ export function gatherMusters(state) {
       host = near ? main : Object.values(state.parties).find((x) => field(x) && x.at === a.at);
     }
     if (!host) {
-      const id = `${liegeId}_banners_${a.at}`.replace(/[^a-z0-9_]/g, '');
-      host = state.parties[id] = { id, owner: liegeId, name: `The Banners of ${liege.name}`, commander: a.commander, at: a.at, pos: [...a.pos], men: 0, kind: 'host', members: [], composition: 'Levies and knights of the sworn houses', morale: a.morale ?? 70, supply: a.supply ?? 80, asOf: a.asOf };
+      let id = `${liegeId}_banners_${a.at}`.replace(/[^a-z0-9_]/g, '');
+      while (state.parties[id]) id += '_2'; // (the banners already raised at this seat are away on a campaign: a second host is a second host, not the first one overwritten with its men and its people, N-037)
+      host = state.parties[id] = { id, owner: liegeId, name: `The Banners of ${liege.rank === 'crown' ? 'the Crown' : liege.name}`, commander: a.commander, at: a.at, pos: [...a.pos], men: 0, kind: 'host', members: [], composition: 'Levies and knights of the sworn houses', morale: a.morale ?? 70, supply: a.supply ?? 80, asOf: a.asOf };
     }
     // from now on every lord called to this muster joins this host, wherever it goes
     if (ob.muster) for (const o of Object.values(state.houses)) if (o.liege === liegeId && o.obligations?.muster === ob.muster && !(o.obligations.join && state.parties[o.obligations.join])) o.obligations.join = host.id;

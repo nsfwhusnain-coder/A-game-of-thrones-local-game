@@ -394,3 +394,18 @@ test('N-036: the banners the Crown calls do not join the King\'s progress, which
   assert.equal(s.parties.royal_progress.men, 1400, 'the court is as it was');
   assert.ok(Object.values(s.parties).some((p) => p.owner === 'baratheon' && p.kind === 'host' && p.men >= 800), 'the Crown\'s banners are a host of their own');
 });
+
+test('N-037: the banners raised at a seat while the first host is away are a second host, and the first is not overwritten with its men and its people', async () => {
+  const { gatherMusters } = await import('../public/js/shared/vassals.js');
+  const s = world('lannister');
+  applyChanges(s, [{ op: 'army_create', id: 'tully_banners_tully', owner: 'tully', name: 'The Banners of Tully', at: 'tully', men: 6000, commander: 'edmure_tully' },
+    { op: 'army_create', id: 'late_comers', owner: 'blackwood', name: 'The Blackwood host', at: 'tully', men: 700, commander: null }]);
+  const first = s.parties.tully_banners_tully; first.at = 'lannister'; first.pos = [...s.holdings.lannister.pos]; delete first.march; // the banners have marched and are camped at Casterly Rock; the seat has none
+  const edmure = s.characters.edmure_tully; assert.equal(partyOf(s, edmure)?.id, 'tully_banners_tully');
+  const late = s.parties.late_comers; late.serving = 'tully'; late.arriveDay = 1; s.houses.blackwood.obligations = { muster: 'tully', call: { men: 700 } };
+  withRng(s, () => gatherMusters(s));
+  assert.equal(s.parties.tully_banners_tully.men, 6000, 'the first host stands, with its men');
+  assert.equal(partyOf(s, edmure)?.id, 'tully_banners_tully', 'and its people are listed in it');
+  assert.ok((s.parties.tully_banners_tully.members || []).includes('edmure_tully'));
+  assert.ok(Object.values(s.parties).some((p) => p.id !== 'tully_banners_tully' && p.owner === 'tully' && p.men >= 700), 'the late comers are a host of their own');
+});
