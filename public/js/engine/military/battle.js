@@ -11,6 +11,7 @@ import { difficultyOf } from '../../../data/balance.js';
 import { keptByStory } from '../people/life.js';
 import { groundAt, paceOf, planRoute } from '../movement.js';
 import { idOf, settle } from '../parties.js';
+import { emit } from '../facts/log.js';
 import { landmassOf } from '../geo.js';
 import { supplyOf, fedByRations, feeds, trainOf, capacityOf } from './supply.js';
 
@@ -132,8 +133,11 @@ export function refugeOf(state, p) {
 export function fallBack(state, p) {
   const to = refugeOf(state, p); if (!to || !state.holdings[to]) return null;
   if (p.at === to) return to;
-  delete p.besieging; p.march = { to, since: state.meta.turn }; p.at = null; p.wait = undefined; delete p.wait;
+  const from = p.at; delete p.besieging; p.march = { to, since: state.meta.turn }; p.at = null; p.wait = undefined; delete p.wait;
   planRoute(state, p, state.holdings[to].pos, to, { toName: state.holdings[to].name }); settle(state, p);
+  // a party that arrives has set out (the coherence check looks): the siege's or the battle's own card tells why it left, this is the road, quietly (ST8)
+  const days = Math.max(1, Math.ceil(p.route?.days || 1));
+  emit(state, 'set_out', { actors: p.commander ? [p.commander] : [], houses: [p.owner], place: from || null, pos: p.pos, importance: 1, data: { party: p.id, to, days, fallback: true }, cause: { type: 'rule', ref: 'fall_back' }, text: `${p.name} falls back to ${state.holdings[to].name} (~${days} days).` });
   return to;
 }
 

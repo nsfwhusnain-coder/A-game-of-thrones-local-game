@@ -18,10 +18,13 @@ export function pronouns(c) {
 }
 
 const NO_INHERIT = /night'?s watch|maester|kingsguard|septon|septa|silent sister|recruit/i;
-function canInherit(c, houseId) {
+function canInherit(state, c, houseId) {
   if (!c || !c.alive) return false;
   if (c.status === 'exiled') return false;
-  if ((c.roles || []).some((r) => ['maester', 'kingsguard', 'ward'].includes(r))) return false;
+  // a ward is another house's child brought up in the hall (Jeyne Poole at Winterfell, Tyrek at the Rock): he does not inherit it. A ward by blood of the house (Theon, the
+  // Greyjoy heir, a ward at Winterfell) is of his own house and inherits it: Asha was lord of the Iron Islands over her living brother because he was a ward (ST5)
+  const ofBlood = [c.father, c.mother].some((id) => state.characters?.[id]?.house === houseId);
+  if ((c.roles || []).some((r) => r === 'maester' || r === 'kingsguard' || (r === 'ward' && !ofBlood))) return false;
   if (c.house !== houseId && c.house !== 'nights_watch') return !NO_INHERIT.test(c.title || '');
   if (c.house === 'nights_watch' || NO_INHERIT.test(c.title || '')) return false;
   return true;
@@ -52,21 +55,21 @@ export function heirOf(state, houseId, deceasedId) {
   // 1. children (and their lines) of the late lord
   const kids = order(chars.filter((c) => (c.father === deceasedId || c.mother === deceasedId)));
   for (const k of kids) {
-    if (canInherit(k, houseId)) return k;
-    const gk = order(chars.filter((c) => c.father === k.id || c.mother === k.id)).find((g) => canInherit(g, houseId));
+    if (canInherit(state, k, houseId)) return k;
+    const gk = order(chars.filter((c) => c.father === k.id || c.mother === k.id)).find((g) => canInherit(state, g, houseId));
     if (gk) return gk;
   }
   // 2. siblings of the late lord
   if (dead) {
     const sibs = order(chars.filter((c) => c.id !== dead.id && ((dead.father && c.father === dead.father) || (dead.mother && c.mother === dead.mother))));
     for (const sib of sibs) {
-      if (canInherit(sib, houseId)) return sib;
-      const nephew = order(chars.filter((c) => c.father === sib.id || c.mother === sib.id)).find((g) => canInherit(g, houseId));
+      if (canInherit(state, sib, houseId)) return sib;
+      const nephew = order(chars.filter((c) => c.father === sib.id || c.mother === sib.id)).find((g) => canInherit(state, g, houseId));
       if (nephew) return nephew;
     }
   }
   // 3. heir designate or any adult member of the house
-  const members = chars.filter((c) => c.house === houseId && canInherit(c, houseId));
+  const members = chars.filter((c) => c.house === houseId && canInherit(state, c, houseId));
   const heir = members.find((c) => (c.roles || []).includes('heir'));
   if (heir) return heir;
   return order(members)[0] || null;

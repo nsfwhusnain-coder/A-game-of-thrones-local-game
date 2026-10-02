@@ -114,7 +114,9 @@ const CANDIDATES = {
   answer_call: (w) => (w.liege && ['called', 'delayed'].includes(w.me.obligations?.levies) ? [{ params: {}, target: w.me.obligations.muster || w.liege.seat }] : []),
   call_banners: (w) => (w.vassals.length && !w.bannersCalled && w.seat ? [{ params: { vassals: 'all', at: w.seat }, target: w.seat }] : []),
   raise_levies: (w) => (w.levies >= 200 ? w.holdings.slice(0, 3).map((h) => ({ params: { at: h, men: Math.round(w.levies * 0.5) }, target: h, men: true })) : []),
-  march_host: (w) => (held(w) ? [] : w.hosts).filter((a) => !a.canonLock).flatMap((a) => placesFor(w, a).map((p) => ({ params: { army: a.id, to: p, ...(w.foes.includes(w.state.holdings[p]?.owner) ? { intent: 'lay siege' } : {}) }, host: a.id, target: p }))),
+  // a host that is on its road goes on to where it was sent (it may be halted, or turned on a foe in reach); the minds do not send it somewhere else each week (ST7: Asha's company set out for
+  // Moat Cailin, then Winter Town, then Moat Cailin again, three departure cards for one band in three weeks)
+  march_host: (w) => (held(w) ? [] : w.hosts).filter((a) => !a.canonLock && !a.march).flatMap((a) => placesFor(w, a).map((p) => ({ params: { army: a.id, to: p, ...(w.foes.includes(w.state.holdings[p]?.owner) ? { intent: 'lay siege' } : {}) }, host: a.id, target: p }))),
   attack_host: (w) => (held(w) ? [] : w.hosts).filter((a) => !a.canonLock).flatMap((a) => w.near(a.pos, 150).filter((f) => a.march?.to !== 'party:' + f.id).map((f) => ({ params: { army: a.id, to: 'party:' + f.id, intent: 'bring them to battle' }, host: a.id, target: 'party:' + f.id }))),
   // a fleet sent reaving along the nearest enemy coasts, or to close an enemy port
   raid_coast: (w) => (w.atWar ? w.fleets.flatMap((f) => Object.values(w.state.holdings).filter((h) => h.coastal && (w.foes.includes(h.owner) || w.foes.includes(realmOf(w.state, h.owner)))).sort((a, b) => miles(a.pos, f.pos) - miles(b.pos, f.pos)).slice(0, 3).map((h) => ({ params: { fleet: f.id, target: h.id }, host: f.id, target: h.id }))) : []),
