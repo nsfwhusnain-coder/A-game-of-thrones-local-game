@@ -117,7 +117,7 @@ in all, the Queen's wheelhouse (speed 10 miles/day), a mile of wagons.
 
 *Implemented (WP D8):* `shared/retinues.js` — up to three a day, twenty abroad (thirty in a tourney moon); purposes
 weighted by nature (warmth → feasts, ambition → the liege, piety → septs and pilgrimages to Oldtown and King's Landing)
-and season (feasts doubled in autumn; no long journeys in a northern winter); tourneys draw their region, the King's
+and season (feasts doubled in autumn; no long journeys in a northern winter); tourneys draw their region (*as built in ST2/ST3, D-108:* for the ten days after the call, and the guests stay for the lists, run three weeks after the call among those who are there), the King's
 progress draws the lords near where it halts; 0–3 of the family ride along; the canon-locked stay home; guests at a
 seat (`guestsAt`) on its card; `returned` told on the way home. `data/calendar.js`: the Faith's days, the harvest fires,
 the old gods' night, the small council's first-day sitting — Meanwhile flavour. The soak fails under five journeys a

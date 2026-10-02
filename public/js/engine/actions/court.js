@@ -7,8 +7,7 @@ import { applyPetitionFx } from '../../shared/petitions.js';
 import { random, shuffle } from '../rng.js';
 import { partyOf, placeOf } from '../parties.js';
 import { emit } from '../facts/log.js';
-import { dayNumber } from '../time.js';
-import { keptByStory } from '../people/life.js';
+import { scheduleLists, listsPending } from '../../shared/tourney.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = (a) => a[Math.floor(random() * a.length)];
@@ -64,25 +63,19 @@ function feast(state, house, cause) {
   return { text: `Hold a great feast at ${state.holdings[me.seat]?.name || 'my seat'} for my bannermen.`, note: `[Already done: the feast cost ${cost} dragons; each sworn lord's loyalty +4.${incident} Narrate the feast — who came, who did not, what was said in drink.]`, summary: `The feast is held (${cost.toLocaleString('en-US')} dragons). Your lords are glad of it.${incident}` };
 }
 
-/** A tourney: the realm's knights come to break lances; glory, a little blood, and the lords' goodwill. */
+/**
+ * A tourney is called, not won, on the day it is ordered (ST2): the purses are paid, the heralds go out, the lords of the region
+ * are asked, and the lists are run three weeks on (shared/tourney.js `listsTick`), among the knights who are there then.
+ */
 function tourney(state, house, cause) {
-  const me = state.houses[house];
+  const me = state.houses[house]; const hall = state.holdings[me.seat]?.name || 'its seat';
   spend(state, house, TOURNEY_COST, 'A tourney');
   const guests = Object.values(state.houses).filter((h) => h.id !== house && (h.liege === house || getRelation(state, house, h.id) > 15 || realmOf(state, h.id) === realmOf(state, house)) && h.seat).slice(0, 30);
-  const knights = Object.values(state.characters).filter((c) => c.alive && (c.roles || []).includes('knight') && !/imprisoned|wounded/.test(c.status || '') && (c.house === house || guests.some((g) => g.id === c.house)));
   const ch = guests.map((g) => ({ op: 'relation', a: house, b: g.id, delta: 3, reason: 'your tourney' }));
-  const champ = knights.length ? pick(knights) : null;
-  let blood = '';
-  if (champ) ch.push({ op: 'character', id: champ.id, note: `Champion of the tourney at ${state.holdings[me.seat]?.name}.`, opinion: clamp((champ.opinion || 0) + 10, -100, 100) });
-  const fallen = knights.filter((k) => k !== champ && !keptByStory(state, k)); // the story's people do not die in the lists by chance
-  if (fallen.length && random() < 0.12) { const k = pick(fallen); ch.push({ op: 'character', id: k.id, alive: false, cause: 'a lance through the throat in the lists', how: 'wound' }, { op: 'relation', a: house, b: k.house, delta: -4, reason: 'a knight dead in your lists' }); blood = ` ${k.name} died in the lists, a splinter through the throat.`; }
-  // the lords of the region ride to it for a moon (shared/retinues.js)
-  if (me.seat) { state.plots = state.plots || {}; (state.plots.tourneys = state.plots.tourneys || {})[me.seat] = dayNumber(state.meta.date); }
-  emit(state, 'tourney', { actors: [me.lord], houses: [house, ...guests.map((g) => g.id)], place: me.seat || null, data: { cost: TOURNEY_COST, guests: guests.length }, cause, text: `House ${me.name} holds a tourney at ${state.holdings[me.seat]?.name || 'its seat'}; ${guests.length} houses send knights.` });
+  const lists = me.seat ? scheduleLists(state, me.seat, house, { cost: TOURNEY_COST }) : null;
+  emit(state, 'tourney', { actors: [me.lord], houses: [house, ...guests.map((g) => g.id)], place: me.seat || null, data: { cost: TOURNEY_COST, guests: guests.length, ...(lists ? { lists: lists.on } : {}) }, cause, text: `House ${me.name} calls a tourney at ${hall}; ${guests.length} houses are asked to send knights.` });
   applyChanges(state, ch, { source: 'Your tourney', cause });
-  if (champ) emit(state, 'tourney_result', { actors: [champ.id], houses: [house, champ.house], place: me.seat || null, cause, text: `${champ.name} is champion of the tourney at ${state.holdings[me.seat]?.name || 'the seat'}.` });
-  me.prestige = (me.prestige || 0) + 5;
-  return { text: `Hold a tourney at ${state.holdings[me.seat]?.name || 'my seat'}.`, note: `[Already done: 5,000 dragons in purses; ${guests.length} houses sent knights; ${champ ? champ.name + ' was champion' : 'no champion of note'}.${blood} Narrate the lists, the melee, the queen of love and beauty.]`, summary: `The tourney is held. ${champ ? `${champ.name} is champion.` : ''}${blood}` };
+  return { text: `Call a tourney at ${hall}.`, note: `[Already done: 5,000 dragons in purses; ${guests.length} houses are asked to send knights; the lists will be run at ${hall} in three weeks. The champion is not chosen yet: name none. Narrate the heralds, the pavilions going up, the banners of the guests on the roads.]`, summary: `The tourney is called: ${guests.length} houses are asked to send knights, and the lists will be run at ${hall} in three weeks.` };
 }
 
 /** Who holds a prisoner: the party they are kept in, or the holding they are kept at. */
@@ -177,7 +170,7 @@ export const COURT = [
   {
     id: 'hold_tourney', family: 'court', label: 'Hold a tourney',
     params: {},
-    legal: (state, i) => (gold(state.houses[i.house]) < TOURNEY_COST ? { code: 'gold', text: 'A tourney worth the name needs ~5,000 dragons for purses and pavilions.' } : awayFromSeat(state, i.house) || crownWaitsForHand(state, i.house)),
+    legal: (state, i) => (gold(state.houses[i.house]) < TOURNEY_COST ? { code: 'gold', text: 'A tourney worth the name needs ~5,000 dragons for purses and pavilions.' } : awayFromSeat(state, i.house) || crownWaitsForHand(state, i.house) || (listsPending(state, state.houses[i.house]?.seat) ? { code: 'called', text: `A tourney is already called at ${state.holdings[state.houses[i.house].seat]?.name || 'the seat'}: its lists have not been run yet.` } : null)),
     cost: () => ({ gold: TOURNEY_COST }),
     start: (state, i) => tourney(state, i.house, i.source),
     receipt: (state, i, d) => [{ ok: true, text: d.summary.trim() }],

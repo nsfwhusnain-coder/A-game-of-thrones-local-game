@@ -13,6 +13,7 @@ import { pronouns } from './people.js';
 import { happenings } from './happenings.js';
 import { random } from '../engine/rng.js';
 import { fact } from '../engine/facts/log.js';
+import { scheduleLists, listsPending } from './tourney.js';
 
 const ym = (d) => d.year * 12 + (d.month - 1);
 const YM = (y, m) => y * 12 + (m - 1);
@@ -91,12 +92,10 @@ function churn(s, days) {
       out.events.push({ ...ev(`Outlaws near ${h.name}`, `Broken men and outlaws have taken to the woods around ${h.name}. Travellers go armed, and merchants go around.`, h.id, 1, 'economy', [h.owner]), kind: 'unrest_rising', data: { outlaws: true } });
       out.changes.push({ op: 'holding', id: h.id, prosperity: Math.max(0, (h.prosperity || 50) - 5) });
     },
-    () => { // a tourney
-      const a = pick(great.filter((h) => ['paramount', 'major', 'crown'].includes(h.rank) && (s.wars || []).every((w) => w.status === 'ended' || !w.attackers.concat(w.defenders).includes(h.id)))); if (!a) return;
-      const knights = Object.values(s.characters).filter((c) => c.alive && (c.roles || []).includes('knight') && !/imprisoned/.test(c.status || ''));
-      const w = pick(knights); if (!w) return;
-      out.events.push({ ...ev(`${w.name} champion at ${s.holdings[a.seat]?.name || a.name}`, `At ${lordName(a)}'s tourney for a name-day, ${w.name} unhorses all comers and crowns a blushing girl queen of love and beauty.`, a.seat, 1, 'court', [a.id, w.house]), kind: 'tourney_result', actors: [w.id, a.lord] });
-      out.changes.push({ op: 'character', id: w.id, note: `Champion of the tourney at ${s.holdings[a.seat]?.name || a.name}.` });
+    () => { // a name-day tourney: called now, and run in three weeks among the knights who are there (shared/tourney.js)
+      const a = pick(great.filter((h) => ['paramount', 'major', 'crown'].includes(h.rank) && h.seat && s.holdings[h.seat] && s.characters[h.lord]?.loc === h.seat && !listsPending(s, h.seat) && (s.wars || []).every((w) => w.status === 'ended' || !w.attackers.concat(w.defenders).includes(h.id)))); if (!a) return;
+      const hall = s.holdings[a.seat].name; const L = scheduleLists(s, a.seat, a.id, { nameDay: true });
+      out.events.push({ ...ev(`${lordName(a)} calls a tourney for a name-day`, `${lordName(a)} has named a day for jousts at ${hall} and asks the knights of the country to ride in.`, a.seat, 1, 'court', [a.id]), kind: 'tourney', actors: [a.lord], data: { cost: 0, nameDay: true, lists: L.on } });
     },
     () => { // a good harvest or a bad one somewhere
       const h = pick(Object.values(s.holdings).filter((x) => x.owner !== player(s) && !['wall', 'beyond', 'essos'].includes(x.region))); if (!h) return;

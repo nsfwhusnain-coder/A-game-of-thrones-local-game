@@ -916,7 +916,8 @@ function applyOne(state, ch, ctx) {
       if (ch.secret && typeof ch.secret === 'string') { c.secret = ch.secret; out.push('now hides a secret'); }
       if (ch.spouse) { const sp = findChar(state, ch.spouse); if (sp) { c.spouse = sp; state.characters[sp].spouse = c.id; out.push('wed to ' + state.characters[sp].name); } }
       // what a lord of the realm could notice of all that (opinion, memories and traits are the person's own)
-      const f = { actors: [c.id], houses: [c.house], place: where() };
+      // (a death of a man who was somewhere else at the time, in the lists of a tourney, is told where it happened: the change may say `place`)
+      const f = { actors: [c.id], houses: [c.house], place: was.alive && ch.alive === false && ch.place ? resolvePlaceId(ch.place) || ch.place : where() };
       const held = (x) => /imprisoned|captive|hostage/.test(x || '');
       const why = `${ch.cause || ''} ${ch.note || ''}`;
       if (was.alive && !c.alive) {
