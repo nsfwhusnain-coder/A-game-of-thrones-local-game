@@ -3,6 +3,17 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — Bug hunt fixes ST10, ST12, ST13, ST14, TX4, TX5, TX9: the words of the chronicle
+
+- **"Lysa Arryn takes the regency" is no longer news in the first week of every game.** The minorities the tale starts with (Edric Dayne's, Robert Arryn's) have their regents in place from the start; a regency that begins later is still told.
+- **A voyage is told as a voyage.** "Maege Mormont rides for Deepwood Motte" while the engine had her at sea: a journey with a sea leg now reads "sails for", "takes ship for".
+- **A man worn past bearing is found where he is**, not always "on the floor of the solar at dawn": in his cell if he is a prisoner, in his tent with a host, in his cabin at sea, at the roadside on the road; and the maester speaks of it only where there is one.
+- **The small news of the week knows where it is.** No more "Merchants of Castle Black talk of prices and tolls" or "pilgrims and septons stir at Norvos": the Wall's brothers count their stores, a castle's steward reckons the stock, the priests of a free city keep their rites, the North honours its old gods.
+- **House names read as names.** "House The Free Folk calls up 12,000 levies", "House Baratheon of King's Landing sends 500 gold dragons", "Host of House Woolfield of Woolfield" are now "The Free Folk calls up…", "The Crown sends…", "Host of House Woolfield": every sentence the engine writes about a house passes one tidy-up as the fact is made or the receipt told. (The crest and the Realm window still say "House The Free Folk": the interface group.)
+- **Cards that stopped at their headline say something more.** A change of taxes says what it does to the people, a late or withheld due what it means for the liege, an office is "named captain of the guard at Winterfell" (of what, where), and a command that came to nothing says why ("The steward could not tell what was meant, and nothing was done") instead of "The word goes out under his seal".
+- **The realm briefing counts "21st", "22nd", "31st"**, never "21th".
+- Tests: `tests/bugfix-text.test.js` (9).
+
 ## 2026-10-02 — Bug hunt fix ST1: the great matters of the story are told as news
 
 - **Bran's fall, Drogo's wedding, the assassin's knife, Jon taking the black, Catelyn's seizure of Tyrion** and every other great matter of the story now say what happened. Before, 28 of the 30 cards of a game read "Grave news reaches Castle Black — The ravens carry the word across the realm", the same for all of them. Now the card says "Bran Stark is found broken beneath the old tower — He lives, but sleeps and does not wake. Maester Luwin sits by his bed.", "An assassin enters Bran Stark's chamber with a Valyrian blade", "Jon Snow is chosen Lord Commander of the Night's Watch", "King Robert dies of a boar's tusk in the kingswood", and so on for all sixty-nine events of the canon; the line under the headline is the story's own telling, with the sentence that repeats the headline left out. The turn's digest no longer says "Grave news reaches Winterfell" twice for two different events, and the King's ride no longer says "The royal progress is on the road" under the boy's fall.
