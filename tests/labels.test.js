@@ -344,7 +344,8 @@ test('N2 adds slots and nothing else: every field of every fact of the battle, b
   const today = dayNumber(battleBase.meta.date);
   const shape = (facts) => {
     const ids = facts.map((f) => f.id);
-    return facts.map((f) => {
+    // (a beaten host that falls back sets out quietly, a fact of the road that ST8 added after N2: the battle's own facts are what is compared)
+    return facts.filter((f) => !f.data?.fallback).map((f) => {
       const g = JSON.parse(JSON.stringify(f));
       for (const k of NEW[g.kind] || []) delete g.data?.[k];
       if (g.kind === 'captured_in_battle') delete g.place;
