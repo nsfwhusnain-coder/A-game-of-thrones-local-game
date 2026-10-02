@@ -302,7 +302,11 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       if (pr) A('cancel_works', { project: pr.id }); else need('Which works should stop?', (state.projects || []).filter((x) => x.house === house && x.status === 'active').slice(0, 4).map((x) => ({ label: x.name, patch: { project: x.id } })), { verb: 'cancel_works', params: {} });
       return;
     }
-    const work = RE.works.test(t) && WORKS.find(([, re]) => re.test(t));
+    // "raise 200 men … send them to the Wall" is a levy for the Wall, not works: "raise" is a works verb only when what is raised is no men,
+    // and "to the Wall" (a place the order goes to) is never the walls of a castle
+    const raisesMen = RE.raise.test(t) && !/\b(fund|build|expand|found|begin|repair|strengthen|endow|open|dig|fill|deepen|train|construct|improve|rebuild)\b/.test(t);
+    const worksT = clause.replace(/\bthe Wall\b/g, ' the Watch ').toLowerCase().replace(/\b(?:to|towards?|for|at|on|beyond|past|from|reach|reaches|guard|man|reinforce|relieve|garrison)\s+the\s+wall\b/g, ' the watch ');
+    const work = RE.works.test(t) && !raisesMen && WORKS.find(([, re]) => re.test(worksT));
     if (work && !/\b(levies|host|army|banners)\b/.test(t)) {
       const holding = places.find((id) => state.holdings[id]?.owner === house) || me.seat;
       if (PROJECT_TEMPLATES.find((x) => x.key === work[0])) A('fund_works', { template: work[0], holding }); else need('What should be built?');

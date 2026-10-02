@@ -3,6 +3,11 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — Bug hunt fix OR1: "send them to the Wall" no longer builds walls
+
+- **"Raise 200 men at Winterfell and send them to the Wall"** raises the men and sends them to the Wall. The reader had taken "the Wall" for a fortification and "raise" for a works verb, dropped the levy and spent 12,000 dragons on walls at Winterfell. Now "raise" is a works verb only when what is raised is not men, and "the Wall" (or "to the wall", "guard the wall") is a place an order goes to, never the walls of a castle. "Strengthen the walls at Winterfell" and "Build a wall at Winterfell" are still works.
+- Tests: `tests/bugfix-orders.test.js` (2).
+
 ## 2026-10-02 — The first bug hunt (report and harnesses; no game change)
 
 - **`docs/BUG-HUNT-2026-10-02.md`**: 57 findings from playing the finished game on the mock and on Maester-12B (story, world, orders, text, interface, server, tests), each with an ID, a severity, evidence, leads in the code and a repro; two were fixed on the spot in H7 (carts that sailed, the King's feast on day one). `docs/BUG-FIX-AGENT-PROMPT.md` is the prompt for the agent that fixes them.
