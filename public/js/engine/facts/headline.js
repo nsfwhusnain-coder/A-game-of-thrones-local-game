@@ -186,6 +186,17 @@ const TALK = {
   religion: (p) => `pilgrims and septons stir at ${p}`, rumor: (p) => `rumour runs at ${p}`, disaster: (p) => `misfortune strikes ${p}`, magic: (p) => `strange word comes from ${p}`,
   intrigue: (p) => `whispers pass between the houses of ${p}`, diplomacy: (p) => `ravens pass between the houses of ${p}`,
 };
+// ... but a place is a kind of place (ST14: "Merchants of Castle Black talk of prices and tolls", "pilgrims and septons stir at Norvos", a city of the Bearded Priests): the
+// Wall's fortresses, the North's holds, the free cities and a castle's steward have their own small news
+const TALK_AT = {
+  economy: { wall: (p) => `the brothers count their stores at ${p}`, hold: (p) => `the steward of ${p} reckons the stores`, essos: (p) => `traders of ${p} talk of ships and tolls` },
+  religion: { wall: (p) => `the brothers keep their vigil at ${p}`, north: (p) => `the old gods are honoured at ${p}`, essos: (p) => `the priests of ${p} keep their rites` },
+  court: { wall: (p) => `the Watch has small news at ${p}` },
+  intrigue: { wall: (p) => `whispers pass among the brothers at ${p}`, essos: (p) => `whispers pass among the great houses of ${p}` },
+  diplomacy: { wall: (p) => `riders come and go at ${p}`, essos: (p) => `envoys pass between the great houses of ${p}` },
+};
+/** The kind of place, for the small news: the Wall's, a free city's, the North's, a town's, a castle's. */
+const placeClass = (c, id) => { const h = c.s.holdings?.[id]; if (!h) return 'town'; if (/^(wall|beyond)$/.test(h.region)) return 'wall'; if (h.region === 'essos') return 'essos'; if (/city|town|palace/.test(h.type || '')) return h.region === 'north' ? 'north' : 'town'; return h.region === 'north' ? 'north' : 'hold'; };
 const KIND_TALK = { feast: (p) => `lords feast at ${p}`, tourney_result: (p) => `knights ride the lists at ${p}`, works_begun: (p) => `masons are busy at ${p}`, works_done: (p) => `masons finish their work at ${p}`, hook: (p) => `small quarrels stir at ${p}` };
 /** The small news of a week as one sentence, at most three clauses: "Lords ride to feasts and hunts across the Reach; a Pentoshi ship is lost off Widow's Watch." */
 export function meanwhileOf(state, facts) {
@@ -218,7 +229,8 @@ export function meanwhileOf(state, facts) {
     const type = f.kind === 'happening' ? (c.s.holdings && TALK[hapType(f)] ? hapType(f) : 'rumor') : f.kind;
     const say1 = f.kind === 'happening' ? TALK[type] : KIND_TALK[f.kind];
     if (!say1) continue;
-    const g = groups.get(type) || { say: say1, places: [] }; const p = c.pl(f.place); if (p && !g.places.includes(p)) g.places.push(p); groups.set(type, g);
+    const cls = f.kind === 'happening' ? placeClass(c, f.place) : ''; const key = `${type}|${cls}`; const own = TALK_AT[type]?.[cls];
+    const g = groups.get(key) || { say: own || say1, places: [] }; const p = c.pl(f.place); if (p && !g.places.includes(p)) g.places.push(p); groups.set(key, g);
   }
   for (const g of [...groups.values()].sort((a, b) => b.places.length - a.places.length)) {
     if (clauses.length >= 3) break;

@@ -116,6 +116,19 @@ function reliefs(state, c, days, ix = null) {
  * One period of living. Returns the events worth telling — and only the ones the player's own
  * people would notice, because a lord does not know that a Dornish castellan is not sleeping.
  */
+/**
+ * How a man who is worn past bearing is found, by where he is (ST13: it was always "on the floor of the solar at dawn", a prisoner who commands an army three
+ * times): a prisoner in his cell, a lord with a host in his tent, a man at sea in his cabin, one on the road at the roadside, the rest in their solar; and the
+ * household that speaks of it is the maester's when the house has one.
+ */
+export function collapseText(state, c) {
+  const P = pronouns(c); const held = /imprisoned|captive|hostage/.test(c.status || ''); const party = partyOf(state, c);
+  const where = held ? `on the stones of ${P.his} cell` : party?.kind === 'fleet' ? `on the planks of ${P.his} cabin` : party && ['host', 'garrison', 'progress'].includes(party.kind) && party.at == null ? `on the ground of ${P.his} tent` : party && party.at == null ? `by the side of the road` : `on the floor of the solar`;
+  const when = held ? 'at first light' : party && party.at == null ? 'at dawn, when the column was to move' : 'at dawn';
+  const maester = Object.values(state.characters || {}).some((x) => x.alive && x.house === c.house && (x.roles || []).includes('maester')) && !held && !party;
+  return `${c.name} was found ${where} ${when}, grey-faced and shaking, and could not be roused for an hour. ${maester ? 'The maester speaks of the strain, and of rest that will not be taken' : 'Those about speak of the strain, and of rest that will not be taken'}.`;
+}
+
 export function psycheTick(state, days) {
   const events = []; const applied = [];
   const player = state.meta?.player;
@@ -168,7 +181,7 @@ export function psycheTick(state, days) {
       c.status = c.status === 'free' ? 'wounded' : c.status;
       events.push(fact(state, 'illness', {
         title: `${c.name} collapses`,
-        text: `${c.name} was found on the floor of the solar at dawn, grey-faced and shaking, and could not be roused for an hour. The maester speaks of the strain, and of rest that will not be taken.`,
+        text: collapseText(state, c),
         where: placeOf(state, c), importance: c.house === player ? 4 : 2, type: 'court', houses: [c.house], mind: true,
       }, { actors: [c.id], data: { why: 'strain' } }));
       c.stress = clamp(c.stress - 25, 0, 100);

@@ -572,7 +572,7 @@ test('a child lord is ruled for: the mother takes the regency, and gives it up a
   assert.equal(reg?.id, 'lysa_arryn');
   // (the scenario seats her already: unseat her to see the regency begin — the test once passed only on another
   // house's regency, the Darkstar's over Starfall, which B-23 forbids)
-  delete s.houses.arryn.regent;
+  delete s.houses.arryn.regent; s.meta.turn = 4; // (a regency that begins after the first turn is news; the ones the tale starts with are not, ST10)
   const r = regencyTick(s, 30);
   assert.equal(s.houses.arryn.regent, 'lysa_arryn');
   assert.ok(r.events.some((e) => /Lysa Arryn takes the regency/.test(e.title)));

@@ -299,12 +299,16 @@ export const HEAD = {
       }
     }
     const to = c.dest(d.to);
+    // a voyage is told as one (Maege Mormont "rides for Deepwood Motte" while the engine had her at sea: ST12): the slot, or the party's route, says part of it is by ship
+    const bySea = d.sea || c.known.party(d.party)?.route?.sea;
     if (host) {
-      const me = hasPerson ? a : armyOf(c, f); const own = hasPerson ? `${c.his(f.actors.find((id) => c.known.person(id)))} host` : '';
+      const me = hasPerson ? a : armyOf(c, f);
+      if (bySea && to) return c.pick(f, hasPerson ? [`${a} sails for ${to}`, `${a} takes ship for ${to} with ${c.his(f.actors.find((id) => c.known.person(id)))} host`] : [`${me} sails for ${to}`, `${me} takes ship for ${to}`]); const own = hasPerson ? `${c.his(f.actors.find((id) => c.known.person(id)))} host` : '';
       if (!to) return c.pick(f, [`${me} takes the road${c.from(f.place) ? ` from${c.from(f.place)}` : ''}`, `${me} marches out${c.at(f.place)}`]);
       return c.pick(f, hasPerson ? [`${a} marches for ${to}`, `${a} leads ${own} to ${to}`, `${a} takes the road to ${to}`] : [`${me} marches for ${to}`, `${me} takes the road to ${to}`]);
     }
     if (!to) return c.pick(f, [`${a} rides out${c.from(f.place) ? ` from${c.from(f.place)}` : ''}`, `${a} takes the road${c.at(f.place)}`]);
+    if (bySea) return c.pick(f, [`${a} sails for ${to}`, `${a} takes ship for ${to}`, `${a} leaves${c.from(f.place)} by sea for ${to}`]);
     return c.pick(f, [`${a} rides for ${to}`, `${a} leaves${c.from(f.place)} for ${to}`, `${a} takes the road to ${to}`]);
   },
   returned: (f, s, c) => { const a = c.subj(f); const p = c.pl(f.place); return c.pick(f, p ? [`${a} returns to ${p}`, `${a} rides home to ${p}`] : [`${a} returns home`, `${a} rides home`]); },
@@ -506,7 +510,8 @@ export const HEAD = {
   office_granted: (f, s, c) => {
     const d = f.data || {}; const a = c.subj(f); const g = (f.actors || [])[1] && c.known.person(f.actors[1]) ? c.nm(f.actors[1]) : ''; const t = officeSay(d);
     if (!t) return `${a} takes office${c.at(f.place)}`;
-    return g ? c.pick(f, [`${g} appoints ${a} ${t}`, `${a} is named ${t}`]) : c.pick(f, [`${a} is named ${t}`, `${a} appointed ${t}`]);
+    const at = !d.title && ROLE_SAY[d.office] ? c.at(f.place) : ''; // (a household office is of a hall)
+    return g ? c.pick(f, [`${g} appoints ${a} ${t}${at}`, `${a} is named ${t}${at}`]) : c.pick(f, [`${a} is named ${t}${at}`, `${a} appointed ${t}${at}`]);
   },
   office_stripped: (f, s, c) => {
     const d = f.data || {}; const a = c.subj(f); const g = (f.actors || [])[1] && c.known.person(f.actors[1]) ? c.nm(f.actors[1]) : ''; const t = officeSay(d) || 'his office';
@@ -648,7 +653,7 @@ export const HEAD = {
     return c.pick(f, [`${a} wins the tourney${at}`, `${a} takes the tourney prize${at}`, `${a} claims the champion's prize${at}`]);
   },
   judgement: (f, s, c) => { const [a, b] = pair(c, f); return b ? c.pick(f, [`${a} judges ${b}${c.at(f.place)}`, `${a} passes judgement on ${b}${c.at(f.place)}`]) : `${a} sits in judgement${c.at(f.place)}`.replace('sits in judgement', 'passes judgement'); },
-  order_given: (f, s, c) => { const [a] = pair(c, f); return c.pick(f, [`${a} gives an order${c.at(f.place)}`, `${a} gives a command${c.at(f.place)}`]); },
+  order_given: (f, s, c) => { const [a] = pair(c, f); if (f.data?.refused) return `${a}'s command comes to nothing`; return c.pick(f, [`${a} gives an order${c.at(f.place)}`, `${a} gives a command${c.at(f.place)}`]); },
   petition: (f, s, c) => { const [a, b] = pair(c, f); return b ? c.pick(f, [`${a} petitions ${b}`, `${a} brings a petition to ${b}`]) : `${a} brings a petition${c.at(f.place)}`; },
   tax_changed: (f, s, c) => {
     const d = f.data || {}; const a = c.subj(f);
@@ -689,7 +694,9 @@ export const HEAD = {
 
 // the small readers the heads above lean on
 /** An office as a headline says it: the Hand is "the crown's right hand" (the words "Hand of the King" are an office the scorer wants a holder for). */
-const officeSay = (d) => { const t = String(d.title || (d.office ? String(d.office).replace(/_/g, ' ') : '')).trim(); return /^(?:the )?hand(?: of the king)?$/i.test(t) ? "the crown's right hand" : t; };
+// the household offices a house gives (engine/actions/court.js ROLES), told as what they are: "captain" is "captain of the guard", and of which hall is the card's place (TX5)
+const ROLE_SAY = { steward: 'steward', maester: 'maester', master_at_arms: 'master-at-arms', captain: 'captain of the guard', spymaster: 'master of whisperers', commander: 'commander of the host', castellan: 'castellan', knight: 'sworn sword', envoy: 'envoy' };
+const officeSay = (d) => { const t = String(d.title || ROLE_SAY[d.office] || (d.office ? String(d.office).replace(/_/g, ' ') : '')).trim(); return /^(?:the )?hand(?: of the king)?$/i.test(t) ? "the crown's right hand" : t; };
 /** A person's cause of death in "dies of ...": by how it happened, else by a short cause the fact gives. */
 function deathOf(d) {
   const how = { age: 'old age', fever: 'a fever', wound: 'a wound', winter: 'the winter cold', illness: 'a long illness' }[d.how];
@@ -1098,7 +1105,7 @@ export const SUM = {
     const note = String(f.data?.note || '').trim(); const P = pro(c, f);
     return sentences(note && !/^(?:wounded|taken|hurt)/i.test(note) && /^[A-Z][a-z]+ /.test(note) ? `${P.He} ${lower1(note.replace(/\.$/, ''))}` : `${P.He} is hurt but lives`);
   },
-  illness: () => '',
+  illness: (f) => sentences(f.data?.why === 'strain' ? 'The strain has told on him, and the rest he needs will not be taken' : ''),
   recovered: () => '',
   came_of_age: (f, s, c) => { const P = pro(c, f); return sentences(`${P.He} answers for ${P.self} now`); },
   succession: (f, s, c) => { const P = pro(c, f); const h = (f.houses || []).find((x) => c.known.house(x)); return sentences(h ? `${P.He} is now head of ${c.hs(h)}` : `${P.He} is now head of the house`); },
@@ -1140,9 +1147,15 @@ export const SUM = {
   tourney: (f) => { const d = f.data || {}; const n = say(d.guests); return sentences(n ? `${cap1(n)} houses are asked to send knights` : 'Knights are called to the lists'); },
   tourney_result: (f, s, c) => { const own = s.characters?.[(f.actors || [])[0]]?.house; const h = c.known.house(own) ? own : (f.houses || []).find((x) => c.known.house(x)); const P = pro(c, f); return h ? sentences(`${P.He} rides for ${c.hs(h)}`) : sentences(`${P.He} is the champion of the lists`); },
   judgement: (f) => { const v = String(f.data?.verdict || '').trim(); return v ? sentences(`The verdict is ${v}`) : ''; },
-  order_given: () => sentences('The word goes out under his seal'),
+  // (a command that could not be carried out says why, in the steward's words, not that the word went out under a seal, TX5)
+  order_given: (f) => { const d = f.data || {}; if (!d.refused) return sentences('The word goes out under his seal'); const why = String(d.why || '').replace(/^the order was not clear\s*[—-]?\s*/i, '').trim(); return sentences(!why || /\?|^(?:where|whom|who|how|which|what|should)\b/i.test(why) ? 'The steward could not tell what was meant, and nothing was done' : `${cap1(why.replace(/[.!]+$/, ''))}, and nothing was done`); },
   petition: () => '',
-  tax_changed: () => '',
+  // (the people's side of the rate, and what a late or withheld due means for the liege: a card must not stop at its headline, TX5)
+  tax_changed: (f) => {
+    const d = f.data || {};
+    if (d.dues) return sentences(d.dues === 'paying' ? 'The coin comes in again' : d.dues === 'late' ? 'The coin is promised and slow in coming' : 'Nothing will be sent until the quarrel is settled');
+    return sentences({ low: 'The smallfolk pay less, and the treasury will feel it', light: 'The smallfolk pay less, and the treasury will feel it', normal: 'The levy goes back to its usual rate', high: 'The levy is heavier, and the smallfolk will feel it', heavy: 'The levy is heavier, and the smallfolk will feel it', crushing: 'The people are bled for coin, and will not forget it' }[d.tax] || '');
+  },
   works_begun: (f) => { const d = f.data || {}; return d.months ? sentences(`It will take ${span(d.months * 30)}`) : ''; },
   works_done: () => '',
   ledger: () => '',

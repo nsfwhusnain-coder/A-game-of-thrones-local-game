@@ -15,6 +15,7 @@
 //
 // An intent is { verb, actor, house, params, source } (03 §3.7): the actor is a character, the house theirs.
 import { MILITARY } from './military.js';
+import { tidyHouseNames } from '../facts/tidy.js';
 import { MOVEMENT } from './movement.js';
 import { ECONOMY } from './economy.js';
 import { COURT } from './court.js';
@@ -53,7 +54,7 @@ export function perform(state, verb, opts = {}) {
     return { ok: false, intent, refusal: { code: 'failed', text }, receipt: [{ ok: false, text }] };
   }
   const cost = v.cost?.(state, intent) || null;
-  const receipt = (v.receipt ? v.receipt(state, intent, done) : [{ ok: true, text: v.label }]).map((l) => ({ ...(cost && !l.cost && l.ok !== false ? { cost } : {}), ...l }));
+  const receipt = (v.receipt ? v.receipt(state, intent, done) : [{ ok: true, text: v.label }]).map((l) => ({ ...(cost && !l.cost && l.ok !== false ? { cost } : {}), ...l, text: tidyHouseNames(state, l.text) }));
   return { ok: true, intent, done, receipt };
 }
 

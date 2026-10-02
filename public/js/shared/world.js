@@ -23,6 +23,7 @@ import { sameLand } from '../engine/geo.js';
 import { toV3 } from '../engine/state/migrate.js';
 import { settleWorld } from '../engine/state/settle.js';
 import { emit } from '../engine/facts/log.js';
+import { tidyHouseNames } from '../engine/facts/tidy.js';
 import { sampleRealm } from '../engine/realm/stats.js';
 
 export const FIGURE_FIELDS = ['treasury', 'income', 'debt', 'levies', 'menAtArms', 'guard', 'ships', 'food'];
@@ -627,7 +628,7 @@ function applyOne(state, ch, ctx) {
       while (state.parties[id]) id += '_2';
       const men = Math.max(0, Math.round(num(ch.men) ?? 0));
       state.parties[id] = {
-        id, owner, name: ch.name || `Host of ${state.houses[owner].name}`, commander: findChar(state, ch.commander) || ch.commander || null,
+        id, owner, name: tidyHouseNames(state, ch.name || `Host of ${state.houses[owner].name}`), commander: findChar(state, ch.commander) || ch.commander || null,
         at: resolvePlaceId(ch.at || ch.location), pos, men, ships: num(ch.ships) ?? undefined,
         kind: op === 'fleet_create' || ch.type === 'fleet' || ch.kind === 'fleet' ? 'fleet' : 'host', composition: ch.composition || '',
         members: [], morale: num(ch.morale) ?? 70, supply: num(ch.supply) ?? 80, asOf: date,
@@ -725,7 +726,7 @@ function applyOne(state, ch, ctx) {
       }
       const turning = riding ? ` (turning back from the road to ${placeName(state, riding.march?.to)})` : '';
       const p = startRide(state, c, dest);
-      note('set_out', { actors: [c.id], houses: [c.house], pos: p.pos, data: { party: p.id, to: dest, days: Math.max(1, Math.ceil(p.route.days)), ...(riding ? { turned: true } : {}) } });
+      note('set_out', { actors: [c.id], houses: [c.house], pos: p.pos, data: { party: p.id, to: dest, days: Math.max(1, Math.ceil(p.route.days)), ...(p.route.sea ? { sea: true } : {}), ...(riding ? { turned: true } : {}) } });
       return { op, text: `${c.name} sets out for ${placeName(state, dest)} (~${Math.max(1, Math.ceil(p.route.days))} days${p.route.sea ? ', part of it by ship' : '\' ride'})${turning}` };
     }
     case 'recruit': case 'hire_men': {
@@ -894,7 +895,7 @@ function applyOne(state, ch, ctx) {
           // no one crosses the realm in a day: a far move is a journey, taken on the road (a far host is ridden to)
           try {
             const p = startRide(state, c, l); out.push(`sets out for ${placeName(state, l)} (~${Math.max(1, Math.ceil(p.route.days))} days)`);
-            note('set_out', { actors: [c.id], houses: [c.house], pos: p.pos, data: { party: p.id, to: isRef(l) ? null : l, ...(isRef(l) ? { joining: idOf(l) } : {}), days: Math.max(1, Math.ceil(p.route.days)) } });
+            note('set_out', { actors: [c.id], houses: [c.house], pos: p.pos, data: { party: p.id, to: isRef(l) ? null : l, ...(isRef(l) ? { joining: idOf(l) } : {}), days: Math.max(1, Math.ceil(p.route.days)), ...(p.route.sea ? { sea: true } : {}) } });
           } catch (e) { out.push(`stays: ${e.message}`); }
         } else {
           setLoc(state, c, l);
