@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on Windows; fileURLToPath gives a real path
 import { chat, extractJson, loadConfig, estimateTokens } from './llm.js';
-import { buildSuggestPrompt } from './prompts.js';
+import { buildSuggestPrompt, suggestionsOf } from './prompts.js';
 import { whatHappened, toldHappenings } from './ai/calls/consolidate.js';
 import { createInitialState, migrateState, applyChanges, placeName, addDays, dateStr, spanOf, resolvePlaceId, dayNumber } from '../public/js/shared/world.js';
 import { partyOf, together, placeOf } from '../public/js/engine/parties.js';
@@ -36,6 +36,7 @@ import { relevantMemory, chronicleNotes } from './ai/context/memory.js';
 import { narrateTurn, narratorOn } from './narrator.js';
 import { cardOf } from '../public/js/engine/facts/headline.js';
 import { noteFirsts } from '../public/js/engine/facts/rank.js';
+import { quoteOf } from '../public/js/engine/facts/quote.js';
 import { shapeCard, digestOf } from '../public/js/engine/facts/digest.js';
 import { deliverLetters, reveal } from './letters.js';
 import { replyText, promisesIn } from './ai/calls/audience.js';
@@ -764,9 +765,9 @@ function deliverReplies(state) {
     const entry = (state.chats[r.char] || []).find((m) => m.pending && m.arrivesDay === r.arrivesDay);
     if (entry) { delete entry.pending; entry.date = dateStr(state.meta.date); entry.applied = res.applied.map((a) => a.text); }
     state.ravens.unshift({ id: nextId(state, 'r'), day: today, from: c.id, fromName: c.name, to: lordId, text: String(r.text).replace(/\*[^*]*\*/g, '').trim(), date: dateStr(state.meta.date), read: false });
-    const first = String(r.text).replace(/\*[^*]*\*/g, ' ').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s/)[0] || '';
+    const first = quoteOf(r.text); // (what it says, not its greeting: TX1)
     const pp = partyOf(state, c); const whence = pp ? (pp.kind === 'rider' ? 'the road' : `the camp of ${pp.name}`) : placeName(state, c.loc);
-    events.push(fact(state, 'letter_arrived', { title: `${c.name} answers ${state.characters[lordId]?.name || 'the lord'}`, text: `A raven from ${whence}: “${first.slice(0, 220)}”${res.applied.length ? ` — ${res.applied.map((a) => a.text).join('; ')}` : ''}`, where: resolvePlaceId(c.loc) || null, importance: 3, houses: [p, c.house], mine: true, day: 1 }, { actors: [c.id, lordId], data: { from: c.id, reply: true }, vis: { scope: 'houses', houses: [p, c.house] } }));
+    events.push(fact(state, 'letter_arrived', { title: `${c.name} answers ${state.characters[lordId]?.name || 'the lord'}`, text: `A raven from ${whence}: “${first}”`, where: resolvePlaceId(c.loc) || null, importance: 3, houses: [p, c.house], mine: true, day: 1 }, { actors: [c.id, lordId], data: { from: c.id, reply: true }, vis: { scope: 'houses', houses: [p, c.house] } }));
   }
   state.pendingReplies = keep;
   return events;
@@ -776,8 +777,7 @@ export async function suggest(id) {
   const cfg = loadConfig();
   const state = loadState(id);
   const { obj, text } = await askJson(id, 'suggest', buildSuggestPrompt(state, readChronicle(id), cfg), cfg);
-  const list = obj?.suggestions || String(text || '').split('\n').filter((l) => l.trim()).slice(0, 7);
-  return { suggestions: list.map(String) };
+  return { suggestions: suggestionsOf(obj, text) };
 }
 
 // News the player has read on the map: its pin goes away (keys are "turn-index"; old ones are forgotten)

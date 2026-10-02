@@ -10,7 +10,7 @@ import { musterState } from '../context/officers.js';
 import { dateStr, placeName } from '../../../public/js/shared/world.js';
 import { forces } from '../../../public/js/engine/parties.js';
 import { VOICES } from '../../../public/data/voices.js';
-import { GAME_WORDS, numbersIn } from '../validate/narration.js';
+import { GAME_WORDS, numbersIn, garbledIn } from '../validate/narration.js';
 import { anachronismsIn } from '../../../public/data/anachronisms.js';
 import { realmBrief } from '../../../public/js/engine/realm/brief.js';
 
@@ -21,7 +21,7 @@ You voice the lord's council: each counsellor in the dossier speaks in turn, in 
 - speeches: two to six, in the order they speak; "speaker" is the counsellor, "text" what they say (first person; a gesture between asterisks at most).
 - Numbers only as the dossier gives them. Never a game word (turn, player, morale, stat); no modern idiom; nothing of what is to come.`;
 export const ADVISOR = `YOUR TASK
-One counsellor answers the lord's question at length, as their office knows the matter: a short opening in their own voice, then two to four headings (a line in capitals) each with a few short points beginning "- ". Numbers only as the dossier gives them. Never a game word; nothing of what is to come.`;
+One counsellor answers the lord's question at length, as their office knows the matter: a short opening in their own voice, then two to four headings (a line in capitals) each with a few short points beginning "- ". When the lord asks for a number of things (the three gravest dangers), each is a heading, exactly that many, and the points under it say what it is and why it is grave. Numbers only as the dossier gives them. Never a game word; nothing of what is to come.`;
 
 /** What an office knows of the house, truly. */
 export function officeKnows(state, c) {
@@ -50,6 +50,13 @@ function nearest(state, pos) {
   return best;
 }
 
+const NUMBERS = { two: 2, three: 3, four: 4, five: 5, 2: 2, 3: 3, 4: 4, 5: 5 };
+/** How many things the lord asks for ("the three gravest dangers", "your two chief worries"), or 0. */
+export function askedCount(words) {
+  const m = String(words || '').toLowerCase().match(/\b(two|three|four|five|[2-5])\s+(?:\w+\s+){0,2}?(dangers?|threats?|worries|risks?|problems?|matters?|things?|weaknesses|enemies|priorities|concerns|troubles)\b/);
+  return m ? NUMBERS[m[1]] : 0;
+}
+
 export default {
   kind: 'council',
   fixtureArgs: () => ({ members: ['luwin', 'rodrik_cassel', 'vayon_poole'], words: 'Can we afford a war?' }),
@@ -59,12 +66,13 @@ export default {
     const p = state.meta.player; const lord = state.characters[state.houses[p].lord];
     const log = (state.chats?.[`council:${[...members].sort().join(',')}`] || []).slice(-8);
     return {
-      state, people, advisor, listening, words,
+      state, people, advisor, listening, words, count: advisor ? askedCount(words) : 0,
       dossier: [
         `DATE: ${dateStr(state.meta.date)}. ${String(state.world?.season || 'summer').replace(/^./, (x) => x.toUpperCase())}.`,
         `THE LORD: ${lord?.name || 'the lord'} of House ${state.houses[p].name}.`,
         // how the realm stands, as this house knows it: the ledger's own figures (engine/realm/brief.js), so a counsellor quotes the numbers the window shows and none the house cannot know
         `THE STATE OF THE REALM, AS YOUR HOUSE KNOWS IT:\n${realmBrief(state, p).text}`,
+        advisor && askedCount(words) ? `THE LORD ASKS FOR ${askedCount(words)} THINGS: write exactly ${askedCount(words)} headings, one for each, and no more.` : null,
         `THE COUNCIL:\n${people.map((c) => `- ${c.id}: ${c.name}${c.title ? `, ${c.title}` : ''}. ${VOICES[c.id]?.voice ? `Speaks: ${VOICES[c.id].voice}` : c.traits ? `Nature: ${c.traits}.` : ''}\n  Knows ${officeKnows(state, c).join('; ') || 'the household'}.`).join('\n')}`,
         // the house's opening (data/briefs.js): what the council has heard in the first moons — news, never what is to come
         (state.meta.date.year * 12 + state.meta.date.month) <= 298 * 12 + 12 ? `WHAT THE COUNCIL HAS HEARD: ${(briefFor(state.houses[p], state).hints || []).join('. ')}.` : null,
@@ -86,6 +94,7 @@ export default {
     if (strings(v).some(hasForeignScript)) out.push('a word in a script that is not the realm\'s');
     for (const re of GAME_WORDS) { const m = text.match(re); if (m) { out.push(`"${m[0]}" is not a word of the realm`); break; } }
     for (const a of anachronismsIn(ctx.state, text)) out.push(`"${a.phrase}": ${a.note}`);
+    { const g = garbledIn(text); if (g) out.push(g); }
     // B-15: a counsellor's figures are the engine's (the dossier), never the chronicle's or the model's own
     const known = numbersIn(ctx.dossier);
     for (const x of numbersIn(text)) {
@@ -106,7 +115,7 @@ function valueOf(ctx) {
     return { speaker: c.id, text: k ? `As to ${k.split(':')[0]}, my lord: ${k.split(': ').slice(1).join(': ')}.` : 'I would counsel caution, my lord.' };
   });
   if (ctx.advisor) {
-    const c = ctx.people[0]; const all = officeKnows(ctx.state, c);
+    const c = ctx.people[0]; const all = officeKnows(ctx.state, c).slice(0, ctx.count || undefined);
     // each thing the office knows under its heading, one point to a clause
     const part = (k) => `${k.split(':')[0].toUpperCase()}\n${k.split(': ').slice(1).join(': ').split(/;\s*|\.\s+(?=[A-Z])/).filter(Boolean).map((x) => `- ${x.replace(/\.$/, '')}`).join('\n')}`;
     return { speeches: [{ speaker: c.id, text: `My lord, as best I can tell it.\n${all.map(part).join('\n') || 'THE HOUSE\n- All is quiet.'}` }] };

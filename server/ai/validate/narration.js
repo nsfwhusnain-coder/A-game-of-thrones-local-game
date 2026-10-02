@@ -116,6 +116,15 @@ export function numbersOf(facts) {
 // ── The forbidden words (10 §8.2; data/style.js) ────────────────────────────────────────────────────────────────────────────────────
 export const GAME_WORDS = [...FORBIDDEN.map((w) => new RegExp(w, 'i')), ...FORBIDDEN_EXACT.map((w) => new RegExp(w))];
 export const MATURE = /\b(genitals?|intercourse|orgasm\w*|cunt)\b/i;
+// text a small model garbled mid-word (bug hunt TX3: "...and they1. I worry for the children, Ned." and "clearer than the... ...the present"): a figure glued to
+// the end of a word, an ellipsis broken in two, or a token of a chat template
+const GARBLED = [[/\b[A-Za-z]{2,}\d+(?=[\s.,;:!?]|$)/, 'a figure glued to a word'], [/(?:\.{2,}|…)\s*(?:\.{2,}|…)/, 'an ellipsis broken in two'], [/<\|[^>]*\|>|\[\/?(?:INST|SYS)\]|^#{2,}\s/m, 'a stray token']];
+/** Why a text reads as garbled, or '' when it does not. */
+export function garbledIn(text) {
+  const t = String(text || '');
+  for (const [re, why] of GARBLED) { const m = t.match(re); if (m) return `${why}: "${m[0].trim()}"`; }
+  return '';
+}
 
 // ── The story's world ────────────────────────────────────────────────────────────────────────────────────────────────
 const ARRIVAL_KINDS = new Set(['arrived', 'landed', 'host_joined', 'envoy_arrived', 'letter_arrived', 'crossed', 'met_on_road', 'host_formed']);
@@ -176,6 +185,7 @@ export function checkEvent(state, ev, story, W = storyWorld(state, story)) {
   if ([text, ev.pov].some(hasForeignScript)) say('script', 'a word in a script that is not the realm\'s');
   for (const re of GAME_WORDS) { const m = text.match(re); if (m) say('game words', `"${m[0]}" is not a word of the realm`); }
   if (MATURE.test(text)) say('maturity', 'explicit description');
+  { const g = garbledIn(text); if (g) say('garbled', g); }
   for (const a of anachronismsIn(state, text)) say('anachronism', `"${a.phrase}": ${a.note}`);
   const at = story.place && state.holdings[story.place];
   for (const n of numbersIn(text)) {
