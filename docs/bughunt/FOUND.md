@@ -251,6 +251,11 @@ At seven-day turns (the game's own default) a fleet whose captain had ridden off
 The Crown's call to its banners named as the host to gather to the largest host standing at the muster, which was the King's progress at King's Landing (N-036's other half): the sworn lords marched across the realm for a court that gives no battle and does not stay where it is. They gather to a host that fights now (`NOT_A_FIELD_HOST`, shared with the vassals' join).
 **Where:** `engine/actions/military.js` (`fieldHostAt`), `engine/parties.js`. **FIXED** (`tests/bugfix-found.test.js`).
 
+### N-044 · S2 · The royal children and the Night's Watch are "on campaign" at a hundred
+Every party but a rider's counted as a campaign for the mind (the cold, the wet and the dying of a host in the field, and almost no relief): so the King's progress, his court at King's Landing with the Queen and the children aboard, a household's ride and a castle's garrison all did, and their captains with them. Myrcella and Tommen, at a hundred in the first moons of a Stark game, "close to breaking"; Alliser Thorne, Bowen Marsh and Qhorin Halfhand likewise, for being the Watch's officers.
+**Where:** `shared/psyche.js` (`campaigning`).
+**FIXED** (`tests/bugfix-found.test.js`): only a host, a fleet or a band in the field is a campaign. A 30-turn Stark game: 55 of 993 at the top (it was 77, and 144 before N-028), 100 behaviour cards (174; 421), 91 collapses (144; 366). A lord at war, and the Watch in a starved winter, still climb: the war's load is unchanged (D-118).
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

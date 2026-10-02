@@ -1,6 +1,6 @@
 import { pronouns } from './people.js';
 import { random } from '../engine/rng.js';
-import { partyOf, isForce, forces, together, placeOf as placeAt } from '../engine/parties.js';
+import { partyOf, forces, together, placeOf as placeAt } from '../engine/parties.js';
 import { fact } from '../engine/facts/log.js';
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 // THE TOLL A WAR TAKES ON A MIND
@@ -38,6 +38,8 @@ export function resilience(c) {
   return clamp(r, 0.5, 1.8);
 }
 
+/** Whether a party is a campaign (a host in the field, a fleet at sea) and not a court on the road (the King's progress), a household's ride, a castle's garrison: the cold, the wet and the dying are the field's. The Night's Watch and the royal children were "on campaign" at a hundred. */
+const campaigning = (p) => !!p && ['host', 'fleet', 'band'].includes(p.kind);
 /** What one death is to one person: a wife, a child, a parent, any other of the house; null for a stranger. */
 function griefOf(c, d) {
   if (d.id === c.spouse) return { v: 28, why: 'his wife dead' };
@@ -66,8 +68,8 @@ export function stressors(state, c, days, ix = null) { // `ix`: the tick's one r
   if (wars.length) add((c.roles?.includes('lord') ? 7 : 4) * wars.length * moons, wars.length > 1 ? 'a war on two fronts' : 'the war');
 
   // in the field: campaigning is cold, wet, and full of other people's dying
-  const withArmy = isForce(partyOf(state, c)) ? partyOf(state, c) : null;
-  const commands = ix ? ix.leads.get(c.id) : forces(state).find((a) => a.commander === c.id);
+  const withArmy = campaigning(partyOf(state, c)) ? partyOf(state, c) : null;
+  const commands = ix ? ix.leads.get(c.id) : forces(state).find((a) => campaigning(a) && a.commander === c.id);
   const army = withArmy || commands;
   if (army) {
     add(5 * moons, 'on campaign');
@@ -106,7 +108,7 @@ function reliefs(state, c, days, ix = null) {
   // A man in a cell, a hostage in another hall, an exile or a host in the field gets none of the
   // things that mend a mind: his own bed, his wife, his children, his own gods.
   if (['imprisoned', 'hostage', 'missing', 'exiled'].includes(c.status)) return 0.5 * moons;
-  if (isForce(partyOf(state, c))) return 1 * moons;
+  if (campaigning(partyOf(state, c))) return 1 * moons;
   let r = 3 * moons; // time itself, if nothing else happens
   const house = state.houses?.[c.house];
   const atHome = house?.seat && placeAt(state, c) === house.seat;
@@ -142,7 +144,7 @@ export function psycheTick(state, days) {
   // one reckoning for the whole tick of what each person's pressures ask of the world (it was asked of every person: a thousand people, a thousand scans)
   const ix = { held: new Map(), leads: new Map(), recent: [], kids: new Map() }; const turnNow = state.meta?.turn ?? 0;
   for (const h of Object.values(state.holdings || {})) { const l = ix.held.get(h.owner); if (l) l.push(h); else ix.held.set(h.owner, [h]); }
-  for (const a of forces(state)) if (a.commander && !ix.leads.has(a.commander)) ix.leads.set(a.commander, a);
+  for (const a of forces(state)) if (campaigning(a) && a.commander && !ix.leads.has(a.commander)) ix.leads.set(a.commander, a);
   for (const d of Object.values(state.characters || {})) {
     if (!d.alive && d.diedTurn != null && turnNow - d.diedTurn <= 2) ix.recent.push(d);
     if (d.alive) for (const p of [d.father, d.mother]) if (p) { const l = ix.kids.get(p); if (l) l.push(d); else ix.kids.set(p, [d]); }

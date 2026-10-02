@@ -9,7 +9,8 @@ The probes again, at the game's own seven-day turns and at ninety days.
 
 - **A fleet does not sail under the name of a captain who rides with another company** (the Iron Fleet raided for seven turns with Victarion at the head of his own riders; N-042).
 - **A call to the banners gathers to a host that fights.** The Crown's call named the King's progress at King's Landing, and the Dornish host set out on a hundred-and-eight-day march for a court that was never going to wait (N-043).
-- Tests: `tests/bugfix-found.test.js` (N-042, N-043). The findings are in `docs/bughunt/FOUND.md`.
+- **The royal children and the Night's Watch are no longer "on campaign" for ever:** only a host in the field, a fleet or a band counts as a campaign for a mind, not the court on the King's progress, a household's ride or a castle's garrison (Myrcella and Tommen were at the top of the strain scale in the first moons; N-044).
+- Tests: `tests/bugfix-found.test.js` (N-042 to N-044). The findings are in `docs/bughunt/FOUND.md`.
 
 ## 2026-10-03 — What the sixth look found: the Hand's tourney, the harvest, the ship
 

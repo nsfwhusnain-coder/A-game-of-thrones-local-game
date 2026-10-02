@@ -463,3 +463,15 @@ test('N-043: a call to the banners gathers to a host that fights, not to the Kin
   applyChanges(s, [{ op: 'army_create', id: 'gold_host', owner: 'baratheon', name: 'The Crown\'s host', at: 'baratheon', men: 900, commander: null }]);
   assert.equal(fieldHostAt(s, 'baratheon', 'baratheon')?.id, 'gold_host');
 });
+
+test('N-044: only a host in the field or a fleet is "on campaign" for the mind: not a garrison\'s captain, nor the court on the King\'s progress', async () => {
+  const { stressors } = await import('../public/js/shared/psyche.js');
+  const s = world('stark'); const why = (id) => stressors(s, s.characters[id], 30).map((x) => x.why);
+  const guard = Object.values(s.parties).find((p) => p.kind === 'garrison' && p.commander && s.characters[p.commander]); assert.ok(guard, 'a garrison with a captain');
+  assert.ok(!why(guard.commander).includes('on campaign'), `${s.characters[guard.commander].name}, captain of a castle's garrison`);
+  applyChanges(s, [{ op: 'army_create', id: 'royal_progress', owner: 'baratheon', name: 'The King\'s progress', at: 'baratheon', men: 1400, commander: 'robert_baratheon' }]);
+  s.parties.royal_progress.kind = 'progress'; setLoc(s, s.characters.tommen_baratheon, 'party:royal_progress');
+  assert.ok(!why('tommen_baratheon').includes('on campaign'), 'a child in the court on the road');
+  applyChanges(s, [{ op: 'army_create', id: 'field_host', owner: 'stark', name: 'The field host', at: 'stark', men: 5000, commander: 'robb_stark' }]);
+  assert.ok(why('robb_stark').includes('on campaign'), 'a host in the field is a campaign');
+});
