@@ -61,7 +61,7 @@ for (const house of HOUSES) {
     for (const e of turn.events.filter((x) => x.narrated && !x.bg)) {
       const fs_ = (e.facts || []).map((x) => factsById.get(x)).filter(Boolean); if (!fs_.length) continue;
       cardsTold++; factsTold += fs_.length;
-      const r = scoreCard({ headline: e.headline, summary: e.summary }, { facts: fs_, actors: [...new Set(fs_.flatMap((f) => f.actors || []))], houses: e.houses, place: e.where }, s);
+      const r = scoreCard({ headline: e.headline, summary: e.summary }, { facts: fs_, actors: [...new Set(fs_.flatMap((f) => f.actors || []))], houses: [...new Set([...(e.houses || []), ...fs_.flatMap((f) => f.houses || [])])], place: e.where }, s);
       if (!r.pass && args.debug) console.log("   ", JSON.stringify(fs_.map((f) => ({ kind: f.kind, data: f.data, place: f.place, houses: f.houses }))).slice(0, 600), JSON.stringify(Object.values(s.parties).filter((p) => fs_.some((f) => f.data?.party === p.id)).map((p) => [p.id, p.name])));
       if (!r.pass) { broken++; cardFaults++; log(`- ${house} turn ${t}: a card fails the scorer [${r.faults}] (${r.detail.map((d) => d.text).join("; ")}) — "${e.headline}" / "${e.summary}"`, true); }
     }
