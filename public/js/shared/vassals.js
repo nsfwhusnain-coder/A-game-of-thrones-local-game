@@ -223,6 +223,11 @@ export function raiseForLiege(state, v, { mine = v.liege === state.meta.player, 
   return answer(state, v, { mine, cause });
 }
 
+/** Who rules a house now: its regent while the lord is a captive or a child, else its lord; no one when both are held. */
+const rulerOf = (state, hid) => {
+  const h = state.houses[hid]; const free = (c) => c?.alive && !/imprisoned|captive|hostage/.test(c.status || '');
+  return free(state.characters[h?.regent]) ? state.characters[h.regent] : free(state.characters[h?.lord]) ? state.characters[h.lord] : null;
+};
 /** Lords in the field grow restless; the disloyal take their men home. Call once per turn with the days elapsed. */
 export function fieldService(state, days) {
   const events = []; const months = days / 30;
@@ -242,7 +247,9 @@ export function fieldService(state, days) {
         lev.v = (Number(lev.v) || 0) + Math.round(leave * 0.9);
         v.obligations = { ...(v.obligations || {}), levies: 'refused' }; delete v.obligations.host;
         for (const c of membersOf(state, host)) if (c.house === vid) sendHome(state, c, v.seat);
-        events.push(...shown(host.owner === state.meta.player, fact(state, 'desertion', { title: `House ${v.name} goes home`, text: `Tired of the war and of ${state.characters[state.houses[host.owner]?.lord]?.name || `${pronouns(state.characters[v.lord]).his} liege`}'s command, ${state.characters[v.lord]?.name || 'the lord'} strikes ${pronouns(state.characters[v.lord]).his} tents in the night and marches ${leave.toLocaleString()} men home.`, where: v.seat, importance: 4, type: 'war', houses: [vid, host.owner] }, { actors: [v.lord], data: { host: host.id, men: leave } })));
+        // (it is the regent who rules a captive's or a child's house, and who marches the men home: the card names him, not the prisoner, ST5)
+        const rules = rulerOf(state, vid); const liegeRules = rulerOf(state, host.owner); const P = rules ? pronouns(rules) : { his: 'their' };
+        events.push(...shown(host.owner === state.meta.player, fact(state, 'desertion', { title: `House ${v.name} goes home`, text: `Tired of the war and of ${liegeRules?.name || 'their liege'}'s command, ${rules?.name || `the lord of House ${v.name}`} strikes ${P.his} tents in the night and marches ${leave.toLocaleString()} men home.`, where: v.seat, importance: 4, type: 'war', houses: [vid, host.owner] }, { actors: rules ? [rules.id] : [], data: { host: host.id, men: leave } })));
       }
     }
     if (host.men <= 0) disband(state, host);
