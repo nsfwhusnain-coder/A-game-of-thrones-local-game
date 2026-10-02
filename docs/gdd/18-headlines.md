@@ -228,6 +228,12 @@ still reads a good card, because the deterministic writer is the floor and not a
 * **The summary** is built as: sentence 1 = the lead fact's plain statement; sentence 2 = a `data.how/why/cause/outcome` clause
   if the slot exists; sentence 3 = for the player's house only, the plain consequence the engine already has as a fact
   (never a feeling). If a slot is missing the sentence is left out — never padded with boilerplate.
+* **The great matters of the story (canon beats) are the one kind told in their own words** (ST1, `DECISIONS.md#D-107`). A beat's
+  event carries the headline it gives its news (`ev(…, head, sum)` in `public/data/beats.js`, kept in the fact as `data.head`
+  `data.sum` and `data.tale`, the telling; the `title` stays the chapter's name for the saga list): `beatHead` says it, and the
+  summary is the beat's own sentences that do not say the headline again (`beatTale`), or its `sum`. They are slots like any other:
+  the writer still never reads a fact's title or text. A fact made before beats had a headline is told by the old line. The test
+  sweeps every beat, alternate and a few houses' worlds through the writer and the scorer, so a new beat must come with a head that passes.
 * **New slots** on the emitters that matter most (N2), read by the writer's `head`/`sum` and the scorer's role check.
   *Implemented in N2 (Slice 1).* The slots as built (this list replaces the plan's, which named `data.how:
   'charged'|'held'|'ambushed'|'night'` and slots for `siege_*`, `crowned`, `wedding` and `arrived`; `DECISIONS.md#D-061`).

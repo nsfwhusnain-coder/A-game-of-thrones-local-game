@@ -58,7 +58,7 @@ export const THREADS = [
       {
         id: 'the_fall', at: YM(298, 9), needs: (s) => alive(s, 'bran_stark') && at(s, 'jaime_lannister', 'stark') && at(s, 'bran_stark', 'stark'),
         fire: (s) => ({
-          events: [ev('The boy who fell', 'Bran Stark, who climbed every wall of Winterfell and never fell, is found broken at the foot of the old tower. He lives, but sleeps and does not wake. Maester Luwin sits by his bed.', 'stark', plays(s, 'stark') ? 5 : 3, 'intrigue', ['stark'])],
+          events: [ev('The boy who fell', 'Bran Stark, who climbed every wall of Winterfell and never fell, is found broken at the foot of the old tower. He lives, but sleeps and does not wake. Maester Luwin sits by his bed.', 'stark', plays(s, 'stark') ? 5 : 3, 'intrigue', ['stark'], 'Bran Stark is found broken beneath the old tower')],
           changes: [{ op: 'character', id: 'bran_stark', status: 'wounded', note: 'Found broken at the foot of the old tower; remembers nothing of the fall.' }],
         }),
       },
@@ -71,14 +71,14 @@ export const THREADS = [
           if (alive(s, 'jon_snow') && s.characters.jon_snow.house === 'stark') ch.push({ op: 'character', id: 'jon_snow', house: 'nights_watch', title: 'Recruit of the Night\'s Watch', loc: 'nights_watch' });
           // the new Hand rides south with his King, as in the books — with his daughters if he chose to bring them
           if (flag(s, 'ned_hand') && free(s, 'eddard_stark') && at(s, 'eddard_stark', 'stark')) ch.push({ op: 'travel', character: 'eddard_stark', to: 'kings_landing', men: 300, name: 'The Hand\'s household', companions: ['jory_cassel', 'vayon_poole', 'septa_mordane', ...(flag(s, 'hand_daughters') ? ['sansa_stark', 'arya_stark'] : [])] });
-          return { events: [ev('The court goes south', 'The King\'s party leaves Winterfell by the kingsroad. Jon Snow rides north to take the black, and Tyrion Lannister goes with him to see the Wall.', 'stark', 2, 'court', ['stark', 'baratheon'])], changes: ch };
+          return { events: [ev('The court goes south', 'The King\'s party leaves Winterfell by the kingsroad. Jon Snow rides north to take the black, and Tyrion Lannister goes with him to see the Wall.', 'stark', 2, 'court', ['stark', 'baratheon'], 'The royal court rides south from Winterfell')], changes: ch };
         },
       },
       {
         // K8: the wolf and the lion on the Trident — only if the girls ride south with the court
         id: 'trident', at: YM(298, 10), grace: 1, needs: (s) => flag(s, 'hand_daughters') && alive(s, 'arya_stark', 'sansa_stark', 'joffrey_baratheon') && !at(s, 'arya_stark', 'stark'),
         fire: () => ({
-          events: [ev('The wolf and the lion', 'On the Trident, near the inn at Darry, Prince Joffrey draws steel on a butcher\'s boy who crossed swords of wood with Arya Stark; her direwolf savages the prince\'s arm. The Hound rides the boy down. The Queen demands a wolf\'s life, and Lord Eddard kills Sansa\'s Lady with his own hand. Arya\'s wolf is driven off into the woods.', 'darry', 3, 'court', ['stark', 'lannister', 'baratheon'])],
+          events: [ev('The wolf and the lion', 'On the Trident, near the inn at Darry, Prince Joffrey draws steel on a butcher\'s boy who crossed swords of wood with Arya Stark; her direwolf savages the prince\'s arm. The Hound rides the boy down. The Queen demands a wolf\'s life, and Lord Eddard kills Sansa\'s Lady with his own hand. Arya\'s wolf is driven off into the woods.', 'darry', 3, 'court', ['stark', 'lannister', 'baratheon'], 'Arya Stark\'s direwolf wounds Prince Joffrey on the Trident')],
           changes: [{ op: 'relation', a: 'stark', b: 'lannister', delta: -8 }],
         }),
       },
@@ -86,7 +86,7 @@ export const THREADS = [
         // K9: the Hand in King's Landing — and the Crown's debt laid before him
         id: 'hand_at_court', at: YM(298, 11), grace: 2, needs: (s) => flag(s, 'ned_hand') && free(s, 'eddard_stark') && at(s, 'eddard_stark', 'baratheon'),
         fire: (s) => ({
-          events: [ev('The Hand takes his seat', `Lord Eddard Stark sits the Hand's chair at the small council. The master of coin tells him, smiling, that the Crown owes six million dragons — three to Lord Tywin, the rest to the Iron Bank, the Faith and the Tyrells — and that the King wants a tourney.`, 'baratheon', plays(s, 'stark', 'baratheon') ? 4 : 2, 'court', ['stark', 'baratheon'])],
+          events: [ev('The Hand takes his seat', `Lord Eddard Stark sits the Hand's chair at the small council. The master of coin tells him, smiling, that the Crown owes six million dragons — three to Lord Tywin, the rest to the Iron Bank, the Faith and the Tyrells — and that the King wants a tourney.`, 'baratheon', plays(s, 'stark', 'baratheon') ? 4 : 2, 'court', ['stark', 'baratheon'], 'Eddard Stark takes his seat at the small council')],
           changes: [{ op: 'character', id: 'eddard_stark', note: 'Took his seat as Hand; learned the depth of the Crown\'s debt.' }],
         }),
       },
@@ -97,7 +97,7 @@ export const THREADS = [
       {
         id: 'assassin', at: YM(298, 10), needs: (s) => alive(s, 'bran_stark', 'catelyn_stark') && s.characters.bran_stark.status === 'wounded',
         fire: (s) => {
-          const out = { events: [ev('A knife in the night', 'A cutthroat with a dagger of Valyrian steel creeps into Bran Stark\'s chamber. Lady Catelyn fights him with her bare hands and the boy\'s direwolf tears out his throat. Such a blade is not a common sellsword\'s.', 'stark', plays(s, 'stark') ? 5 : 3, 'intrigue', ['stark'])], changes: [] };
+          const out = { events: [ev('A knife in the night', 'A cutthroat with a dagger of Valyrian steel creeps into Bran Stark\'s chamber. Lady Catelyn fights him with her bare hands and the boy\'s direwolf tears out his throat. Such a blade is not a common sellsword\'s.', 'stark', plays(s, 'stark') ? 5 : 3, 'intrigue', ['stark'], 'An assassin enters Bran Stark\'s chamber with a Valyrian blade')], changes: [] };
           if (plays(s, 'stark')) {
             out.decision = {
               id: 'catspaw', title: 'Whose was the dagger?', from: 'catelyn_stark',
@@ -118,7 +118,7 @@ export const THREADS = [
         // C3: in King's Landing Catelyn is told whose dagger it was (what she is told, not what is true)
         id: 'littlefingers_lie', at: YM(298, 11), grace: 1, needs: (s) => flag(s, 'cat_south') && free(s, 'catelyn_stark') && free(s, 'petyr_baelish') && at(s, 'catelyn_stark', 'baratheon'),
         fire: (s) => ({
-          events: [ev('Whose dagger?', 'In a room above one of Petyr Baelish\'s establishments, Catelyn Stark shows her childhood friend the catspaw\'s dagger. He knows it: he lost it, he says, on a wager at the Prince\'s nameday tourney — to Tyrion Lannister.', 'baratheon', plays(s, 'stark', 'tully') ? 4 : 2, 'intrigue', ['stark', 'tully'])],
+          events: [ev('Whose dagger?', 'In a room above one of Petyr Baelish\'s establishments, Catelyn Stark shows her childhood friend the catspaw\'s dagger. He knows it: he lost it, he says, on a wager at the Prince\'s nameday tourney — to Tyrion Lannister.', 'baratheon', plays(s, 'stark', 'tully') ? 4 : 2, 'intrigue', ['stark', 'tully'], 'Petyr Baelish tells Catelyn Stark the dagger was Tyrion Lannister\'s')],
           changes: [{ op: 'relation', a: 'stark', b: 'lannister', delta: -10 }],
           flags: { cat_told: true },
         }),
@@ -132,7 +132,7 @@ export const THREADS = [
         fire: (s) => {
           const winner = free(s, 'loras_tyrell') ? 'Ser Loras Tyrell, the Knight of Flowers' : free(s, 'jaime_lannister') ? 'Ser Jaime Lannister' : 'a hedge knight no one had heard of';
           const out = {
-            events: [ev('The Tourney of the Hand', `King Robert holds a great tourney in King's Landing, forty thousand golden dragons to the champion. Ser Hugh of the Vale dies with a lance through his throat; the Mountain loses his temper and tries to kill ${winner}, and the Hound stands between them. The crown's debt grows by the purse.`, 'baratheon', 3, 'court', ['baratheon', 'tyrell', 'clegane'])],
+            events: [ev('The Tourney of the Hand', `King Robert holds a great tourney in King's Landing, forty thousand golden dragons to the champion. Ser Hugh of the Vale dies with a lance through his throat; the Mountain loses his temper and tries to kill ${winner}, and the Hound stands between them. The crown's debt grows by the purse.`, 'baratheon', 3, 'court', ['baratheon', 'tyrell', 'clegane'], 'King Robert holds a great tourney at King\'s Landing', 'Forty thousand golden dragons go to the champion. The Mountain loses his temper and tries to kill Ser Loras Tyrell, the Knight of Flowers, and the Hound stands between them. The crown\'s debt grows by the purse.')],
             changes: [{ op: 'figure', house: 'baratheon', field: 'treasury', delta: -90000, source: 'The tourney accounts' }],
             post: (st) => { st.plots.tourneys = { ...(st.plots.tourneys || {}), baratheon: dayNumber(st.meta.date) }; },
           };
@@ -157,7 +157,7 @@ export const THREADS = [
       {
         id: 'seized', at: YM(298, 11), needs: (s) => free(s, 'catelyn_stark') && free(s, 'tyrion_lannister') && flag(s, 'cat_south') === true && flag(s, 'cat_told') && !inWar(s, 'stark', 'lannister'),
         fire: (s) => ({
-          events: [ev('Seized at the crossroads', 'At the inn at the crossroads, Catelyn Stark calls on the knights of her father\'s bannermen to seize Tyrion Lannister for the attempted murder of her son. He is carried off to the Eyrie to stand before her sister.', 'crossroads_inn', 5, 'intrigue', ['stark', 'tully', 'lannister', 'arryn'])],
+          events: [ev('Seized at the crossroads', 'At the inn at the crossroads, Catelyn Stark calls on the knights of her father\'s bannermen to seize Tyrion Lannister for the attempted murder of her son. He is carried off to the Eyrie to stand before her sister.', 'crossroads_inn', 5, 'intrigue', ['stark', 'tully', 'lannister', 'arryn'], 'Catelyn Stark calls for Tyrion Lannister\'s arrest at the crossroads inn')],
           changes: [{ op: 'character', id: 'tyrion_lannister', status: 'imprisoned', loc: 'arryn' }, { op: 'character', id: 'catelyn_stark', loc: 'arryn' }, { op: 'relation', a: 'lannister', b: 'stark', delta: -30 }, { op: 'relation', a: 'lannister', b: 'tully', delta: -25 }],
           decision: plays(s, 'lannister') ? {
             id: 'imp_taken', title: 'They have taken Tyrion', from: 'kevan_lannister',
@@ -176,7 +176,7 @@ export const THREADS = [
         // I4: Jaime answers his brother's taking in the streets of King's Landing
         id: 'streets', at: YM(298, 11), grace: 1, needs: (s) => free(s, 'jaime_lannister') && free(s, 'eddard_stark') && at(s, 'jaime_lannister', 'baratheon') && at(s, 'eddard_stark', 'baratheon') && !plays(s, 'stark', 'lannister'),
         fire: (s) => ({
-          events: [ev('Swords in the street', 'Ser Jaime Lannister and twenty gold-cloaked swords fall on the Hand in the rain outside Chataya\'s. Jory Cassel and two of the Hand\'s guards die in the mud; Lord Eddard\'s leg is broken under his fallen horse. Jaime rides for Casterly Rock that night.', 'baratheon', 4, 'war', ['stark', 'lannister'])],
+          events: [ev('Swords in the street', 'Ser Jaime Lannister and twenty gold-cloaked swords fall on the Hand in the rain outside Chataya\'s. Jory Cassel and two of the Hand\'s guards die in the mud; Lord Eddard\'s leg is broken under his fallen horse. Jaime rides for Casterly Rock that night.', 'baratheon', 4, 'war', ['stark', 'lannister'], 'Jaime Lannister\'s swords ambush Eddard Stark in the rain')],
           changes: [...(alive(s, 'jory_cassel') ? [{ op: 'character', id: 'jory_cassel', alive: false, cause: 'slain by Jaime Lannister\'s men in the streets of King\'s Landing' }] : []), { op: 'character', id: 'eddard_stark', status: 'wounded', note: 'His leg broken in the fight in the street.' }, { op: 'travel', character: 'jaime_lannister', to: 'casterly_rock', men: 20, name: 'The Kingslayer\'s riders' }, { op: 'relation', a: 'stark', b: 'lannister', delta: -15 }],
         }),
       },
@@ -184,7 +184,7 @@ export const THREADS = [
         id: 'burning', at: YM(298, 12), needs: (s) => flag(s, 'riverlands_burn') && alive(s, 'gregor_clegane') && !inWar(s, 'lannister', 'tully'),
         fire: (s) => {
           const out = {
-            events: [ev('Fire in the Riverlands', 'Men with no banners — but everyone knows the Mountain — burn Sherrer, the Mummer\'s Ford and a score of villages across the Riverlands. Edmure Tully calls his banners; Lord Tywin gathers a host at Casterly Rock.', 'riverrun', 5, 'war', ['lannister', 'tully', 'clegane'])],
+            events: [ev('Fire in the Riverlands', 'Men with no banners — but everyone knows the Mountain — burn Sherrer, the Mummer\'s Ford and a score of villages across the Riverlands. Edmure Tully calls his banners; Lord Tywin gathers a host at Casterly Rock.', 'riverrun', 5, 'war', ['lannister', 'tully', 'clegane'], 'Raiders burn the Riverlands and Edmure Tully calls his banners')],
             changes: [{ op: 'war', id: 'lannister_vs_tully', name: 'War in the Riverlands', attackers: ['lannister'], defenders: ['tully'], reason: 'The seizure of Tyrion Lannister' }],
           };
           for (const h of Object.values(s.holdings)) if (s.houses[h.owner]?.region === 'riverlands' && random() < 0.35) out.changes.push({ op: 'holding', id: h.id, unrest: Math.min(100, (h.unrest || 0) + 25), prosperity: Math.max(0, (h.prosperity || 50) - 15), note: 'Raided and burned by men without banners' });
@@ -206,7 +206,7 @@ export const THREADS = [
         // I2: the high road and the Eyrie: a sellsword wins the Imp his freedom
         id: 'trial', at: YM(298, 12), grace: 1, needs: (s) => alive(s, 'tyrion_lannister') && s.characters.tyrion_lannister.status === 'imprisoned' && at(s, 'tyrion_lannister', 'arryn') && alive(s, 'bronn') && !plays(s, 'arryn', 'lannister'),
         fire: (s) => ({
-          events: [ev('Trial by combat in the Eyrie', 'Before Lady Lysa\'s high seat Tyrion Lannister demands a trial by combat. A sellsword named Bronn takes his part and, in the garden of the Eyrie, tires out Ser Vardis Egen and sends him through the Moon Door. The Imp is set free on the high road, where the mountain clans come for him — and go with him.', 'arryn', 4, 'intrigue', ['arryn', 'lannister'])],
+          events: [ev('Trial by combat in the Eyrie', 'Before Lady Lysa\'s high seat Tyrion Lannister demands a trial by combat. A sellsword named Bronn takes his part and, in the garden of the Eyrie, tires out Ser Vardis Egen and sends him through the Moon Door. The Imp is set free on the high road, where the mountain clans come for him — and go with him.', 'arryn', 4, 'intrigue', ['arryn', 'lannister'], 'Tyrion Lannister is freed by Bronn\'s sword at the Eyrie')],
           changes: [...(alive(s, 'vardis_egen') ? [{ op: 'character', id: 'vardis_egen', alive: false, cause: 'slain by Bronn in Tyrion Lannister\'s trial by combat' }] : []), { op: 'character', id: 'tyrion_lannister', status: 'free', note: 'Freed by trial by combat; the mountain clans ride with him.' }, { op: 'travel', character: 'tyrion_lannister', to: 'casterly_rock', men: 0, companions: ['bronn'] }],
         }),
       },
@@ -214,7 +214,7 @@ export const THREADS = [
         // I5: the Hand sends the King's justice after the Mountain
         id: 'berics_ride', at: YM(298, 12), grace: 1, needs: (s) => flag(s, 'ned_hand') && alive(s, 'eddard_stark', 'beric_dondarrion') && at(s, 'eddard_stark', 'baratheon') && !plays(s, 'stark', 'dondarrion'),
         fire: () => ({
-          events: [ev('The King\'s justice rides', 'From the Iron Throne, in the King\'s name, the Hand sends Lord Beric Dondarrion with a hundred and twenty men to bring Ser Gregor Clegane to justice for the burning of the Riverlands. Thoros of Myr rides with him.', 'baratheon', 3, 'court', ['stark', 'dondarrion', 'clegane'])],
+          events: [ev('The King\'s justice rides', 'From the Iron Throne, in the King\'s name, the Hand sends Lord Beric Dondarrion with a hundred and twenty men to bring Ser Gregor Clegane to justice for the burning of the Riverlands. Thoros of Myr rides with him.', 'baratheon', 3, 'court', ['stark', 'dondarrion', 'clegane'], 'Beric Dondarrion rides to bring Gregor Clegane to the King\'s justice')],
           changes: [{ op: 'character', id: 'beric_dondarrion', note: 'Sent by the Hand to bring the Mountain to justice.' }, { op: 'relation', a: 'stark', b: 'clegane', delta: -20 }],
         }),
       },
@@ -223,7 +223,7 @@ export const THREADS = [
         id: 'lions', at: YM(299, 1), grace: 1, needs: (s) => inWar(s, 'lannister', 'tully') && alive(s, 'tywin_lannister') && !plays(s, 'lannister', 'tully'),
         fire: (s) => {
           const out = {
-            events: [ev('The lions in the Riverlands', 'Ser Jaime Lannister comes down through the Golden Tooth with fifteen thousand and scatters the river lords beneath Riverrun, taking Ser Edmure Tully captive; Riverrun is closed in. Lord Tywin, with twenty thousand more, takes Harrenhal and burns his way east along the Trident.', 'tully', 5, 'war', ['lannister', 'tully'])],
+            events: [ev('The lions in the Riverlands', 'Ser Jaime Lannister comes down through the Golden Tooth with fifteen thousand and scatters the river lords beneath Riverrun, taking Ser Edmure Tully captive; Riverrun is closed in. Lord Tywin, with twenty thousand more, takes Harrenhal and burns his way east along the Trident.', 'tully', 5, 'war', ['lannister', 'tully'], 'Jaime Lannister scatters the river lords and shuts in Riverrun')],
             changes: [{ op: 'battle', name: 'Battle beneath the walls of Riverrun', at: 'tully', attacker: 'lannister', defender: 'tully', victor: 'lannister' }],
           };
           const camp = Object.values(s.parties).filter((a) => a.owner === 'lannister' && a.kind === 'host' && a.men > 0 && a.pos).sort((a, b) => Math.hypot(a.pos[0] - s.holdings.tully.pos[0], a.pos[1] - s.holdings.tully.pos[1]) - Math.hypot(b.pos[0] - s.holdings.tully.pos[0], b.pos[1] - s.holdings.tully.pos[1]))[0];
@@ -241,7 +241,7 @@ export const THREADS = [
         fire: (s) => {
           if (plays(s, 'baratheon')) {
             return {
-              events: [ev('A hunt in the kingswood', 'The King is restless and means to hunt boar in the kingswood. His squire Lancel keeps his cup full of strongwine.', 'baratheon', 3, 'court', ['baratheon'])],
+              events: [ev('A hunt in the kingswood', 'King Robert is restless and means to hunt boar in the kingswood. His squire Lancel keeps his cup full of strongwine.', 'baratheon', 3, 'court', ['baratheon'], 'King Robert rides out to hunt boar in the kingswood')],
               decision: {
                 id: 'last_hunt', title: 'Ride out after the boar?', from: 'lancel_lannister',
                 text: '"A boar, Your Grace, the biggest in the kingswood." Your squire is pouring the strongwine the Queen sent. Your gut aches and your Hand frowns.',
@@ -255,7 +255,7 @@ export const THREADS = [
             };
           }
           return {
-            events: [ev('The King is dead', 'King Robert, drunk on strongwine, is opened from groin to nipple by a boar in the kingswood and dies of it. Before he dies he names Lord Eddard Protector of the Realm until his son comes of age.', 'baratheon', 5, 'court', ['baratheon', 'lannister', 'stark'])],
+            events: [ev('The King is dead', 'King Robert, drunk on strongwine, is opened from groin to nipple by a boar in the kingswood and dies of it. Before he dies he names Lord Eddard Protector of the Realm until his son comes of age.', 'baratheon', 5, 'court', ['baratheon', 'lannister', 'stark'], 'King Robert is gored by a boar in the kingswood')],
             changes: [{ op: 'character', id: 'robert_baratheon', alive: false, cause: 'gored by a boar in the kingswood' }],
           };
         },
@@ -265,7 +265,7 @@ export const THREADS = [
         fire: (s) => {
           if (plays(s, 'stark')) {
             return {
-              events: [ev('The throne room', 'Robert is dead. Joffrey sits the Iron Throne; Cersei holds his letters. You alone know that none of her children are Robert\'s.', 'baratheon', 5, 'intrigue', ['stark', 'lannister'])],
+              events: [ev('The throne room', 'Robert is dead. Joffrey sits the Iron Throne; Cersei holds his letters. You alone know that none of her children are Robert\'s.', 'baratheon', 5, 'intrigue', ['stark', 'lannister'], 'Joffrey sits the Iron Throne while Cersei holds the late King\'s letters')],
               decision: {
                 id: 'ned_choice', title: 'Robert is dead. What does the Hand do?', from: 'petyr_baelish',
                 text: 'Littlefinger says the gold cloaks can be bought for six thousand dragons. The Queen has not yet moved. Robert\'s letter names you Protector of the Realm "until my heir comes of age" — and Joffrey is no heir of his.',
@@ -279,7 +279,7 @@ export const THREADS = [
             };
           }
           return {
-            events: [ev('Treason in the throne room', 'Lord Eddard Stark produces the late King\'s letter naming him Protector of the Realm. The gold cloaks turn their spears on his guards. The Hand is dragged to the black cells, and Joffrey is proclaimed king.', 'baratheon', 5, 'intrigue', ['stark', 'lannister', 'baratheon'])],
+            events: [ev('Treason in the throne room', 'Lord Eddard Stark produces the late King\'s letter naming him Protector of the Realm. The gold cloaks turn their spears on his guards. The Hand is dragged to the black cells, and Joffrey is proclaimed king.', 'baratheon', 5, 'intrigue', ['stark', 'lannister', 'baratheon'], 'Eddard Stark is dragged to the black cells for treason')],
             changes: [{ op: 'character', id: 'eddard_stark', status: 'imprisoned', note: 'Seized in the throne room for treason.' }, { op: 'relation', a: 'stark', b: 'lannister', delta: -40 }],
             flags: { ned_seized: true },
           };
@@ -293,14 +293,14 @@ export const THREADS = [
           if (free(s, 'barristan_selmy')) ch.push({ op: 'character', id: 'barristan_selmy', note: 'Dismissed from the Kingsguard by King Joffrey; rode out of the city in his armour.' });
           if (alive(s, 'tywin_lannister') && !plays(s, 'lannister')) ch.push({ op: 'character', id: 'tywin_lannister', title: 'Hand of the King, Lord of Casterly Rock' });
           if (alive(s, 'janos_slynt')) ch.push({ op: 'character', id: 'janos_slynt', title: 'Lord of Harrenhal, Commander of the City Watch' });
-          return { events: [ev('King Joffrey', 'In the Great Sept of Baelor the High Septon sets the crown on Joffrey Baratheon\'s head. The new King dismisses Ser Barristan Selmy from his Kingsguard for being old; Lord Tywin is named Hand, and Janos Slynt of the gold cloaks is given Harrenhal.', 'baratheon', 4, 'court', ['baratheon', 'lannister'])], changes: ch };
+          return { events: [ev('King Joffrey', 'In the Great Sept of Baelor the High Septon sets the crown on Joffrey Baratheon\'s head. The new King dismisses Ser Barristan Selmy from his Kingsguard for being old; Lord Tywin is named Hand, and Janos Slynt of the gold cloaks is given Harrenhal.', 'baratheon', 4, 'court', ['baratheon', 'lannister'], 'The High Septon sets the crown on Joffrey Baratheon\'s head', 'The new King dismisses Ser Barristan Selmy from his Kingsguard for being old, and Janos Slynt of the gold cloaks is given Harrenhal.')], changes: ch };
         },
       },
       {
         id: 'banners', at: YM(299, 1), needs: (s) => flag(s, 'ned_seized') && !inWar(s, 'stark', 'lannister') && s.houses.stark?.lord && alive(s, s.houses.stark.lord),
         fire: (s) => {
           const out = {
-            events: [ev('The North calls its banners', `${C(s, 'robb_stark')?.alive ? 'Robb Stark, fifteen years old,' : 'Winterfell'} calls the banners of the North. The lords come: Umber, Karstark, Bolton, Glover, Mormont, Manderly. Eighteen thousand men march for Moat Cailin.`, 'stark', 5, 'war', ['stark', 'lannister'])],
+            events: [ev('The North calls its banners', `${C(s, 'robb_stark')?.alive ? 'Robb Stark, fifteen years old,' : 'Winterfell'} calls the banners of the North. The lords come: Umber, Karstark, Bolton, Glover, Mormont, Manderly. Eighteen thousand men march for Moat Cailin.`, 'stark', 5, 'war', ['stark', 'lannister'], `${C(s, 'robb_stark')?.alive ? 'Robb Stark' : 'Winterfell'} calls the banners of the North`)],
             changes: [{ op: 'war', id: 'war_of_five_kings', name: 'The War of the Five Kings', attackers: ['stark', 'tully'], defenders: ['lannister', 'baratheon'], reason: 'The imprisonment of Lord Eddard Stark' }],
           };
           if (!plays(s, 'stark')) out.changes.push({ op: 'army_create', owner: 'stark', name: 'The Northern Host', at: 'moat_cailin', men: 18000, commander: alive(s, 'robb_stark') ? 'robb_stark' : null, composition: 'Northern levies, heavy horse of the Umbers and Karstarks', status: 'marching' });
@@ -314,7 +314,9 @@ export const THREADS = [
           if (alive(s, 'renly_baratheon') && !plays(s, 'baratheon_se')) { ch.push({ op: 'character', id: 'renly_baratheon', title: 'King Renly, First of His Name', loc: 'tyrell' }, { op: 'pact', type: 'alliance', a: 'baratheon_se', b: 'tyrell', terms: 'Renly weds Margaery; the Reach crowns him' }); ev_.push('At Highgarden, Renly Baratheon weds Margaery Tyrell and is crowned king, with the whole power of the Reach and the Stormlands behind him.'); }
           if (alive(s, 'stannis_baratheon') && !plays(s, 'baratheon_ds')) { ch.push({ op: 'character', id: 'stannis_baratheon', title: 'King Stannis, First of His Name' }); ev_.push('On Dragonstone, Stannis Baratheon names himself Robert\'s heir and sends letters to every lord in the realm: Joffrey, Myrcella and Tommen are bastards born of incest.'); }
           if (!ch.length) return null;
-          return { events: [ev('Brothers crowned', ev_.join(' '), 'baratheon_ds', 5, 'court', ['baratheon_se', 'baratheon_ds', 'tyrell'])], changes: ch };
+          const renly = ch.some((c) => c.id === 'renly_baratheon'); const stannis = ch.some((c) => c.id === 'stannis_baratheon');
+          const head = renly && stannis ? 'Renly and Stannis Baratheon each claim the crown' : renly ? 'Renly Baratheon claims the crown at Highgarden' : 'Stannis Baratheon claims the crown from Dragonstone';
+          return { events: [ev('Brothers crowned', ev_.join(' '), 'baratheon_ds', 5, 'court', ['baratheon_se', 'baratheon_ds', 'tyrell'], head)], changes: ch };
         },
       },
     ],
@@ -326,7 +328,7 @@ export const THREADS = [
         fire: (s) => {
           if (plays(s, 'baratheon', 'lannister')) {
             return {
-              events: [ev('The traitor in the black cells', 'Lord Eddard Stark has confessed his treason, if he is allowed to take the black. The small council is divided; the King wants a head.', 'baratheon', 4, 'court', ['stark', 'baratheon'])],
+              events: [ev('The traitor in the black cells', 'Lord Eddard Stark has confessed his treason, if he is allowed to take the black. The small council is divided; the King wants a head.', 'baratheon', 4, 'court', ['stark', 'baratheon'], 'Eddard Stark offers to confess and take the black')],
               decision: {
                 id: 'ned_fate', title: 'What becomes of Eddard Stark?', from: 'varys',
                 text: 'Varys has persuaded him to confess before the Great Sept of Baelor. Pycelle says a live Stark is a hostage worth an army; the King says a dead one is a lesson. The North is watching.',
@@ -340,7 +342,7 @@ export const THREADS = [
             };
           }
           return {
-            events: [ev('The steps of Baelor\'s Sept', 'Before the Great Sept, Eddard Stark confesses to treason he did not commit, to save his daughters. King Joffrey, to the horror of his mother and council, has Ser Ilyn Payne take his head. His sword Ice goes to the Lannisters.', 'baratheon', 5, 'court', ['stark', 'baratheon', 'lannister'])],
+            events: [ev('The steps of Baelor\'s Sept', 'Before the Great Sept, Eddard Stark confesses to treason he did not commit, to save his daughters. King Joffrey, to the horror of his mother and council, has Ser Ilyn Payne take his head. His sword Ice goes to the Lannisters.', 'baratheon', 5, 'court', ['stark', 'baratheon', 'lannister'], 'Ilyn Payne takes Eddard Stark\'s head on King Joffrey\'s word')],
             changes: [{ op: 'character', id: 'eddard_stark', alive: false, cause: 'beheaded on the steps of the Great Sept of Baelor' }, { op: 'relation', a: 'stark', b: 'lannister', delta: -40 }, { op: 'relation', a: 'stark', b: 'baratheon', delta: -40 }],
             flags: { ned_dead: true },
           };
@@ -356,7 +358,7 @@ export const THREADS = [
           const lord = s.characters[s.houses.stark.lord];
           if (plays(s, 'stark')) {
             return {
-              events: [ev('A council of war', 'Your lords have gathered in the great hall of Riverrun. The Greatjon is on his feet.', 'tully', 4, 'court', ['stark'])],
+              events: [ev('A council of war', 'Your lords have gathered in the great hall of Riverrun. The Greatjon is on his feet.', 'tully', 4, 'court', ['stark'], 'The northern lords gather at Riverrun for a council of war')],
               decision: {
                 id: 'kinginthenorth', title: '"The King in the North!"', from: 'greatjon_umber',
                 text: `The Greatjon lays his sword before ${lord?.name || 'you'}: "Here is the only king I mean to bow my knee to. Why shouldn't we rule ourselves again? It was the dragons we married, and the dragons are all dead." The hall takes up the cry. Renly and Stannis both demand your fealty.`,
@@ -370,7 +372,7 @@ export const THREADS = [
             };
           }
           return {
-            events: [ev('The King in the North', `At Riverrun the northern lords lay their swords before ${lord?.name || 'the Stark'} and proclaim ${lord ? pronouns(lord).him : 'him'} ${lord && pronouns(lord).he === 'she' ? 'Queen' : 'King'} in the North, as ${lord ? pronouns(lord).his : 'his'} forefathers were before Aegon came. The river lords kneel with them.`, 'tully', 5, 'court', ['stark', 'tully'])],
+            events: [ev('The King in the North', `At Riverrun the northern lords lay their swords before ${lord?.name || 'the Stark'} and proclaim ${lord ? pronouns(lord).him : 'him'} ${lord && pronouns(lord).he === 'she' ? 'Queen' : 'King'} in the North, as ${lord ? pronouns(lord).his : 'his'} forefathers were before Aegon came. The river lords kneel with them.`, 'tully', 5, 'court', ['stark', 'tully'], `${lord ? lord.name : 'A young Stark'} is proclaimed ${lord && pronouns(lord).he === 'she' ? 'Queen' : 'King'} in the North at Riverrun`)],
             changes: [{ op: 'liege', house: 'stark', liege: null }, ...(lord ? [{ op: 'character', id: lord.id, title: 'King in the North' }] : []), ...(s.houses.tully && !plays(s, 'tully') ? [{ op: 'liege', house: 'tully', liege: 'stark' }] : [])],
           };
         },
@@ -384,7 +386,7 @@ export const THREADS = [
         fire: (s) => {
           if (plays(s, 'stark')) {
             return {
-              events: [ev('The crossing at the Twins', 'Your host must cross the Green Fork, and the only bridge for a hundred leagues belongs to Lord Walder Frey — who called his banners and has not yet decided which side to march on.', 'frey', 4, 'war', ['stark', 'frey'])],
+              events: [ev('The crossing at the Twins', 'Your host must cross the Green Fork, and the only bridge for a hundred leagues belongs to Lord Walder Frey — who called his banners and has not yet decided which side to march on.', 'frey', 4, 'war', ['stark', 'frey'], 'Walder Frey holds the only crossing of the Green Fork')],
               decision: {
                 id: 'twins', title: 'Lord Walder\'s price', from: 'walder_frey',
                 text: '"Your father\'s bannermen, your mother\'s bannermen, all of them want something." Walder Frey will open his bridge and send four thousand swords, if your lord marries one of his daughters when the war is done, and takes two of his grandsons to foster.',
@@ -397,7 +399,7 @@ export const THREADS = [
               },
             };
           }
-          return { events: [ev('The crossing at the Twins', 'Lord Walder Frey lets the northern host cross the Green Fork, for a price: his daughter\'s marriage to the young Stark lord when the war is done. Four thousand Frey swords march south with them.', 'frey', 3, 'war', ['stark', 'frey'])], changes: [{ op: 'pact', type: 'alliance', a: 'stark', b: 'frey', terms: 'Passage of the Twins; a Stark to wed a Frey' }], flags: { frey_pact: true } };
+          return { events: [ev('The crossing at the Twins', 'Lord Walder Frey lets the northern host cross the Green Fork, for a price: his daughter\'s marriage to the young Stark lord when the war is done. Four thousand Frey swords march south with them.', 'frey', 3, 'war', ['stark', 'frey'], 'Walder Frey lets the northern host cross the Green Fork')], changes: [{ op: 'pact', type: 'alliance', a: 'stark', b: 'frey', terms: 'Passage of the Twins; a Stark to wed a Frey' }], flags: { frey_pact: true } };
         },
       },
       {
@@ -406,14 +408,14 @@ export const THREADS = [
         fire: (s) => {
           const win = (s.meta.settings?.canonGravity || 'canon') === 'canon' || random() < (plays(s, 'stark') ? 0.6 : 0.7);
           return win
-            ? { events: [ev('The Whispering Wood', 'In the dark of the Whispering Wood the northmen fall on Jaime Lannister\'s camp from three sides. The Kingslayer is taken alive, and three lordlings with him. The siege of Riverrun is broken.', 'tully', 5, 'war', ['stark', 'lannister'])], changes: [{ op: 'character', id: 'jaime_lannister', status: 'imprisoned', loc: 'tully' }, { op: 'battle', name: 'Battle of the Whispering Wood', at: 'tully', attacker: 'stark', defender: 'lannister', victor: 'stark' }] }
-            : { events: [ev('A trap that failed', 'The northmen try to take Jaime Lannister in the Whispering Wood, but his scouts smell them out. He cuts his way free and the siege of Riverrun goes on.', 'tully', 3, 'war', ['stark', 'lannister'])], changes: [{ op: 'battle', name: 'Skirmish in the Whispering Wood', at: 'tully', attacker: 'stark', defender: 'lannister', victor: 'lannister' }] };
+            ? { events: [ev('The Whispering Wood', 'In the dark of the Whispering Wood the northmen fall on Jaime Lannister\'s camp from three sides. The Kingslayer is taken alive, and three lordlings with him. The siege of Riverrun is broken.', 'tully', 5, 'war', ['stark', 'lannister'], 'The northmen fall on Jaime Lannister\'s camp in the Whispering Wood')], changes: [{ op: 'character', id: 'jaime_lannister', status: 'imprisoned', loc: 'tully' }, { op: 'battle', name: 'Battle of the Whispering Wood', at: 'tully', attacker: 'stark', defender: 'lannister', victor: 'stark' }] }
+            : { events: [ev('A trap that failed', 'The northmen try to take Jaime Lannister in the Whispering Wood, but his scouts smell them out. He cuts his way free and the siege of Riverrun goes on.', 'tully', 3, 'war', ['stark', 'lannister'], 'Jaime Lannister cuts his way free of the northmen\'s trap')], changes: [{ op: 'battle', name: 'Skirmish in the Whispering Wood', at: 'tully', attacker: 'stark', defender: 'lannister', victor: 'lannister' }] };
         },
       },
       {
         id: 'shadow', at: YM(299, 6), grace: 2, needs: (s) => alive(s, 'renly_baratheon', 'stannis_baratheon', 'melisandre') && /king/i.test(s.characters.renly_baratheon.title || '') && /king/i.test(s.characters.stannis_baratheon.title || '') && !plays(s, 'baratheon_se', 'baratheon_ds'),
         fire: () => ({
-          events: [ev('A shadow in the king\'s tent', 'On the eve of battle outside Storm\'s End, King Renly is slain in his own tent by a shadow with his brother\'s face, before the eyes of Catelyn Stark and Brienne of Tarth. By dawn the stormlords have gone over to Stannis; the Tyrells ride home.', 'baratheon_se', 5, 'intrigue', ['baratheon_se', 'baratheon_ds', 'tyrell'])],
+          events: [ev('A shadow in the king\'s tent', 'On the eve of battle outside Storm\'s End, King Renly is slain in his own tent by a shadow with his brother\'s face, before the eyes of Catelyn Stark and Brienne of Tarth. By dawn the stormlords have gone over to Stannis; the Tyrells ride home.', 'baratheon_se', 5, 'intrigue', ['baratheon_se', 'baratheon_ds', 'tyrell'], 'A shadow comes to King Renly\'s tent outside Storm\'s End')],
           changes: [{ op: 'character', id: 'renly_baratheon', alive: false, cause: 'slain by a shadow in his tent' }, { op: 'pact', type: 'alliance', a: 'baratheon_se', b: 'tyrell', status: 'ended' }],
         }),
       },
@@ -422,16 +424,16 @@ export const THREADS = [
         fire: (s) => {
           const lanTyrell = alive(s, 'tywin_lannister') && !alive(s, 'renly_baratheon');
           if (lanTyrell) {
-            return { events: [ev('The Blackwater', 'Stannis\'s fleet sails into the mouth of the Blackwater Rush — and into a river of wildfire. As his army storms the Mud Gate, Lord Tywin and the Tyrells fall on its flank. The ghost of Renly, men say, led the charge. Stannis flees to Dragonstone with a remnant.', 'baratheon', 5, 'war', ['baratheon', 'baratheon_ds', 'lannister', 'tyrell'])], changes: [{ op: 'battle', name: 'Battle of the Blackwater', at: 'baratheon', attacker: 'baratheon_ds', defender: 'baratheon', victor: 'baratheon' }, { op: 'pact', type: 'alliance', a: 'lannister', b: 'tyrell', terms: 'Margaery Tyrell to wed King Joffrey' }, { op: 'figure', house: 'baratheon_ds', field: 'ships', delta: -100 }, { op: 'relation', a: 'lannister', b: 'tyrell', delta: 30 }] };
+            return { events: [ev('The Blackwater', 'Stannis\'s fleet sails into the mouth of the Blackwater Rush — and into a river of wildfire. As his army storms the Mud Gate, Lord Tywin and the Tyrells fall on its flank. The ghost of Renly, men say, led the charge. Stannis flees to Dragonstone with a remnant.', 'baratheon', 5, 'war', ['baratheon', 'baratheon_ds', 'lannister', 'tyrell'], 'Wildfire burns Stannis Baratheon\'s fleet on the Blackwater')], changes: [{ op: 'battle', name: 'Battle of the Blackwater', at: 'baratheon', attacker: 'baratheon_ds', defender: 'baratheon', victor: 'baratheon' }, { op: 'pact', type: 'alliance', a: 'lannister', b: 'tyrell', terms: 'Margaery Tyrell to wed King Joffrey' }, { op: 'figure', house: 'baratheon_ds', field: 'ships', delta: -100 }, { op: 'relation', a: 'lannister', b: 'tyrell', delta: 30 }] };
           }
-          return { events: [ev('The Blackwater', 'Stannis Baratheon storms King\'s Landing. The wildfire burns half his fleet, but no relief comes: the gates are forced, the gold cloaks throw down their spears, and Joffrey is dragged from the Red Keep.', 'baratheon', 5, 'war', ['baratheon', 'baratheon_ds'])], changes: [{ op: 'battle', name: 'Battle of the Blackwater', at: 'baratheon', attacker: 'baratheon_ds', defender: 'baratheon', victor: 'baratheon_ds' }, { op: 'character', id: 'joffrey_baratheon', status: 'imprisoned' }, { op: 'character', id: 'stannis_baratheon', loc: 'baratheon' }] };
+          return { events: [ev('The Blackwater', 'Stannis Baratheon storms King\'s Landing. The wildfire burns half his fleet, but no relief comes: the gates are forced, the gold cloaks throw down their spears, and Joffrey is dragged from the Red Keep.', 'baratheon', 5, 'war', ['baratheon', 'baratheon_ds'], 'Stannis Baratheon attacks King\'s Landing across the Blackwater')], changes: [{ op: 'battle', name: 'Battle of the Blackwater', at: 'baratheon', attacker: 'baratheon_ds', defender: 'baratheon', victor: 'baratheon_ds' }, { op: 'character', id: 'joffrey_baratheon', status: 'imprisoned' }, { op: 'character', id: 'stannis_baratheon', loc: 'baratheon' }] };
         },
       },
       {
         // W15: the Rose and the Lion: the price of the Tyrells' help
         id: 'rose_lion', at: YM(299, 10), grace: 2, needs: (s) => free(s, 'joffrey_baratheon') && alive(s, 'margaery_tyrell') && (s.pacts || []).some((p) => p.status !== 'ended' && [p.a, p.b].includes('tyrell') && [p.a, p.b].includes('lannister')) && !plays(s, 'baratheon', 'tyrell'),
         fire: (s) => ({
-          events: [ev('The Rose and the Lion', 'Before the court King Joffrey sets Sansa Stark aside — the daughter of a traitor — and asks Lord Mace Tyrell for his daughter Margaery\'s hand. The wedding is set for the new year.', 'baratheon', 4, 'court', ['baratheon', 'tyrell', 'stark'])],
+          events: [ev('The Rose and the Lion', 'Before the court King Joffrey sets Sansa Stark aside — the daughter of a traitor — and asks Lord Mace Tyrell for his daughter Margaery\'s hand. The wedding is set for the new year.', 'baratheon', 4, 'court', ['baratheon', 'tyrell', 'stark'], 'King Joffrey sets Sansa Stark aside and asks for Margaery Tyrell')],
           changes: [{ op: 'character', id: 'margaery_tyrell', note: 'Betrothed to King Joffrey.' }, ...(alive(s, 'sansa_stark') ? [{ op: 'character', id: 'sansa_stark', note: 'Set aside by King Joffrey; still kept at court.' }] : []), { op: 'relation', a: 'lannister', b: 'tyrell', delta: 10 }],
         }),
       },
@@ -440,7 +442,7 @@ export const THREADS = [
         fire: (s) => {
           const lord = s.houses.stark.lord;
           return {
-            events: [ev('The Red Wedding', 'At the Twins, under Lord Walder\'s roof, the musicians strike up "The Rains of Castamere" and the Freys and Boltons murder the King in the North, his mother and his bannermen at the wedding feast. Guest right is broken. The North remembers.', 'frey', 5, 'war', ['stark', 'frey', 'bolton', 'lannister'])],
+            events: [ev('The Red Wedding', 'At the Twins, under Lord Walder\'s roof, the musicians strike up "The Rains of Castamere" and the Freys and Boltons murder the King in the North, his mother and his bannermen at the wedding feast. Guest right is broken. The North remembers.', 'frey', 5, 'war', ['stark', 'frey', 'bolton', 'lannister'], 'Guest right is broken at the Twins', 'The musicians strike up "The Rains of Castamere" under Lord Walder\'s roof, and the wedding feast turns to slaughter. The North remembers.')],
             changes: [{ op: 'character', id: lord, alive: false, cause: 'murdered at the Red Wedding' }, ...(alive(s, 'catelyn_stark') ? [{ op: 'character', id: 'catelyn_stark', alive: false, cause: 'murdered at the Red Wedding' }] : []), { op: 'character', id: 'roose_bolton', title: 'Warden of the North, Lord of the Dreadfort' }, { op: 'relation', a: 'stark', b: 'frey', delta: -100 }, { op: 'relation', a: 'lannister', b: 'frey', delta: 30 }],
           };
         },
@@ -448,7 +450,7 @@ export const THREADS = [
       {
         id: 'purple_wedding', at: YM(300, 2), grace: 1, needs: (s) => alive(s, 'joffrey_baratheon', 'olenna_tyrell') && free(s, 'joffrey_baratheon') && /king/i.test(s.characters.joffrey_baratheon.title || '') && (s.pacts || []).some((p) => p.status !== 'ended' && [p.a, p.b].includes('tyrell') && [p.a, p.b].includes('lannister')) && !plays(s, 'baratheon'),
         fire: () => ({
-          events: [ev('The Purple Wedding', 'At his wedding feast King Joffrey chokes on pigeon pie and wine, clawing at his throat, and dies purple-faced in his mother\'s arms. Cersei screams that Tyrion poisoned him. Tommen, eight years old, is king.', 'baratheon', 5, 'intrigue', ['baratheon', 'lannister', 'tyrell'])],
+          events: [ev('The Purple Wedding', 'At his wedding feast King Joffrey chokes on pigeon pie and wine, clawing at his throat, and dies purple-faced in his mother\'s arms. Cersei screams that Tyrion poisoned him. Tommen, eight years old, is king.', 'baratheon', 5, 'intrigue', ['baratheon', 'lannister', 'tyrell'], 'King Joffrey chokes at his wedding feast')],
           changes: [{ op: 'character', id: 'joffrey_baratheon', alive: false, cause: 'poisoned at his wedding feast' }, { op: 'character', id: 'tyrion_lannister', status: 'imprisoned', loc: 'baratheon', note: 'Accused of poisoning the King.' }],
         }),
       },
@@ -456,7 +458,7 @@ export const THREADS = [
         // W21: a trial by combat: the Red Viper stands for the accused
         id: 'viper', at: YM(300, 3), grace: 1, needs: (s) => alive(s, 'tyrion_lannister', 'oberyn_martell', 'gregor_clegane') && s.characters.tyrion_lannister.status === 'imprisoned' && at(s, 'oberyn_martell', 'baratheon', 'martell') && !plays(s, 'lannister', 'martell', 'clegane'),
         fire: () => ({
-          events: [ev('The Viper and the Mountain', 'Tyrion Lannister demands a trial by combat, and Prince Oberyn Martell takes his part against Ser Gregor Clegane. The prince has the Mountain down, his spear through him, and will have a confession for his sister Elia — and the Mountain pulls him down and crushes his skull. Tyrion is condemned. Ser Gregor lies dying of the spear\'s poison.', 'baratheon', 5, 'court', ['lannister', 'martell', 'clegane'])],
+          events: [ev('The Viper and the Mountain', 'Tyrion Lannister demands a trial by combat, and Prince Oberyn Martell takes his part against Ser Gregor Clegane. The prince has the Mountain down, his spear through him, and will have a confession for his sister Elia — and the Mountain pulls him down and crushes his skull. Tyrion is condemned. Ser Gregor lies dying of the spear\'s poison.', 'baratheon', 5, 'court', ['lannister', 'martell', 'clegane'], 'Oberyn Martell fights for Tyrion Lannister against Gregor Clegane')],
           changes: [{ op: 'character', id: 'oberyn_martell', alive: false, cause: 'slain by Ser Gregor Clegane in a trial by combat' }, { op: 'character', id: 'gregor_clegane', status: 'wounded', note: 'Dying slowly of a poisoned spear.' }, { op: 'relation', a: 'martell', b: 'lannister', delta: -40 }],
         }),
       },
@@ -464,7 +466,7 @@ export const THREADS = [
         // W22: the condemned son and the father
         id: 'tywin_dies', at: YM(300, 4), grace: 1, needs: (s) => alive(s, 'tywin_lannister', 'tyrion_lannister') && s.characters.tyrion_lannister.status === 'imprisoned' && !plays(s, 'lannister'),
         fire: () => ({
-          events: [ev('The Lord of Casterly Rock is dead', 'Lord Tywin Lannister is found dead in the privy of the Tower of the Hand with a crossbow bolt in his belly. His dwarf son, condemned to die, is gone from the black cells. Men say a great lord who shat gold has died unable to shit at all.', 'baratheon', 5, 'court', ['lannister', 'baratheon'])],
+          events: [ev('The Lord of Casterly Rock is dead', 'Lord Tywin Lannister is found dead in the privy of the Tower of the Hand with a crossbow bolt in his belly. His dwarf son, condemned to die, is gone from the black cells. Men say a great lord who shat gold has died unable to shit at all.', 'baratheon', 5, 'court', ['lannister', 'baratheon'], 'Tywin Lannister is found with a crossbow bolt in his belly')],
           changes: [{ op: 'character', id: 'tywin_lannister', alive: false, cause: 'shot with a crossbow in the Tower of the Hand' }, { op: 'character', id: 'tyrion_lannister', status: 'missing', note: 'Escaped the black cells.' }],
         }),
       },
@@ -476,7 +478,7 @@ export const THREADS = [
         // W3: Roose Bolton draws Lord Tywin to the Green Fork while Robb crosses at the Twins
         id: 'green_fork', at: YM(299, 2), grace: 1, needs: (s) => inWar(s, 'stark', 'lannister') && free(s, 'roose_bolton') && free(s, 'tywin_lannister') && !plays(s, 'stark', 'lannister', 'bolton'),
         fire: () => ({
-          events: [ev('The Green Fork', 'Roose Bolton brings the northern foot down the kingsroad by night and falls on Lord Tywin\'s host on the Green Fork. The northmen are broken and fall back on the Twins, but they held the lions long enough: the northern horse has crossed the river.', 'darry', 4, 'war', ['stark', 'bolton', 'lannister'])],
+          events: [ev('The Green Fork', 'Roose Bolton brings the northern foot down the kingsroad by night and falls on Lord Tywin\'s host on the Green Fork. The northmen are broken and fall back on the Twins, but they held the lions long enough: the northern horse has crossed the river.', 'darry', 4, 'war', ['stark', 'bolton', 'lannister'], 'Roose Bolton falls on Tywin Lannister\'s host at the Green Fork')],
           changes: [{ op: 'battle', name: 'Battle on the Green Fork', at: 'darry', attacker: 'stark', defender: 'lannister', victor: 'lannister' }],
         }),
       },
@@ -484,7 +486,7 @@ export const THREADS = [
         // W5: the Camps — Riverrun relieved the night after the Whispering Wood
         id: 'camps', at: YM(299, 3), grace: 1, needs: (s) => inWar(s, 'stark', 'lannister') && alive(s, 'jaime_lannister') && !free(s, 'jaime_lannister') && !plays(s, 'stark', 'lannister', 'tully'),
         fire: (s) => ({
-          events: [ev('The Battle of the Camps', 'With the Kingslayer taken, the northmen fall on the three Lannister camps about Riverrun while the rivers keep them apart. The besiegers break and flee west; Riverrun\'s gates open to the Young Wolf, and Ser Edmure Tully is freed.', 'tully', 4, 'war', ['stark', 'tully', 'lannister'])],
+          events: [ev('The Battle of the Camps', 'With the Kingslayer taken, the northmen fall on the three Lannister camps about Riverrun while the rivers keep them apart. The besiegers break and flee west; Riverrun\'s gates open to the Young Wolf, and Ser Edmure Tully is freed.', 'tully', 4, 'war', ['stark', 'tully', 'lannister'], 'The northmen break the Lannister camps around Riverrun')],
           changes: [{ op: 'battle', name: 'Battle of the Camps', at: 'tully', attacker: 'stark', defender: 'lannister', victor: 'stark' }, ...(alive(s, 'edmure_tully') && !free(s, 'edmure_tully') ? [{ op: 'character', id: 'edmure_tully', status: 'free', loc: 'tully', note: 'Freed at the Battle of the Camps.' }] : [])],
         }),
       },
@@ -492,7 +494,7 @@ export const THREADS = [
         // W9: the western campaign — Oxcross, the Crag, and a wedding that breaks a vow
         id: 'westerlands', at: YM(299, 6), grace: 2, needs: (s) => inWar(s, 'stark', 'lannister') && s.houses.stark?.lord === 'robb_stark' && free(s, 'robb_stark') && alive(s, 'jeyne_westerling') && !s.characters.robb_stark.spouse && !plays(s, 'stark', 'westerling', 'lannister', 'frey'),
         fire: () => ({
-          events: [ev('The Young Wolf in the west', 'Robb Stark takes the war into the westerlands: he routs Stafford Lannister\'s levies at Oxcross and storms the Crag, where he is wounded by an arrow. Nursed by Lord Gawen\'s daughter Jeyne, he takes her to bed — and, being who he is, marries her. At the Twins, Lord Walder Frey hears of it.', 'westerling', 5, 'war', ['stark', 'westerling', 'lannister', 'frey'])],
+          events: [ev('The Young Wolf in the west', 'Robb Stark takes the war into the westerlands: he routs Stafford Lannister\'s levies at Oxcross and storms the Crag, where he is wounded by an arrow. Nursed by Lord Gawen\'s daughter Jeyne, he takes her to bed — and, being who he is, marries her. At the Twins, Lord Walder Frey hears of it.', 'westerling', 5, 'war', ['stark', 'westerling', 'lannister', 'frey'], 'Robb Stark takes the war into the westerlands')],
           changes: [{ op: 'battle', name: 'Battle of Oxcross', at: 'westerling', attacker: 'stark', defender: 'lannister', victor: 'stark' }, { op: 'character', id: 'robb_stark', spouse: 'jeyne_westerling', note: 'Wed Jeyne Westerling at the Crag, breaking his word to the Freys.' }, { op: 'character', id: 'jeyne_westerling', spouse: 'robb_stark' }, { op: 'liege', house: 'westerling', liege: 'stark' }, { op: 'relation', a: 'stark', b: 'frey', delta: -40 }],
           flags: { frey_slight: true },
         }),
@@ -501,7 +503,7 @@ export const THREADS = [
         // W11: Edmure holds the fords of the Red Fork against Lord Tywin
         id: 'fords', at: YM(299, 7), grace: 1, needs: (s) => inWar(s, 'tully', 'lannister') && free(s, 'edmure_tully') && free(s, 'tywin_lannister') && !plays(s, 'tully', 'lannister'),
         fire: () => ({
-          events: [ev('The Battle of the Fords', 'Lord Tywin tries to force the fords of the Red Fork, and Ser Edmure Tully, who has chosen to hold the river rather than fall back as his king bid him, throws him back again and again. Tywin draws off — towards King\'s Landing.', 'tully', 4, 'war', ['tully', 'lannister'])],
+          events: [ev('The Battle of the Fords', 'Lord Tywin tries to force the fords of the Red Fork, and Ser Edmure Tully, who has chosen to hold the river rather than fall back as his king bid him, throws him back again and again. Tywin draws off — towards King\'s Landing.', 'tully', 4, 'war', ['tully', 'lannister'], 'Edmure Tully holds the Red Fork against Tywin Lannister')],
           changes: [{ op: 'battle', name: 'Battle of the Fords', at: 'tully', attacker: 'lannister', defender: 'tully', victor: 'tully' }],
         }),
       },
@@ -509,7 +511,7 @@ export const THREADS = [
         // W12: Catelyn sends the Kingslayer south to buy back her daughters
         id: 'kingslayer_freed', at: YM(299, 8), grace: 1, needs: (s) => alive(s, 'jaime_lannister') && !free(s, 'jaime_lannister') && at(s, 'jaime_lannister', 'tully') && free(s, 'catelyn_stark') && !plays(s, 'stark', 'tully', 'lannister'),
         fire: () => ({
-          events: [ev('The Kingslayer gone', 'Word runs through Riverrun that the Kingslayer is gone from his cell. Lady Catelyn has let him go in the night, under guard of a tall knight of Tarth, to be exchanged for her daughters in King\'s Landing. The river lords are furious; Lord Karstark, whose sons Jaime killed, most of all.', 'tully', 4, 'intrigue', ['stark', 'tully', 'lannister', 'karstark'])],
+          events: [ev('The Kingslayer gone', 'Word runs through Riverrun that the Kingslayer is gone from his cell. Lady Catelyn has let him go in the night, under guard of a tall knight of Tarth, to be exchanged for her daughters in King\'s Landing. The river lords are furious; Lord Karstark, whose sons Jaime killed, most of all.', 'tully', 4, 'intrigue', ['stark', 'tully', 'lannister', 'karstark'], 'Catelyn Stark lets the Kingslayer go from Riverrun')],
           changes: [{ op: 'character', id: 'jaime_lannister', status: 'free', note: 'Released by Catelyn Stark to be exchanged for her daughters.' }, { op: 'relation', a: 'stark', b: 'karstark', delta: -20 }],
           flags: { jaime_freed: true },
         }),
@@ -518,7 +520,7 @@ export const THREADS = [
         // W16: Karstark's justice — and the king's
         id: 'karstark', at: YM(299, 10), grace: 1, needs: (s) => flag(s, 'jaime_freed') && free(s, 'rickard_karstark') && inWar(s, 'stark', 'lannister') && !plays(s, 'stark', 'karstark'),
         fire: () => ({
-          events: [ev('Karstark\'s justice', 'In the night Lord Rickard Karstark\'s men murder two Lannister boys held captive at Riverrun. The King in the North beheads him with his own hand for it. Half the Karstark horse ride home.', 'tully', 4, 'court', ['stark', 'karstark'])],
+          events: [ev('Karstark\'s justice', 'In the night Lord Rickard Karstark\'s men murder two Lannister boys held captive at Riverrun. The King in the North beheads him with his own hand for it. Half the Karstark horse ride home.', 'tully', 4, 'court', ['stark', 'karstark'], 'Robb Stark sits in judgement on Lord Rickard Karstark')],
           changes: [{ op: 'character', id: 'rickard_karstark', alive: false, cause: 'beheaded by his king for the murder of captives' }, { op: 'relation', a: 'stark', b: 'karstark', delta: -40 }],
         }),
       },
@@ -530,7 +532,7 @@ export const THREADS = [
         // W17: Hoster Tully dies abed, as he has long been dying
         id: 'hoster', at: YM(299, 7), grace: 4, needs: (s) => alive(s, 'hoster_tully') && !plays(s, 'tully'),
         fire: (s) => ({
-          events: [ev('The lord of Riverrun is dead', 'Lord Hoster Tully, long abed, dies at Riverrun with his daughter at his side. His funeral boat is set adrift on the Red Fork; his son Edmure\'s burning arrows miss it three times before his uncle takes the bow.', 'tully', 3, 'court', ['tully'])],
+          events: [ev('The lord of Riverrun is dead', 'Lord Hoster Tully, long abed, dies at Riverrun with his daughter at his side. His funeral boat is set adrift on the Red Fork; his son Edmure\'s burning arrows miss it three times before his uncle takes the bow.', 'tully', 3, 'court', ['tully'], 'Hoster Tully\'s funeral boat is set adrift on the Red Fork')],
           changes: [{ op: 'character', id: 'hoster_tully', alive: false, cause: 'a long illness' }, ...(alive(s, 'edmure_tully') && s.houses.tully?.lord === 'hoster_tully' ? [{ op: 'house', house: 'tully', lord: 'edmure_tully' }] : [])],
         }),
       },
@@ -540,20 +542,20 @@ export const THREADS = [
     id: 'omens', name: 'Signs and seasons', stages: [
       {
         id: 'comet', at: YM(299, 3), grace: 1, needs: () => true,
-        fire: () => ({ events: [ev('The red comet', 'A comet the colour of blood hangs in the sky over all Westeros, by day and by night. The ironborn call it the Drowned God\'s sword; in King\'s Landing it is Joffrey\'s; the maesters say only that it is a comet. Every man reads it for his own king.', 'baratheon', 3, 'court', [])] }),
+        fire: () => ({ events: [ev('The red comet', 'A comet the colour of blood hangs in the sky over all Westeros, by day and by night. The ironborn call it the Drowned God\'s sword; in King\'s Landing it is Joffrey\'s; the maesters say only that it is a comet. Every man reads it for his own king.', 'baratheon', 3, 'court', [], 'A red comet burns in the sky over King\'s Landing')] }),
       },
       {
         // the white raven of autumn (10 §4.10): under Canon gravity the Citadel's word, not the dice
         id: 'autumn', at: YM(299, 9), grace: 2, needs: (s) => (s.world?.season || 'summer') === 'summer',
         fire: () => ({
-          events: [ev('The white ravens: autumn', 'The Conclave has met, and white ravens fly from the Citadel to every castle: summer is ended. Ten years, two turns and sixteen days it lasted, the longest in living memory. Lords are counselled to fill their granaries.', 'hightower', 4, 'court', [])],
+          events: [ev('The white ravens: autumn', 'The Conclave has met, and white ravens fly from the Citadel to every castle: summer is ended. Ten years, two turns and sixteen days it lasted, the longest in living memory. Lords are counselled to fill their granaries.', 'hightower', 4, 'court', [], 'Summer ends as white ravens fly from the Hightower')],
           post: (st) => { st.world = st.world || {}; st.world.season = 'autumn'; st.world.seasonDays = 0; st.world.seasonNote = 'The Citadel has sent forth the white ravens: summer is ended.'; },
         }),
       },
       {
         id: 'winter', at: YM(300, 7), grace: 5, needs: (s) => s.world?.season === 'autumn',
         fire: () => ({
-          events: [ev('The white ravens: winter', 'White ravens fly from Oldtown again: winter has come. In the North the snows lie deep already; in the south the harvest is in, what harvest the war has left.', 'hightower', 5, 'court', [])],
+          events: [ev('The white ravens: winter', 'White ravens fly from Oldtown again: winter has come. In the North the snows lie deep already; in the south the harvest is in, what harvest the war has left.', 'hightower', 5, 'court', [], 'Winter comes as white ravens fly from the Hightower')],
           post: (st) => { st.world = st.world || {}; st.world.season = 'winter'; st.world.seasonDays = 0; st.world.seasonNote = 'White ravens fly from Oldtown: winter has come.'; },
         }),
       },
@@ -563,16 +565,16 @@ export const THREADS = [
     id: 'the_wall', name: 'Beyond the Wall', stages: [
       {
         id: 'benjen', at: YM(298, 11), needs: (s) => free(s, 'benjen_stark'),
-        fire: () => ({ events: [ev('A ranger overdue', 'Benjen Stark, First Ranger of the Night\'s Watch, rode beyond the Wall with six men to look for Ser Waymar Royce. Weeks later his horse comes back to Castle Black without him.', 'nights_watch', 3, 'court', ['nights_watch', 'stark'])], changes: [{ op: 'character', id: 'benjen_stark', status: 'missing', loc: 'beyond the Wall', note: 'Vanished ranging beyond the Wall.' }] }),
+        fire: () => ({ events: [ev('A ranger overdue', 'Benjen Stark, First Ranger of the Night\'s Watch, rode beyond the Wall with six men to look for Ser Waymar Royce. Weeks later his horse comes back to Castle Black without him.', 'nights_watch', 3, 'court', ['nights_watch', 'stark'], 'Benjen Stark\'s horse comes back to Castle Black without him')], changes: [{ op: 'character', id: 'benjen_stark', status: 'missing', loc: 'beyond the Wall', note: 'Vanished ranging beyond the Wall.' }] }),
       },
       {
         id: 'wights', at: YM(299, 1), grace: 2, needs: (s) => alive(s, 'jeor_mormont'), // canon: the dead rise at Castle Black early in 299 (GDD 10 §4.8 N2), whatever the threat reads
-        fire: () => ({ events: [ev('The dead come to Castle Black', 'Two rangers\' bodies, found in the haunted forest and carried back, rise in the night and kill a brother in the Lord Commander\'s tower. They burn only with fire. Lord Commander Mormont resolves to lead a great ranging beyond the Wall.', 'nights_watch', 5, 'court', ['nights_watch'])], changes: [{ op: 'character', id: 'jeor_mormont', note: 'Saw the dead walk in his own tower.' }], flags: { dead_walk: true } }),
+        fire: () => ({ events: [ev('The dead come to Castle Black', 'Two rangers\' bodies, found in the haunted forest and carried back, rise in the night and kill a brother in the Lord Commander\'s tower. They burn only with fire. Lord Commander Mormont resolves to lead a great ranging beyond the Wall.', 'nights_watch', 5, 'court', ['nights_watch'], 'Two rangers carried back to Castle Black rise in the night')], changes: [{ op: 'character', id: 'jeor_mormont', note: 'Saw the dead walk in his own tower.' }], flags: { dead_walk: true } }),
       },
       {
         id: 'great_ranging', at: YM(299, 3), grace: 2, needs: (s) => free(s, 'jeor_mormont') && !plays(s, 'nights_watch'),
         fire: () => ({
-          events: [ev('The Great Ranging', 'Lord Commander Mormont rides out of Castle Black with three hundred brothers — a third of the Watch — to find Benjen Stark, and what Mance Rayder is gathering in the mountains. They make their camp on the Fist of the First Men.', 'nights_watch', 3, 'court', ['nights_watch'])],
+          events: [ev('The Great Ranging', 'Lord Commander Mormont rides out of Castle Black with three hundred brothers — a third of the Watch — to find Benjen Stark, and what Mance Rayder is gathering in the mountains. They make their camp on the Fist of the First Men.', 'nights_watch', 3, 'court', ['nights_watch'], 'Jeor Mormont leads three hundred brothers out of Castle Black')],
           changes: [{ op: 'travel', character: 'jeor_mormont', to: 'fist_first_men', men: 0 }],
           flags: { great_ranging: true },
         }),
@@ -580,14 +582,14 @@ export const THREADS = [
       {
         id: 'fist', at: YM(299, 10), grace: 1, needs: (s) => flag(s, 'great_ranging') && alive(s, 'jeor_mormont') && !plays(s, 'nights_watch'),
         fire: () => ({
-          events: [ev('The Fist of the First Men', 'In a night of snow the dead come up the Fist of the First Men, and the Others with them. The brothers\' fires go out one by one. Of three hundred who rode out, fewer than fifty stumble through the snow to the keep of a wildling called Craster.', 'fist_first_men', 5, 'war', ['nights_watch'])],
+          events: [ev('The Fist of the First Men', 'In a night of snow the dead come up the Fist of the First Men, and the Others with them. The brothers\' fires go out one by one. Of three hundred who rode out, fewer than fifty stumble through the snow to the keep of a wildling called Craster.', 'fist_first_men', 5, 'war', ['nights_watch'], 'The brothers\' fires go out on the Fist of the First Men')],
           changes: [{ op: 'figure', house: 'nights_watch', field: 'menAtArms', delta: -250, source: 'The Fist of the First Men' }],
         }),
       },
       {
         id: 'crasters', at: YM(299, 11), grace: 1, needs: (s) => alive(s, 'jeor_mormont') && !plays(s, 'nights_watch'),
         fire: () => ({
-          events: [ev('Mutiny at Craster\'s Keep', 'Starving and snowbound under Craster\'s roof, the brothers turn on their host — and on the Lord Commander. Jeor Mormont, the Old Bear, dies in the mud of the keep with a knife in his back. The survivors straggle home to the Wall.', 'crasters_keep', 5, 'court', ['nights_watch'])],
+          events: [ev('Mutiny at Craster\'s Keep', 'Starving and snowbound under Craster\'s roof, the brothers turn on their host — and on the Lord Commander. Jeor Mormont, the Old Bear, dies in the mud of the keep with a knife in his back. The survivors straggle home to the Wall.', 'crasters_keep', 5, 'court', ['nights_watch'], 'Brothers of the Watch turn on Jeor Mormont at Craster\'s Keep')],
           changes: [{ op: 'character', id: 'jeor_mormont', alive: false, cause: 'murdered by mutineers at Craster\'s Keep' }],
         }),
       },
@@ -599,7 +601,7 @@ export const THREADS = [
           return {
             events: [ev('The battle beneath the Wall', stannis
               ? 'A hundred thousand free folk come against the Wall behind their King-beyond-the-Wall, with giants and mammoths. A few hundred brothers hold Castle Black — and then King Stannis Baratheon\'s knights fall on the wildling host from the east. Mance Rayder is taken.'
-              : 'A hundred thousand free folk come against the Wall behind their King-beyond-the-Wall, with giants and mammoths. A few hundred brothers hold Castle Black through nights of fire and arrows, and no one comes to help them.', 'nights_watch', 5, 'war', ['nights_watch', 'free_folk', ...(stannis ? ['baratheon_ds'] : [])])],
+              : 'A hundred thousand free folk come against the Wall behind their King-beyond-the-Wall, with giants and mammoths. A few hundred brothers hold Castle Black through nights of fire and arrows, and no one comes to help them.', 'nights_watch', 5, 'war', ['nights_watch', 'free_folk', ...(stannis ? ['baratheon_ds'] : [])], 'The free folk assault Castle Black beneath the Wall')],
             changes: [{ op: 'battle', name: 'The battle beneath the Wall', at: 'nights_watch', attacker: 'free_folk', defender: 'nights_watch', victor: stannis ? 'nights_watch' : null }, ...(stannis ? [{ op: 'character', id: 'mance_rayder', status: 'imprisoned', note: 'Taken by King Stannis at the battle beneath the Wall.' }] : [])],
           };
         },
@@ -607,7 +609,7 @@ export const THREADS = [
       {
         id: 'lord_commander', at: YM(300, 3), grace: 2, needs: (s) => alive(s, 'jon_snow') && s.characters.jon_snow.house === 'nights_watch' && !alive(s, 'jeor_mormont') && !plays(s, 'nights_watch'),
         fire: () => ({
-          events: [ev('The nine hundred and ninety-eighth', 'The black brothers choose their new Lord Commander. After days of votes that go nowhere, a raven flies to the back of the kettle — and the choice falls on Jon Snow, Lord Eddard Stark\'s bastard son.', 'nights_watch', 4, 'court', ['nights_watch'])],
+          events: [ev('The nine hundred and ninety-eighth', 'The black brothers choose their new Lord Commander. After days of votes that go nowhere, a raven flies to the back of the kettle — and the choice falls on Jon Snow, Lord Eddard Stark\'s bastard son.', 'nights_watch', 4, 'court', ['nights_watch'], 'Jon Snow is chosen Lord Commander of the Night\'s Watch')],
           changes: [{ op: 'character', id: 'jon_snow', title: 'Lord Commander of the Night\'s Watch' }, { op: 'house', house: 'nights_watch', lord: 'jon_snow' }],
         }),
       },
@@ -618,51 +620,51 @@ export const THREADS = [
       {
         id: 'wedding', at: YM(298, 9), needs: (s) => alive(s, 'daenerys_targaryen', 'khal_drogo') && !s.characters.daenerys_targaryen.spouse,
         fire: () => ({
-          events: [ev('A Dothraki wedding', 'Outside Pentos, Khal Drogo weds Daenerys Targaryen before forty thousand screamers. There are three deaths at the feast, which the Dothraki count a dull wedding. Among her gifts are three dragon eggs, turned to stone by the ages.', 'pentos', 3, 'court', ['targaryen', 'dothraki'])],
+          events: [ev('A Dothraki wedding', 'Outside Pentos, Khal Drogo weds Daenerys Targaryen before forty thousand screamers. There are three deaths at the feast, which the Dothraki count a dull wedding. Among her gifts are three dragon eggs, turned to stone by the ages.', 'pentos', 3, 'court', ['targaryen', 'dothraki'], 'Khal Drogo takes Daenerys Targaryen as his bride outside Pentos')],
           changes: [{ op: 'character', id: 'daenerys_targaryen', spouse: 'khal_drogo', title: 'Khaleesi of Drogo\'s khalasar', loc: 'dothraki' }],
         }),
       },
       {
         id: 'golden_crown', at: YM(298, 11), needs: (s) => alive(s, 'viserys_targaryen', 'khal_drogo') && !plays(s, 'targaryen'),
         fire: () => ({
-          events: [ev('A crown for a king', 'In Vaes Dothrak, Viserys Targaryen draws a sword in the sacred city and threatens his sister. Khal Drogo gives him the golden crown he demanded: a pot of molten gold, poured over his head. "He was no dragon," says Daenerys. "Fire cannot kill a dragon."', 'dothraki', 4, 'court', ['targaryen', 'dothraki'])],
+          events: [ev('A crown for a king', 'In Vaes Dothrak, Viserys Targaryen draws a sword in the sacred city and threatens his sister. Khal Drogo gives him the golden crown he demanded: a pot of molten gold, poured over his head. "He was no dragon," says Daenerys. "Fire cannot kill a dragon."', 'dothraki', 4, 'court', ['targaryen', 'dothraki'], 'Khal Drogo pours molten gold over Viserys Targaryen\'s head')],
           changes: [{ op: 'character', id: 'viserys_targaryen', alive: false, cause: 'crowned with molten gold by Khal Drogo' }, { op: 'character', id: 'daenerys_targaryen', title: 'Princess of Dragonstone, Khaleesi' }],
         }),
       },
       {
         id: 'wine_seller', at: YM(298, 12), grace: 1, needs: (s) => alive(s, 'daenerys_targaryen', 'khal_drogo') && !plays(s, 'targaryen', 'dothraki'),
         fire: () => ({
-          events: [ev('The wine-seller', 'In the market of Vaes Dothrak a wine-seller presses a cask of Arbor gold on the khaleesi. Ser Jorah Mormont knocks it from her hands: the wine is poisoned, and the man was paid by the Usurper. Khal Drogo swears before his bloodriders to cross the poison water and take the iron chair for his son.', 'dothraki', 4, 'intrigue', ['targaryen', 'dothraki', 'baratheon'])],
+          events: [ev('The wine-seller', 'In the market of Vaes Dothrak a wine-seller presses a cask of Arbor gold on the khaleesi. Ser Jorah Mormont knocks it from her hands: the wine is poisoned, and the man was paid by the Usurper. Khal Drogo swears before his bloodriders to cross the poison water and take the iron chair for his son.', 'dothraki', 4, 'intrigue', ['targaryen', 'dothraki', 'baratheon'], 'Jorah Mormont knocks poisoned wine from Daenerys Targaryen\'s hands')],
           changes: [{ op: 'relation', a: 'dothraki', b: 'baratheon', delta: -40 }],
         }),
       },
       {
         id: 'maegi', at: YM(298, 12), grace: 3, needs: (s) => alive(s, 'khal_drogo', 'daenerys_targaryen') && !plays(s, 'dothraki'),
         fire: () => ({
-          events: [ev('The death of a khal', 'Khal Drogo takes a cut in a fight over a Lhazareen town; it festers. The godswife Mirri Maz Duur works blood magic in his tent to save him — and the khal lives, but will never speak or ride again, and the khaleesi\'s son is born dead. The khalasar breaks apart. Drogo dies with a pillow over his face.', 'dothraki', 4, 'court', ['dothraki', 'targaryen'])],
+          events: [ev('The death of a khal', 'Khal Drogo takes a cut in a fight over a Lhazareen town; it festers. The godswife Mirri Maz Duur works blood magic in his tent to save him — and the khal lives, but will never speak or ride again, and the khaleesi\'s son is born dead. The khalasar breaks apart. Drogo dies with a pillow over his face.', 'dothraki', 4, 'court', ['dothraki', 'targaryen'], 'Mirri Maz Duur works blood magic to save the wounded Khal Drogo')],
           changes: [{ op: 'character', id: 'khal_drogo', alive: false, cause: 'a festering wound and a maegi\'s magic' }],
         }),
       },
       {
         id: 'hatching', at: YM(299, 1), needs: (s) => alive(s, 'daenerys_targaryen') && !flag(s, 'dragons_hatched'),
         fire: (s) => ({
-          events: [ev('Dragons', 'Rumour runs from the Dothraki sea to the Free Cities, and nobody believes it: a silver-haired queen walked into a funeral pyre and came out unburned, with three living dragons at her breast.', 'dothraki', 5, 'court', ['targaryen'])],
+          events: [ev('Dragons', 'Rumour runs from the Dothraki sea to the Free Cities, and nobody believes it: a silver-haired queen walked into a funeral pyre and came out unburned, with three living dragons at her breast.', 'dothraki', 5, 'court', ['targaryen'], 'Rumour says Daenerys Targaryen walked unburned from a funeral pyre', 'Nobody believes it, but the tale runs from the Dothraki sea to the Free Cities: a silver-haired queen with three living dragons at her breast.')],
           changes: [...(alive(s, 'khal_drogo') ? [{ op: 'character', id: 'khal_drogo', alive: false, cause: 'a festering wound' }] : []), { op: 'character', id: 'daenerys_targaryen', title: 'Mother of Dragons, the Unburnt', note: 'Hatched three dragons in Drogo\'s pyre.' }],
           flags: { dragons_hatched: true },
         }),
       },
       {
         id: 'red_waste', at: YM(299, 4), grace: 2, needs: (s) => free(s, 'daenerys_targaryen') && flag(s, 'dragons_hatched') && !plays(s, 'targaryen'),
-        fire: () => ({ events: [ev('Across the red waste', 'Traders in Pentos hear that the dragon queen led the remnant of her khalasar into the red waste, following the red comet east, and that the dead of thirst lie along her road.', 'dothraki', 2, 'court', ['targaryen'])] }),
+        fire: () => ({ events: [ev('Across the red waste', 'Traders in Pentos hear that the dragon queen led the remnant of her khalasar into the red waste, following the red comet east, and that the dead of thirst lie along her road.', 'dothraki', 2, 'court', ['targaryen'], 'Daenerys Targaryen leads her khalasar into the red waste')] }),
       },
       {
         id: 'qarth', at: YM(299, 9), grace: 3, needs: (s) => free(s, 'daenerys_targaryen') && flag(s, 'dragons_hatched') && !plays(s, 'targaryen'),
-        fire: () => ({ events: [ev('Dragons in Qarth', 'Sailors out of the Jade Sea swear they saw three dragons in Qarth, in the arms of a silver-haired girl who begs ships of the merchant princes. The warlocks of the city, they say, wanted her dead.', 'dothraki', 3, 'court', ['targaryen'])] }),
+        fire: () => ({ events: [ev('Dragons in Qarth', 'Sailors out of the Jade Sea swear they saw three dragons in Qarth, in the arms of a silver-haired girl who begs ships of the merchant princes. The warlocks of the city, they say, wanted her dead.', 'dothraki', 3, 'court', ['targaryen'], 'Sailors swear Daenerys Targaryen keeps three dragons in Qarth')] }),
       },
       {
         id: 'slavers_bay', at: YM(300, 2), grace: 4, needs: (s) => free(s, 'daenerys_targaryen') && flag(s, 'dragons_hatched') && !plays(s, 'targaryen'),
         fire: () => ({
-          events: [ev('The Breaker of Chains', 'From Slaver\'s Bay the tale comes to Oldtown and King\'s Landing: the dragon queen bought eight thousand Unsullied in Astapor with a dragon, then loosed the dragon on the slavers and the Unsullied on the city. Yunkai has bent; Meereen has fallen.', 'dothraki', 4, 'court', ['targaryen'])],
+          events: [ev('The Breaker of Chains', 'From Slaver\'s Bay the tale comes to Oldtown and King\'s Landing: the dragon queen bought eight thousand Unsullied in Astapor with a dragon, then loosed the dragon on the slavers and the Unsullied on the city. Yunkai has bent; Meereen has fallen.', 'dothraki', 4, 'court', ['targaryen'], 'Daenerys Targaryen breaks the slavers of Astapor and Yunkai')],
           changes: [{ op: 'character', id: 'daenerys_targaryen', title: 'Queen of Meereen, Mother of Dragons, Breaker of Chains' }],
         }),
       },
@@ -673,7 +675,7 @@ export const THREADS = [
       {
         id: 'crown', at: YM(299, 4), needs: (s) => alive(s, 'balon_greyjoy') && !plays(s, 'greyjoy') && (s.wars || []).some((w) => w.status !== 'ended' && w.attackers.concat(w.defenders).includes('stark')),
         fire: () => ({
-          events: [ev('The King of the Isles and the North', 'With the wolves in the south, Balon Greyjoy crowns himself on Pyke and launches the Iron Fleet at the undefended North. "We do not sow." Ironborn longships are sighted off the Stony Shore.', 'greyjoy', 5, 'war', ['greyjoy', 'stark'])],
+          events: [ev('The King of the Isles and the North', 'With the wolves in the south, Balon Greyjoy crowns himself on Pyke and launches the Iron Fleet at the undefended North. "We do not sow." Ironborn longships are sighted off the Stony Shore.', 'greyjoy', 5, 'war', ['greyjoy', 'stark'], 'Balon Greyjoy launches the Iron Fleet against the North')],
           changes: [{ op: 'character', id: 'balon_greyjoy', title: 'King of the Iron Islands and the North' }, { op: 'war', id: 'ironborn_reaving', name: 'The Ironborn Reaving', attackers: ['greyjoy'], defenders: ['stark'], reason: 'The Old Way' }],
         }),
       },
@@ -681,7 +683,7 @@ export const THREADS = [
         // W10: while the Iron Fleet holds the north's attention, Theon takes Winterfell by night
         id: 'winterfell_taken', at: YM(299, 6), grace: 2, needs: (s) => free(s, 'theon_greyjoy') && inWar(s, 'greyjoy', 'stark') && s.holdings.stark?.owner === 'stark' && !plays(s, 'stark', 'greyjoy') && menHolding(s, 'stark', 'greyjoy') <= 700, // (thirty ironmen and a rope take a hall of its few defenders, not one with a host inside: ST15)
         fire: (s) => ({
-          events: [ev('Winterfell taken', 'With thirty ironmen and a rope over the walls in the dark, Theon Greyjoy takes Winterfell from its few defenders. Days later two small heads are set above the gates, and Theon says they are Bran and Rickon Stark.', 'stark', 5, 'war', ['greyjoy', 'stark'])],
+          events: [ev('Winterfell taken', 'With thirty ironmen and a rope over the walls in the dark, Theon Greyjoy takes Winterfell from its few defenders. Days later two small heads are set above the gates, and Theon says they are Bran and Rickon Stark.', 'stark', 5, 'war', ['greyjoy', 'stark'], 'Theon Greyjoy scales the walls of Winterfell with thirty ironmen')],
           flags: { winterfell_taken: true },
           changes: [{ op: 'holding', id: 'stark', owner: 'greyjoy', note: 'Taken by Theon Greyjoy in the night' }, ...['bran_stark', 'rickon_stark'].filter((id) => alive(s, id) && at(s, id, 'stark')).map((id) => ({ op: 'character', id, status: 'missing', note: 'Gone from Winterfell when the ironborn took it.' }))],
         }),
@@ -689,7 +691,7 @@ export const THREADS = [
       {
         id: 'winterfell_burns', at: YM(299, 10), grace: 2, needs: (s) => flag(s, 'winterfell_taken') && free(s, 'ramsay_snow') && !plays(s, 'stark', 'greyjoy', 'bolton'),
         fire: (s) => ({
-          events: [ev('Winterfell burns', 'The Bastard of Bolton\'s men, let into Winterfell as friends, fall on everyone within — ironborn and northmen alike. Winterfell is put to the torch; its people are driven out or killed. Of Theon Greyjoy there is no word.', 'stark', 5, 'war', ['greyjoy', 'stark', 'bolton'])],
+          events: [ev('Winterfell burns', 'The Bastard of Bolton\'s men, let into Winterfell as friends, fall on everyone within — ironborn and northmen alike. Winterfell is put to the torch; its people are driven out or killed. Of Theon Greyjoy there is no word.', 'stark', 5, 'war', ['greyjoy', 'stark', 'bolton'], 'The Bastard of Bolton\'s men fall on Winterfell and burn it')],
           changes: [{ op: 'holding', id: 'stark', owner: 'bolton', prosperity: 5, unrest: 80, note: 'Sacked and burned by the Bastard of Bolton' }, ...(alive(s, 'theon_greyjoy') ? [{ op: 'character', id: 'theon_greyjoy', status: 'missing', note: 'Lost when Winterfell burned.' }] : []), ...(alive(s, 'rodrik_cassel') ? [{ op: 'character', id: 'rodrik_cassel', alive: false, cause: 'slain before the gates of Winterfell' }] : [])],
         }),
       },
@@ -697,7 +699,7 @@ export const THREADS = [
         // W19: the King of the Isles falls from a bridge in a storm; his brother's ship is seen that same day
         id: 'balon_falls', at: YM(299, 11), grace: 2, needs: (s) => alive(s, 'balon_greyjoy') && !plays(s, 'greyjoy'),
         fire: () => ({
-          events: [ev('The King of the Isles falls', 'In a storm, King Balon Greyjoy falls from one of the rope bridges of Pyke to the rocks below. The priests of the Drowned God call a kingsmoot at Old Wyk; the same week the Silence, Euron Crow\'s Eye\'s ship, is seen off the isles.', 'greyjoy', 5, 'court', ['greyjoy'])],
+          events: [ev('The King of the Isles falls', 'In a storm, King Balon Greyjoy falls from one of the rope bridges of Pyke to the rocks below. The priests of the Drowned God call a kingsmoot at Old Wyk; the same week the Silence, Euron Crow\'s Eye\'s ship, is seen off the isles.', 'greyjoy', 5, 'court', ['greyjoy'], 'King Balon Greyjoy falls from a rope bridge at Pyke')],
           changes: [{ op: 'character', id: 'balon_greyjoy', alive: false, cause: 'a fall from a bridge at Pyke in a storm' }],
           flags: { kingsmoot: true },
         }),
@@ -729,7 +731,7 @@ export const BEAT_META = {
       // Robert is dead and the Hand is not in King's Landing to stand against the Queen: the crown passes quietly to Joffrey
       when: (s) => !alive(s, 'robert_baratheon') && alive(s, 'joffrey_baratheon') && !at(s, 'eddard_stark', 'baratheon'),
       effects: (s) => ({
-        events: [ev('A boy king', 'King Robert is dead of a boar\'s tusk. With no Hand to gainsay her, Queen Cersei has Prince Joffrey crowned before the week is out; the realm bends the knee to the boy.', 'baratheon', 5, 'court', ['baratheon', 'lannister'])],
+        events: [ev('A boy king', 'King Robert is dead of a boar\'s tusk. With no Hand to gainsay her, Queen Cersei has Prince Joffrey crowned before the week is out; the realm bends the knee to the boy.', 'baratheon', 5, 'court', ['baratheon', 'lannister'], 'Queen Cersei rushes Prince Joffrey to the throne', 'King Robert is dead of a boar\'s tusk. With no one to gainsay her, the Queen has the boy crowned before the week is out, and the realm bends the knee.')],
         changes: [{ op: 'character', id: 'joffrey_baratheon', title: 'King of the Andals and the First Men' }],
       }),
     }],
@@ -744,7 +746,7 @@ export const BEAT_META = {
     alternates: [{
       // the war took the Kingslayer another way: he is already a captive of the northmen or the river lords
       when: (s) => alive(s, 'jaime_lannister') && !free(s, 'jaime_lannister') && inWar(s, 'stark', 'lannister'),
-      effects: () => ({ events: [ev('The Kingslayer in chains', 'The river lords bring Ser Jaime Lannister to Riverrun in chains, taken in the fighting in the west. The lion\'s cub is the North\'s to bargain with now.', 'tully', 4, 'war', ['stark', 'tully', 'lannister'])] }),
+      effects: () => ({ events: [ev('The Kingslayer in chains', 'The river lords bring Ser Jaime Lannister to Riverrun in chains, taken in the fighting in the west. The lion\'s cub is the North\'s to bargain with now.', 'tully', 4, 'war', ['stark', 'tully', 'lannister'], 'The river lords bring Jaime Lannister to Riverrun in chains')] }),
     }],
   },
   'five_kings.shadow': { names: ['renly_baratheon', 'stannis_baratheon', 'melisandre'] },

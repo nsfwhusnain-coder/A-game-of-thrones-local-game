@@ -15,4 +15,6 @@ export const flag = (s, k) => s.plots?.flags?.[k];
 export const player = (s) => s.meta.player;
 export const plays = (s, ...houses) => houses.includes(player(s));
 export const inWar = (s, a, b) => (s.wars || []).some((w) => w.status !== 'ended' && ((w.attackers.includes(a) && w.defenders.includes(b)) || (w.attackers.includes(b) && w.defenders.includes(a))));
-export const ev = (title, text, where, importance = 3, type = 'court', houses = []) => ({ title, text, where, importance, type, houses });
+// `head` is the news headline of the card (the title is the chapter's name: "The boy who fell"; the head says what happened:
+// "Bran Stark is found broken beneath the old tower"), `sum` its subtitle when the telling's own sentences will not do (ST1).
+export const ev = (title, text, where, importance = 3, type = 'court', houses = [], head = '', sum = '') => ({ title, text, where, importance, type, houses, ...(head ? { head } : {}), ...(sum ? { sum } : {}) });

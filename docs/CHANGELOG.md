@@ -13,6 +13,19 @@ for the player, and what the owner should verify.
 - **Old saves** play on (a tourney already won stays won).
 - Tests: `tests/bugfix-tourneys.test.js` (9), `tests/bugfix-decrees.test.js` (4).
 
+## 2026-10-02 — Bug hunt fix ST1: the great matters of the story are told as news
+
+- **Bran's fall, Drogo's wedding, the assassin's knife, Jon taking the black, Catelyn's seizure of Tyrion** and every other great matter of the story now say what happened. Before, 28 of the 30 cards of a game read "Grave news reaches Castle Black — The ravens carry the word across the realm", the same for all of them. Now the card says "Bran Stark is found broken beneath the old tower — He lives, but sleeps and does not wake. Maester Luwin sits by his bed.", "An assassin enters Bran Stark's chamber with a Valyrian blade", "Jon Snow is chosen Lord Commander of the Night's Watch", "King Robert dies of a boar's tusk in the kingswood", and so on for all sixty-nine events of the canon; the line under the headline is the story's own telling, with the sentence that repeats the headline left out. The turn's digest no longer says "Grave news reaches Winterfell" twice for two different events, and the King's ride no longer says "The royal progress is on the road" under the boy's fall.
+- **Old saves** keep working: a great matter recorded before this is told as it was (its card has no headline of its own to read); the beats still to come in an old save are fired by the code and carry theirs.
+- **Five small cards of the realm's life that the headline check refused are mended** (found while reading what the soak plays): "A ranger of the Watch tells of empty villages" now says where, "Two villages feud" is "Two villages quarrel", the boundary stone no longer moves "a hundred acres", the reconciliation feast no longer broaches "Arbor gold", and the granary at Winterfell no longer "burns" (a phrase the game keeps for a later chapter): "Fire takes the granary at Winterfell".
+- Tests: `tests/bugfix-headlines.test.js` (5): every beat has a headline, and every card of every beat and alternate, in eight houses' worlds, passes the headline scorer and never says "Grave news"; the writer reads a beat's slots, never its title or text.
+
+## 2026-10-02 — Bug hunt fix SV1: the game answers only its own page
+
+- **A web page you happen to visit can no longer reconfigure the game.** Any site could make your browser post to `127.0.0.1:3298`; the server took the body as JSON whatever its type and had no check on who asked, so a page could have pointed the model server's address, and the key sent to it, somewhere else. The server now answers only its own page: a name it is known by (an address or `localhost`), a request that changes anything must come from that same address and port, and a body must say it is JSON. The game works as before from `127.0.0.1` and from `localhost`; nothing needs setting. (To reach it by another name on your own network, list the name in `WC_ALLOWED_HOSTS`.)
+- **Bad requests are answered, in plain words.** A request that is not JSON, or is too large, now gets a short refusal (400 / 413) instead of an error with the parser's own words, and no longer leaves the connection stuck; a preflight (`OPTIONS`) is answered instead of hanging. The pages carry the usual headers (no framing, no sniffing).
+- Tests: `tests/bugfix-server.test.js` (6).
+
 ## 2026-10-02 — Bug hunt fix OR1: "send them to the Wall" no longer builds walls
 
 - **"Raise 200 men at Winterfell and send them to the Wall"** raises the men and sends them to the Wall. The reader had taken "the Wall" for a fortification and "raise" for a works verb, dropped the levy and spent 12,000 dragons on walls at Winterfell. Now "raise" is a works verb only when what is raised is not men, and "the Wall" (or "to the wall", "guard the wall") is a place an order goes to, never the walls of a castle. "Strengthen the walls at Winterfell" and "Build a wall at Winterfell" are still works.
