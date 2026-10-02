@@ -22,12 +22,58 @@ function send(res, status, body, type = 'application/json') {
   res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store' });
   res.end(type === 'application/json' ? JSON.stringify(body) : body);
 }
-async function readBody(req) {
-  const chunks = []; let size = 0;
-  for await (const c of req) { size += c.length; if (size > 5e6) throw game.httpError(413, 'body too large'); chunks.push(c); }
-  const s = Buffer.concat(chunks).toString('utf8');
-  return s ? JSON.parse(s) : {};
+const MAX_BODY = 5e6;
+/**
+ * The JSON object a request carries ({} for no body). A body that is not JSON, or not an object, is a 400 in plain words (not
+ * the parser's own message); one that is too large is a 413, and what is left of it is read and thrown away so that the
+ * connection can serve the next request (SV3).
+ */
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = []; let size = 0; let over = false; let rest = 0;
+    const tooLarge = () => { over = true; chunks.length = 0; reject(game.httpError(413, 'that request is too large')); };
+    if (Number(req.headers['content-length']) > MAX_BODY) tooLarge();
+    req.on('data', (c) => {
+      if (over) { rest += c.length; if (rest > 64e6) req.destroy(); return; } // (a body without end is cut off at last)
+      size += c.length; if (size > MAX_BODY) return tooLarge(); chunks.push(c);
+    });
+    req.on('end', () => {
+      if (over) return;
+      const text = Buffer.concat(chunks).toString('utf8');
+      if (!text.trim()) return resolve({});
+      let v; try { v = JSON.parse(text); } catch { return reject(game.httpError(400, 'the request is not valid JSON')); }
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return reject(game.httpError(400, 'the request must be a JSON object'));
+      resolve(v);
+    });
+    req.on('error', reject);
+  });
 }
+
+// ── Same origin only (bug hunt SV1) ──
+// The game is a page talking to its own server and to nothing else. Any page on any site can make the browser send a form POST to
+// 127.0.0.1:3298 (a plain-text body, which this server once read as JSON) and so could point the model server's URL, and the key sent
+// to it, anywhere. So the server answers only the game's own page: a Host it is known by (an address, or localhost: a name that only
+// points here is a page trying DNS rebinding), and, for a request that changes anything, an Origin that is that same Host (when the
+// browser says where the request came from at all: a script or a test sends neither), and a body that says it is JSON, which a form
+// cannot send. `WC_ALLOWED_HOSTS` (comma separated names) adds a name the owner reaches the game by on their own network.
+const KNOWN_NAMES = new Set(['localhost', ...String(process.env.WC_ALLOWED_HOSTS || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)]);
+const hostName = (h) => String(h || '').toLowerCase().match(/^(\[[0-9a-f:.]+\]|[^:\s]+)(?::\d+)?$/)?.[1] || null;
+const isAddress = (n) => /^\d{1,3}(?:\.\d{1,3}){3}$/.test(n) || /^\[[0-9a-f:.]+\]$/.test(n);
+const knownHost = (h) => { const n = hostName(h); return !!n && (isAddress(n) || n === 'localhost' || n.endsWith('.localhost') || KNOWN_NAMES.has(n)); };
+const CHANGES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+/** Why a request is not the game's own, or null. */
+function foreign(req) {
+  const host = req.headers.host;
+  if (!knownHost(host)) return 'This game answers only to its own page (unknown Host).';
+  if (!CHANGES.has(req.method) && req.method !== 'OPTIONS') return null;
+  const o = req.headers.origin;
+  if (o !== undefined) { let u = null; try { u = new URL(o); } catch { /* "null" is no origin */ } if (!u || u.host.toLowerCase() !== host.toLowerCase()) return 'This game answers only to its own page (another origin).'; }
+  const site = req.headers['sec-fetch-site'];
+  if (site && site !== 'same-origin' && site !== 'none') return 'This game answers only to its own page (a request from another site).';
+  return null;
+}
+// what every answer says to the browser: no sniffing, no frame (the page cannot be put in another's), no form that posts elsewhere, no referrer
+const SECURITY_HEADERS = { 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'same-origin', 'Cross-Origin-Resource-Policy': 'same-origin', 'Content-Security-Policy': "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" };
 
 const routes = [];
 const route = (method, pattern, handler) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), handler });
@@ -42,14 +88,14 @@ function build() {
 route('GET', '/api/version', () => ({ build: build() }));
 route('GET', '/api/config', () => ({ ...loadConfig(), apiKey: loadConfig().apiKey ? '••••' : '' }));
 route('POST', '/api/config', async (req) => { const b = await readBody(req); if (b.apiKey === '••••') delete b.apiKey; const c = saveConfig(b); return { ...c, apiKey: c.apiKey ? '••••' : '' }; });
-route('GET', '/api/models', async () => ({ models: await listModels() }));
+route('GET', '/api/models', async () => { try { return { models: await listModels() }; } catch (e) { throw game.httpError(502, e.message); } });
 // The model test (Settings → Test connection): a tiny grammar-constrained call (server/ai/calls/probe.js) that shows
 // whether the server answers, whether it enforces a JSON schema, and whether "the Wall" lands on the Wall.
 route('POST', '/api/llm/test', async () => {
   const cfg = loadConfig();
   const r = await runCall('probe', createInitialState('agot_298', 'stark', { seed: 298 }), {}, { cfg });
   const first = r.record.attempts[0] || {};
-  if (first.error) throw new Error(first.error);
+  if (first.error) throw game.httpError(502, first.error);
   return {
     ok: r.via !== 'fallback', ms: r.ms, model: r.model || first.model, via: r.via,
     schema: !first.problems?.some((p) => /unreadable|not one of|missing|not allowed|expected/.test(p)),
@@ -144,8 +190,16 @@ async function ttsProxy(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
   try {
+    const why = foreign(req);
+    if (why) return send(res, 403, { error: why });
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    // a preflight is answered, and never with leave for another site (no Access-Control-Allow-*): the page is not for them
+    if (req.method === 'OPTIONS') { res.writeHead(204, { Allow: 'GET, HEAD, POST, DELETE, OPTIONS', 'Cache-Control': 'no-store' }); return res.end(); }
+    if (!['GET', 'HEAD'].includes(req.method) && !CHANGES.has(req.method)) return send(res, 405, { error: 'method not allowed' });
+    // a body says it is JSON (a form cannot say so): not a "text/plain" the game's own reader would take for JSON
+    if (CHANGES.has(req.method) && (Number(req.headers['content-length']) > 0 || req.headers['transfer-encoding']) && !/^application\/json\s*(;|$)/i.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'send JSON (Content-Type: application/json)' });
     if (url.pathname === '/api/tts' && req.method === 'POST') return await ttsProxy(req, res);
     if (url.pathname === '/api/music' && req.method === 'GET') {
       // your own music: any audio files dropped into public/music/ play instead of the generated score
@@ -176,6 +230,7 @@ const server = http.createServer(async (req, res) => {
       }
       return send(res, 404, { error: 'not found' });
     }
+    if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, { error: 'method not allowed' });
     // Static files (three.js is served straight from node_modules)
     let base = PUBLIC, rel = decodeURIComponent(url.pathname);
     // three.js ships bundled in public/vendor; fall back to node_modules if someone deletes it
@@ -191,7 +246,9 @@ const server = http.createServer(async (req, res) => {
     const status = e.status || (e.name === 'AbortError' ? 504 : e.cause?.code === 'ECONNREFUSED' ? 503 : 500);
     const msg = e.cause?.code === 'ECONNREFUSED' ? `Cannot reach the model server at ${loadConfig().baseUrl}. Is LM Studio / Ollama / llama.cpp running? (Or switch to mock mode in Settings.)` : e.message;
     if (status >= 500 && status !== 503) console.error(e);
-    send(res, status, { error: msg });
+    // an error of the server's own is never shown as it is: its words (a parser's, "Cannot read properties of null") are for the console
+    const own = status < 500 || status === 502 || status === 503 || status === 504;
+    send(res, status, { error: own ? msg : 'The game could not do that. (The details are in the server\'s console.)' });
   }
 });
 
