@@ -1601,6 +1601,14 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **A model is held to the words.** The interpreter's check refuses a `set_tax` when the order says nothing of taxes. This is the only part of OR9 a rule can hold; the rest needs a live model and is an owner check in `docs/HANDOFF.md`.
 - **Not done.** `betroth`, `foster` and `marry` verbs belong with the births and marriages of the living world (WD1) and are added there. "I will ride south myself" with no place named asks where.
 
+## D-114 · 2026-10-02 · A save is held by one thing at a time; input has limits (bug hunt SV2, SV3, SV4, SV5, CI1)
+
+- **SV2.** `server/game.js` keeps a map of the saves being written (`hold`, `exclusive`). Everything that loads a save, works on it and writes it back holds it: a turn, stop-here, undo, a conversation, a council, consolidation, an order, an action, an edit, a delete, and the small asks (ravens read, ack, welcome, the chronicle). A second one is refused with a 409 at once, not queued: queued, it would run on the world the first one has changed, and the lord who clicked End turn twice would have two turns. A receipt being read (`previewOrderPlans`, `answerOrderQuestion`) waits for the save to be free instead, as the page does not know it is blocked. Reads are never held. `startJump` asks before it starts a job.
+- **SV3.** A save whose `state.json` cannot be parsed, or is not a game, is a 422 with a sentence (`loadState`) and is listed with `damaged: true` (`listSaves`), so the title screen can offer to burn it.
+- **SV4.** A span is `auto`, a named span, or `1d`–`360d` (`checkSpan`). Orders (2,000 characters, 60), messages (4,000) and the chronicle (1,000,000) are refused when too long, not truncated: a lord who pastes a letter should know it was too long.
+- **SV5.** `playerView` drops `meta.rngState`. **Not done:** the whole state is still sent with every answer; the server is on the owner's own machine, the cost is a few milliseconds, and a patch protocol would be a rewrite of the page's state handling.
+- **CI1.** The seed of the CI soak is in the failure message with the command to play it again (`WC_SOAK_SEED` fixes it); the soak builds a card's story with the houses of all its facts, as `clusterFacts` does.
+
 ## D-116 · 2026-10-02 · Children, matches and weddings; the old; the books' figures (bug hunt WD1, WD2, WD3, WD5, WD6)
 
 - **WD1, the rates (GDD 08 §13).** `engine/people/family.js`: conception 6 % a moon to thirty, 4.5 % to thirty-five, 2.5 % to forty, 0.8 % to forty-four (the GDD says 5–8 % under 45; these are its lower end, since the couple must be under one roof and the game is long), carried 270 days ±14, 240 days before another is begun, nine children at most, the mother's risk 2 %, one in sixteen born dead, 51 % sons. A hundred and twelve fertile couples at the start give about forty births a year. *Question for the owner:* is that the right population growth for a campaign of four to ten years?

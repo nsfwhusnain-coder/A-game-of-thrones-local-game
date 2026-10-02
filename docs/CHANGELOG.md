@@ -13,6 +13,15 @@ for the player, and what the owner should verify.
 - **A boy does not lead a party.** Robert Arryn, six, no longer "leaves the Eyrie with 180 knights and riders to hunt in the country".
 - Tests: `tests/bugfix-prisoners.test.js` (8).
 
+## 2026-10-02 — Bug hunt fixes SV2, SV3, SV4, SV5, CI1: one thing at a time on a save, and no bad input
+
+- **Two End turns are one.** While a turn is being written, a second End turn, an undo, a conversation, a council, an order, an edit or a delete is refused at once ("The chronicle is busy: a turn is being written. Wait for it to finish.") instead of running on a stale copy and losing, or undoing, the turn. The quiet ones asked in passing (the ravens read, a page of news) are refused the same way; the page already does without them.
+- **A damaged chronicle says so.** A save whose file cannot be read is listed on the title screen as damaged, says why in words when you click it, and can be burned with the ✕. A folder with no save in it is not listed.
+- **Spans and sizes are checked.** `abc`, `-5d`, `0d`, `9999d` and `999999999d` are refused ("use auto, or from 1d to 360d") instead of being played for a minute and more; an order of more than 2,000 characters, more than 60 orders, a message of more than 4,000 characters and a chronicle of more than a million are refused in words rather than cut off in silence.
+- **The page is not sent the dice.** The position of the save's random generator, which would let a page foretell the next roll, stays on the server.
+- **The soak says which game failed.** `tests/soak.test.js` prints the seed and the command that plays that game again, and a card of a rolled-up story is scored against the houses of all its facts (the likeliest cause of the one red run on CI: "Norrey men join the host" failed for want of Norrey).
+- Tests: `tests/bugfix-saves.test.js` (5).
+
 ## 2026-10-02 — Bug hunt fixes WD1, WD2, WD3, WD5, WD6: children, matches, old age, the books and the cards
 
 - **Children are born.** Over four years the realm had no births and one wedding. Now a married couple under 45, together in a hall, has about a 5 % chance a moon (less after thirty-five) of a child: nine moons carried, one mother in fifty lost in childbed, one child in sixteen born dead. A child is of his father's house, named by his own people's names (none of the story's cast where the pool allows), and the birth is public news; who is *with child* is the house's own: you see your own ladies' ("Expecting: a child, in about three moons" on the sheet) and no one else's. About forty children a year in a realm of a hundred and ten fertile couples. Nothing is given to the story's own: a pillar whose end is to come, one of the children it carries, and anyone a beat still to come names, are never given a child by chance.

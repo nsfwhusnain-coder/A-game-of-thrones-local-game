@@ -58,6 +58,8 @@ export function playerView(state) {
   delete k.realm;
   const view = {
     ...state, parties, characters, houses,
+    // the position of the save's dice would let a page foretell what the next roll gives (bug hunt SV5); the browser has no use for it
+    meta: { ...state.meta, rngState: undefined },
     // our own knowledge only; the other houses' are theirs
     knowledge: { [me]: k },
     // the realm's minds keep their counsel; replies still on the road are not yet read; tempers are read in faces
