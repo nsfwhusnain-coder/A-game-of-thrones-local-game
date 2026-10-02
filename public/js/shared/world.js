@@ -935,6 +935,9 @@ function applyOne(state, ch, ctx) {
       } else if (c.alive) {
         // a captive of the field is held by the host's commander (or, failing him, its house); one taken at a castle, by its lord's house
         const inBattle = /battle/i.test(why);
+        // seized while riding with his own people (the Hand, arrested at King's Landing with his riders about him), he is taken out of their party and held where it stands: a prisoner does not ride on
+        // with the riders that were his own, as Lord Eddard did for two years, "imprisoned" in a party that marched about the Riverlands (the beat that tries him in the Sept could not find him: bug hunt N-003)
+        if (held(c.status) && !held(was.status)) { const mine = partyOf(state, c); if (mine && mine.owner === c.house) leaveParty(state, c); }
         if (held(c.status) && !held(was.status)) for (const p of Object.values(state.parties || {})) if (p.commander === c.id) p.commander = null; // a prisoner leads no one: what he led goes on without him
         if (held(c.status) && !held(was.status)) note(inBattle ? 'captured_in_battle' : 'captured', { ...f, ...(inBattle && !f.place && ch.place ? { place: ch.place } : {}), data: { by: (inBattle ? ch.by : null) ?? (resolvePlaceId(c.loc) && state.holdings[resolvePlaceId(c.loc)]?.owner || null), note: ch.note || null, ...(inBattle && ch.battle ? { battle: ch.battle } : {}) } });
         else if (held(was.status) && !held(c.status)) note(/ransom/i.test(why) ? 'ransomed' : 'released', f);

@@ -3,6 +3,14 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — What the second hunt found: the Hand in the black cells, a host that lost a man a day to a pass, and Viserys's own opening
+
+- **A man seized among his own riders is held where he stands** (N-003). Lord Eddard, arrested at King's Landing, stayed "imprisoned" in his own riders' party, which marched off with him; the Sept could not find him, and the King's justice, the crowning in the North, the Blackwater, the Red Wedding and the Westerlands all lapsed in any game he was not played in. He is now in the black cells of King's Landing, and the Sept is told the moon after. A man taken by an enemy host stays in that host's company.
+- **A host that follows another host pays a pass once** (N-004). A company of fifty lost every man at the Golden Tooth over ten weeks, paying the pass again each day; every vassal on the road to a liege who was moving, through the Neck, the Twins, the Bloody Gate or the Tooth, was eaten the same way.
+- **Viserys's opening is Viserys's** (N-005): the card, the strengths, the weaknesses and what the council has heard spoke to Daenerys.
+- "Orton Fossoway sits at the table" (one guest, one verb), and "1 man lost, 1 day" in the engine's crossing notes (N-006).
+- Tests: `tests/bugfix-found.test.js` (5). The findings are in `docs/bughunt/FOUND.md`.
+
 ## 2026-10-02 — Bug hunt fixes ST5, ST6, ST7, ST8, ST11: prisoners, who leads, bands that change their mind, garrisons
 
 - **A prisoner is not freed by accident.** Asha Greyjoy, taken in battle, "set out for Pyke" and "marched 3,397 men home" 575 days later with no release, ransom or escape: when her house's men left the host that held her, she was sent home with them. A prisoner is now held where he is until he is released, ransomed or escapes, however his house's men or his captors' host move; and the card of a house going home names the one who rules it (its regent while the lord is a captive or a child), not the prisoner.

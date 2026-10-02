@@ -1600,3 +1600,9 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **Said, not dropped.** `res.unread` (clauses the rules could not read) and `res.said` (a man in the hall, told aloud) ride with the reading into the receipt: "Left to the story: ..." and "X is here and told in person: no raven flies". The story still reads them; the lord is told that it will.
 - **A model is held to the words.** The interpreter's check refuses a `set_tax` when the order says nothing of taxes. This is the only part of OR9 a rule can hold; the rest needs a live model and is an owner check in `docs/HANDOFF.md`.
 - **Not done.** `betroth`, `foster` and `marry` verbs belong with the births and marriages of the living world (WD1) and are added there. "I will ride south myself" with no place named asks where.
+
+
+## D-117 · 2026-10-02 · A prisoner seized among his own is taken out of their party; a barrier is paid once per order (bug hunt N-003, N-004)
+
+- **N-003.** When a character becomes held (imprisoned, captive, hostage) and is in a party of his own house, he leaves it (`leaveParty`, so he is held at the holding where it stands, or the nearest). A man captured in the field is first brought into his captors' party by the battle code, so this does not touch him. The beats that find a prisoner (`baelors_sept` wants Ned *at* King's Landing) therefore find him.
+- **N-004.** `tollAlong` (shared/marches.js) keeps what a host has paid on its march order as well as on its route: a host marching to another party has its road planned again every day. A new order is a new road and pays again.
