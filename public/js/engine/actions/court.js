@@ -8,6 +8,10 @@ import { random, shuffle } from '../rng.js';
 import { partyOf, placeOf } from '../parties.js';
 import { emit } from '../facts/log.js';
 import { scheduleLists, listsPending } from '../../shared/tourney.js';
+import { betrothable, refusal, bind } from '../people/family.js';
+import { isFemale } from '../../shared/people.js';
+import { dayNumber } from '../time.js';
+import { houseLabel } from '../facts/label.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = (a) => a[Math.floor(random() * a.length)];
@@ -181,6 +185,35 @@ export const COURT = [
     receipt: (state, i, d) => [{ ok: true, text: `${d.name} is named your heir, and the lords will be told.` }],
     said: (state, i, d) => ({ status: 'done', text: `Name ${d.name} as my heir.` }),
     facts: ['office_granted'], mind: { allowed: false },
+  },
+  {
+    // a match for one of the lord's own (WD1; GDD 08 §9.1 and §12): the other house hears it, and agrees when the houses are on terms and of a rank; the wedding follows when both are
+    // sixteen and the bride has ridden to her husband's hall (engine/people/family.js, in the day loop)
+    id: 'betroth', family: 'court', label: 'Betroth one of your house',
+    params: { character: 'character:own', to: 'character' },
+    legal: (state, i) => {
+      const c = state.characters[i.params.character]; const o = state.characters[i.params.to];
+      if (!c || !c.alive || c.house !== i.house) return { code: 'no_one', text: 'No one of yours by that name.' };
+      if (!o || !o.alive) return { code: 'no_match', text: 'There is no such person to betroth them to.' };
+      if (o.house === i.house) return { code: 'own_house', text: `${o.name} is of your own house: a match is made with another.` };
+      if (c.spouse && state.characters[c.spouse]?.alive) return { code: 'wed', text: `${c.name} is wed already.` };
+      if (o.spouse && state.characters[o.spouse]?.alive) return { code: 'wed', text: `${o.name} is wed already.` };
+      if (c.betrothed || o.betrothed) return { code: 'promised', text: `${c.betrothed ? c.name : o.name} is promised already.` };
+      if (!betrothable(state, c)) return { code: 'not_eligible', text: `${c.name} cannot be promised: too young, held, or of a calling that forbids it.` };
+      if (!betrothable(state, o)) return { code: 'not_eligible', text: `${o.name} cannot be promised: too young, held, or of a calling that forbids it.` };
+      if (isFemale(c) === isFemale(o)) return { code: 'same', text: 'A match is between a man and a woman.' };
+      const no = refusal(state, c, o); return no ? { code: 'declined', text: no } : null;
+    },
+    start: (state, i) => {
+      const c = state.characters[i.params.character]; const o = state.characters[i.params.to]; const today = dayNumber(state.meta.date);
+      const wed = bind(state, c, o, today); const lord = lordOf(state, i.house);
+      applyChanges(state, [{ op: 'relation', a: i.house, b: o.house, delta: 8 }]);
+      emit(state, 'betrothal', { actors: [c.id, o.id], houses: [c.house, o.house], place: placeOf(state, c) || null, data: { wed, by: lord?.id || null }, cause: i.source, text: `${c.name} of ${houseLabel(state, c.house)} is betrothed to ${o.name} of ${houseLabel(state, o.house)}, by the word of ${lord?.name || 'their lord'}.` });
+      return { a: c.name, b: o.name, house: o.house, months: Math.max(1, Math.round((wed - today) / 30)) };
+    },
+    receipt: (state, i, d) => [{ ok: true, text: `${d.a} is betrothed to ${d.b}; ${houseLabel(state, d.house)} is glad of it. The wedding is some ${d.months} moon${d.months === 1 ? '' : 's'} off, when both are of age and the bride has come to her husband's hall.` }],
+    said: (state, i, d) => ({ status: 'done', text: `Betroth ${d.a} to ${d.b}.` }),
+    facts: ['betrothal'], mind: { allowed: false },
   },
   {
     id: 'grant_holding', family: 'court', label: 'Grant a holding to a sworn lord',

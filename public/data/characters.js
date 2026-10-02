@@ -28,7 +28,7 @@ const FIRST_CHARACTERS = [
   C('robb_stark', 'Robb Stark', 'stark', 'Heir to Winterfell', 14, 'winterfell', ['heir'], 'brave, earnest, honorable, impulsive', 'Eldest son of Eddard. Eager to prove himself.'),
   C('sansa_stark', 'Sansa Stark', 'stark', '', 11, 'winterfell', ['family'], 'courteous, romantic, naive', 'Dreams of songs and southern knights.'),
   C('arya_stark', 'Arya Stark', 'stark', '', 9, 'winterfell', ['family'], 'wilful, brave, tomboyish, clever', 'Would rather hold a sword than a needle.'),
-  C('bran_stark', 'Brandon Stark', 'stark', '', 7, 'winterfell', ['family'], 'curious, climber, dreamer', 'Loves to climb the towers of Winterfell.'),
+  C('bran_stark', 'Bran Stark', 'stark', '', 7, 'winterfell', ['family'], 'curious, climber, dreamer', 'Loves to climb the towers of Winterfell.'),
   C('rickon_stark', 'Rickon Stark', 'stark', '', 3, 'winterfell', ['family'], 'wild, young', 'Youngest Stark child.'),
   C('jon_snow', 'Jon Snow', 'stark', 'Bastard of Winterfell', 14, 'winterfell', ['bastard'], 'brooding, honorable, skilled with sword', 'Eddard\'s acknowledged bastard. Longs to join the Night\'s Watch.'),
   C('theon_greyjoy', 'Theon Greyjoy', 'greyjoy', 'Ward of Winterfell', 19, 'winterfell', ['ward', 'heir'], 'cocky, insecure, torn loyalties', 'Hostage for his father\'s good behaviour since the Greyjoy Rebellion.'),

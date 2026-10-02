@@ -50,7 +50,7 @@ YOUR PEOPLE (where they are):
 - Robb Stark [robb_stark|robb] (your heir) — Winterfell
 - Sansa Stark [sansa_stark|sansa] (your daughter) — Winterfell
 - Arya Stark [arya_stark|arya] (your daughter) — Winterfell
-- Brandon Stark [bran_stark|brandon_stark] (your son) — Winterfell
+- Bran Stark [bran_stark|bran] (your son) — Winterfell
 - Rickon Stark [rickon_stark|rickon] (your son) — Winterfell
 - Jon Snow [jon_snow|jon] (your son) — Winterfell
 - Theon Greyjoy [theon_greyjoy|theon] (your heir, your ward) — Winterfell
@@ -169,7 +169,6 @@ Turn the order into actions.
        "arya_stark",
        "bran",
        "bran_stark",
-       "brandon_stark",
        "cat",
        "catelyn",
        "catelyn_stark",
@@ -177,7 +176,8 @@ Turn the order into actions.
        "eddard_stark",
        "gage",
        "hallis",
-       "… 49 members"
+       "hallis_mollen",
+       "… 48 members"
       ]
      },
      "subject": {
@@ -239,7 +239,7 @@ Turn the order into actions.
        "alannys_tawney",
        "alannys_weaver",
        "alaric_hornwood",
-       "… 1703 members"
+       "… 1702 members"
       ]
      },
      "houses": {

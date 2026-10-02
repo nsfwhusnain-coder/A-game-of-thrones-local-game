@@ -13,7 +13,7 @@ export const G3_HOLDINGS = [
   ['nightfort', 'The Nightfort', 690, 557, 'nights_watch', 'ruin'],
   ['deep_lake', 'Deep Lake', 698, 558, 'nights_watch', 'ruin'],
   ['queensgate', 'Queensgate', 706, 560, 'nights_watch', 'ruin'],
-  ['oakenshield', 'Oakenshield', 727, 562, 'nights_watch', 'ruin'],
+  ['oakenshield', 'Old Oakenshield', 727, 562, 'nights_watch', 'ruin'],
   ['woodswatch', 'Woodswatch-by-the-Pool', 736, 563, 'nights_watch', 'ruin'],
   ['sable_hall', 'Sable Hall', 748, 564, 'nights_watch', 'ruin'],
   ['rimegate', 'Rimegate', 759, 565, 'nights_watch', 'ruin'],

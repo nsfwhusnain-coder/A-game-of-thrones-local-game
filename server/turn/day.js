@@ -15,7 +15,8 @@ import { retinueTick } from '../../public/js/shared/retinues.js';
 import { listsTick } from '../../public/js/shared/tourney.js';
 import { vassalTick, gatherMusters, fieldService } from '../../public/js/shared/vassals.js';
 import { worldTick, canonAhead } from '../../public/js/shared/plots.js';
-import { lifeTick, mayDie } from '../../public/js/engine/people/life.js';
+import { lifeTick, mayDie, ageRisk } from '../../public/js/engine/people/life.js';
+import { familyTick } from '../../public/js/engine/people/family.js';
 import { CALENDAR, COURTS } from '../../public/data/calendar.js';
 import { resolveWarfare } from '../../public/js/shared/battles.js';
 import { roadEncounters } from '../../public/js/shared/roads.js';
@@ -44,7 +45,7 @@ function theYears(state, applied) {
     c.age += 1;
     if (!mayDie(state, c, spared)) continue;
     const ailing = c.status === 'wounded' || /ailing|dying|sick|abed/i.test(`${c.traits} ${c.bio}`);
-    const risk = c.age >= 60 ? ((c.age - 58) ** 2) / 2600 + (ailing ? 0.25 : 0) : ailing && c.age > 45 ? 0.08 : 0;
+    const risk = ageRisk(c.age) + (ailing ? (c.age >= 60 ? 0.25 : c.age > 45 ? 0.08 : 0) : 0);
     if (risk && random() < Math.min(0.85, risk)) dead.push({ c, cause: ailing ? 'illness' : 'old age' });
   }
   // the years' dead are told in the years' own words: their facts are recorded here, before the heirs' (not by the op).
@@ -89,6 +90,8 @@ export async function engineDay(state, ctx) {
   if (day % 7 === 0) { const r = psycheTick(state, 7); cards.push(...(r.events || [])); applied.push(...(r.applied || [])); }
   // wounds heal or fester; fevers, winter chills and great age (engine/people/life.js)
   { const r = lifeTick(state, random, { spared: sparedBy(state) }); cards.push(...r.events); if (r.changes.length) applied.push(...applyChanges(state, r.changes, { source: 'Life', spanDays: 1, told: ['character'], cause: { type: 'rule', ref: 'life' } }).applied); }
+  // children are born, the unwed are matched and wed (engine/people/family.js)
+  cards.push(...familyTick(state, { spared: sparedBy(state) }).events);
   cards.push(...retinueTick(state, 1).events);
   // the tourneys whose day has come: the lists are run among the knights who are there (shared/tourney.js)
   listsTick(state);

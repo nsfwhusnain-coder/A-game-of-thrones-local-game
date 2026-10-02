@@ -40,7 +40,7 @@ export function playerView(state) {
     const mine = c.house === me;
     let x = c;
     if (!mine) {
-      const { secret, stress, paranoia, memories, ...rest } = c;
+      const { secret, stress, paranoia, memories, expecting, bridal, ...rest } = c; // (who is with child in another house is its own news; a betrothal is public)
       x = { ...rest, ...(secret && !c.secretKnown ? { secretHidden: true } : secret ? { secret } : {}) };
     }
     if (!mine && hidden.has(idOf(c.loc))) x = { ...x, loc: 'unknown' };

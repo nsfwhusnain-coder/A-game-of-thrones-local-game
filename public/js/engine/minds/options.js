@@ -16,7 +16,9 @@ import { realmSummary } from '../realm/brief.js';
 
 // How long a house lets pass before doing the same thing again (days): a tourney is an event of the year, a feast of
 // the season; taxes are not changed every week, nor gifts sent, nor a son sent riding off each Monday.
-export const RESTING = { hold_tourney: 300, hold_feast: 90, send_gift: 120, set_tax: 120, set_dues: 90, send_person: 45, fund_works: 60, hire_men: 60, call_banners: 60, disband_host: 30 };
+export const RESTING = { hold_tourney: 300, hold_feast: 90, send_gift: 120, set_tax: 120, set_dues: 90, send_person: 45, fund_works: 60, hire_men: 60, call_banners: 150, raise_levies: 60, disband_host: 30 };
+// (bug hunt WD5: Tywin called the banners eight times in thirty turns of one war, and whole houses "called up levies" every second turn: a campaign season is five moons, and
+// a lord who has raised his levies waits two before he raises them again)
 // What a lord decides in his own hall: the taxes of his lands, the works at his castle, a household's offices, a prisoner's fate, the feast and the lists, the purse and the
 // grain. A lord on the road with his party (or a guest at another castle) decrees none of it: it was a lord who set out on the road and a day or ten later proclaimed heavy
 // taxes at his own castle, begun works there, sent a gift (ST4). The weekly minds decide on its first day and the engine dates the decision there, so the answer is not a later

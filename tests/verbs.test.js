@@ -83,6 +83,7 @@ const CASES = {
   appoint_office: { ok: () => ({ character: 'rodrik_cassel', role: 'captain' }), no: () => [{ character: 'rodrik_cassel', role: 'jester' }, 'office'] },
   dismiss_office: { ok: () => ({ character: 'luwin' }), no: () => [{ character: 'jon_snow' }, 'no_office'] },
   name_heir: { ok: () => ({ character: 'bran_stark' }), no: () => [{ character: 'eddard_stark' }, 'lord'] },
+  betroth: { ok: () => ({ character: 'sansa_stark', to: 'edmure_tully' }), no: () => [{ character: 'sansa_stark', to: 'arya_stark' }, 'own_house'] },
   grant_holding: { ok: () => ({ holding: 'moat_cailin', house: 'umber' }), no: () => [{ holding: 'stark', house: 'umber' }, 'seat'] },
   hold_feast: { ok: () => ({}), no: (s) => { s.houses.stark.figures.treasury.v = 100; return [{}, 'gold']; } },
   hold_tourney: { ok: () => ({}), no: (s) => { s.houses.stark.figures.treasury.v = 100; return [{}, 'gold']; } },
