@@ -275,6 +275,19 @@ Every card of three 30-turn games run through `scoreCard`: about 1 % failed, and
 **Where:** `engine/facts/heads.js` (`BEHAVIOUR_HEAD`), `data/calendar.js` (a `head` for each day, with a verb and a place), `data/happening-heads.js`.
 **FIXED** (`tests/bugfix-found.test.js`). Left: heads that name a house by its short name when the fact's slots lack the house (`sends the Darry host home`), "Five battles in fourteen days" (a count the slots do not hold) and static happening texts naming the King: the floor card is still the writer's, the scorer is strict.
 
+### N-049 · S4 · A lord's call remembers hosts that are gone
+After a battle or a merge a house's `obligations.host` and `join` still named the host (97 such words in one game): a new host given its name was taken for it. Read by `static2` over the kept games.
+**Where:** `engine/parties.js` (`tidyObligations`, each day before the march). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-050 · S4 · "Five battles in fourteen days"
+A running fight's length is a count of days the card's slots do not hold: it is told as a span ("in a fortnight") now. **Where:** `engine/facts/heads.js` (`RUN`). **FIXED**.
+
+### N-051 · S3 · A hired company with no state (found by `fuzz-ops`)
+The `recruit` op made a company where no host stood and never settled it: a party with no `state` until the next load. **Where:** `shared/world.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-052 · S3 · `merge_hosts` throws on one host named in a word (found by `fuzz-verbs`)
+`i.params.armies.some is not a function`: a model that names one host in a string, not a list, made the verb throw instead of refuse. **Where:** `engine/actions/military.js`. **FIXED** (`tests/bugfix-found.test.js`). Eight seeds of 2,500 verb calls and eight of 3,000 ops since: no other throw, no NaN.
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

@@ -526,3 +526,36 @@ test('N-048: the cards the writer makes of the calendar, a strained lord and the
   const s = world('stark'); today(s); s.facts = []; emit(s, 'happening', { actors: [], houses: ['stark'], place: 'stark', importance: 2, data: { tpl: 'd_rhoyne' }, text: 'x' });
   for (const pin of [0, 1]) { const st = storyOf(s); const card = cardOf(s, st, { pin }); assert.ok(scoreCard({ headline: card.headline, summary: card.summary }, st, s).pass, card.headline); }
 });
+
+test('N-049: a call forgets the host that is gone, so the next host given its name is not taken for it', async () => {
+  const { tidyObligations } = await import('../public/js/engine/parties.js');
+  const s = world('lannister'); const v = s.houses.blackwood;
+  applyChanges(s, [{ op: 'army_create', id: 'host_of_house_blackwood', owner: 'blackwood', name: 'Host of House Blackwood', at: 'blackwood', men: 500, commander: null }]);
+  v.obligations = { muster: 'tully', host: 'host_of_house_blackwood', join: 'tully_banners_tully' };
+  tidyObligations(s); assert.equal(v.obligations.host, 'host_of_house_blackwood', 'a host that is there is remembered'); assert.equal(v.obligations.join, null, 'one that was never there is not');
+  delete s.parties.host_of_house_blackwood; tidyObligations(s);
+  assert.equal(v.obligations.host, undefined, 'a host that is gone is forgotten'); assert.equal(v.obligations.muster, 'tully', 'and the rest of the call stands');
+});
+
+test('N-050: a running fight is told over "a fortnight", not "fourteen days" (a number the slots do not hold)', () => {
+  const s = world('stark'); const day = dayNumber(s.meta.date); s.meta.clock = { turn: 1, from: day, to: day + 29 };
+  for (const on of [1, 3, 5, 7, 9, 11, 13]) emit(s, 'battle', { actors: [], houses: ['lannister', 'tully'], place: Object.values(s.holdings).find((h) => h.owner === 'tully').id, importance: 4, on, text: 'x', data: { attacker: 'a', defender: 'b', winner: 'a', loser: 'b', winnerHouse: 'lannister', loserHouse: 'tully', lost: { a: 100, b: 300 } } });
+  const st = clusterFacts(s, s.facts).stories.find((x) => x.facts.length === 7); assert.ok(st, 'one story of thirteen days of fighting, a battle every other day');
+  const card = cardOf(s, st); assert.match(card.summary, /^Seven battles in a fortnight\./, card.summary);
+});
+
+test('N-051: a company hired where there is no host is settled at once, with a state, as every other party is', () => {
+  const s = world('stark', 3); const t = s.houses.moreland || s.houses.stark; const hid = t.id; const place = t.seat;
+  t.figures.treasury = { ...(t.figures.treasury || {}), v: 1e6 }; for (const p of Object.values(s.parties)) if (p.owner === hid) delete s.parties[p.id];
+  withRng(s, () => applyChanges(s, [{ op: 'recruit', house: hid, at: place, men: 100 }]));
+  const co = Object.values(s.parties).find((p) => p.owner === hid && /company/.test(p.name)); assert.ok(co, 'the company is made');
+  assert.ok(typeof co.state === 'string' && co.state.length, `it has a state (${co.state})`);
+});
+
+test('N-052: a verb refuses in words a parameter of the wrong shape: one host named in a word for merge_hosts is a list of one', () => {
+  const s = world('stark');
+  applyChanges(s, [{ op: 'army_create', id: 'h1', owner: 'stark', name: 'H1', at: 'stark', men: 500, commander: null }, { op: 'army_create', id: 'h2', owner: 'stark', name: 'H2', at: 'stark', men: 300, commander: null }]);
+  for (const armies of ['h1', ['h1', 'h2'], '', null, 7]) {
+    assert.doesNotThrow(() => check(s, intentFor(s, 'merge_hosts', { house: 'stark', params: { armies }, source: { type: 'intent', ref: 'robb_stark', by: 'mock' } })), JSON.stringify(armies));
+  }
+});

@@ -480,11 +480,12 @@ export const MILITARY = [
     id: 'merge_hosts', family: 'military', label: 'Join hosts together',
     params: { armies: 'party:own[]?', name: 'text?', commander: 'character:own?' },
     legal: (state, i) => {
-      const mine = Object.values(state.parties).filter((a) => commands(state, i.house, a) && a.kind !== 'fleet' && (!i.params.armies?.length ? a.kind !== 'garrison' : i.params.armies.includes(a.id) || i.params.armies.some((x) => slug(x) === slug(a.name))));
+      const named = Array.isArray(i.params.armies) ? i.params.armies : i.params.armies ? [i.params.armies] : []; // (one host named in a word, not a list, is a list of one)
+      const mine = Object.values(state.parties).filter((a) => commands(state, i.house, a) && a.kind !== 'fleet' && (!named.length ? a.kind !== 'garrison' : named.includes(a.id) || named.some((x) => slug(x) === slug(a.name))));
       const at = new Map(); for (const a of mine) { const k = a.at || `${Math.round(a.pos[0] / 6)},${Math.round(a.pos[1] / 6)}`; at.set(k, (at.get(k) || 0) + 1); }
       return [...at.values()].some((n) => n >= 2) ? null : { code: 'apart', text: 'There are no two hosts in the same place to join — they must first march to one place.' };
     },
-    start: (state, i) => mergeHosts(state, { house: i.house, ...i.params, cause: i.source }),
+    start: (state, i) => mergeHosts(state, { house: i.house, ...i.params, armies: Array.isArray(i.params.armies) ? i.params.armies : i.params.armies ? [i.params.armies] : undefined, cause: i.source }),
     receipt: (state, i, done) => lines(done),
     facts: ['host_joined'], mind: { allowed: true },
   },

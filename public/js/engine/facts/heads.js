@@ -1023,7 +1023,7 @@ export const RUN = {
   },
   sum(g, s, c) {
     const last = g[g.length - 1]; const v = sides(c, last); const days = last.day - g[0].day + 1;
-    const first = `${cap1(say(g.length))} battles in ${days === 1 ? 'a day' : `${say(days)} days`}`;
+    const first = `${cap1(say(g.length))} battles in ${span(days)}`;
     const steady = g.every((f) => sideWon(f) === sideWon(last));
     // each side's dead over all of them: by the house, for the hosts of a house are one side whichever of them fought
     const fell = (side) => g.reduce((n, f) => n + (f.data?.lost?.[side === 'win' ? f.data.winner : f.data.loser] || 0), 0);

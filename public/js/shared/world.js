@@ -755,7 +755,7 @@ function applyOne(state, ch, ctx) {
       else {
         let id = slug(`${state.houses[hid].name}_${placeName(state, place)}_company`); while (state.parties[id]) id += '_2';
         const lord = Object.values(state.characters).find((c) => c.alive && c.house === hid && (c.loc === place));
-        host = state.parties[id] = { id, owner: hid, name: `The ${state.houses[hid].name} company at ${placeName(state, place)}`, commander: lord?.id || null, at: place, pos: [...pos], men, kind: 'garrison', members: [], composition: `${kind} hired at ${placeName(state, place)}`, morale: 65, supply: 80, asOf: date };
+        host = state.parties[id] = { id, owner: hid, name: `The ${state.houses[hid].name} company at ${placeName(state, place)}`, commander: lord?.id || null, at: place, pos: [...pos], men, kind: 'garrison', members: [], composition: `${kind} hired at ${placeName(state, place)}`, morale: 65, supply: 80, asOf: date }; settle(state, host); // (a company with no state: the validator, and the day's work, read it)
       }
       note(kind === 'sellswords' ? 'sellswords_hired' : 'men_hired', { actors: [host.commander], houses: [hid], place, pos, data: { party: host.id, men, cost: men * price }, text: `${fmt(men)} ${kind} are hired at ${placeName(state, place)} for House ${state.houses[hid].name}.` });
       return { op, text: `${fmt(men)} ${kind} hired at ${placeName(state, place)} for ${fmt(men * price)} dragons${men < (num(ch.men) ?? 200) ? ' (all that could be found or paid for)' : ''}; ${host.name} now ${fmt(host.men)}` };

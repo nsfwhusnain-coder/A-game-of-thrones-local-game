@@ -9,7 +9,7 @@ import { dateOfDay } from '../../public/js/engine/time.js';
 import { random } from '../../public/js/engine/rng.js';
 import { fact, redate } from '../../public/js/engine/facts/log.js';
 import { marchTick } from '../../public/js/shared/marches.js';
-import { boardCommanders } from '../../public/js/engine/parties.js';
+import { boardCommanders, tidyObligations } from '../../public/js/engine/parties.js';
 import { seasonTick } from '../../public/js/shared/economy.js';
 import { psycheTick } from '../../public/js/shared/psyche.js';
 import { retinueTick } from '../../public/js/shared/retinues.js';
@@ -76,7 +76,7 @@ export async function engineDay(state, ctx) {
   const mu = musterTick(state, ctx.touched); applied.push(...mu.applied); cards.push(...mu.events);
   cards.push(...advanceMusters(state, 1));
   // every party with somewhere to be walks its road one day (a host raised today sets out today)
-  boardCommanders(state); // (a host that has set out has its commander with it)
+  tidyObligations(state); boardCommanders(state); // (a host that has set out has its commander with it; a call forgets a host that is gone)
   const mt = marchTick(state, { span: 1, turnStart: day - 1 }); cards.push(...mt.events); applied.push(...mt.applied);
   // the fleets: hosts aboard sail with them, storms, blockades and raids (engine/military/naval.js)
   { const r = seaTick(state, 1, random); cards.push(...r.events); applied.push(...r.applied); }

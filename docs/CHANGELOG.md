@@ -7,6 +7,7 @@ for the player, and what the owner should verify.
 
 - A neighbour riding to your seat to pay his respects, to feast or to hunt is a card of the court, not of war (N-047).
 - The writer's own cards pass its own scorer more often: the strain of a lord, the days of the calendar and the floating market of Planky Town have a verb and a place in their headlines (N-048).
+- A lord's call forgets a host that is gone (N-049); a running fight is told over "a fortnight" (N-050); a hired company is settled when it is made (N-051); a verb given one host in a word for a list refuses in words instead of throwing (N-052). Two fuzzers join the harnesses (`fuzz-ops.mjs`, `fuzz-verbs.mjs`).
 - The tests run once for a work branch (as its pull request) and not twice (a push and a pull request were two identical runs of an hour on two machines).
 
 ## 2026-10-03 — The bug hunt closes: the report marked, the owner's checks listed
