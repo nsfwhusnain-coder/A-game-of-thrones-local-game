@@ -228,6 +228,21 @@ When the banners of a liege were raised at a seat while the first banners were c
 **Repro:** `node scripts/canon.js --houses redwyne --moons 14 --seed 41` (invariants broken: 75), or `probe-simul.mjs redwyne 41 14` (`unlisted-member`).
 **FIXED** (`tests/bugfix-found.test.js`): a banners host with an id in use takes the next (`_2`); the Crown's is named "The Banners of the Crown", not "of Baratheon of King's Landing".
 
+### N-038 · S3 · The Hand rides south six days before the lists at Winterfell
+In an Arryn game the realm's gossip called a name-day tourney at Winterfell and, six days before its lists, the story sent the Hand south with his household (`probe-simul`: `tourney-host-away`). The same class as the King on his progress, for houses the story needs elsewhere.
+**Where:** `engine/actions/court.js` (`storyNeeds`, in `hold_feast` and `hold_tourney`), `shared/plots.js` (the name-day tourney).
+**FIXED** (`tests/bugfix-found.test.js`): a house whose speaker a beat names within the moon calls no feast or lists (never the player's house; none in a sandbox).
+
+### N-039 · S4 · "1 ships founder", "An winter gale"
+**Where:** `engine/military/naval.js`, `engine/facts/heads.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-040 · S3 · A good harvest or a blight in the realm is "Rumour spreads at X. It is only talk."
+The gossip's harvest news had a data slot (`harvest: good|blight`) and no head, so it fell to the generic rumour: seven cards in a 30-turn game.
+**Where:** `engine/facts/heads.js` (`happeningHead`). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-041 · S4 · "Shella Deddings guards Tristan Deddings's seat"
+**Where:** `engine/facts/heads.js` (`regency_begun`). **FIXED** (`tests/bugfix-found.test.js`): "Deddings' seat".
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
@@ -239,6 +254,9 @@ When the banners of a liege were raised at a seat while the first banners were c
 - `probe-simul`'s "acts-on-the-road" for a vassal's lord whose host was beaten and joined another host: the road was ended by the join, which the probe did not read until it learned `host_joined`.
 
 ## Seen, and left alone
+
+- `probe-simul`'s "tourney-host-away" for a lord marching with his muster a fortnight after calling lists (Crakehall, Umber): the call to arms outranks the tourney; the lists run without him. A house at war could be refused a tourney (`dutyBound`); left for the owner.
+- Strain: after thirty turns of the Stark game 74 of 1,005 are still at the top of the strain scale (the lords and children of the great houses at war; the Watch). The war's own load is untouched (D-118's question).
 
 - The sweep's "act-on-the-road" for levies called (Tywin at Casterly Rock while his host is on the road): a lord at war sends his steward word to raise levies at his seat; it is a letter, not a feast he sits at. Left.
 

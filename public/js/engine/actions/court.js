@@ -11,6 +11,7 @@ import { scheduleLists, listsPending } from '../../shared/tourney.js';
 import { betrothable, refusal, bind } from '../people/family.js';
 import { isFemale } from '../../shared/people.js';
 import { speakerFor } from '../../shared/regency.js';
+import { canonLocked } from '../../shared/plots.js';
 import { dayNumber } from '../time.js';
 import { houseLabel } from '../facts/label.js';
 
@@ -37,6 +38,12 @@ export function awayFromSeat(state, house) {
   const at = resolvePlaceId(placeOf(state, doer));
   if (at && at === resolvePlaceId(me.seat)) return null;
   return { code: 'away', text: `${doer.name} is not at ${state.holdings[me.seat]?.name || 'the seat'}, and no one holds a feast or a tourney in an empty hall.` };
+}
+/** A near beat of the story needs this house's speaker elsewhere (the Hand rides south within the moon): the realm's houses call no feast or lists for him to leave. Never the player's house. */
+export function storyNeeds(state, house) {
+  if (house === state.meta.player || (state.meta.settings?.canonGravity || 'canon') === 'sandbox') return null;
+  const who = speakerFor(state, house); if (!who || !canonLocked(state).has(who.id)) return null;
+  return { code: 'story', text: `${who.name} is needed elsewhere before long.` };
 }
 /** The Crown's own tourney waits for the Hand's (the canon beat, shared/plots.js 'hands_tourney'): while the story has it to come, the King does not hold lists of his own (the player's own house is never held back). Nor does he feast at King's Landing in the same weeks: on the first day of the game his mind is asked before the progress is on the road, and a feast "at King's Landing" would be told beside "King Robert passes the Twins". */
 export function crownWaitsForHand(state, house, what = 'lists') {
@@ -239,7 +246,7 @@ export const COURT = [
   {
     id: 'hold_feast', family: 'court', label: 'Hold a feast',
     params: {},
-    legal: (state, i) => { const cost = feastCost(state, i.house); return gold(state.houses[i.house]) < cost ? { code: 'gold', text: `A feast worthy of your house would cost ~${cost.toLocaleString('en-US')} dragons.` } : awayFromSeat(state, i.house) || crownWaitsForHand(state, i.house, 'feast'); },
+    legal: (state, i) => { const cost = feastCost(state, i.house); return gold(state.houses[i.house]) < cost ? { code: 'gold', text: `A feast worthy of your house would cost ~${cost.toLocaleString('en-US')} dragons.` } : awayFromSeat(state, i.house) || crownWaitsForHand(state, i.house, 'feast') || storyNeeds(state, i.house); },
     cost: (state, i) => ({ gold: feastCost(state, i.house) }),
     start: (state, i) => feast(state, i.house, i.source),
     receipt: (state, i, d) => [{ ok: true, text: d.summary }],
@@ -249,7 +256,7 @@ export const COURT = [
   {
     id: 'hold_tourney', family: 'court', label: 'Hold a tourney',
     params: {},
-    legal: (state, i) => (gold(state.houses[i.house]) < TOURNEY_COST ? { code: 'gold', text: 'A tourney worth the name needs ~5,000 dragons for purses and pavilions.' } : awayFromSeat(state, i.house) || crownWaitsForHand(state, i.house) || (listsPending(state, state.houses[i.house]?.seat) ? { code: 'called', text: `A tourney is already called at ${state.holdings[state.houses[i.house].seat]?.name || 'the seat'}: its lists have not been run yet.` } : null)),
+    legal: (state, i) => (gold(state.houses[i.house]) < TOURNEY_COST ? { code: 'gold', text: 'A tourney worth the name needs ~5,000 dragons for purses and pavilions.' } : awayFromSeat(state, i.house) || crownWaitsForHand(state, i.house) || storyNeeds(state, i.house) || (listsPending(state, state.houses[i.house]?.seat) ? { code: 'called', text: `A tourney is already called at ${state.holdings[state.houses[i.house].seat]?.name || 'the seat'}: its lists have not been run yet.` } : null)),
     cost: () => ({ gold: TOURNEY_COST }),
     start: (state, i) => tourney(state, i.house, i.source),
     receipt: (state, i, d) => [{ ok: true, text: d.summary.trim() }],

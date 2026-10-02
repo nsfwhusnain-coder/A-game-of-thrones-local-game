@@ -598,7 +598,7 @@ export const HEAD = {
   },
   regency_begun: (f, s, c) => {
     const r = c.nm(f.actors?.[0]) || c.subj(f); const w = f.actors?.[1] && c.known.person(f.actors[1]) ? c.nm(f.actors[1]) : '';
-    return w ? c.pick(f, [`${r} takes the regency for ${w}`, `${r} guards ${w}'s seat`]) : `${r} takes the regency`;
+    return w ? c.pick(f, [`${r} takes the regency for ${w}`, `${r} guards ${possessive(w)} seat`]) : `${r} takes the regency`;
   },
   regency_ended: (f, s, c) => {
     const r = c.nm(f.actors?.[0]) || c.subj(f); const w = f.actors?.[1] && c.known.person(f.actors[1]) ? c.nm(f.actors[1]) : '';
@@ -933,8 +933,12 @@ const BEHAVIOUR_SUM = {
 /** The small events of a house's lands, by the steward's note (data.note): the head, and a line that adds no claim the engine does not make. */
 const LEDGER_EVENT = { sickness: 'Sickness spreads among the smallfolk', outlaws: 'Outlaws gather on the roads', blight: 'Blight takes the fields', fire: 'Fire takes the granary', shoals: 'Fat shoals fill the nets', fair: 'A great fair draws merchants', vein: 'A new vein is found in the mines', storm: 'A storm wrecks the fishing boats', harvest: 'A bumper harvest is brought in' };
 const LEDGER_SUM = { sickness: 'It is the poor who suffer it', outlaws: 'Travellers go armed, or do not go', blight: 'The harvest will be thin', fire: 'The stores are short for it', shoals: 'The boats come home heavy', fair: 'The town is full, and the lord\'s tolls with it', vein: 'The miners say it is rich', storm: 'The fleet will be a season mending', harvest: 'The barns are full' };
+/** The harvest the realm's gossip tells of a place (data.harvest): there was no head for it, and it was "Rumour spreads at X". */
+const HARVEST_HEAD = { good: ['The harvest fills the granaries at {P}', 'A fine harvest is brought in at {P}'], blight: ['Blight takes the wheat at {P}', 'Blight strikes the fields near {P}'] };
+const HARVEST_SUM = { good: "The lord's granaries are full to the rafters", blight: 'The smallfolk are eating their seed corn' };
 function happeningHead(f, s, c) {
   const own = String(f.data?.head || '').trim(); if (own) return own; // a day of the realm's calendar names itself
+  if (HARVEST_HEAD[f.data?.harvest]) return fillTpl(c.pick(f, HARVEST_HEAD[f.data.harvest]), f, c);
   if (FAMILY_HEAD[f.data?.family]) return FAMILY_HEAD[f.data.family](f, c);
   const id = f.data?.tpl; const [heads] = TPL[id] || HAP_HEADS[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor;
   const t = c.pick(f, heads); return fillTpl(t, f, c);
@@ -1271,7 +1275,7 @@ export const SUM = {
     if (f.thread === 'kings_ride' && f.data?.stage === 'progress') return sentences('The royal progress is on the road, and the whole realm watches it pass');
     return beatTale(f) || sentences('The ravens carry the word across the realm');
   },
-  happening: (f, s, c) => { if (f.data?.sum) return sentences(f.data.sum); if (FAMILY_SUM[f.data?.family]) return FAMILY_SUM[f.data.family](f); const id = f.data?.tpl; const [, sum] = TPL[id] || HAP_HEADS[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor; return sentences(sum); },
+  happening: (f, s, c) => { if (f.data?.sum) return sentences(f.data.sum); if (HARVEST_SUM[f.data?.harvest]) return sentences(HARVEST_SUM[f.data.harvest]); if (FAMILY_SUM[f.data?.family]) return FAMILY_SUM[f.data.family](f); const id = f.data?.tpl; const [, sum] = TPL[id] || HAP_HEADS[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor; return sentences(sum); },
   hook: (f, s, c) => { const e = HOOK[f.data?.hook]; return e ? sentences(e[1]) : ''; },
   behaviour: (f) => sentences(BEHAVIOUR_SUM[f.data?.band] || ''),
   weather: () => '',
@@ -1317,7 +1321,7 @@ export const DETAIL = {
   delayed: (f, s, c) => (f.data?.wait ? [`Waits about ${Math.round(f.data.wait)} days for ships.`] : []),
   embarked: (f, s, c) => { const d = f.data || {}; return [d.men ? `${c.n(d.men, c.owner(f))} men` : '', d.ships ? `${d.ships} ships` : '', d.days ? `${Math.round(d.days)} days at sea` : ''].filter(Boolean).length ? [[d.men ? `${c.n(d.men, c.owner(f))} men` : '', d.ships ? `${d.ships} ships` : '', d.days ? `${Math.round(d.days)} days at sea` : ''].filter(Boolean).join(', ') + '.'] : []; },
   landed: (f, s, c) => (f.data?.men ? [`${c.n(f.data.men, c.owner(f))} men land.`] : []),
-  lost_at_sea: (f, s, c) => { const d = f.data || {}; const o = c.owner(f); return [[d.ships ? `${d.ships} ships lost` : '', d.drowned ? `about ${c.n(d.drowned, o).replace(/^about /, '')} drowned` : ''].filter(Boolean).join('; ')].filter(Boolean).map((t) => `${cap1(t)}.`); },
+  lost_at_sea: (f, s, c) => { const d = f.data || {}; const o = c.owner(f); return [[d.ships ? `${d.ships} ${d.ships === 1 ? 'ship' : 'ships'} lost` : '', d.drowned ? `about ${c.n(d.drowned, o).replace(/^about /, '')} drowned` : ''].filter(Boolean).join('; ')].filter(Boolean).map((t) => `${cap1(t)}.`); },
   levies_called: (f, s, c) => {
     const d = f.data || {}; const o = c.owner(f); const out = [];
     if (d.men) out.push(`Men called: ${c.n(d.men, o)}.`);
