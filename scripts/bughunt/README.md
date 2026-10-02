@@ -20,8 +20,12 @@ server on a spare port with a scratch saves folder). Nothing here touches your `
 | `odd-soaks.sh` | The odd houses (a city, a company, a tribe, the Wall), 14 turns each. |
 | `analyze-game.mjs <house> <seed> <turns> [span]` | One game, many consistency checks on the facts: tourneys, champions, the dead and the held acting, children leading, pronouns, speeds. |
 | `probe-simul.mjs <house> <seed> <turns> [span]` | One person doing two things that cannot both be true: a lord hosting while on the road, a tourney's host away on a progress, a host whose commander is not with it, a man in two parties, the held or the dead in command. |
+| `probe-links.mjs <house> <seed> <turns> [span]` | The web of relations after every turn: a liege that loops or is gone, a hold with no house, a seat held by strangers, a regent in a cell or in the grave, a living spouse who does not answer the vow, a child older than a parent, a siege with no host at the walls, a war with a side that is gone. |
+| `play-orders.mjs <house> <seed> <turns> [span]` | Plays a house with plausible orders in its own words (names taken from the world), one or two a week; reads the invariants, odd text in cards and receipts, and a person in two parties. `V=1` prints every order and what it did. |
 | `fuzz-ops.mjs <seed> <n>` | `applyChanges` with the ops a model could emit and weird parameters; reports state that goes NaN or breaks an invariant. |
 | `fuzz-verbs.mjs <seed> <n>` | every verb with weird parameters; a verb must refuse in words, never throw, never corrupt. |
+| `fuzz-orders.mjs <seed> <n>` | random sentences from the words of orders (odd characters, long strings) through the reader and its receipt; reading must refuse in words, never throw. |
+| `seed-sweep.mjs <first seed> <count> [turns] [span]` | Many seeds, a few turns each, a different house each time: an exception in a turn, or a world that breaks its own invariants. |
 | `play-all-houses.mjs` | Two turns as every one of the 290 houses (about 12 minutes). Prints only the houses with problems. |
 | `sweep-world.mjs` | The starting world of every house and character: missing links, ages, duplicates. |
 | `seed-loop.sh [house] [first] [last]` | The CI soak (`scripts/soak.js`) on many seeds; prints the ones that fail. |
