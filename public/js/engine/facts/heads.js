@@ -598,7 +598,7 @@ export const HEAD = {
   },
   regency_begun: (f, s, c) => {
     const r = c.nm(f.actors?.[0]) || c.subj(f); const w = f.actors?.[1] && c.known.person(f.actors[1]) ? c.nm(f.actors[1]) : '';
-    return w ? c.pick(f, [`${r} takes the regency for ${w}`, `${r} guards ${w}'s seat`]) : `${r} takes the regency`;
+    return w ? c.pick(f, [`${r} takes the regency for ${w}`, `${r} guards ${possessive(w)} seat`]) : `${r} takes the regency`;
   },
   regency_ended: (f, s, c) => {
     const r = c.nm(f.actors?.[0]) || c.subj(f); const w = f.actors?.[1] && c.known.person(f.actors[1]) ? c.nm(f.actors[1]) : '';

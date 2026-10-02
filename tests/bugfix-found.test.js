@@ -433,3 +433,13 @@ test('N-040: a good harvest or a blight in the realm is told as that, not as "Ru
     assert.ok(scoreCard({ headline: card.headline, summary: card.summary }, st, s).pass, `${harvest}: ${card.headline}`);
   }
 });
+
+test('N-041: "guards Tristan Deddings\' seat": a regent\'s ward whose name ends in s has the possessive of the language', () => {
+  const s = world('stark'); today(s);
+  for (let pin = 0; pin < 2; pin++) {
+    s.facts = []; emit(s, 'regency_begun', { actors: ['catelyn_stark', 'tristan_mooton'].filter((id) => s.characters[id]).length === 2 ? ['catelyn_stark', 'tristan_mooton'] : ['catelyn_stark', 'roose_bolton'], houses: ['stark'], place: 'stark', importance: 2, data: { why: 'captive' }, text: 'x' });
+    const h = cardOf(s, { facts: [s.facts[0]] }, { pin }).headline; assert.doesNotMatch(h, /s's seat/, h);
+  }
+  s.characters.roose_bolton.name = 'Roose Boltons'; s.facts = []; emit(s, 'regency_begun', { actors: ['catelyn_stark', 'roose_bolton'], houses: ['stark'], place: 'stark', importance: 2, data: {}, text: 'x' });
+  const t = cardOf(s, { facts: [s.facts[0]] }, { pin: 1 }).headline; assert.match(t, /Boltons' seat/, t);
+});

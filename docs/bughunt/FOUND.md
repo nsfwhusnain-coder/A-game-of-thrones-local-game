@@ -240,6 +240,9 @@ In an Arryn game the realm's gossip called a name-day tourney at Winterfell and,
 The gossip's harvest news had a data slot (`harvest: good|blight`) and no head, so it fell to the generic rumour: seven cards in a 30-turn game.
 **Where:** `engine/facts/heads.js` (`happeningHead`). **FIXED** (`tests/bugfix-found.test.js`).
 
+### N-041 · S4 · "Shella Deddings guards Tristan Deddings's seat"
+**Where:** `engine/facts/heads.js` (`regency_begun`). **FIXED** (`tests/bugfix-found.test.js`): "Deddings' seat".
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
