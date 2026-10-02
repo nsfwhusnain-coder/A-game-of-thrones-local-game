@@ -138,6 +138,13 @@ function trimToTokens(s, tokens, keepEnd = false) {
 
 // ---------------- Prompt builders ----------------
 
+/** The suggestions a model gave, as lines of text: a model that answers with objects ({ "text": … }) gave "[object Object]" (bug hunt TX8). */
+export function suggestionsOf(obj, text) {
+  const line = (x) => (typeof x === 'string' ? x : x && typeof x === 'object' ? x.text ?? x.suggestion ?? x.order ?? x.action ?? x.title ?? '' : x == null ? '' : String(x));
+  const list = Array.isArray(obj?.suggestions) ? obj.suggestions : String(text || '').split('\n').filter((l) => l.trim());
+  return list.map((x) => String(line(x)).replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(Boolean).slice(0, 7);
+}
+
 export function buildSuggestPrompt(state, chronicleMd, cfg) {
   const system = 'You are the trusted advisor of the player\'s house in a grand strategy game set in A Song of Ice and Fire. Suggest bold but plausible orders. Reply ONLY with JSON: {"suggestions":["order 1","order 2",...]} — 5 to 7 concrete one-sentence orders written as the lord would dictate them.';
   const user = [playerSheet(state), memoryBlock(state, chronicleMd, 3000, 2), `DATE: ${dateStr(state.meta.date)}`, 'What should we do next?'].join('\n\n');

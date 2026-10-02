@@ -132,7 +132,8 @@ export function clusterFacts(state, facts, { together = [] } = {}) {
     const a = news[i], b = news[j];
     if (!a.place || a.place !== b.place || a.day !== b.day) continue;
     const named = folk[i].size && folk[j].size;
-    if (named ? [...folk[i]].some((x) => folk[j].has(x)) : (a.houses || []).some((h) => (b.houses || []).includes(h))) bind(i, j);
+    // (a fact that names no one is of the house it touched, and of the same kind of matter: a sworn knight's grievance at the hall where the banners gather is no part of the muster, TX6)
+    if (named ? [...folk[i]].some((x) => folk[j].has(x)) : archetypeOf(a) === archetypeOf(b) && (a.houses || []).some((h) => (b.houses || []).includes(h))) bind(i, j);
   }
 
   // the candidate stories, each a list of indexes; C3 cuts the big and mixed ones

@@ -1569,6 +1569,16 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **Held by a test.** `tests/bugfix-headlines.test.js` fires every beat and alternate on the world of eight houses, tells the story as the clusterer makes it (the beat's fact, and what it does to the world), and holds every card to the scorer and against "Grave news"; a beat added later without a head fails it.
 - **Not done:** the King's ride (`progress`, `arrival`) keeps its stage-told headlines ("King Robert passes the Twins on his progress"); the other leads of a story (a battle, a death, an arrival) are untouched and are the subject of other findings (ST9, ST12, ST13, ST14).
 
+## D-115 · 2026-10-02 · What the map does with the keyboard and where it looks (bug hunt UI1, UI2, UI3, UI5, UI6)
+
+- **UI1.** `map3d/keys.js` (`holdKeys`) owns the held keys: a key with Cmd, Ctrl or Alt is not held (and lets go of the rest), and the set is cleared on window blur and when the tab is hidden. It is wired from `MapScene` and tested without a browser.
+- **UI2.** `map3d/home.js`: a house's home is its seat, else the holding its lord is in, else where he rides, else the middle of what it holds. The first view, the Home key and the camera's return after a long turn use it.
+- **UI3.** `houseHeading` (`engine/facts/label.js`) is a house's name as a title: the label of the sentence with its first letter raised, and `House <name>` for the crown in its own crest. The windows' mid-sentence uses (`Held by …`, `in the pay of …`) use `houseLabel`.
+- **UI5.** A journey's road is drawn at every zoom for the party in hand and from `ROUTES_FROM` (level 1.6, about 675 map units out) for all of them.
+- **UI6.** The server answers the optional sigil index with an empty object.
+- **UI4.** The hit area of a control that is small to the eye is padding with a negative margin (`.realm-sort`, `.wc-strip__all`, `.wc-card__more`), so the layout is unchanged; chips have `min-height: 1.6rem`; boxes to tick 1.5rem. Checked in a browser, not by a gate: a 24-pixel rule would also catch the glyph buttons of the windows' corners, which are fine.
+- **Not done:** UI7 (the frame cost grows with the armies in a war; no leak was shown; nothing to fix without a profile on the owner's GPU).
+
 ## D-108 · 2026-10-02 · A tourney is an event with days in it (bug hunt ST2, ST3, ST9)
 
 - **The fault.** `hold_tourney` called a tourney and won it in one step; its champion was any living knight of the host or of a guest house wherever he was (Rakharo, Drogo's bloodrider, won a name-day tourney at Starfall); the lords of the region began to ride for it after it was over (14 set out 5 to 25 days after one had ended); a name-day happening told a result for a tourney nobody called; and a knight killed in the lists was told dead at his post (the Blackfish "at the Bloody Gate", of a lance in the lists at the Eyrie).
@@ -1609,13 +1619,12 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **SV5.** `playerView` drops `meta.rngState`. **Not done:** the whole state is still sent with every answer; the server is on the owner's own machine, the cost is a few milliseconds, and a patch protocol would be a rewrite of the page's state handling.
 - **CI1.** The seed of the CI soak is in the failure message with the command to play it again (`WC_SOAK_SEED` fixes it); the soak builds a card's story with the houses of all its facts, as `clusterFacts` does.
 
-## D-115 · 2026-10-02 · What the map does with the keyboard and where it looks (bug hunt UI1, UI2, UI3, UI5, UI6)
+## D-113 · 2026-10-02 · A card quotes what a letter says; an audience's dossier states its setting (bug hunt TX1, TX2, TX3, TX6, TX7, TX8, TX10)
 
-- **UI1.** `map3d/keys.js` (`holdKeys`) owns the held keys: a key with Cmd, Ctrl or Alt is not held (and lets go of the rest), and the set is cleared on window blur and when the tab is hidden. It is wired from `MapScene` and tested without a browser.
-- **UI2.** `map3d/home.js`: a house's home is its seat, else the holding its lord is in, else where he rides, else the middle of what it holds. The first view, the Home key and the camera's return after a long turn use it.
-- **UI3.** `houseHeading` (`engine/facts/label.js`) is a house's name as a title: the label of the sentence with its first letter raised, and `House <name>` for the crown in its own crest. The windows' mid-sentence uses (`Held by …`, `in the pay of …`) use `houseLabel`.
-- **UI5.** A journey's road is drawn at every zoom for the party in hand and from `ROUTES_FROM` (level 1.6, about 675 map units out) for all of them.
-- **UI6.** The server answers the optional sigil index with an empty object.
-- **UI4.** The hit area of a control that is small to the eye is padding with a negative margin (`.realm-sort`, `.wc-strip__all`, `.wc-card__more`), so the layout is unchanged; chips have `min-height: 1.6rem`; boxes to tick 1.5rem. Checked in a browser, not by a gate: a 24-pixel rule would also catch the glyph buttons of the windows' corners, which are fine.
-- **Not done:** UI7 (the frame cost grows with the armies in a war; no leak was shown; nothing to fix without a profile on the owner's GPU).
+- **TX1, TX2.** `engine/facts/quote.js` (`quoteOf`, `isGreeting`) takes the first sentence of a letter that is not a greeting (a few words that only address someone, as "Eddard." or "My dear Ned,"), without its signature, and without the salutation that opens a sentence ("My dear Prince, my lord—"). Both places that make a `letter_arrived` fact (`server/letters.js`, `server/game.js` deliverReplies) use it, and neither puts the engine's notes (`applied`) on the card: the notes stay in the post and the chat, where the player reads them as chips. A card is the place and the words.
+- **TX3.** `garbledIn` (`server/ai/validate/narration.js`) is a rule of the audience, council and narration checks: a figure glued to a word, an ellipsis broken in two, a stray chat token. A reply that fails is asked for again, then falls back to the mock's plain line, as every refused reply does.
+- **TX6.** The same-day, same-place rule of clustering (C5) bound a fact that names no one to any fact of the same house. It now binds only facts of the same archetype: a grievance (court) is not part of the muster (war); a village burned (war) still is part of the battle.
+- **TX7.** The audience dossier carries `THE PLACE` (the holding's kind and what may be seen in it), the exile's landlessness and `HOW YOU ADDRESS THE LORD` (kinship from the people's parents and spouses, honour from the lord's title). The setting is a fact of the world, so the engine states it; the model writes the words. Only the model can show whether it obeys: an owner check.
+- **TX8.** The advisor is told how many things the lord asked for (`askedCount`), and the mock lists no more. `suggestionsOf` turns a model's objects into lines.
+- **TX10.** Not a fix of the model's speed: the wait says beforehand that a long stretch can take minutes (`LONG_TURN_DAYS`, 14). The timings on the 12B are an owner check.
 

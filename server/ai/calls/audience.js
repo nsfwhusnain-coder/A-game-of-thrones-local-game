@@ -10,10 +10,45 @@ import { system } from '../context/primer.js';
 import { officerKnowledge } from '../context/officers.js';
 import { COMMITMENTS, promisesOf, promiseText } from '../../../public/js/engine/politics/commitments.js';
 import { dateStr, placeName } from '../../../public/js/shared/world.js';
-import { placeOf } from '../../../public/js/engine/parties.js';
+import { placeOf, partyOf } from '../../../public/js/engine/parties.js';
 import { VOICES } from '../../../public/data/voices.js';
-import { namesIn, numbersIn, GAME_WORDS } from '../validate/narration.js';
+import { namesIn, numbersIn, GAME_WORDS, garbledIn } from '../validate/narration.js';
 import { anachronismsIn } from '../../../public/data/anachronisms.js';
+
+// Where the scene is and how they speak to each other (bug hunt TX7): on the model every reply opened "in the great hall, by torchlight, under a father's gaze", wherever the pair were,
+// Daenerys and Jorah called the exiled prince "Lord Targaryen", and a counsellor in a Pentos villa worried about "our granaries". What the setting allows and how the lord is
+// addressed are facts of the world, so the dossier states them (the model writes the words, never the setting).
+const KIND = { city: 'a city', town: 'a town', castle: 'a castle', great_castle: 'a great castle', fortress: 'a fortress', palace: 'a palace', camp: 'a camp', ruin: 'a ruin' };
+const ROOF = { castle: 'the hall, the solar, the yard, the godswood', great_castle: 'the hall, the solar, the yard, the godswood', fortress: 'the hall, the solar, the yard, the godswood', palace: 'the hall, the solar, the yard, the godswood', city: 'a house, a courtyard, a counting-room, the street, an inn', town: 'a house, an inn, a street, a market', camp: 'a tent, a fire, the horse-lines', ruin: 'broken walls, a fire, the wind' };
+const KINSHIP = { m: { sibling: 'brother', parent: 'father', child: 'son', spouse: 'husband' }, f: { sibling: 'sister', parent: 'mother', child: 'daughter', spouse: 'wife' } };
+/** What the lord is to this person, by kinship, in the person's own mouth: "brother", "father", "son", "husband"; null for no kin. */
+function kinOf(c, lord) {
+  if (!lord || c.id === lord.id) return null;
+  const k = KINSHIP[lord.sex === 'f' ? 'f' : 'm'];
+  if (c.spouse === lord.id || lord.spouse === c.id) return k.spouse;
+  if (c.father === lord.id || c.mother === lord.id) return k.parent;   // the lord is their father or mother
+  if (lord.father === c.id || lord.mother === c.id) return k.child;    // the lord is their son or daughter
+  if ((c.father && c.father === lord.father) || (c.mother && c.mother === lord.mother)) return k.sibling;
+  return null;
+}
+/** How a person speaks to the lord: the name of kinship when there is one, else the honour of the lord's own title, never "Lord <House>" for one who is not a lord. */
+export function addressOf(state, c, lord) {
+  if (!lord) return 'my lord';
+  const kin = kinOf(c, lord); const title = String(lord.title || ''); const first = String(lord.name || '').split(' ')[0];
+  const honour = /\b(king|queen)\b/i.test(title) ? 'Your Grace' : /\bprince(ss)?\b/i.test(title) ? `${/princess/i.test(title) ? 'Princess' : 'Prince'} ${first}` : /^(ser|lady)\b/i.test(title) ? `${title.split(' ')[0]} ${first}` : lord.sex === 'f' ? 'my lady' : 'my lord';
+  return kin ? `"${first}", or "${kin}" when the moment is private; in company "${honour}"` : `"${honour}"`;
+}
+/** The setting of the scene, from the world: the kind of place, what may be seen in it, and what the lord's house does not hold. */
+export function sceneOf(state, c, lord, { face = true, own = false } = {}) {
+  const p = state.meta.player; const here = placeOf(state, c) || c.loc; const h = state.holdings?.[here]; const road = partyOf(state, c);
+  const kind = road ? (road.kind === 'rider' ? 'the road' : `a camp on the road (${road.name})`) : h ? `${placeName(state, here)}, ${KIND[h.type] || 'a place'}` : placeName(state, here);
+  const roof = road ? 'a tent, a fire, the road' : ROOF[h?.type] || 'a room, a fire';
+  const plain = /hall/.test(roof) ? 'and nothing a castle does not have' : 'and nothing grander: no great hall, throne or torch-lit gallery';
+  const out = [`THE PLACE: ${kind}. ${face ? `What may be seen in the scene: ${roof}, ${plain}.` : 'No scene to describe: the words are the letter.'}`];
+  if (state.houses[p]?.landless) out.push(`THE LORD'S HOUSE HOLDS NO LAND: no keep, no granaries, no levies, no tenants.${own ? ' You share their exile and have no hall of your own.' : ''} Speak of none.`);
+  out.push(`HOW YOU ADDRESS THE LORD: ${addressOf(state, c, lord)}; never "Lord ${state.houses[p]?.name}" unless that is their own title.`);
+  return out;
+}
 
 export const MOODS = ['warm', 'courteous', 'guarded', 'cold', 'angry', 'afraid', 'amused'];
 const AGREEING = new Set(['agree', 'yield']);
@@ -25,7 +60,7 @@ You are the person the dossier describes, answering the lord who speaks to you â
 - outcome.asks_for: what you want in return, in a few words, or "".
 - outcome.reveals: "none", unless the outcome allows a secret and you choose to let it slip.
 - outcome.mood: how you feel as it ends.
-Say only what you would know. Never a game word (turn, player, morale, stat); no modern idiom; nothing of what is to come.`;
+Keep to THE PLACE and to how you address the lord, as the dossier gives them. Do not open every reply with the same gesture: begin with what is particular to you and the place. Say only what you would know. Never a game word (turn, player, morale, stat); no modern idiom; nothing of what is to come.`;
 
 // "within the fortnight", "in ten days", "by the next moon"
 function daysIn(text) {
@@ -99,6 +134,7 @@ export default {
         receipt.length ? `WHAT YOU ARE ABOUT TO DO (the lord's command, as it will be done): ${receipt.join('; ')}.` : null,
         log.length ? `THE LAST WORDS BETWEEN YOU:\n${log.map((m) => `${m.role === 'player' ? 'The lord' : 'You'}: ${String(m.text).replace(/\s+/g, ' ').slice(0, 240)}`).join('\n')}` : null,
         face ? `THE SETTING: face to face at ${where}.` : `THE SETTING: a letter from the lord reached you at ${where}; you answer by raven.`,
+        ...sceneOf(state, c, lord, { face, own }),
         `THE OUTCOME (settled by the game):\n${stance?.directive || 'Answer as you would.'}${may.length ? `\nYOU MAY PROMISE: ${may.map((x) => `${x.kind}${x.target && x.target !== 'none' ? ` ${x.target}` : ''} within ${x.by_days} days`).join('; ')}.` : '\nYOU PROMISE NOTHING in this answer.'}`,
       ].filter(Boolean).join('\n'),
     };
@@ -125,6 +161,7 @@ export default {
     if (strings(v).some(hasForeignScript)) out.push('a word in a script that is not the realm\'s');
     for (const re of GAME_WORDS) { const m = text.match(re); if (m) { out.push(`"${m[0]}" is not a word of the realm`); break; } }
     for (const a of anachronismsIn(ctx.state, text)) out.push(`"${a.phrase}": ${a.note}`);
+    { const g = garbledIn(text); if (g) out.push(g); }
     for (const a of v.outcome.agrees_to) {
       const want = ctx.may.find((x) => x.kind === a.kind);
       if (!want) out.push(`${a.kind} was not asked for`);

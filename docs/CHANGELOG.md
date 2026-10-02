@@ -22,15 +22,16 @@ for the player, and what the owner should verify.
 - **The soak says which game failed.** `tests/soak.test.js` prints the seed and the command that plays that game again, and a card of a rolled-up story is scored against the houses of all its facts (the likeliest cause of the one red run on CI: "Norrey men join the host" failed for want of Norrey).
 - Tests: `tests/bugfix-saves.test.js` (5).
 
-## 2026-10-02 — Bug hunt fixes UI1 to UI6: the map's keys, where it opens, the crest, the dashes, and controls you can hit
+## 2026-10-02 — Bug hunt fixes TX1, TX2, TX3, TX6, TX7, TX8, TX10: letters, audiences and the advisor
 
-- **The map stops when you let go.** A key pressed with Cmd, Ctrl or Alt (Cmd+S, Cmd+D, Cmd+A) is the browser's, not the map's, and everything the map held is let go when the window loses the keyboard or the tab is hidden: on a Mac the camera no longer drifts on after Cmd+D.
-- **Exiles open on their lord.** Viserys in Pentos and the Golden Company open the map over Pentos and over their camp, not over the North, and the Home key goes there. After a long turn the camera returns to the lord's hall too.
-- **The crest names a faction as a faction**: "The Free Folk", "The Golden Company", "Braavos", "The Night's Watch", and "House Stark" for a house; the same in the house windows, cards and the Realm.
-- **The dashes are read close in.** From the middle zoom out only the road of the party you have selected (or are following) is drawn; at the default zoom every road is.
-- **No 404 on every page load.** The sigil artwork's index is an empty list when no artwork is installed.
-- **Small controls are bigger to hit, not to look at** (UI4): the strip's "All", the Realm's sort headings, a card's "Details" and the thread list had a hit area of 13 pixels at 1366 × 768; each now carries 30 or more as padding with a negative margin, so the page looks as it did. A chip is 25 pixels high; a box to tick is 24, not the browser's 13. Measured in the browser at 1366 × 768 over the main screen, the Realm, People, Chronicle, Settings and How to play: nothing under 22 pixels remains but the box in the People list (23).
-- Tests: `tests/bugfix-ui.test.js` (8). Screenshots in `docs/screens/bugfix/`. *Not done:* UI7 (frame cost in a war: no leak was shown) — see the issue.
+- **A letter's card quotes what it says.** "A raven from Riverrun: “Eddard.”" and "A raven from Dragonstone: “Lord Targaryen.”" are gone: the card skips the greeting ("Eddard. My dear Ned, …") and the signature and quotes the first thing the letter says.
+- **No bookkeeping on a letter card.** Illyrio's reply no longer ends "LOAN: Targaryen & Pentos — Agreed in audience …; Illyrio Mopatis opinion 3". What a letter settled is in the loan and the pact themselves; the card is the place and the words.
+- **Garbled words are refused.** A reply with a figure glued to a word ("they1."), an ellipsis broken in two ("the... ...the present") or a stray token of the model's own is asked for again, in an audience, a council and the narration.
+- **A rumour is no part of the muster.** A sworn knight's grievance at Winterfell is its own card, not a detail of "Eddard Stark raises the northern banners".
+- **Audiences know where they are and how to speak.** The dossier of every audience now says what the place is (a city, a camp, a castle) and what can be seen in it, that an exile's house holds no land (no granaries, no levies), and how the lord is addressed ("brother" and "Your Grace" for Viserys, never "Lord Targaryen"). *Owner check on the model: no great hall in a Pentos villa; Jorah and Daenerys do not say "Lord Targaryen".*
+- **The advisor answers the question asked.** "The three gravest dangers" is three headings, not a paragraph; the orphan `/suggest` route returns lines of text, never "[object Object]".
+- **A long stretch of days says so.** A turn of two weeks or more tells you the chronicler may take minutes. *Owner check on the model: how long a 30-day turn takes on the 12B.*
+- Tests: `tests/bugfix-letters.test.js` (7).
 
 ## 2026-10-02 — Bug hunt fixes OR2–OR11: the steward reads more of what you say, and says what it could not
 
@@ -54,6 +55,16 @@ for the player, and what the owner should verify.
 - **Winterfell is not taken by thirty men from under an army.** The ironborn's night raid on Winterfell (the story's own beat) waited only for the war; it fired on the day a Stark host of nineteen thousand came inside, and the host "sat before the walls" of its own castle. It now needs the hall to have few defenders (700 men or fewer, whatever the sides), and waits, within its window, until it has.
 - **Old saves** play on (a tourney already won stays won).
 - Tests: `tests/bugfix-tourneys.test.js` (9), `tests/bugfix-decrees.test.js` (4).
+
+## 2026-10-02 — Bug hunt fixes UI1 to UI6: the map's keys, where it opens, the crest, the dashes, and controls you can hit
+
+- **The map stops when you let go.** A key pressed with Cmd, Ctrl or Alt (Cmd+S, Cmd+D, Cmd+A) is the browser's, not the map's, and everything the map held is let go when the window loses the keyboard or the tab is hidden: on a Mac the camera no longer drifts on after Cmd+D.
+- **Exiles open on their lord.** Viserys in Pentos and the Golden Company open the map over Pentos and over their camp, not over the North, and the Home key goes there. After a long turn the camera returns to the lord's hall too.
+- **The crest names a faction as a faction**: "The Free Folk", "The Golden Company", "Braavos", "The Night's Watch", and "House Stark" for a house; the same in the house windows, cards and the Realm.
+- **The dashes are read close in.** From the middle zoom out only the road of the party you have selected (or are following) is drawn; at the default zoom every road is.
+- **No 404 on every page load.** The sigil artwork's index is an empty list when no artwork is installed.
+- **Small controls are bigger to hit, not to look at** (UI4): the strip's "All", the Realm's sort headings, a card's "Details" and the thread list had a hit area of 13 pixels at 1366 × 768; each now carries 30 or more as padding with a negative margin, so the page looks as it did. A chip is 25 pixels high; a box to tick is 24, not the browser's 13. Measured in the browser at 1366 × 768 over the main screen, the Realm, People, Chronicle, Settings and How to play: nothing under 22 pixels remains but the box in the People list (23).
+- Tests: `tests/bugfix-ui.test.js` (8). Screenshots in `docs/screens/bugfix/`. *Not done:* UI7 (frame cost in a war: no leak was shown) — see the issue.
 
 ## 2026-10-02 — Bug hunt fix ST1: the great matters of the story are told as news
 
