@@ -3,6 +3,27 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-03 — What the fifth look found: the Crown takes the field
+
+The same hunt on six other houses, the Chronicle read from other seats, and a sweep for text that leaks or does not parse.
+
+- **A host no longer vanishes when a second host is raised at its seat** (N-037): the banners raised while the first were camped elsewhere took the first one's name and replaced it, with its men and everyone who rode with it. The Crown's host is "The Banners of the Crown".
+- **The Crown takes the field.** Its banners were joining the King's progress, his court, which gives no battle: the whole levy of the realm, 56,000 men with the Queen and the royal children among them, sat at King's Landing under a name for a procession. They are a host of their own now (N-036).
+- "Lysa Arryn calls a tourney" while she marches (N-033); "Arya's direwolf wounds Prince Joffrey" in a game where he is already King (N-034); "about 1 days" and "Oldflowers's party" (N-035).
+- Tests: `tests/bugfix-found.test.js` (N-033 to N-037). The findings are in `docs/bughunt/FOUND.md`.
+
+## 2026-10-03 — What the fourth look found: a fleet sails with its captain, a death is one blow, the steward's news is told
+
+A 42-moon game, the Chronicle read in the browser, and the probe for one person doing two things at once.
+
+- **The steward's small events are told as what they are** (a fire in the granary, a new vein in the mines, a great fair, blight, outlaws, a storm, a bumper harvest) instead of "House Forrester inspects its accounts" (N-023); **weariness is news only of your own house** (it was fifty cards a game, N-024); **a company does not march under the name of a man who has gone to another host** (Rodrik Cassel, N-025).
+- **A fleet that sails has its captain aboard** (Victarion reaved the coast with the Iron Fleet while he sat at Pyke; Renly's host marched without him): a host or fleet that sets out takes its commander with it, and one who is held or far away leads it no more (N-026).
+- **The realm's gossip no longer feasts a lord who is on the road** (Walder Frey was said to feast a guest at the Twins a fortnight after he marched for Riverrun with his levies; N-027).
+- **A death is a blow once.** Every death had struck the mind of each of the dead's kin every week for three moons: a house after a battle went to the top of the strain scale together, and the Chronicle was full of lords "close to breaking" and collapsing (421 and 366 cards in a 42-moon game; about half as many now, and the same pitch of strain is told again only after a year) (N-028).
+- **A birth says whose child it is** ("A daughter of Eddard Stark and Catelyn Stark.") where it was a name and an empty line (N-029).
+- A castle that has fallen is no longer also "shut in" (N-030); and the days of a running fight that reach you by raven, one a day, are told as one fight, as those you see are (N-031).
+- Tests: `tests/bugfix-found.test.js` (N-023 to N-032), `tests/bugfix-world.test.js`. The findings are in `docs/bughunt/FOUND.md`.
+
 ## 2026-10-03 — What the third look found: the Tullys seize, the Northern Host has Robb, a wife with child is not a rumour
 
 Playing the merged game for a dozen moons and reading what it told.
@@ -13,18 +34,12 @@ Playing the merged game for a dozen moons and reading what it told.
 - **The Northern Host marches with Robb at its head,** where it marched on without him and he sat at Winterfell (N-013). A prisoner's house is told as ruled by its regent in the words of its facts (N-014).
 - **A lord's strain is told as he worsens**, once at each pitch, as what his household sees (short with the servants, snapping, spoken of in low voices), not as "keeps his own counsel" each time he crossed a line (N-011).
 - **A host passes its own house's barrier at no price** (N-010); **"Prince Joffrey" no longer whips stableboys once he is King**, nor "Lord Renly" hold court once he is crowned (N-012).
-- **The steward's small events are told as what they are** (a fire in the granary, a new vein in the mines, a great fair, blight, outlaws, a storm, a bumper harvest) instead of "House Forrester inspects its accounts" (N-023); **weariness is news only of your own house** (it was fifty cards a game, N-024); **a company does not march under the name of a man who has gone to another host** (Rodrik Cassel, N-025).
-- **A fleet that sails has its captain aboard** (Victarion reaved the coast with the Iron Fleet while he sat at Pyke; Renly's host marched without him): a host or fleet that sets out takes its commander with it, and one who is held or far away leads it no more (N-026).
-- **The realm's gossip no longer feasts a lord who is on the road** (Walder Frey was said to feast a guest at the Twins a fortnight after he marched for Riverrun with his levies; N-027).
-- **A death is a blow once.** Every death had struck the mind of each of the dead's kin every week for three moons: a house after a battle went to the top of the strain scale together, and the Chronicle was full of lords "close to breaking" and collapsing (421 and 366 cards in a 42-moon game; about half as many now, and the same pitch of strain is told again only after a year) (N-028).
-- **A birth says whose child it is** ("A daughter of Eddard Stark and Catelyn Stark.") where it was a name and an empty line (N-029).
-- A castle that has fallen is no longer also "shut in" (N-030); and the days of a running fight that reach you by raven, one a day, are told as one fight, as those you see are (N-031).
 - **The Meanwhile no longer says "rumour runs at King's Landing" four times a moon**: a clause an earlier week of the turn has said is left out of the later ones (N-022).
 - **A house's lord or heir is not married away to another's hall** (N-021): Harlaw's heir had become Merlyn's on his wedding day, and still led a Harlaw company. Two such, a ruling lady and an heir, are not matched; the player's own order for such a match is refused in words.
 - **The lord who called a tourney stays for it** instead of riding off to a feast or a hunt before the lists are run (N-020); and **a man who commands a host or a fleet no longer leaves it to ride with his house's muster** (Euron left his ship, Edmure his company; N-019).
 - **A pursuit is one battle, not seven.** Hosts of the same two houses meeting again the next day and the next are one card ("The Lannister host destroys the Tully host near Wayfarer's Rest. Seven battles in seven days.") instead of a fresh victory every morning; and equal losses read "lose about as many men", not "about as many men than" (N-017, N-018).
 - **The realm ledger no longer says "at least 2,600"** of a house whose host has joined its liege's, a moon on: word of a host keeps its own age (N-015).
-- Tests: `tests/bugfix-found.test.js` (14, from 5), `tests/bugfix-world.test.js` (7), and the happenings content test knows `uncrowned:`. New probe: `scripts/bughunt/probe-simul.mjs` (one person doing two things at once). The findings are in `docs/bughunt/FOUND.md`.
+- Tests: `tests/bugfix-found.test.js`, `tests/bugfix-world.test.js`, and the happenings content test knows `uncrowned:`. New probe: `scripts/bughunt/probe-simul.mjs` (one person doing two things at once). The findings are in `docs/bughunt/FOUND.md`.
 
 ## 2026-10-02 — What the second hunt found: the Hand in the black cells, a host that lost a man a day to a pass, and Viserys's own opening
 

@@ -35,10 +35,11 @@ export const BAND_COVERAGE = 0.85;
 export const LEAST_OVER = 0.6;
 export const LEAST_SLACK = 100; // a report of a host is never under a hundred men (knowledge.js), so a house of fifty is "at least 160" of a host it has lost
 /** The most a figure of a house was at a sample since a cell of `age` turns was noted (the truth series, a sample a week), and now. */
-function peakSince(state, house, field, now, age) {
+function seriesSince(state, house, field, age) {
   const since = dayNumber(state.meta.date) - 30 * ((age ?? 0) + 1);
-  return Math.max(now, ...seriesOf(state, house, field).filter(([day]) => day >= since).map(([, v]) => v));
+  return seriesOf(state, house, field).filter(([day]) => day >= since).map(([, v]) => v);
 }
+function peakSince(state, house, field, now, age) { return Math.max(now, ...seriesSince(state, house, field, age)); }
 /** A figure this many turns old or less is fresh. */
 export const FRESH = 1;
 const MARKS = { self: [''], sworn: ['~', '≈'], seen: ['~', '≈', '≥'], reported: ['~', '≈', '≥'], rumour: ['~', '≈'], learned: ['~'] };
@@ -80,7 +81,9 @@ export function auditView(state, viewer, { lenses = LENSES, scope = 'all', viewO
         if ((cell.age ?? Infinity) <= FRESH || cell.via === 'sworn') { kind.fresh++; kind.max = Math.max(kind.max, Math.abs(rel)); if (rel > 0) kind.over = Math.max(kind.over, rel); else kind.under = Math.max(kind.under, -rel); }
         if ((cell.age ?? Infinity) > FRESH && cell.via !== 'sworn') continue; // old news: shown with its age, not held to a bound
         if (cell.mark === '~' && BOUNDS[cell.via] && !(t === 0 && cell.via === 'rumour')) {
-          if (Math.abs(cell.v - t) > room(t, BOUNDS[cell.via], field)) bad(who, field, cell.via, `${cell.via} ${field} ${cell.v} against the truth ${t} (${(rel * 100).toFixed(1)} %, the bound is ±${BOUNDS[cell.via] * 100} %)`);
+          // (a figure is an estimate of the truth of the day it was made: it holds if it was within its bound of the truth at any sample since the word came, as well as of the truth now)
+          const truths = cell.via !== 'sworn' ? [t, ...seriesSince(state, row.house, field, cell.age)] : [t]; // (even one noted this turn: a holding may change hands in the days after the word)
+          if (!truths.some((x) => Math.abs(cell.v - x) <= room(x, BOUNDS[cell.via], field))) bad(who, field, cell.via, `${cell.via} ${field} ${cell.v} against the truth ${t} (${(rel * 100).toFixed(1)} %, the bound is ±${BOUNDS[cell.via] * 100} %)`);
         }
         // (a host reported may have been broken, merged or lost to a battle in the turns since the word came: "at least" is held to the most the truth was in that time)
         if (cell.mark === '≥' && cell.v > peakSince(state, row.house, field, t, cell.age) * (1 + LEAST_OVER) + LEAST_SLACK) bad(who, field, 'least', `"at least ${cell.v}" ${field} where the truth is ${t}`);

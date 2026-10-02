@@ -164,6 +164,8 @@ export function answerRebel(state, [vid, how]) {
  *  A call to the banners names the host the lords are to join (`obligations.join`). Late banners join THAT host wherever
  *  it has gone — marched on, or arrived somewhere else — so a muster never leaves an orphan host behind at the muster
  *  point (the "they all muster up and stay there" bug). */
+/** The kinds of party that never give battle (battle.js: they withdraw) or sit in a castle: no lord's levy joins them as "the great host". */
+const NOT_A_FIELD_HOST = new Set(['fleet', 'garrison', 'progress', 'retinue', 'caravan', 'envoy', 'rider']);
 export function gatherMusters(state) {
   const events = [];
   const dist = (x, y) => Math.hypot(x.pos[0] - y.pos[0], x.pos[1] - y.pos[1]);
@@ -175,7 +177,7 @@ export function gatherMusters(state) {
     // a lord's levies still gathering at his seat stay there until they set out (engine/military/muster.js)
     if (gathering(state, v) && v.obligations.host === a.id) continue;
     const ob = v.obligations || {};
-    const field = (x) => x.owner === liegeId && isForce(x) && !['fleet', 'garrison'].includes(x.kind) && x.id !== a.id;
+    const field = (x) => x.owner === liegeId && isForce(x) && !NOT_A_FIELD_HOST.has(x.kind) && x.id !== a.id; // (the King's progress is his court on the road, which never gives battle: the banners of the Crown joined it, 56,000 men in a household that stands at King's Landing and withdraws before any foe, N-036)
     let host = null;
     // the host this lord was called to join, wherever it is now
     const grand = ob.join && state.parties[ob.join] && field(state.parties[ob.join]) ? state.parties[ob.join] : null;
@@ -194,8 +196,9 @@ export function gatherMusters(state) {
       host = near ? main : Object.values(state.parties).find((x) => field(x) && x.at === a.at);
     }
     if (!host) {
-      const id = `${liegeId}_banners_${a.at}`.replace(/[^a-z0-9_]/g, '');
-      host = state.parties[id] = { id, owner: liegeId, name: `The Banners of ${liege.name}`, commander: a.commander, at: a.at, pos: [...a.pos], men: 0, kind: 'host', members: [], composition: 'Levies and knights of the sworn houses', morale: a.morale ?? 70, supply: a.supply ?? 80, asOf: a.asOf };
+      let id = `${liegeId}_banners_${a.at}`.replace(/[^a-z0-9_]/g, '');
+      while (state.parties[id]) id += '_2'; // (the banners already raised at this seat are away on a campaign: a second host is a second host, not the first one overwritten with its men and its people, N-037)
+      host = state.parties[id] = { id, owner: liegeId, name: `The Banners of ${liege.rank === 'crown' ? 'the Crown' : liege.name}`, commander: a.commander, at: a.at, pos: [...a.pos], men: 0, kind: 'host', members: [], composition: 'Levies and knights of the sworn houses', morale: a.morale ?? 70, supply: a.supply ?? 80, asOf: a.asOf };
     }
     // from now on every lord called to this muster joins this host, wherever it goes
     if (ob.muster) for (const o of Object.values(state.houses)) if (o.liege === liegeId && o.obligations?.muster === ob.muster && !(o.obligations.join && state.parties[o.obligations.join])) o.obligations.join = host.id;

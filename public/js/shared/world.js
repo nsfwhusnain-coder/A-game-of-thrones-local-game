@@ -718,7 +718,7 @@ function applyOne(state, ch, ctx) {
         if (!taken) throw new Error(`no men to spare where ${c.name} is`);
         let id = slug(`${c.name.split(' ')[0]}_riders`); while (state.parties[id]) id += '_2';
         const origin = riding ? null : c.loc;
-        const co = state.parties[id] = { id, kind: 'host', owner: c.house, name: ch.name || `${c.name.replace(/^Ser /, '')}'s company`, commander: c.id, at: null, pos: [...from], men: taken, composition: ch.composition || 'Household men-at-arms, mounted', members: [], morale: 75, supply: 85, asOf: date, march: { to: dest, since: state.meta.turn } };
+        const co = state.parties[id] = { id, kind: 'host', owner: c.house, name: ch.name || `${c.name.replace(/^Ser /, '')}${/s$/.test(c.name) ? "'" : "'s"} company`, commander: c.id, at: null, pos: [...from], men: taken, composition: ch.composition || 'Household men-at-arms, mounted', members: [], morale: 75, supply: 85, asOf: date, march: { to: dest, since: state.meta.turn } };
         joinParty(state, c, co);
         // companions ride with the party: those at the same place (family, officers, wards)
         const comp = (Array.isArray(ch.companions) ? ch.companions : []).map((x) => state.characters[findChar(state, x)]).filter((x) => x && x.alive && x.id !== c.id && !/imprisoned|captive/.test(x.status || '') && origin && x.loc === origin);

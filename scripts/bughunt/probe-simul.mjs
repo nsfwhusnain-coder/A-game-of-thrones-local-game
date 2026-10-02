@@ -16,6 +16,7 @@ for (let n = 1; n <= Number(turns); n++) {
   const where = (p) => (p.at == null ? 'on the road' : s.holdings[p.at]?.name || p.at);
   const partyOf = new Map(); // a man in two parties
   for (const p of Object.values(s.parties || {})) for (const m of p.members || []) { if (partyOf.has(m) && partyOf.get(m) !== p.id) add('two-parties', `${nm(m)} is in ${partyOf.get(m)} and ${p.id} (turn ${n})`); partyOf.set(m, p.id); }
+  for (const c of Object.values(C)) { if (!/^party:/.test(c.loc || '')) continue; const p = s.parties[c.loc.slice(6)]; if (!p) add('dangling-loc', `${c.name} travels with ${c.loc}, which is gone (turn ${n})`); else if (!(p.members || []).includes(c.id)) add('unlisted-member', `${c.name} travels with ${p.name || p.id}, which does not list them (turn ${n})`); }
   for (const p of Object.values(s.parties || {})) {
     const c = C[p.commander]; if (!c) continue;
     if (!c.alive) add('dead-commands', `${c.name} (dead) commands ${p.name} (turn ${n})`);
