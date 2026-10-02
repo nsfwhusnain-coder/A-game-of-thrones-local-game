@@ -10,7 +10,7 @@ for the player, and what the owner should verify.
 - **The crest names a faction as a faction**: "The Free Folk", "The Golden Company", "Braavos", "The Night's Watch", and "House Stark" for a house; the same in the house windows, cards and the Realm.
 - **The dashes are read close in.** From the middle zoom out only the road of the party you have selected (or are following) is drawn; at the default zoom every road is.
 - **No 404 on every page load.** The sigil artwork's index is an empty list when no artwork is installed.
-- Tests: `tests/bugfix-ui.test.js` (8). *Not done:* UI4 (small controls at 1366 × 768), UI7 (frame cost in a war) — see the issue.
+- Tests: `tests/bugfix-ui.test.js` (7). *Not done:* UI4 (small controls at 1366 × 768), UI7 (frame cost in a war) — see the issue.
 
 ## 2026-10-02 — Bug hunt fixes OR2–OR11: the steward reads more of what you say, and says what it could not
 
