@@ -22,6 +22,8 @@ const { perform, check, intentFor } = await import('../public/js/engine/actions/
 const { partyOf } = await import('../public/js/engine/parties.js');
 const { suitability, refusal } = await import('../public/js/engine/people/family.js');
 const { HAPPENINGS } = await import('../public/data/happenings.js');
+const { raiseLevies } = await import('../public/js/engine/actions/military.js');
+const { regencyTick, speakerFor } = await import('../public/js/shared/regency.js');
 
 const world = (house = 'stark', seed = 7) => createInitialState('agot_298', house, { seed });
 
@@ -558,4 +560,20 @@ test('N-052: a verb refuses in words a parameter of the wrong shape: one host na
   for (const armies of ['h1', ['h1', 'h2'], '', null, 7]) {
     assert.doesNotThrow(() => check(s, intentFor(s, 'merge_hosts', { house: 'stark', params: { armies }, source: { type: 'intent', ref: 'robb_stark', by: 'mock' } })), JSON.stringify(armies));
   }
+});
+
+test('N-053: the muster receipt says what the first men are made of straight after the men, not after the ones still on the road', () => {
+  const s = world('stark', 3); s.houses.stark.figures.levies = { ...(s.houses.stark.figures.levies || {}), v: 9000 };
+  const r = withRng(s, () => raiseLevies(s, { house: 'stark', at: 'stark', men: 9000, immediate: false }));
+  const line = r.lines.find((l) => /levies muster at/.test(l)); assert.ok(line, r.lines.join(' | '));
+  assert.match(line, /^[\d,]+ levies muster at Winterfell as [^;(]+ \([^)]*(?:foot|archers|riders|knights)[^)]*\); [\d,]+ more are mustering from the fields$/, line);
+});
+
+test('N-054: a regent who is seized or dies gives up the seal: another takes it, and a prisoner never speaks for the house', () => {
+  const s = world('stark', 3); const h = s.houses.stark; s.characters.eddard_stark.status = 'imprisoned';
+  regencyTick(s, 30); const first = h.regent; assert.ok(first, 'a regent is named for the lord in the cells');
+  s.characters[first].status = 'imprisoned'; assert.notEqual(speakerFor(s, 'stark')?.id, first, 'a prisoner is not the one who speaks, even before the tick');
+  regencyTick(s, 30); assert.ok(h.regent && h.regent !== first && s.characters[h.regent].alive && !/imprison|captive/.test(s.characters[h.regent].status || ''), `another, free, takes the seal (${h.regent})`);
+  const second = h.regent; s.characters[second].alive = false;
+  regencyTick(s, 30); assert.ok(!h.regent || (h.regent !== second && s.characters[h.regent].alive), 'a dead regent is not kept as the regent');
 });

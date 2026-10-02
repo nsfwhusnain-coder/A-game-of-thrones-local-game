@@ -288,6 +288,12 @@ The `recruit` op made a company where no host stood and never settled it: a part
 ### N-052 · S3 · `merge_hosts` throws on one host named in a word (found by `fuzz-verbs`)
 `i.params.armies.some is not a function`: a model that names one host in a string, not a list, made the verb throw instead of refuse. **Where:** `engine/actions/military.js`. **FIXED** (`tests/bugfix-found.test.js`). Eight seeds of 2,500 verb calls and eight of 3,000 ops since: no other throw, no NaN.
 
+### N-053 · S4 · The muster receipt lists the first men's make-up after the men still to come (found playing in the browser)
+"1,143 levies muster at Winterfell as The Host of Winterfell; 14,857 more are mustering from the fields (23 knights, 137 riders, 823 foot, 160 archers)": the bracket described the 1,143 and read as the make-up of the 14,857. It now follows the host it describes. **Where:** `engine/actions/military.js` `raiseLevies`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-054 · S2 · A regent in a cell, or in the grave, still held the seal (found by `probe-links`)
+Greyjoy seed 14, moon 11 to 14: Broom's regent Humfrey Broom and Lefford's regent Marla Lefford were prisoners and Marbrand's regent Ser Addam Marbrand was dead, and each house was still ruled in their name: `regencyTick` kept any regent who was alive, and `speakerFor` spoke for the house with whoever `regent` named. A held regent is now replaced by the next in the order of `chooseRegent`, a dead one is struck out even when nobody fit is left, and a prisoner never speaks for the house. **Where:** `shared/regency.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
@@ -298,6 +304,10 @@ The `recruit` op made a company where no host stood and never settled it: a part
 - `probe-simul`'s "foreign-commander" for Jon Snow: the rider party that takes him to the Wall is Stark's, and he is the Watch's the day he is sent. A boy riding to take the black under his father's escort, not a man commanding another house's host.
 - `probe-simul`'s "acts-on-the-road" for a vassal's lord whose host was beaten and joined another host: the road was ended by the join, which the probe did not read until it learned `host_joined`.
 
+- `probe-links` (liege loops, a hold with no house, spouses, ages, sieges, wars with a side gone) over six houses for fourteen moons: nothing the game did. Its "widow not told" and "born after a parent's death" are the starting data (Tywin's Joanna, Edmure's mother, Daenerys's father); a siege with no host in its walls is the day it is lifted, the next.
+- Cards at Essos, the Wall, the Iron Islands and beyond the Wall, scanned for the words of another country ("lord", "castle", "harvest", "tourney", "road", "septon") over a game of two years: none that is not the place's own. (A synthetic card for every fact kind at those places does show "raven", "castle" and "lord" where no such fact is ever made.)
+- The Crown played as Baratheon: banners called, "The Banners of the Crown" forms at King's Landing and grows to forty thousand over ten weeks, the progress and the Gold Cloaks stay what they are, and no invariant breaks.
+
 ## Seen, and left alone
 
 - A house at war could be refused a tourney (`dutyBound`); left for the owner. (The lists now wait for a host who marched, N-045.)
@@ -307,4 +317,3 @@ The `recruit` op made a company where no host stood and never settled it: a part
 
 - `probe-simul`'s "acts-on-the-road" for a bride whose company halts at a hall (Jeyne Westerling at Crane): the company is camped there, so she is in the hall, and the road fact has no arrival to read. A wedding in the hall of the one who stays is the rule.
 - S4: the Targaryen start has two canon-data oddities `probe`s print: Obara Sand born twelve years after her father Oberyn, and Cassana Estermont too young to be Robert's mother by the start's own birth years. Both are the data's, from the books' loose ages; left.
-

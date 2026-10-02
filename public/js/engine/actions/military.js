@@ -105,7 +105,7 @@ export function raiseLevies(state, { house = state.meta.player, at, men, command
     host = state.parties[id] = { id, owner: house, name: String(name || `The Host of ${hold.name}`).slice(0, 80), commander: cmd?.id || null, at: place, pos: [...hold.pos], men: first, kind: 'host', members: [], composition: `Levies of House ${me.name}${n >= 3000 ? ', with household knights' : ''}`, morale: 65, supply: 80, asOf: dateStr(state.meta.date), ...(n > first ? { muster: { remaining: n - first, daily: Math.max(50, Math.ceil(n / 14)), house } } : {}) };
     if (cmd) joinParty(state, cmd, host);
     settle(state, host);
-    out.push(`${fmtN(first)} levies muster at ${hold.name} as ${host.name}${n > first ? `; ${fmtN(n - first)} more are mustering from the fields` : ''}${cmd ? ` under ${cmd.name}` : ''} (${unitsText(state, host)})`);
+    out.push(`${fmtN(first)} levies muster at ${hold.name} as ${host.name}${cmd ? ` under ${cmd.name}` : ''} (${unitsText(state, host)})${n > first ? `; ${fmtN(n - first)} more are mustering from the fields` : ''}`);
   }
   for (const v of Object.values(state.houses)) if (v.liege === house && v.obligations?.muster === place && ['called', 'delayed', 'answered'].includes(v.obligations.levies) && !(v.obligations.join && state.parties[v.obligations.join])) v.obligations.join = host.id;
   if (n < Math.round(Number(men) || 0)) out.push(`only ${fmtN(n)} could be found of the ${fmtN(Math.round(Number(men)))} asked for`);
