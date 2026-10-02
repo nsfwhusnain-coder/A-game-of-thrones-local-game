@@ -3,6 +3,11 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — The first bug hunt (report and harnesses; no game change)
+
+- **`docs/BUG-HUNT-2026-10-02.md`**: 57 findings from playing the finished game on the mock and on Maester-12B (story, world, orders, text, interface, server, tests), each with an ID, a severity, evidence, leads in the code and a repro; two were fixed on the spot in H7 (carts that sailed, the King's feast on day one). `docs/BUG-FIX-AGENT-PROMPT.md` is the prompt for the agent that fixes them.
+- **`scripts/bughunt/`**: the probes that found them (sweeps over many houses and long games, a text corpus to read, hostile requests, a browser walk, an order battery), all on the mock, with a README; `live/` holds the ones that need the model, for the owner. Transcripts from the live runs are in `docs/bughunt/live-samples/`.
+
 ## 2026-10-02 — H7: what the owner found playing
 
 - **The tip about the menu no longer covers it.** It sat under the menu button, where the menu opens, and hid the doors. It now sits under the bar, to the left of the menu; it never takes a click; and it is put away the moment you open the menu.

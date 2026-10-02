@@ -1,0 +1,10 @@
+import { REPO } from './paths.mjs';
+import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'; import { pathToFileURL } from 'node:url';
+process.env.WC_PROVIDER='mock'; process.env.WC_SAVES=fs.mkdtempSync(path.join(os.tmpdir(),'wc-bh-shape-'));
+const repo=REPO + '/'; const im=(p)=>import(pathToFileURL(repo+p).href);
+const game=await im('server/game.js');
+const {id}=game.newGame('agot_298','stark',{seed:33});
+const r=await game.advance(id,{span:'7d'}); await game.settled(id);
+console.log(Object.keys(r.turn).join(',')); console.log(JSON.stringify(r.turn.events[0]).slice(0,900));
+const f=game.readFacts(id,{limit:3}); console.log(JSON.stringify(f).slice(0,700));
+fs.rmSync(process.env.WC_SAVES,{recursive:true,force:true});

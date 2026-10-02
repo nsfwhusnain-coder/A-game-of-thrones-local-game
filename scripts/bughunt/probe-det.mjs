@@ -1,0 +1,10 @@
+import { REPO } from './paths.mjs';
+import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'; import { pathToFileURL } from 'node:url';
+process.env.WC_PROVIDER='mock'; process.env.WC_SAVES=fs.mkdtempSync(path.join(os.tmpdir(),'wc-bh-det-'));
+const repo=REPO + '/'; const im=(p)=>import(pathToFileURL(repo+p).href);
+const game=await im('server/game.js');
+const run=async()=>{ const id=game.newGame('agot_298','stark',{seed:5}).id; for(let i=0;i<4;i++){ await game.advance(id,{span:'7d'}); await game.settled(id);} return game.loadState(id); };
+const A=await run(), B=await run();
+const diff=(a,b,p='',out=[])=>{ if(out.length>25) return out; if(a===b) return out; if(typeof a!=='object'||typeof b!=='object'||!a||!b){ out.push(p+': '+JSON.stringify(a)?.slice(0,60)+' vs '+JSON.stringify(b)?.slice(0,60)); return out; } for(const k of new Set([...Object.keys(a),...Object.keys(b)])) diff(a[k],b[k],p+'/'+k,out); return out; };
+const d=diff(A,B); console.log('differences between two identical-seed games after 4 turns:',d.length); console.log(d.slice(0,25).join('\n'));
+fs.rmSync(process.env.WC_SAVES,{recursive:true,force:true});
