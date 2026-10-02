@@ -10,13 +10,12 @@ import { weighAudience, holdToVerdict, moodWord } from '../public/js/shared/temp
 import { applyChanges, dateStr, placeName } from '../public/js/shared/world.js';
 import { dayNumber, dateOfDay } from '../public/js/engine/time.js';
 import { fact } from '../public/js/engine/facts/log.js';
+import { quoteOf } from '../public/js/engine/facts/quote.js';
 import { makeCommitment, COMMITMENTS } from '../public/js/engine/politics/commitments.js';
 import { learn } from '../public/js/engine/knowledge.js';
 import { placeOf, partyOf } from '../public/js/engine/parties.js';
 import { nextId } from '../public/js/engine/ids.js';
 import { resolvePlaceId } from '../public/js/shared/world.js';
-
-const firstSentence = (t) => String(t).replace(/\*[^*]*\*/g, ' ').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s/)[0] || '';
 
 /**
  * The letters of a turn: the lord's that land are read and answered; the answers that land are delivered. Returns the
@@ -61,7 +60,7 @@ export async function deliverLetters(state, { provider = 'mock', cfg, log, known
     const orig = state.post.find((x) => x.id === a.replyTo); if (orig) orig.status = 'answered';
     const pp = partyOf(state, c); const whence = pp ? (pp.kind === 'rider' ? 'the road' : `the camp of ${pp.name}`) : placeName(state, placeOf(state, c) || c.loc);
     cards.push(fact(state, 'letter_arrived', {
-      title: `${c.name} answers ${lord?.name || 'the lord'}`, text: `A raven from ${whence}: “${firstSentence(a.text).slice(0, 220)}”${a.applied?.length ? ` — ${a.applied.join('; ')}` : ''}`,
+      title: `${c.name} answers ${lord?.name || 'the lord'}`, text: `A raven from ${whence}: “${quoteOf(a.text)}”`, // (what the letter says, not its greeting, TX1; the engine's notes of what it settled stay in the post, not on the card, TX2)
       where: resolvePlaceId(placeOf(state, lord) || lord?.loc) || state.houses[p].seat || null, importance: 3, houses: [p, c.house], mine: true, day: a.arriveDay - clock.from + 1,
     }, { actors: [c.id, lordId], data: { from: c.id, reply: true, letter: a.id }, vis: { scope: 'houses', houses: [p, c.house] } }));
   }
