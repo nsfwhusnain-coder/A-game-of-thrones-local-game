@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'; // a file URL's pathname is /C:/… on
 import { chat, extractJson, loadConfig, estimateTokens } from './llm.js';
 import { buildSuggestPrompt } from './prompts.js';
 import { whatHappened, toldHappenings } from './ai/calls/consolidate.js';
-import { createInitialState, migrateState, applyChanges, placeName, addDays, dateStr, spanOf, resolvePlaceId, dayNumber } from '../public/js/shared/world.js';
+import { createInitialState, migrateState, applyChanges, placeName, addDays, dateStr, spanOf, SPANS, resolvePlaceId, dayNumber } from '../public/js/shared/world.js';
 import { partyOf, together, placeOf } from '../public/js/engine/parties.js';
 import { settleWorld } from '../public/js/engine/state/settle.js';
 import { validate } from '../public/js/engine/state/validate.js';
@@ -61,17 +61,23 @@ export const httpError = (status, msg) => Object.assign(new Error(msg), { status
 
 export function listSaves() {
   return fs.readdirSync(SAVES, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => {
+    const updatedOf = () => { try { return fs.statSync(path.join(SAVES, d.name)).mtimeMs; } catch { return 0; } };
     try {
       const st = JSON.parse(fs.readFileSync(path.join(SAVES, d.name, 'state.json'), 'utf8'));
       return { id: d.name, player: st.meta.player, playerName: st.houses[st.meta.player]?.name, date: dateStr(st.meta.date), turn: st.meta.turn, scenario: st.meta.scenarioName, updated: fs.statSync(path.join(SAVES, d.name, 'state.json')).mtime };
-    } catch { return null; }
+    } catch {
+      // a folder with no state.json is no save (a scratch folder, one half made); one whose state cannot be read is a save that was hurt (a crash mid-write, a hand edit): it is shown, so that it can be burned (SV3)
+      if (!fs.existsSync(path.join(SAVES, d.name, 'state.json'))) return null;
+      return { id: d.name, damaged: true, playerName: 'A damaged chronicle', date: '—', turn: 0, updated: updatedOf() };
+    }
   }).filter(Boolean).sort((a, b) => b.updated - a.updated);
 }
 
 export function loadState(id) {
   const f = path.join(dir(id), 'state.json');
   if (!fs.existsSync(f)) throw httpError(404, 'no such save');
-  const st = JSON.parse(fs.readFileSync(f, 'utf8'));
+  let st; try { st = JSON.parse(fs.readFileSync(f, 'utf8')); } catch { throw httpError(422, 'This chronicle is damaged: its save file cannot be read. It can be burned from the title screen.'); }
+  if (!st || typeof st !== 'object' || !st.meta || !st.houses) throw httpError(422, 'This chronicle is damaged: its save file is not a game. It can be burned from the title screen.');
   if (!st.world) initEconomy(st); // migrate v1 saves
   migrateState(st);
   return st;
@@ -217,7 +223,12 @@ export function scribe(id, text, { spoken = false } = {}) {
 }
 export const scribeStatus = () => ({ model: scribeOn() });
 
-export function writeChronicle(id, text) { fs.writeFileSync(path.join(dir(id), 'chronicle.md'), text); }
+const putChronicle = (id, text) => fs.writeFileSync(path.join(dir(id), 'chronicle.md'), text); // (the engine's own writes, under the hold it already has)
+export function writeChronicle(id, text) {
+  tooLong('chronicle', text, MAX_CHRONICLE);
+  const release = hold(id, 'the chronicle');
+  try { putChronicle(id, text); } finally { release(); }
+}
 function appendChronicle(id, text) { fs.appendFileSync(path.join(dir(id), 'chronicle.md'), text); }
 // `info` (from server/ai/client.js): { attempt, model, ms, problems, provider }. With config `logCalls: true` every attempt is also kept whole — the
 // prompt, the reply and what the checks said of it — in llm-calls.jsonl: the next fine-tune's data (accepted replies are examples, refused ones
@@ -240,18 +251,29 @@ export function newGame(scenario, house, { ironman = false, seed, canonGravity, 
   const id = `${house}-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`;
   saveState(id, state);
   const h = state.houses[house];
-  writeChronicle(id, `# The Chronicle of House ${h.name}\n\n_${state.meta.scenarioName}. Begun on ${dateStr(state.meta.date)}._\n\nThis file is the long-term memory of your game. The simulator reads it every turn. You may edit it by hand to correct or steer the story.\n\n`);
+  putChronicle(id, `# The Chronicle of House ${h.name}\n\n_${state.meta.scenarioName}. Begun on ${dateStr(state.meta.date)}._\n\nThis file is the long-term memory of your game. The simulator reads it every turn. You may edit it by hand to correct or steer the story.\n\n`);
   return { id, state };
 }
 
-export function deleteSave(id) { fs.rmSync(dir(id), { recursive: true, force: true }); }
+export function deleteSave(id) { const release = hold(id, 'a chronicle'); try { fs.rmSync(dir(id), { recursive: true, force: true }); } finally { release(); } }
 
+// what a lord may write (bug hunt SV4): an order of a long paragraph, a message of a page; more is a mistake, said so, not cut off in silence
+const MAX_ORDER = 2000, MAX_ORDERS = 60, MAX_WORDS = 4000, MAX_CHRONICLE = 1_000_000;
+function tooLong(what, text, max) {
+  if (String(text ?? '').length > max) throw httpError(413, `That ${what} is too long: at most ${max.toLocaleString('en-GB')} characters.`);
+}
 export function setOrders(id, orders) {
-  const state = loadState(id);
-  const prev = new Map(state.orders.map((o) => [o.id, o])); // keep the simulator-only notes and flags of existing orders
-  state.orders = (orders || []).map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o.text || '').slice(0, 2000) })).filter((o) => o.text.trim());
-  saveState(id, state);
-  return state.orders;
+  if (orders != null && !Array.isArray(orders)) throw httpError(400, 'The orders are a list.');
+  if ((orders || []).length > MAX_ORDERS) throw httpError(413, `Too many orders: at most ${MAX_ORDERS}.`);
+  for (const o of orders || []) tooLong('order', o?.text, MAX_ORDER);
+  const release = hold(id, 'orders');
+  try {
+    const state = loadState(id);
+    const prev = new Map(state.orders.map((o) => [o.id, o])); // keep the simulator-only notes and flags of existing orders
+    state.orders = (orders || []).map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o?.text || '') })).filter((o) => o.text.trim());
+    saveState(id, state);
+    return state.orders;
+  } finally { release(); }
 }
 
 // What the model is doing right now, per save (polled by the browser while it waits)
@@ -298,6 +320,30 @@ export function memoryOf(id, state) {
   return (c, { words = '', places = [] } = {}) => (c ? relevantMemory(state, { facts, notes, house: c.house, actors: [c.id], houses: [c.house], places: [placeOf(state, c), ...places].filter(Boolean), words }).text : '');
 }
 
+// One thing at a time on a save (bug hunt SV2). The engine loads a save, works on it (a turn awaits a model for minutes) and writes it back, so anything
+// else that wrote the save meanwhile was lost, and two End turns both ran. A thing that changes the save holds it; a second is refused at once ("the chronicle is
+// busy"), except the quiet ones (a receipt read, a raven marked read), which wait their turn.
+const writing = new Map(); // save id -> what is being written
+const idle = new Map(); // save id -> those waiting for it to be free
+const busyError = (id) => httpError(409, `The chronicle is busy: ${writing.get(id)} is being written. Wait for it to finish.`);
+/** What is being written to a save now, or null. */
+export const writingNow = (id) => writing.get(id) || null;
+function hold(id, what) {
+  if (writing.has(id)) throw busyError(id);
+  writing.set(id, what);
+  return () => { writing.delete(id); for (const wake of idle.get(id) || []) wake(); idle.delete(id); };
+}
+/** Run `fn` holding the save; a save already held is refused with a 409. */
+async function exclusive(id, what, fn) { const release = hold(id, what); try { return await fn(); } finally { release(); } }
+/** Wait until nothing is being written to the save (a quiet thing waits; it is never refused unless it waits a quarter of an hour). */
+async function untilFree(id, ms = 15 * 60e3) {
+  while (writing.has(id)) {
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(busyError(id)), ms); t.unref?.();
+      idle.set(id, [...(idle.get(id) || []), () => { clearTimeout(t); resolve(); }]);
+    });
+  }
+}
 const consolidating = new Map(); // save id -> promise (memory is compressed in the background)
 /** Wait for a save's background work (the chronicle's consolidation, a receipt being read) to finish writing it. */
 export async function settled(id) {
@@ -315,6 +361,7 @@ const previewing = new Map(); // save id -> promise
 export async function previewOrderPlans(id) {
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const job = (async () => {
+    await untilFree(id); // (a receipt is read after the turn, or the conversation, that is writing the save, not under it)
     const cfg = loadConfig(); const state = loadState(id);
     await readOrders(state, interpreter(id, state, cfg)); // the model, if asked, is asked here
     // the player may have edited or removed orders meanwhile: a reading is kept only for the words it was read from;
@@ -330,6 +377,7 @@ export async function previewOrderPlans(id) {
 /** The lord answers an order's question (a chip under it): the reading is patched, or the words added and read again. */
 export async function answerOrderQuestion(id, orderId, option) {
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
+  await untilFree(id);
   const cfg = loadConfig(); const state = loadState(id);
   const o = state.orders.find((x) => x.id === orderId); if (!o) throw httpError(404, 'no such order');
   if (!answerOrder(o, Number(option))) throw httpError(400, 'no such answer');
@@ -343,7 +391,19 @@ export async function answerOrderQuestion(id, orderId, option) {
  * Let the days pass (03 §6.2). opts: { span ('auto' = until something happens), orders, onSegment(segment) — each
  * week as soon as it is told (the SSE stream), stopWanted() → the day the lord asked to stop on, if he has }.
  */
-export async function advance(id, { span = 'auto', orders, onSegment = null, stopWanted = null, stopAt = null, replayMinds = null, replayHooks = null, replayWeaver = null } = {}) {
+const MAX_SPAN_DAYS = 360; // a year: "9999d" and "999999999d" ran for a minute and more (bug hunt SV4)
+/** A span the game knows: "auto", a named one ("1w"), or n days ("12d") up to a year. */
+export function checkSpan(span) {
+  if (span === undefined || span === null || span === 'auto') return;
+  const m = /^(\d{1,4})d$/.exec(String(span));
+  if (!SPANS[span] && !(m && Number(m[1]) >= 1 && Number(m[1]) <= MAX_SPAN_DAYS)) throw httpError(400, `That is not a span of days: use "auto", or from 1d to ${MAX_SPAN_DAYS}d.`);
+}
+export async function advance(id, opts = {}) {
+  if (writing.has(id)) throw busyError(id); // (a second End turn is refused at once, not run after the first)
+  checkSpan(opts.span);
+  return exclusive(id, 'a turn', () => advanceUnheld(id, opts));
+}
+async function advanceUnheld(id, { span = 'auto', orders, onSegment = null, stopWanted = null, stopAt = null, replayMinds = null, replayHooks = null, replayWeaver = null } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   if (previewing.has(id)) await previewing.get(id).catch(() => {});
   const cfg = loadConfig();
@@ -357,15 +417,16 @@ export async function advance(id, { span = 'auto', orders, onSegment = null, sto
  * with the same orders and the same minds' choices, as far as that day and no further — the days he saw come out the
  * same (the dice are the save's, and the day loop runs a day at a time) — and the rest is unmade.
  */
-export async function stopHere(id, day) {
+export async function stopHere(id, day) { return exclusive(id, 'a turn', () => stopHereUnheld(id, day)); }
+async function stopHereUnheld(id, day) {
   const state = loadState(id);
   if (state.meta.settings?.ironman) throw httpError(403, 'An ironman chronicle cannot be unwritten: stop the days while they pass.');
   const t = readTurn(id, state.meta.turn);
   const d = Math.round(Number(day) || 0);
   const days = spanOf(t.span).days;
   if (d < 1 || d >= days) throw httpError(400, `the turn ran ${days} day${days > 1 ? 's' : ''}: stop on one of days 1–${days - 1}`);
-  await undo(id, { turns: 1 });
-  return advance(id, { span: t.span, stopAt: d, replayMinds: t.minds || [], replayHooks: t.hooks || [], replayWeaver: t.weaver || [] });
+  await undoUnheld(id, { turns: 1 });
+  return advanceUnheld(id, { span: t.span, stopAt: d, replayMinds: t.minds || [], replayHooks: t.hooks || [], replayWeaver: t.weaver || [] });
 }
 async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replayMinds = null, replayHooks = null, replayWeaver = null, onSegment = null, stopWanted = null }) {
   if (orders) { const prev = new Map(state.orders.map((o) => [o.id, o])); state.orders = orders.map((o) => ({ ...(prev.get(o.id) || {}), id: o.id || nextId(state, 'o'), text: String(o.text) })).filter((o) => o.text.trim()); }
@@ -637,8 +698,7 @@ async function maybeConsolidate(id, state, cfg, force = false) {
 }
 
 export async function consolidateNow(id) {
-  const cfg = loadConfig();
-  return maybeConsolidate(id, loadState(id), cfg, true);
+  return exclusive(id, 'the long memory', async () => { const cfg = loadConfig(); return maybeConsolidate(id, loadState(id), cfg, true); });
 }
 
 /**
@@ -646,7 +706,8 @@ export async function consolidateNow(id) {
  * all; the fact log and the world log are cut back to their lengths then, and the turns after it are forgotten. An
  * ironman chronicle cannot be unwritten.
  */
-export async function undo(id, { turns = 1 } = {}) {
+export async function undo(id, opts = {}) { return exclusive(id, 'an undoing', () => undoUnheld(id, opts)); }
+async function undoUnheld(id, { turns = 1 } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {}); // the chronicle is not written under our feet
   const state = loadState(id);
   if (state.meta.settings?.ironman) throw httpError(403, 'An ironman chronicle cannot be unwritten.');
@@ -668,7 +729,7 @@ export async function undo(id, { turns = 1 } = {}) {
   const { state: before, chronicle, factsBytes, worldLogBytes } = JSON.parse(zlib.gunzipSync(fs.readFileSync(snap)).toString('utf8'));
   const cut = (f, bytes) => { const p = path.join(dir(id), f); if (fs.existsSync(p) && sizeOf(p) > bytes) fs.truncateSync(p, bytes); };
   cut('facts.jsonl', factsBytes); cut('world-log.md', worldLogBytes);
-  writeChronicle(id, chronicle);
+  putChronicle(id, chronicle);
   const gone = (d) => { const p = path.join(dir(id), d); if (fs.existsSync(p)) for (const f of fs.readdirSync(p)) if (Number(f.slice(0, 6)) >= target) fs.rmSync(path.join(p, f), { force: true }); };
   gone('turns'); gone('snapshots');
   saveState(id, before);
@@ -676,6 +737,10 @@ export async function undo(id, { turns = 1 } = {}) {
 }
 
 export async function talk(id, charId, message) {
+  tooLong('message', message, MAX_WORDS);
+  return exclusive(id, 'a conversation', () => talkUnheld(id, charId, message));
+}
+async function talkUnheld(id, charId, message) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);
@@ -782,42 +847,54 @@ export async function suggest(id) {
 
 // News the player has read on the map: its pin goes away (keys are "turn-index"; old ones are forgotten)
 export function acknowledge(id, keys) {
-  const state = loadState(id);
-  state.acks = Object.fromEntries(Object.entries(state.acks || {}).filter(([, t]) => state.meta.turn - t < 4));
-  for (const k of (Array.isArray(keys) ? keys : []).slice(0, 200)) state.acks[String(k).slice(0, 80)] = state.meta.turn;
-  saveState(id, state);
-  return { ok: true };
+  const release = hold(id, 'a page of news'); // (these three are asked in passing and may be refused: the page asks again, or does without)
+  try {
+    const state = loadState(id);
+    state.acks = Object.fromEntries(Object.entries(state.acks || {}).filter(([, t]) => state.meta.turn - t < 4));
+    for (const k of (Array.isArray(keys) ? keys : []).slice(0, 200)) state.acks[String(k).slice(0, 80)] = state.meta.turn;
+    saveState(id, state);
+    return { ok: true };
+  } finally { release(); }
 }
 
 // The welcome card has been read: it is not shown again, in this browser or another (WP U8)
 export function markWelcomed(id) {
-  const state = loadState(id);
-  state.meta.welcomed = true;
-  saveState(id, state);
-  return { ok: true };
+  const release = hold(id, 'the welcome');
+  try {
+    const state = loadState(id);
+    state.meta.welcomed = true;
+    saveState(id, state);
+    return { ok: true };
+  } finally { release(); }
 }
 
 export function markRavensRead(id) {
-  const state = loadState(id);
-  state.ravens.forEach((r) => { r.read = true; });
-  saveState(id, state);
-  return state.ravens;
+  const release = hold(id, 'the ravens');
+  try {
+    const state = loadState(id);
+    state.ravens.forEach((r) => { r.read = true; });
+    saveState(id, state);
+    return state.ravens;
+  } finally { release(); }
 }
 
 export function editState(id, patch) {
   // Manual GM edits from the UI (e.g. correcting a figure). Uses the same change ops.
-  const state = loadState(id);
-  const res = applyChanges(state, patch.changes || [], { source: 'Game master' });
-  saveState(id, state);
-  return { ...res, state };
+  const release = hold(id, 'an edit');
+  try {
+    const state = loadState(id);
+    const res = applyChanges(state, patch.changes || [], { source: 'Game master' });
+    saveState(id, state);
+    return { ...res, state };
+  } finally { release(); }
 }
 
 // Direct actions from the cards: each is a verb of the registry (engine/actions/registry.js) — its checks, its cost, what
 // it does and its receipt — settled here and now, and told to the story model as an order already carried out.
 // The body is `{ verb, params }`; the cards of earlier versions sent `{ kind, … }`, which maps to the same verbs.
 export function act(id, body) {
-  const state = loadState(id);
-  return withDice(state, () => actWith(id, state, body));
+  const release = hold(id, 'an order'); // (a card's verb is settled on the save as it stands, not on one a turn is about to overwrite)
+  try { const state = loadState(id); return withDice(state, () => actWith(id, state, body)); } finally { release(); }
 }
 function actWith(id, state, body) {
   // an order may carry a note for the simulator only (what the ledger already settled), never shown to the player
@@ -840,7 +917,11 @@ function actWith(id, state, body) {
   return { state, receipt: r.receipt, summary: told(r), ...(r.done?.effects?.length ? { effects: r.done.effects } : {}) };
 }
 
-export async function council(id, members, message, { advisor = false } = {}) {
+export async function council(id, members, message, opts = {}) {
+  tooLong('message', message, MAX_WORDS);
+  return exclusive(id, 'a council', () => councilUnheld(id, members, message, opts));
+}
+async function councilUnheld(id, members, message, { advisor = false } = {}) {
   if (consolidating.has(id)) await consolidating.get(id).catch(() => {});
   const cfg = loadConfig();
   const state = loadState(id);

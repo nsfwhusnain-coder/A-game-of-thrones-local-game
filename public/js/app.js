@@ -100,12 +100,13 @@ async function renderSaves() {
   const saves = await api('/saves');
   $('#save-list').innerHTML = saves.length ? saves.map((s) => {
     const h = HOUSES.find((x) => x.id === s.player);
+    if (s.damaged) return `<div class="save damaged" data-id="${s.id}" data-damaged="1" title="Its save file cannot be read. It can be burned."><div><div>A damaged chronicle</div><div class="muted" style="font-size:max(0.8rem,12px)">${esc(s.id)} · cannot be opened</div></div><button class="btn small del" data-del="${s.id}">✕</button></div>`;
     return `<div class="save" data-id="${s.id}">${h ? `<img src="${bannerURL(h.sigil, 40, 60)}">` : ''}<div><div>${esc(s.playerName)}</div><div class="muted" style="font-size:max(0.8rem,12px)">${esc(s.date)} · turn ${s.turn}</div></div><button class="btn small del" data-del="${s.id}">✕</button></div>`;
   }).join('') : '<div class="muted">No saved games yet.</div>';
   $('#save-list').onclick = async (e) => {
     const del = e.target.closest('[data-del]')?.dataset.del;
     if (del) { e.stopPropagation(); if (await confirmModal('Burn this chronicle?', 'The save and everything written in it will be gone for good. There is no undoing this.', { yes: 'Burn it', no: 'Keep it', danger: true })) { await api('/games/' + del, { method: 'DELETE' }); renderSaves(); } return; }
-    const s = e.target.closest('.save'); if (s) startGame(s.dataset.id);
+    const s = e.target.closest('.save'); if (s?.dataset.damaged) return toast('That chronicle is damaged: its save file cannot be read. You can burn it with the ✕.', true); if (s) startGame(s.dataset.id);
   };
 }
 async function refreshLLMStatus() {
