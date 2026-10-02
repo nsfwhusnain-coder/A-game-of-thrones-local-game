@@ -11,7 +11,7 @@ import { random } from '../engine/rng.js';
 import { temperament } from './temperament.js';
 import { canonLocked } from './plots.js';
 import { dayNumber } from '../engine/time.js';
-import { tourneyNow } from './tourney.js';
+import { tourneyNow, listsPending } from './tourney.js';
 
 // why a lord rides out (09 §3.1): each purpose weighted, and weighted again by the lord's nature and the season
 const PURPOSES = [
@@ -82,7 +82,7 @@ function sendOut(state, r) {
   const home = (h) => h.seat && state.holdings[h.seat];
   // a child lord (a boy of six at the Eyrie) does not ride out with his household knights to hunt in the country (ST11); the people a near beat of the story needs stay where they are (engine/world/beats.js; B-10)
   const locked = canonLocked(state);
-  const lords = Object.values(state.houses).filter((h) => h.id !== p && h.lord && home(h) && SIZE[h.rank] && state.characters[h.lord]?.alive && state.characters[h.lord].status === 'free' && (state.characters[h.lord].age ?? 30) >= 15 && state.characters[h.lord].loc === h.seat && home(h).status !== 'besieged' && !dutyBound(state, h) && !locked.has(h.lord) && canAttend(state, state.characters[h.lord], 'attending'));
+  const lords = Object.values(state.houses).filter((h) => h.id !== p && h.lord && home(h) && SIZE[h.rank] && state.characters[h.lord]?.alive && state.characters[h.lord].status === 'free' && (state.characters[h.lord].age ?? 30) >= 15 && state.characters[h.lord].loc === h.seat && home(h).status !== 'besieged' && !dutyBound(state, h) && !locked.has(h.lord) && !listsPending(state, h.seat) && canAttend(state, state.characters[h.lord], 'attending')); // (a lord whose own lists are to be run does not ride out to feast or hunt elsewhere: Renly was on the road to Storm's End's neighbours while its tourney waited, N-020)
   if (!lords.length) return null;
   // the player's own region is where the eye rests: its lords go out more often
   const mine = state.holdings[state.houses[p]?.seat]?.region;

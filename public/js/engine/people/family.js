@@ -143,7 +143,7 @@ const seatPos = (state, id) => state.holdings?.[state.houses[id]?.seat]?.pos || 
 
 /** How well two unwed would suit their houses: near each other, friends, of like rank; null when the match cannot be made. */
 export function suitability(state, a, b) {
-  if (isFemale(a) === isFemale(b) || a.house === b.house || closeKin(a, b) || Math.abs(a.age - b.age) > FAMILY.AGE_GAP) return null;
+  if (isFemale(a) === isFemale(b) || a.house === b.house || closeKin(a, b) || Math.abs(a.age - b.age) > FAMILY.AGE_GAP || (tied(state, a) && tied(state, b))) return null;
   const ha = state.houses[a.house], hb = state.houses[b.house];
   if (Math.abs(TIER[ha.rank] - TIER[hb.rank]) > 1 || atWar(state, ha.id, hb.id) || getRelation(state, ha.id, hb.id) < -10) return null;
   const pa = seatPos(state, ha.id), pb = seatPos(state, hb.id);
@@ -179,6 +179,7 @@ export function betrothable(state, c) {
 export function refusal(state, a, b) {
   const [ha, hb] = [state.houses[a.house], state.houses[b.house]]; if (!ha || !hb) return 'There is no house to treat with.';
   if (closeKin(a, b)) return `${a.name} and ${b.name} are too near in blood.`;
+  if (tied(state, a) && tied(state, b)) return `${a.name} and ${b.name} are each the heart of a house: neither can go to the other's hall.`;
   if (atWar(state, ha.id, hb.id)) return `${houseLabel(state, hb.id)} will not hear of it: the houses are at war.`;
   if (getRelation(state, ha.id, hb.id) < -20) return `${houseLabel(state, hb.id)} is too cold to ${houseLabel(state, ha.id)} to hear of a match.`;
   if (Math.abs(TIER[ha.rank] - TIER[hb.rank]) > 1) return `${houseLabel(state, TIER[hb.rank] > TIER[ha.rank] ? hb.id : ha.id)} is too far beneath the other for the match.`;
@@ -213,10 +214,12 @@ function matches(state, spared, today) {
 
 // ── the wedding: the bride rides to her husband's hall ───────────────────────────────────────────────────────────────────
 
-/** Who goes to whom: the bride to the groom's seat, unless she is the lord of her house (then he comes to hers). */
+/** Whether a person is the heart of a house, its lord or its heir: such a one does not go to another's hall to live (Urragon Harlaw, Harlaw's heir, went to be Merlyn's, and his company stayed Harlaw's). */
+const tied = (state, c) => state.houses[c.house]?.lord === c.id || (c.roles || []).includes('heir');
+/** Who goes to whom: the bride to the groom's seat, unless she is the lord or the heir of her house (then he comes to hers, if he is neither). */
 function whoGoes(state, a, b) {
   const [bride, groom] = isFemale(a) ? [a, b] : [b, a];
-  return state.houses[bride.house]?.lord === bride.id && state.houses[groom.house]?.lord !== groom.id ? [groom, bride] : [bride, groom];
+  return tied(state, bride) && !tied(state, groom) ? [groom, bride] : [bride, groom];
 }
 
 function wed(state, a, b) {

@@ -107,6 +107,18 @@ function span(days) {
 const theName = (n) => (/^The\s/.test(n) ? `the ${n.slice(4)}` : n);
 const plural = (short) => (/s$/.test(short) ? short : `${short}s`);
 const possessive = (t) => (/s$/.test(t) ? `${t}'` : `${t}'s`);
+/** The plural of a verb the templates write in the third person singular: "seizes" → "seize", "carries" → "carry", "crushes" → "crush". */
+const IRREGULAR = { is: 'are', was: 'were', has: 'have', does: 'do' };
+const NOT_VERBS = new Set(['against', 'across', 'towards', 'its', 'his', 'this', 'thus', 'always', 'perhaps', 'besides', 'unless', 'less', 'whereas', 'sometimes', 'afterwards']);
+export function plural3(w) {
+  if (IRREGULAR[w]) return IRREGULAR[w];
+  if (!/^[a-z]{3,}s$/.test(w) || NOT_VERBS.has(w) || /(?:ss|us|is)$/.test(w)) return w;
+  if (/ies$/.test(w)) return w.length === 4 ? w.slice(0, -1) : `${w.slice(0, -3)}y`; // dies, lies, ties; carries, tries
+  return /(?:ss|sh|ch|x|zz|o)es$/.test(w) ? w.slice(0, -2) : w.slice(0, -1);
+}
+/** The houses told as a people ("the Tullys", "the Free Folk") are many, and the verb after them is too. */
+const SPOKEN_AS_MANY = /^(?:paramount|major|minor|exile|tribe)$/;
+const isMany = (rank, label) => SPOKEN_AS_MANY.test(rank || 'minor') || (rank === 'company' && /s$/.test(label));
 /** The words that have to stand where a person cannot be named. */
 const ADJ = { pentos: 'Pentoshi', braavos: 'Braavosi', myr: 'Myrish', tyrosh: 'Tyroshi', lys: 'Lysene', lorath: 'Lorathi', norvos: 'Norvoshi', qohor: 'Qohori', volantis: 'Volantene', greyjoy: 'ironborn', dothraki: 'Dothraki', free_folk: 'wildling', nights_watch: 'Watch' };
 /** A region as a place and as an adjective ("the North", "northern"): a roll-up says "Six northern hosts" or "Five hosts of the Vale". */
@@ -132,6 +144,8 @@ export function ctxFor(state, story = null, opts = {}) {
   const showPlace = level === 0 || !anyone;
   const used = [];
   const mark = (id) => { if (id && !used.includes(id)) used.push(id); return id; };
+  const many = new Set(); // the names this telling gave a house as a people: what agrees with them
+  const said = (h, label, id = null) => { if (h && !/^House /.test(label) && isMany(h.rank, label) && (!id || label === houseLabel(s, id))) many.add(label); return label; }; // a host named for the whole people ("the Free Folk") is as many as it
   const person = (id) => s.characters?.[id] || null;
   const house = (id) => s.houses?.[id] || null;
   const party = (id) => s.parties?.[id] || null;
@@ -167,16 +181,16 @@ export function ctxFor(state, story = null, opts = {}) {
     his(id, cap = false) { const p = person(id); const w = p ? pronouns(p) : { his: 'their', His: 'Their' }; return cap ? w.His : w.his; },
     him(id) { const p = person(id); return p ? pronouns(p).him : 'them'; },
     /** A house: "House Stark", "the Free Folk", "the Crown". */
-    hs(id) { const h = house(id); if (!h) return ''; mark(id); return h.rank === 'crown' ? 'the royal house' : houseLabel(s, id); },
+    hs(id) { const h = house(id); if (!h) return ''; mark(id); return h.rank === 'crown' ? 'the royal house' : said(h, houseLabel(s, id)); },
     short(id) { const h = house(id); if (!h) return ''; mark(id); return houseShort(s, id); },
     /** "the Lannisters", "the Free Folk", "the Crown": a house as a body of people. */
-    folk(id) { const h = house(id); if (!h) return ''; mark(id); if (h.rank === 'crown') return 'the royal house'; return /^(?:paramount|major|minor|exile)$/.test(h.rank || 'minor') ? `the ${plural(houseShort(s, id))}` : houseLabel(s, id); },
+    folk(id) { const h = house(id); if (!h) return ''; mark(id); if (h.rank === 'crown') return 'the royal house'; return said(h, /^(?:paramount|major|minor|exile)$/.test(h.rank || 'minor') ? `the ${plural(houseShort(s, id))}` : houseLabel(s, id)); },
     /** "Stark's": a house that owns a thing ("Stark's call"); the Crown is "the King's". */
     hpos(id) { const h = house(id); if (!h) return ''; mark(id); return h.rank === 'crown' ? "the royal house's" : possessive(houseShort(s, id)); },
     /** The host of a house: "the Stark host". */
-    host(id) { const h = house(id); if (!h) return 'a host'; mark(id); return partyLabel(s, { owner: id }); },
+    host(id) { const h = house(id); if (!h) return 'a host'; mark(id); return said(h, partyLabel(s, { owner: id }), id); },
     /** A party as it is told: "the Stark host", "the Iron fleet"; a party the world lacks is the host of its owner. */
-    pty(id, owner) { const p = party(id); if (p) { mark(id); return partyLabel(s, p); } return owner && house(owner) ? c.host(owner) : ''; },
+    pty(id, owner) { const p = party(id); if (p) { mark(id); return said(house(p.owner), partyLabel(s, p), p.owner); } return owner && house(owner) ? c.host(owner) : ''; },
     /** A place after a preposition: "the Twins", "Winterfell"; '' when the world has no such place. */
     pl(id) { const n = s.holdings?.[id]?.name; return n && !/['’]s (?:host|camp)$/i.test(n) ? theName(n) : ''; }, // a camp named for its leader is no place to name
     /** " at the Twins": said at the fitting's first level only, and never when the place is the only name the story has. */
@@ -199,6 +213,15 @@ export function ctxFor(state, story = null, opts = {}) {
     /** A house's number of men, told for its viewer: exact for its own, its vassals and its allies, two figures for the rest. */
     n(v, houseId) { const x = Math.round(Number(v) || 0); if (friends.has(houseId) || x < 100) return fmt(x); const p = 10 ** (String(x).length - 2); return `about ${fmt(Math.round(x / p) * p)}`; },
     friend(houseId) { return friends.has(houseId); },
+    /** The text with the verb after each house told as a people made plural: "The Tullys seizes Stoney Sept" → "The Tullys seize Stoney Sept". */
+    agree(text) {
+      let out = String(text || '');
+      for (const name of many) {
+        const re = new RegExp(`(?<![\\w'’])(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}) ([A-Za-z]+)((?: (?:back|up|out|off|in|down|away))?)(?:( its\\b)|( and) ([a-z]+))?`, 'gi');
+        out = out.replace(re, (m, who, verb, particle, its, and, next) => (/^[a-z]/.test(verb) ? `${who} ${plural3(verb)}${particle}${its ? ' their' : ''}${and ? ` and ${plural3(next)}` : ''}` : m));
+      }
+      return out;
+    },
     say, count, body, span, plural, possessive, cap1, fmt, lower1: (t) => t.charAt(0).toLowerCase() + t.slice(1),
   };
   const pty = (id) => (id && party(id) ? c.pty(id) : '');
@@ -418,8 +441,8 @@ export const HEAD = {
     return by ? c.pick(f, [`${p} slain by ${by}${at}`, `${p} cut down by ${by}${at}`, `${p} killed by ${by}${at}`, `${p} struck down by ${by}${at}`]) : c.pick(f, [`${p} slain${at}`, `${p} dies in battle${at}`, `${p} falls in battle${at}`, `${p} killed${at}`]);
   },
   siege_begun: (f, s, c) => {
-    const a = victor(c, f) || c.subj(f); const T = holdingOf(c, f) || 'a castle'; const plur = !(f.actors || []).some((id) => c.known.person(id)) && a.startsWith('the ');
-    return plur ? c.pick(f, [`${cap1(a)} besiege ${T}`, `${cap1(a)} lay siege to ${T}`]) : c.pick(f, [`${a} besieges ${T}`, `${a} lays siege to ${T}`, `${T} besieged by ${a}`, `${a} closes on ${T}`]);
+    const a = victor(c, f) || c.subj(f); const T = holdingOf(c, f) || 'a castle';
+    return c.pick(f, [`${a} besieges ${T}`, `${a} lays siege to ${T}`, `${T} besieged by ${a}`, `${a} closes on ${T}`]);
   },
   siege_tick: (f, s, c) => { const a = victor(c, f) || c.subj(f); const T = holdingOf(c, f) || 'the castle'; return `${a} keeps up the siege of ${T}`; },
   sally: (f, s, c) => { const a = c.subj(f); const T = holdingOf(c, f) || 'the castle'; return c.pick(f, [`${a} strikes out from ${T}`, `${a} hits the besiegers from ${T}`.replace('hits', 'strikes')]); },
@@ -449,7 +472,7 @@ export const HEAD = {
   raid: (f, s, c) => { const a = c.subj(f); const T = c.pl(f.place); return c.pick(f, [`${a} raids ${T ? `the lands near ${T}` : 'the coast'}`, `${a} plunders ${T ? `the lands near ${T}` : 'the coast'}`]); },
   village_burned: (f, s, c) => {
     const by = slot(f, 'data.by'); const who1 = by && c.known.house(by) ? c.folk(by) : '';
-    return who1 ? c.pick(f, [`${cap1(who1)} burn a village${c.near(f.place)}`, `A village burns${c.near(f.place)}`]) : `A village burns${c.near(f.place)}`;
+    return who1 ? c.pick(f, [`${cap1(who1)} burns a village${c.near(f.place)}`, `A village burns${c.near(f.place)}`]) : `A village burns${c.near(f.place)}`;
   },
   blockade: (f, s, c) => { const a = c.subj(f); const T = holdingOf(c, f) || 'a port'; return c.pick(f, [`${a} blockades ${T}`, `${a} shuts ${T} off from the sea`]); },
   sea_battle: (f, s, c) => {
@@ -696,7 +719,10 @@ export const HEAD = {
   canon_beat: (f, s, c) => beatHead(f, s, c),
   happening: (f, s, c) => happeningHead(f, s, c),
   hook: (f, s, c) => hookHead(f, s, c),
-  behaviour: (f, s, c) => { const a = c.subj(f); return `${a} keeps ${c.his(f.actors?.[0])} own counsel`; },
+  behaviour: (f, s, c) => {
+    const a = c.subj(f); const band = f.data?.band; const forms = BEHAVIOUR_HEAD[band];
+    return forms ? c.pick(f, forms.map((t) => t.replace('{A}', a))) : `${a} keeps ${c.his(f.actors?.[0])} own counsel`;
+  },
   weather: (f, s, c) => { const P = c.pl(f.place); const h = (f.houses || []).find((x) => c.known.house(x)); return `The weather turns hard ${P ? `at ${P}` : `for ${h ? c.hs(h) : 'the realm'}`}`; },
   legacy: (f, s, c) => { const h = (f.houses || []).find((x) => c.known.house(x)); return `${h ? cap1(c.hs(h)) : c.subj(f)} keeps an old chronicle line`; },
 };
@@ -880,7 +906,31 @@ const fillTpl = (t, f, c) => {
   const out = t.replace(/\{P\}/g, P || hs || 'the realm').replace(/\{hs\}/g, hs || 'a great house').replace(/\{A\}/g, A);
   return cap1(out);
 };
+/** A wife's confinement, told by its slot (`data.family`): the news of a house's own hearth, which is not talk. */
+const FAMILY_HEAD = {
+  expecting: (f, c) => { const w = c.nm(f.actors?.[0]) || c.subj(f); const m = c.nm(f.actors?.[1]); return c.pick(f, m ? [`${w} is with child`, `${w} carries ${c.possessive(m)} child`] : [`${w} is with child`, `${w} is expecting a child`]); },
+  stillborn: (f, c) => { const w = c.nm(f.actors?.[0]) || c.subj(f); return c.pick(f, [`${w} loses her child`, `${w} is brought to bed of a dead child`]); },
+};
+const FAMILY_SUM = {
+  expecting: (f) => { const n = Math.max(1, Math.round(((f.data?.due ?? f.day) - f.day) / 30)); return sentences(n <= 1 ? 'The child is looked for within the moon' : `The child is looked for in about ${say(n)} moons`); },
+  stillborn: () => sentences('The child was born dead, and the household keeps its grief'),
+};
+/** How a man's strain shows, by its band (data.band): what the household sees, never a number. */
+const BEHAVIOUR_HEAD = {
+  weary: ['{A} looks worn', '{A} has not been sleeping'],
+  strained: ['{A} is short with the household', '{A} is on edge'],
+  fraying: ['{A} snaps at all who come near', '{A} is fraying'],
+  breaking: ['{A} is spoken of in low voices', '{A} is close to breaking'],
+};
+const BEHAVIOUR_SUM = {
+  weary: 'It is a long time since a night of proper rest',
+  strained: 'The servants step carefully about the table',
+  fraying: 'The household has learned not to bring news at all',
+  breaking: 'The shaking hands, the wine at breakfast and the long silences are marked by all',
+};
 function happeningHead(f, s, c) {
+  const own = String(f.data?.head || '').trim(); if (own) return own; // a day of the realm's calendar names itself
+  if (FAMILY_HEAD[f.data?.family]) return FAMILY_HEAD[f.data.family](f, c);
   const id = f.data?.tpl; const [heads] = TPL[id] || HAP_HEADS[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor;
   const t = c.pick(f, heads); return fillTpl(t, f, c);
 }
@@ -944,7 +994,35 @@ function pro(c, f) {
 /** A sum of gold in words that need no number behind them. */
 const gold = (n) => (n < 100 ? 'a few dozen' : n < 1000 ? 'hundreds of' : n < 10000 ? 'thousands of' : n < 100000 ? 'tens of thousands of' : 'hundreds of thousands of');
 /** How the losses of two sides compare, in words: "far more", "many more", "about as many", "fewer" (the second's, against the first's). */
-const more = (a, b) => { const r = b / Math.max(1, a); return r >= 3 ? 'far more' : r >= 1.5 ? 'many more' : r >= 0.67 ? 'about as many' : 'fewer'; };
+/** What each side lost, as a comparison: "The Tullys lose far more men than the Lannisters", "The Tullys and the Lannisters lose about as many men". */
+function lossLine(W, L, won, lost) {
+  const r = lost / Math.max(1, won); const loses = L === 'the vanquished' ? 'lose' : 'loses';
+  if (r >= 0.67 && r < 1.5) return `${cap1(L)} and ${W} lose about as many men`;
+  return `${cap1(L)} ${loses} ${r >= 3 ? 'far more' : r >= 1.5 ? 'many more' : 'fewer'} men than ${W}`;
+}
+/**
+ * A running fight, told as one (cluster.js `RUN_GAP`): the same two hosts in battle on the next day and the next. `g` is its battles, earliest first.
+ * Won every time by one side it is "X wears down Y"; won by both in turn it is "X and Y fight on".
+ */
+export const RUN = {
+  head(g, s, c) {
+    const last = g[g.length - 1]; const v = sides(c, last); const near = c.near(last.place); const steady = g.every((f) => f.data?.winner === last.data?.winner);
+    if (!steady || v.drawn || !v.win || !v.lose) { const a = v.win || c.subj(last); const b = v.lose; return b ? c.pick(last, [`${a} and ${b} fight on${near}`, `${a} and ${b} fight a running battle${near}`]) : `A running fight${near}`; }
+    return last.data?.wiped
+      ? c.pick(last, [`${v.win} destroys ${v.lose}${near}`, `${v.win} hunts down ${v.lose}${near}`, `${v.lose} cut down by ${v.win}${near}`])
+      : c.pick(last, [`${v.win} wears down ${v.lose}${near}`, `${v.win} presses ${v.lose} hard${near}`, `${v.win} keeps the field against ${v.lose}${near}`]);
+  },
+  sum(g, s, c) {
+    const last = g[g.length - 1]; const v = sides(c, last); const days = last.day - g[0].day + 1;
+    const first = `${cap1(say(g.length))} battles in ${days === 1 ? 'a day' : `${say(days)} days`}`;
+    const steady = g.every((f) => f.data?.winner === last.data?.winner);
+    const fell = (key) => g.reduce((n, f) => n + (f.data?.lost?.[key] || 0), 0);
+    const won = fell(last.data?.winner); const lost = fell(last.data?.loser);
+    const W = v.winHouse ? c.folk(v.winHouse) : 'the victors'; const L = v.loseHouse ? c.folk(v.loseHouse) : 'the vanquished';
+    const second = steady && !v.drawn && last.data?.winner && last.data?.loser && (won || lost) ? lossLine(W, L, won, lost) : '';
+    return sentences(first, second, steady && last.data?.wiped && v.lose ? `${cap1(v.lose)} is no more` : '');
+  },
+};
 /** Sentences in a row: each ends with a full stop; empty ones are left out. */
 const sentences = (...ts) => ts.filter(Boolean).map((t) => { const x = String(t).trim(); return /[.!?]$/.test(x) ? x : `${x}.`; }).join(' ');
 const FACTORS = {
@@ -1030,7 +1108,7 @@ export const SUM = {
     const lost = d.lost && typeof d.lost === 'object' ? d.lost : null;
     if (lost && !v.drawn && d.winner && d.loser && lost[d.winner] != null && lost[d.loser] != null) {
       const W = v.winHouse ? c.folk(v.winHouse) : 'the victors'; const L = v.loseHouse ? c.folk(v.loseHouse) : 'the vanquished';
-      second = `${cap1(L)} lose ${more(lost[d.winner], lost[d.loser])} men than ${W}`;
+      second = lossLine(W, L, lost[d.winner], lost[d.loser]);
     } else if (lost && v.drawn) second = 'Both sides leave many dead on the field';
     return sentences(first, second);
   },
@@ -1178,9 +1256,9 @@ export const SUM = {
     if (f.thread === 'kings_ride' && f.data?.stage === 'progress') return sentences('The royal progress is on the road, and the whole realm watches it pass');
     return beatTale(f) || sentences('The ravens carry the word across the realm');
   },
-  happening: (f, s, c) => { const id = f.data?.tpl; const [, sum] = TPL[id] || HAP_HEADS[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor; return sentences(sum); },
+  happening: (f, s, c) => { if (f.data?.sum) return sentences(f.data.sum); if (FAMILY_SUM[f.data?.family]) return FAMILY_SUM[f.data.family](f); const id = f.data?.tpl; const [, sum] = TPL[id] || HAP_HEADS[id] || HAP_TYPE[HAP_BY_ID.get(id)?.type] || HAP_TYPE.rumor; return sentences(sum); },
   hook: (f, s, c) => { const e = HOOK[f.data?.hook]; return e ? sentences(e[1]) : ''; },
-  behaviour: () => '',
+  behaviour: (f) => sentences(BEHAVIOUR_SUM[f.data?.band] || ''),
   weather: () => '',
   legacy: () => '',
 };

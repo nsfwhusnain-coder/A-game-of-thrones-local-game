@@ -3,6 +3,23 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-03 — What the third look found: the Tullys seize, the Northern Host has Robb, a wife with child is not a rumour
+
+Playing the merged game for a dozen moons and reading what it told.
+
+- **"The Tullys seize Stoney Sept."** A house named as a people (the Tullys, the Free Folk) now takes the plural verb in every headline, summary and detail; the Crown and a single host are still one (N-008).
+- **A wife with child, and a child lost, are told as news of the hearth** ("Catelyn Stark is with child. The child is looked for in about nine moons.") and not as "Rumour spreads at Winterfell. It is only talk." (N-009).
+- **The days of the realm's calendar are told by name:** the Stranger's eve, the Father's feast at Oldtown, the harvest fires, the old gods' night, the small council's moon, in their own words, and not as "Rumour spreads at King's Landing" (N-016).
+- **The Northern Host marches with Robb at its head,** where it marched on without him and he sat at Winterfell (N-013). A prisoner's house is told as ruled by its regent in the words of its facts (N-014).
+- **A lord's strain is told as he worsens**, once at each pitch, as what his household sees (short with the servants, snapping, spoken of in low voices), not as "keeps his own counsel" each time he crossed a line (N-011).
+- **A host passes its own house's barrier at no price** (N-010); **"Prince Joffrey" no longer whips stableboys once he is King**, nor "Lord Renly" hold court once he is crowned (N-012).
+- **The Meanwhile no longer says "rumour runs at King's Landing" four times a moon**: a clause an earlier week of the turn has said is left out of the later ones (N-022).
+- **A house's lord or heir is not married away to another's hall** (N-021): Harlaw's heir had become Merlyn's on his wedding day, and still led a Harlaw company. Two such, a ruling lady and an heir, are not matched; the player's own order for such a match is refused in words.
+- **The lord who called a tourney stays for it** instead of riding off to a feast or a hunt before the lists are run (N-020); and **a man who commands a host or a fleet no longer leaves it to ride with his house's muster** (Euron left his ship, Edmure his company; N-019).
+- **A pursuit is one battle, not seven.** The same two hosts meeting again the next day and the next, on the same ground, are one card ("The Lannister host destroys the Tully host near Wayfarer's Rest. Seven battles in seven days.") instead of a fresh victory every morning; and equal losses read "lose about as many men", not "about as many men than" (N-017, N-018).
+- **The realm ledger no longer says "at least 2,600"** of a house whose host has joined its liege's, a moon on: word of a host keeps its own age (N-015).
+- Tests: `tests/bugfix-found.test.js` (14, from 5), `tests/bugfix-world.test.js` (7), and the happenings content test knows `uncrowned:`. New probe: `scripts/bughunt/probe-simul.mjs` (one person doing two things at once). The findings are in `docs/bughunt/FOUND.md`.
+
 ## 2026-10-02 — What the second hunt found: the Hand in the black cells, a host that lost a man a day to a pass, and Viserys's own opening
 
 - **A man seized among his own riders is held where he stands** (N-003). Lord Eddard, arrested at King's Landing, stayed "imprisoned" in his own riders' party, which marched off with him; the Sept could not find him, and the King's justice, the crowning in the North, the Blackwater, the Red Wedding and the Westerlands all lapsed in any game he was not played in. He is now in the black cells of King's Landing, and the Sept is told the moon after. A man taken by an enemy host stays in that host's company.

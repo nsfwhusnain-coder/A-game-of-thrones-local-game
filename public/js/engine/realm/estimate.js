@@ -145,7 +145,9 @@ export function observe(state, viewer = state.meta.player) {
     let w = weeks.get(rep.owner); if (!w) weeks.set(rep.owner, w = new Map());
     w.set(rep.turn, (w.get(rep.turn) || 0) + (rep.men || 0));
   }
-  for (const [owner, w] of weeks) at(owner).said += Math.max(...w.values());
+  // (and the turn of the picture that stands: word of a host a few moons old is noted with its own age, not as this week's. It was noted afresh every week for four, and a host that had
+  // since joined its liege's gave "at least 2,600" of a house left with 1,400, as news a moon old, bug hunt N-015)
+  for (const [owner, w] of weeks) { const best = Math.max(...w.values()); at(owner).said += best; at(owner).saidTurn = [...w].find(([, men]) => men === best)[0]; }
   // what was taught: a fact carrying `figure = { house, field, value }`, noted once
   const taught = new Map();
   for (const n of Object.values(k.facts)) {
@@ -170,7 +172,8 @@ export function observe(state, viewer = state.meta.player) {
       if (men > 0) v.swords = sig(men, 2);
       if (o?.ships > 0) v.ships = Math.max(1, Math.round(o.ships * (1 + noise(state, viewer, id, 'ships', t, 0.1))));
       const face = faceOf(state, viewer, id, ctx, { turn: t, via, men: men || null, gold: lesson?.gold ?? taughtBefore('gold'), people: lesson?.people ?? taughtBefore('people') });
-      note(R, id, { day: today, turn: t, via, v: { holdings: face.holdings, people: face.people, income: face.income, power: face.power, ...v } });
+      const news = o?.seen || o?.saidTurn == null ? t : Math.min(t, o.saidTurn); // a sighting is this week's; word alone is as old as the word
+      note(R, id, { day: today, turn: t, ...(news < t ? { news } : {}), via, v: { holdings: face.holdings, people: face.people, income: face.income, power: face.power, ...v } });
     }
     if (lesson) note(R, id, { day: today, turn: t, via: 'learned', v: { ...lesson } });
   }
@@ -257,7 +260,7 @@ export function estimateOf(state, viewer, subject, ctx = realmContext(state, vie
   }
   const obs = state.knowledge?.[viewer]?.realm?.[subject]?.obs || [];
   let prior = null; const rumour = () => (prior ||= faceOf(state, viewer, subject, ctx, { turn: 0, via: 'rumour' }));
-  const ageOf = (o) => Math.max(0, turn - o.turn);
+  const ageOf = (o) => Math.max(0, turn - (o.news ?? o.turn));
   const gone = { mark: '—' };
   for (const k of FIELDS) {
     const o = newest(obs, k);

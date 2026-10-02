@@ -216,9 +216,11 @@ export function chokepointToll(state, army, from, to, days) {
     const leave = hasLeave(state, army, cp);
     // a host passes cheaply if it has leave, or if it crosses at the gate itself and no one bars it
     const gated = !!leave || (atTheGate(state, cp, at) && !cp.clans && !gateBars(state, army, cp));
-    const d = (gated ? cp.daysGated : cp.days) * bite;
-    const lossRate = (gated ? cp.lossGated : cp.loss) * bite;
-    const mor = (gated ? cp.moraleGated : cp.morale) * bite;
+    // and at no price at all through a gate its own house holds: a Lefford host lost twelve men at the Golden Tooth under Lefford's own walls (bug hunt N-010)
+    const free = leave === 'own';
+    const d = free ? 0 : (gated ? cp.daysGated : cp.days) * bite;
+    const lossRate = free ? 0 : (gated ? cp.lossGated : cp.loss) * bite;
+    const mor = free ? 0 : (gated ? cp.moraleGated : cp.morale) * bite;
     const lost = Math.round(army.men * lossRate * Math.min(1, Math.max(0.35, (d || 1) / Math.max(1, days))));
     out.days += d; out.losses += lost; out.morale += mor;
     out.met.push({ id: cp.id, name: cp.name, gated, leave, lost, days: Math.round(d * 10) / 10 });

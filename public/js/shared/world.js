@@ -637,6 +637,9 @@ function applyOne(state, ch, ctx) {
       };
       settle(state, state.parties[id]);
       const made = state.parties[id];
+      // a host the story makes is made with its leader at its head: the Northern Host marched on without Robb, who sat on at Winterfell (bug hunt N-013)
+      const lead = typeof made.commander === 'string' ? state.characters[made.commander] : null;
+      if (lead?.alive && !/imprisoned|captive|hostage/.test(lead.status || '') && !String(lead.loc || '').startsWith('party:')) joinParty(state, lead, made);
       note('host_formed', { actors: [made.commander], houses: [owner], place: made.at, pos: made.pos, data: { party: id, men, kind: made.kind } });
       return { op, text: `${made.name} (${state.houses[owner].name}) ${men ? fmt(men) + ' men' : ''} appears at ${placeName(state, ch.at || ch.location) || 'the field'}` };
     }

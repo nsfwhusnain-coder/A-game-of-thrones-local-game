@@ -15,7 +15,8 @@ const { RESTING } = await import('../public/js/engine/minds/options.js');
 const { freshNotes, ledgerNote } = await import('../server/game.js');
 const { dateOfDay, dayNumber } = await import('../public/js/engine/time.js');
 const { emit } = await import('../public/js/engine/facts/log.js');
-const { faceOf, realmContext } = await import('../public/js/engine/realm/estimate.js');
+const { faceOf, realmContext, observe, estimateOf } = await import('../public/js/engine/realm/estimate.js');
+const { knowledgeOf } = await import('../public/js/engine/knowledge.js');
 const { clusterFacts } = await import('../public/js/engine/facts/cluster.js');
 const { cardOf } = await import('../public/js/engine/facts/headline.js');
 const { scoreCard } = await import('../server/ai/validate/headline.js');
@@ -93,4 +94,17 @@ test('N-007: a census a spy taught stands only as far as the lands it counted: a
   assert.ok(told(truth * 40) <= truth * 1.15, 'it is not larger than the lands now hold (a census of 150,000 over lands of a few thousand)');
   for (const h of Object.values(s.holdings)) if (h.owner === subject) h.owner = 'lannister';
   assert.equal(told(150000), 0, 'a house with no hold has no people the viewer can see');
+});
+
+test('N-015: word of a host a few moons old is noted with its own age, not as this week\'s news: Blackwood is not "at least 2,600" afresh for a moon after its host joined its liege\'s', () => {
+  const s = world('tyrell', 23); const k = knowledgeOf(s, 'tyrell'); s.meta.turn = 9;
+  k.parties.host_of_house_gone = { owner: 'brax', men: 2600, turn: 7 }; // heard of two moons ago; the host has since joined another's
+  const swords = () => (knowledgeOf(s, 'tyrell').realm?.brax?.obs || []).filter((o) => o.v.swords != null);
+  const age = () => estimateOf(s, 'tyrell', 'brax').cells.swords.age;
+  observe(s, 'tyrell');
+  assert.equal(swords().length, 1, 'the word is kept');
+  assert.equal(age(), 2, 'and the ledger shows it two moons old');
+  k.parties.host_b = { owner: 'brax', men: 3000, turn: 9 }; // a fuller, fresh word
+  observe(s, 'tyrell');
+  assert.equal(age(), 0, 'fresh word is this week\'s');
 });

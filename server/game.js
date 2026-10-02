@@ -34,7 +34,7 @@ import { directWeek, thinWeek } from './director.js';
 import { weaveWeek } from './weaver.js';
 import { relevantMemory, chronicleNotes } from './ai/context/memory.js';
 import { narrateTurn, narratorOn } from './narrator.js';
-import { cardOf } from '../public/js/engine/facts/headline.js';
+import { cardOf, foldMeanwhile } from '../public/js/engine/facts/headline.js';
 import { noteFirsts } from '../public/js/engine/facts/rank.js';
 import { quoteOf } from '../public/js/engine/facts/quote.js';
 import { shapeCard, digestOf } from '../public/js/engine/facts/digest.js';
@@ -572,7 +572,7 @@ async function advanceWith(id, state, cfg, { span, orders, stopAt = null, replay
   const record = {
     carried, ...(mindsRecord.length ? { minds: mindsRecord } : {}), ...(hooksRecord.length ? { hooks: hooksRecord } : {}), ...(weaverRecord.length ? { weaver: weaverRecord } : {}), turn, dateFrom, date: dateStr(state.meta.date), span: `${days}d`,
     ...(stopped ? { until: stopped.text, stopped: stopped.major ? 'major' : 'minor' } : until ? { until } : {}), ...(stopAt ? { stoppedAt: days } : {}),
-    segments, orders: state.orders, summary: stripForeignScript(summary), digest, ...(narration ? { narration } : {}), ...(meanwhile.length ? { meanwhile: meanwhile.join(' ') } : {}),
+    segments, orders: state.orders, summary: stripForeignScript(summary), digest, ...(narration ? { narration } : {}), ...(meanwhile.length ? { meanwhile: foldMeanwhile(meanwhile) } : {}),
     events, applied, rejected, ledger: state.houses[p].ledger.at(-1), ms: { ...ms, total: Date.now() - t0 },
   };
   // the clock's timings are the machine's, not the world's: kept in the turn's file, never in the save (a replay is the

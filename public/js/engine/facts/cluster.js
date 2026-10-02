@@ -32,6 +32,7 @@ const CAUSED = new Set(['order', 'intent', 'beat']); // causes that bind (a rule
 const CUT_AT = 6; // a story of more than this many facts of two archetypes is two stories (C3)
 const HEAVY = 4; // news of this weight is never buried in another kind of story
 const HEAP = 8; // a story of more than this many facts at two places is two stories, unless it is a roll-up
+const RUN_GAP = 2; // days between two battles of the same hosts that are still one running fight
 const ROLL_AT = 3; // three of a kind that share a cause, a thread or a road's end are one card (C2)
 const ROLL_MAX = 3; // and only news of this weight or less; heavier news is told one by one
 /** Where each kind of host-fact is going, when three of them are one card: a host sets out or answers for a place, joins a host, reaches a place. */
@@ -118,6 +119,14 @@ export function clusterFacts(state, facts, { together = [] } = {}) {
     if (!k) return; const key = `${k}|${arrival[i]}`;
     if (byKey.has(key)) any.join(byKey.get(key), i); else byKey.set(key, i);
   };
+  // a running fight: the same two hosts meeting again the next day, and the next, on the same ground, is one battle that lasts (a pursuit was told as seven victories)
+  const lastFight = new Map();
+  news.forEach((f, i) => {
+    if (f.kind !== 'battle' || !f.data?.attacker || !f.data?.defender) return;
+    const pair = [f.data.attacker, f.data.defender].sort().join('|'); const prev = lastFight.get(pair);
+    const run = prev && f.day - prev.day <= RUN_GAP ? prev.run : `${pair}@${f.day}`;
+    lastFight.set(pair, { day: f.day, run }); link(`b:${run}`, i);
+  });
   news.forEach((f, i) => {
     if (f.thread) link(`t:${f.thread}`, i);
     if (f.data?.party) link(`p:${f.data.party}`, i);
