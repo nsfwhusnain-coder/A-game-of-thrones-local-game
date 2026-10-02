@@ -9,7 +9,7 @@
 //   obligations.stage:  'letter' | 'deliberating' | 'gathering' | 'departed' | 'joined' | 'delayed' | 'refused'
 //   obligations.call:   { host, muster, scope, sent, arrive, decide, depart, retry, men, gather, predicted, eta, late }
 import { applyChanges, placePos, placeName, getRelation } from '../../shared/world.js';
-import { ref, isRef, idOf, joinParty, settle, partyAt, forces } from '../parties.js';
+import { ref, isRef, idOf, joinParty, settle, partyAt, forces, placeOf } from '../parties.js';
 import { marchDays, atWar, MILES_PER_UNIT } from '../../shared/warfare.js';
 import { vassalTemper } from '../../shared/vassals.js';
 import { pronouns, isFemale } from '../../shared/people.js';
@@ -125,6 +125,14 @@ export const hostLeader = (state, v) => {
   return fighters.sort((a, b) => rank(b) - rank(a))[0] || null;
 };
 const leaderOf = hostLeader;
+/** The one who commands the host that gathers at the seat: the first of the house's leaders (its regent, its lord, then its best fighters) who is there; none if none is. */
+function leaderAt(state, v) {
+  const r = v.regent && state.characters[v.regent]; const l = state.characters[v.lord];
+  const fighters = Object.values(state.characters).filter((c) => c.house === v.id && mayLead(c) && (c.roles || []).some((x) => FIGHTERS[x]));
+  const rank = (c) => Math.max(...(c.roles || []).map((x) => FIGHTERS[x] || 0)) * 100 + (c.skills || []).slice(0, 3).reduce((a, b) => a + b, 0);
+  const order = [mayLead(r) ? r : null, mayLead(l) && !(v.regent && r?.alive && l.age < 16) ? l : null, ...fighters.sort((a, b) => rank(b) - rank(a))].filter(Boolean);
+  return order.find((c) => placeOf(state, c) === v.seat) || null;
+}
 /**
  * A lord answers: his levies begin to gather at his seat today (a host serving his liege, growing day by day), and set
  * out when they are gathered. `now` — he answers at once (the verb answer_call), without the days of thought.
@@ -144,9 +152,10 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
     return { applied: [], events: shown(mine, fact(state, 'call_answered', { title: `House ${v.name} answers — with little`, text, where: v.seat, importance: 2, type: 'war', houses: answerHouses(v) }, { actors: [lead?.id], data: { men: 0 }, cause })), men: 0, party: null, text };
   }
   const name = `Host of House ${v.name}`;
+  const leadHere = leaderAt(state, v); // (a lord who is away on a ride of his own does not step from the road into the host that gathers at his seat: Renly was feasting at Storm's End a fortnight into his ride to Highgarden, N-046)
   const first = Math.min(sent.men, Math.max(50, round50(sent.men / call.gather)));
   const r = applyChanges(state, [
-    { op: 'army_create', owner: v.id, name, at: v.seat, men: first, commander: lead?.id || null, composition: `Levies of House ${v.name}${sent.arms > 200 ? ', with knights and men-at-arms' : ''}`, status: 'mustering' },
+    { op: 'army_create', owner: v.id, name, at: v.seat, men: first, commander: leadHere?.id || null, composition: `Levies of House ${v.name}${sent.arms > 200 ? ', with knights and men-at-arms' : ''}`, status: 'mustering' },
     { op: 'figure', house: v.id, field: 'levies', delta: -sent.levies, source: 'Muster rolls' },
     { op: 'figure', house: v.id, field: 'menAtArms', delta: -sent.arms, source: 'Muster rolls' },
   ], { cause });
@@ -157,7 +166,7 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
     a.serving = v.liege; ob.host = a.id;
     if (sent.men > first) a.muster = { remaining: sent.men - first, daily: Math.max(50, Math.ceil((sent.men - first) / Math.max(1, call.gather - 1))), house: v.id, quiet: true };
     // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
-    if (lead) joinParty(state, lead, a);
+    if (leadHere) joinParty(state, leadHere, a);
     const leading = new Set(Object.values(state.parties).map((p) => p.commander).filter(Boolean)); // (a man who commands a host or a fleet of his own rides with that, not with the muster: Euron left his ship and Edmure his company)
     const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && c.id !== lead?.id && !leading.has(c.id) && (!isFemale(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !rideOf(state, c) && (c.loc === v.seat || isRef(c.loc)) && !(c.roles || []).includes('maester'));
     riding = kin.filter(() => random() < 0.55).slice(0, 2);
