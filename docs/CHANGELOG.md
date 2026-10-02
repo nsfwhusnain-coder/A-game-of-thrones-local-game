@@ -3,6 +3,12 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — Bug hunt fix SV1: the game answers only its own page
+
+- **A web page you happen to visit can no longer reconfigure the game.** Any site could make your browser post to `127.0.0.1:3298`; the server took the body as JSON whatever its type and had no check on who asked, so a page could have pointed the model server's address, and the key sent to it, somewhere else. The server now answers only its own page: a name it is known by (an address or `localhost`), a request that changes anything must come from that same address and port, and a body must say it is JSON. The game works as before from `127.0.0.1` and from `localhost`; nothing needs setting. (To reach it by another name on your own network, list the name in `WC_ALLOWED_HOSTS`.)
+- **Bad requests are answered, in plain words.** A request that is not JSON, or is too large, now gets a short refusal (400 / 413) instead of an error with the parser's own words, and no longer leaves the connection stuck; a preflight (`OPTIONS`) is answered instead of hanging. The pages carry the usual headers (no framing, no sniffing).
+- Tests: `tests/bugfix-server.test.js` (6).
+
 ## 2026-10-02 — Bug hunt fix OR1: "send them to the Wall" no longer builds walls
 
 - **"Raise 200 men at Winterfell and send them to the Wall"** raises the men and sends them to the Wall. The reader had taken "the Wall" for a fortification and "raise" for a works verb, dropped the levy and spent 12,000 dragons on walls at Winterfell. Now "raise" is a works verb only when what is raised is not men, and "the Wall" (or "to the wall", "guard the wall") is a place an order goes to, never the walls of a castle. "Strengthen the walls at Winterfell" and "Build a wall at Winterfell" are still works.
