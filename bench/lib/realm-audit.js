@@ -27,9 +27,12 @@ export const BAND_COVERAGE = 0.85;
 /**
  * A `≥` figure may overstate by this much of the truth. A report is up to a quarter off (knowledge.js), a host that has since bled in a battle is
  * smaller, and a report of a host that merged into another lingers until someone sees the empty field (up to six turns), so two reports can stand for
- * one body of men: the soak measured +52 % in a moon of Frey's muster. The bound catches a broken sum, not that staleness (which the age shows).
+ * one body of men: the soak measured +52 % in a moon of Frey's muster; and a host may be broken up the very turn it is reported (a Smallwood host of 430 went home, "at least 400" of a house
+ * with 200). The bound catches a broken sum (a figure past double the truth), not that staleness (which the age shows).
  */
-export const LEAST_OVER = 0.6;
+export const LEAST_OVER = 1;
+/** Men of a house now serving in another house's host (a vassal's host joined its liege's): `host.contingents` keeps them by the house they came from. */
+const lentOf = (state, house) => Object.values(state.parties || {}).reduce((n, a) => n + (a.owner !== house ? a.contingents?.[house] || 0 : 0), 0);
 /** A figure this many turns old or less is fresh. */
 export const FRESH = 1;
 const MARKS = { self: [''], sworn: ['~', '≈'], seen: ['~', '≈', '≥'], reported: ['~', '≈', '≥'], rumour: ['~', '≈'], learned: ['~'] };
@@ -73,7 +76,8 @@ export function auditView(state, viewer, { lenses = LENSES, scope = 'all', viewO
         if (cell.mark === '~' && BOUNDS[cell.via] && !(t === 0 && cell.via === 'rumour')) {
           if (Math.abs(cell.v - t) > room(t, BOUNDS[cell.via], field)) bad(who, field, cell.via, `${cell.via} ${field} ${cell.v} against the truth ${t} (${(rel * 100).toFixed(1)} %, the bound is ±${BOUNDS[cell.via] * 100} %)`);
         }
-        if (cell.mark === '≥' && cell.v > t * (1 + LEAST_OVER) + 50) bad(who, field, 'least', `"at least ${cell.v}" ${field} where the truth is ${t}`);
+        // (a host reported may since have joined its liege's: those men are the house's still, and stand in the liege's host as its contingent)
+        if (cell.mark === '≥' && cell.v > (t + (field === 'swords' ? lentOf(state, row.house) : 0)) * (1 + LEAST_OVER) + 50) bad(who, field, 'least', `"at least ${cell.v}" ${field} where the truth is ${t}`);
       }
     }
   }

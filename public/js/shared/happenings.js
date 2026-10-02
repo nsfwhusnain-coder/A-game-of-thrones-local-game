@@ -23,6 +23,9 @@ function atWar(s, house) {
 const lordOf = (s, h) => { const c = s.characters[s.houses[h.owner]?.lord]; return c?.alive ? c : null; };
 export const inPlayerRealm = (s, h) => { const p = s.meta.player; const o = s.houses[h.owner]; return !!o && (o.id === p || realmOf(s, o.id) === realmOf(s, p) && (o.liege === p || o.id === p)); };
 
+/** Is this person a king or a queen: crowned by title, or the lord of the house that holds the crown? A happening that calls him "Prince" or "Lord" must not tell of him then. */
+const crowned = (s, id) => { const c = s.characters[id]; return !!c && (/^(?:King|Queen)\b/i.test(c.title || '') || Object.values(s.houses).some((h) => h.rank === 'crown' && h.lord === id)); };
+
 // Does the world fit this happening at this place?
 export function fits(s, tpl, h, lord) {
   const season = s.world?.season || 'summer';
@@ -48,6 +51,7 @@ export function fits(s, tpl, h, lord) {
     if (w === 'mine' && !inPlayerRealm(s, h)) return false;
     if (w === 'notmine' && inPlayerRealm(s, h)) return false;
     if (w.startsWith('alive:') && !w.slice(6).split('+').every((id) => s.characters[id]?.alive)) return false;
+    if (w.startsWith('uncrowned:') && w.slice(10).split('+').some((id) => crowned(s, id))) return false;
     if (w.startsWith('flag:') && !s.plots?.flags?.[w.slice(5)]) return false;
     if (w.startsWith('noflag:') && s.plots?.flags?.[w.slice(7)]) return false;
   }

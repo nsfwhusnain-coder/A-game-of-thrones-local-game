@@ -10,7 +10,7 @@
 // state.meta.player (whose friends' numbers are told exactly and everyone else's to two figures, in `details` only).
 // A story from cluster.js and a bare list of facts (an old save, N6) get the same card: nothing here needs the clusterer's
 // own fields — the lead, the archetype and the roll-up are worked out again from the facts.
-import { HEAD, SUM, ALSO, DETAIL, ARCHETYPE, LEDE, ctxFor, say } from './heads.js';
+import { HEAD, SUM, ALSO, DETAIL, ARCHETYPE, LEDE, RUN, ctxFor, say } from './heads.js';
 import { dateOfDay, longDate } from '../time.js';
 import { list } from './label.js';
 
@@ -35,6 +35,12 @@ function leadOf(facts) {
 // one: "Five northern hosts march for Winterfell", the houses and their men in the fold.
 const ROLLABLE = new Set(['set_out', 'call_answered', 'arrived', 'host_joined']);
 function rollOf(facts, story) {
+  // a running fight (cluster.js): two or more battles of the same two hosts are one card
+  const fights = facts.filter((f) => f.kind === 'battle' && f.data?.attacker && f.data?.defender && !f.data?.against);
+  if (fights.length >= 2 && new Set(fights.map((f) => [f.data.attacker, f.data.defender].sort().join('|'))).size === 1) {
+    const group = fights.sort((a, b) => a.day - b.day || (a.id < b.id ? -1 : 1));
+    return { kind: 'battle', group, rest: facts.filter((f) => !group.includes(f)) };
+  }
   const n = new Map(); for (const f of facts) if (ROLLABLE.has(f.kind)) n.set(f.kind, (n.get(f.kind) || 0) + 1);
   const [kind, count] = [...n.entries()].sort((a, b) => b[1] - a[1])[0] || [];
   if (!kind || count < 3 || (story?.rolled !== true && count * 2 < facts.length)) return null;
@@ -54,6 +60,7 @@ function regionNoun(c, hs, noun) {
   return adj ? `${adj} ${noun}` : `${noun} of ${place}`;
 }
 const rollHead = {
+  battle: (g, s, c) => RUN.head(g, s, c),
   set_out: (g, s, c) => {
     const host = g.filter((f) => f.data?.party && c.known.party(f.data.party) ? !['rider', 'envoy', 'retinue'].includes(c.known.party(f.data.party).kind) : !f.data?.why).length * 2 >= g.length;
     const hs = houseIds(c, g); const N = cap1(c.count(hs.length > 1 ? hs.length : g.length)); const to = c.dest(g.every((f) => f.data?.to === g[0].data?.to) ? g[0].data?.to : null);
@@ -90,6 +97,7 @@ const days = (f) => (f.data?.eta && f.data.eta > f.day ? f.data.eta - f.day : f.
 // how a house is named among others in a roll-up: a family by its plural ("Lockes"), anything else by its name ("Night's Watch")
 const kin = (c, s, h) => (/^(?:paramount|major|minor|exile)$/.test(s.houses?.[h]?.rank || 'minor') ? c.plural(c.short(h)) : c.short(h));
 const rollSum = {
+  battle: (g, s, c) => RUN.sum(g, s, c),
   set_out: (g, s, c) => {
     const hs = houseIds(c, g); const names = hs.map((h) => kin(c, s, h)).filter(Boolean);
     const first = names.slice(0, 3);
@@ -116,7 +124,7 @@ function purposeWords(g) {
   const found = []; for (const [re, w] of PURPOSE) if (g.some((f) => re.test(String(f.data?.why || '')))) found.push(w);
   return found.length ? list(found.slice(0, 3)) : '';
 }
-const rollDetail = (g, s, c) => g.flatMap((f) => DETAIL[f.kind]?.(f, s, c) || []);
+const rollDetail = (g, s, c) => (g[0]?.kind === 'battle' ? [g[0], g.at(-1)] : g).flatMap((f) => DETAIL[f.kind]?.(f, s, c) || []); // (a running fight: its first day's losses and its last)
 
 // ── The card ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 /** The shortest telling that always passes: who, and a plain verb, by the kind of thing it is. */
@@ -156,17 +164,17 @@ export function cardOf(state, story, opts = {}) {
   const roll = rollOf(facts, story);
   const lead = roll ? roll.group[0] : leadOf(facts);
   const others = facts.filter((f) => f !== lead).sort(byWeight);
-  const kind = lead.kind; const archetype = ARCHETYPE[kind] || 'other';
+  const kind = lead.kind; const archetype = kind === 'happening' && lead.data?.family ? 'court' : ARCHETYPE[kind] || 'other';
   const build = roll ? (c) => rollHead[roll.kind](roll.group, state, c) : (c) => (HEAD[kind] || (() => ''))(lead, state, c);
   // the fitting (18 §3.1): the whole telling, then no place, then short names, then the archetype's short form
   let c; let headline = '';
   for (let level = 0; level <= 3; level++) {
     c = ctxFor(state, { ...story, facts }, { level: Math.min(level, 2), pin: opts.pin });
-    headline = tidy(level < 3 ? build(c) : (SHORT[archetype] || SHORT.other)(c.subj(lead)));
+    headline = tidy(c.agree(level < 3 ? build(c) : (SHORT[archetype] || SHORT.other)(c.subj(lead))));
     if (wordCount(headline) >= 3 && wordCount(headline) <= 12 && headline.length <= 80) break;
   }
   const full = ctxFor(state, { ...story, facts }, { pin: opts.pin });
-  const summary = summaryOf(state, full, lead, others, roll);
+  const summary = full.agree(summaryOf(state, full, lead, others, roll));
   const details = [...new Set([
     ...(roll ? rollDetail(roll.group, state, full) : DETAIL[kind]?.(lead, state, full) || []),
     ...(roll ? [] : others.filter((f) => f.kind !== kind).flatMap((f) => DETAIL[f.kind]?.(f, state, full) || [])).slice(0, 4),
@@ -198,6 +206,19 @@ const TALK_AT = {
 /** The kind of place, for the small news: the Wall's, a free city's, the North's, a town's, a castle's. */
 const placeClass = (c, id) => { const h = c.s.holdings?.[id]; if (!h) return 'town'; if (/^(wall|beyond)$/.test(h.region)) return 'wall'; if (h.region === 'essos') return 'essos'; if (/city|town|palace/.test(h.type || '')) return h.region === 'north' ? 'north' : 'town'; return h.region === 'north' ? 'north' : 'hold'; };
 const KIND_TALK = { feast: (p) => `lords feast at ${p}`, tourney_result: (p) => `knights ride the lists at ${p}`, works_begun: (p) => `masons are busy at ${p}`, works_done: (p) => `masons finish their work at ${p}`, hook: (p) => `small quarrels stir at ${p}` };
+/**
+ * The small news of a turn's weeks as one paragraph: a sentence for each week, without a clause an earlier week of the turn has already said
+ * ("rumour runs at King's Landing" was in every one of the four, "the households of Winterfell have small news" twice).
+ */
+export function foldMeanwhile(parts) {
+  const told = new Set(); const out = [];
+  for (const p of parts || []) {
+    const clauses = String(p || '').trim().replace(/[.\s]+$/, '').split(/;\s+/).map((c) => c.trim()).filter(Boolean);
+    const fresh = clauses.filter((c) => { const k = c.toLowerCase(); if (told.has(k)) return false; told.add(k); return true; });
+    if (fresh.length) out.push(`${fresh.join('; ').replace(/^./, (x) => x.toUpperCase())}.`);
+  }
+  return out.join(' ');
+}
 /** The small news of a week as one sentence, at most three clauses: "Lords ride to feasts and hunts across the Reach; a Pentoshi ship is lost off Widow's Watch." */
 export function meanwhileOf(state, facts) {
   const fs = (facts || []).filter((f) => f && f.kind); if (!fs.length) return '';

@@ -19,6 +19,7 @@ server on a spare port with a scratch saves folder). Nothing here touches your `
 | `run-soaks.mjs` | Runs `sweep-soak` over about 60 houses, three at a time (slow; trim the lists). |
 | `odd-soaks.sh` | The odd houses (a city, a company, a tribe, the Wall), 14 turns each. |
 | `analyze-game.mjs <house> <seed> <turns> [span]` | One game, many consistency checks on the facts: tourneys, champions, the dead and the held acting, children leading, pronouns, speeds. |
+| `probe-simul.mjs <house> <seed> <turns> [span]` | One person doing two things that cannot both be true: a lord hosting while on the road, a tourney's host away on a progress, a host whose commander is not with it, a man in two parties, the held or the dead in command. |
 | `play-all-houses.mjs` | Two turns as every one of the 290 houses (about 12 minutes). Prints only the houses with problems. |
 | `sweep-world.mjs` | The starting world of every house and character: missing links, ages, duplicates. |
 | `seed-loop.sh [house] [first] [last]` | The CI soak (`scripts/soak.js`) on many seeds; prints the ones that fail. |

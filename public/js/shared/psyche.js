@@ -161,12 +161,16 @@ export function psycheTick(state, days) {
     // Never a number in front of the player: a man who is breaking is seen breaking.
     const band = stressBand(c);
     const wasBand = bandOf(before);
-    if (band !== wasBand && (c.house === player || c.id === state.houses?.[player]?.lord || isKnownTo(state, c, player))) {
+    // told when a man gets worse, and not again at the same pitch for a while: a lord who hovers about a line is not a new story each week
+    if (bandNews(c, band, wasBand, turnNow) && (c.house === player || c.id === state.houses?.[player]?.lord || isKnownTo(state, c, player))) {
       const line = BAND_TEXT[band]?.(c);
-      if (line) events.push(fact(state, 'behaviour', {
-        title: `${c.name} is not ${pronouns(c).himself}`,
-        text: line, where: placeOf(state, c), importance: c.house === player ? 3 : 2, type: 'court', houses: [c.house], mind: true,
-      }, { actors: [c.id], vis: { scope: 'local' } }));
+      if (line) {
+        c.toldBand = { band, turn: turnNow };
+        events.push(fact(state, 'behaviour', {
+          title: `${c.name} is not ${pronouns(c).himself}`,
+          text: line, where: placeOf(state, c), importance: c.house === player ? 3 : 2, type: 'court', houses: [c.house], mind: true,
+        }, { actors: [c.id], data: { band }, vis: { scope: 'local' } }));
+      }
     }
     // a mind under siege makes worse decisions, trusts less, and drives its own people away
     if (c.paranoia > 55) {
@@ -191,6 +195,13 @@ export function psycheTick(state, days) {
   return { events, applied };
 }
 
+const BAND_RANK = { steady: 0, weary: 1, strained: 2, fraying: 3, breaking: 4 };
+const TOLD_AGAIN_TURNS = 4; // turns before a man's strain at the same pitch is told again
+/** Is a change of band news: a man getting worse, and not at a pitch already told within the last few turns. */
+export function bandNews(c, band, wasBand, turn) {
+  const told = c.toldBand;
+  return BAND_RANK[band] > BAND_RANK[wasBand] && (!told || BAND_RANK[band] > BAND_RANK[told.band] || turn - told.turn >= TOLD_AGAIN_TURNS);
+}
 const bandOf = (v) => (v >= 85 ? 'breaking' : v >= 65 ? 'fraying' : v >= 40 ? 'strained' : v >= 20 ? 'weary' : 'steady');
 export const stressBand = (c) => bandOf(c.stress ?? 0);
 

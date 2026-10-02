@@ -5,6 +5,8 @@ import { applyChanges, resolvePlaceId, placeName, placePos, rideOf } from '../..
 import { partyOf } from '../parties.js';
 import { atSeaOn } from '../movement.js';
 import { destination } from './military.js';
+import { listsPending } from '../../shared/tourney.js';
+import { speakerFor } from '../../shared/regency.js';
 
 const held = (c) => /imprisoned|captive/.test(c?.status || '');
 const sentence = (t) => t.replace(/^./, (x) => x.toUpperCase()).replace(/([^.!?…])$/, '$1.');
@@ -27,6 +29,9 @@ export const MOVEMENT = [
       if (held(c)) return { code: 'captive', text: `${c.name} is a prisoner, and goes nowhere at your word.` };
       const to = resolvePlaceId(i.params.to) || destination(state, i.params.to);
       if (!to || !placePos(to, state.holdings)) return { code: 'no_place', text: `No one knows the way to ${i.params.to || 'nowhere'}.` };
+      // the one who holds a tourney is there when its lists are run (a lord of another house is not sent off to hunt while his own lists wait; the player's own lord goes where the player says)
+      const seat = state.houses[c.house]?.seat;
+      if (c.house !== state.meta.player && seat && listsPending(state, seat) && speakerFor(state, c.house)?.id === c.id && to !== resolvePlaceId(seat)) return { code: 'hosting', text: `${c.name} cannot leave while the lists at ${placeName(state, seat)} are yet to be run.` };
       const ride = rideOf(state, c);
       if (ride?.march?.to === to) return { code: 'already', text: `${c.name} is already on the road to ${placeName(state, to)}.` };
       if (!ride && resolvePlaceId(c.loc) === to && !partyOf(state, c)) return { code: 'there', text: `${c.name} is already at ${placeName(state, to)}.` };

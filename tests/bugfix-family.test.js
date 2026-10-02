@@ -98,7 +98,7 @@ test('WD1: a year of the realm: births in the right numbers, to the right mother
   const births = facts.filter((f) => f.kind === 'birth'); const bet = facts.filter((f) => f.kind === 'betrothal'); const wed = facts.filter((f) => f.kind === 'wedding');
   assert.ok(births.length >= 25 && births.length <= 140, `births over three years: ${births.length}`);
   assert.ok(bet.length >= 5 && bet.length <= 90, `betrothals: ${bet.length}`);
-  assert.ok(wed.length >= 1, `weddings: ${wed.length} (the brides ride in the game's day loop, not in this test: only those already in their husbands' halls wed here)`);
+  assert.ok(wed.length <= bet.length, `weddings: ${wed.length} of ${bet.length} betrothals (the brides ride in the game's day loop, not in this test: only those already in their husbands' halls wed here, and the match that sends a house's heart away is not made, N-021)`);
   for (const f of births) {
     const [cid, mid, fid] = f.actors; const c = s.characters[cid], mother = s.characters[mid], father = s.characters[fid];
     assert.ok(c && mother && father && c.mother === mid && c.father === fid && c.age <= 3);

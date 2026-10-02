@@ -10,6 +10,7 @@ import { emit } from '../facts/log.js';
 import { scheduleLists, listsPending } from '../../shared/tourney.js';
 import { betrothable, refusal, bind } from '../people/family.js';
 import { isFemale } from '../../shared/people.js';
+import { speakerFor } from '../../shared/regency.js';
 import { dayNumber } from '../time.js';
 import { houseLabel } from '../facts/label.js';
 
@@ -63,7 +64,7 @@ function feast(state, house, cause) {
     incident = ` At the high table, ${state.characters[a.lord].name} and ${state.characters[b.lord].name} came to blows over ${over}.`;
   }
   applyChanges(state, ch, { source: 'Your feast', cause });
-  emit(state, 'feast', { actors: [me.lord, ...vas.map((v) => v.lord)], houses: [house, ...vas.map((v) => v.id)], place: me.seat || null, data: { cost, brawl: !!incident, ...(brawlers ? { brawlers, over } : {}) }, cause, text: `${lordOf(state, house)?.name || `House ${me.name}`} ${vas.length ? `feasts ${vas.length} sworn lord${vas.length === 1 ? '' : 's'} at` : 'holds a feast for the household at'} ${state.holdings[me.seat]?.name || 'the seat'}.${incident}` });
+  emit(state, 'feast', { actors: [me.lord, ...vas.map((v) => v.lord)], houses: [house, ...vas.map((v) => v.id)], place: me.seat || null, data: { cost, brawl: !!incident, ...(brawlers ? { brawlers, over } : {}) }, cause, text: `${speakerFor(state, house)?.name || `House ${me.name}`} ${vas.length ? `feasts ${vas.length} sworn lord${vas.length === 1 ? '' : 's'} at` : 'holds a feast for the household at'} ${state.holdings[me.seat]?.name || 'the seat'}.${incident}` });
   return { text: `Hold a great feast at ${state.holdings[me.seat]?.name || 'my seat'} for my bannermen.`, note: `[Already done: the feast cost ${cost} dragons; each sworn lord's loyalty +4.${incident} Narrate the feast — who came, who did not, what was said in drink.]`, summary: `The feast is held (${cost.toLocaleString('en-US')} dragons). Your lords are glad of it.${incident}` };
 }
 
@@ -111,7 +112,7 @@ function judge(state, house, { character, verdict }, cause) {
     for (const v of vassalsOf(state, house)) { const l = state.characters[state.houses[v].lord]; if (!l?.alive) continue; const T = temperament(l); const d = T.guile < 0.3 && T.warmth > 0.5 ? -6 : T.warmth < 0.3 ? 3 : -2; ch.push({ op: 'character', id: l.id, loyalty: clamp((l.loyalty ?? 60) + d, -100, 100) }); }
     summary = `${c.name} is executed. House ${h?.name} will not forget it; your own lords take it each after their nature.`;
   }
-  emit(state, 'judgement', { actors: [me.lord, c.id], houses: [house, c.house], place: me.seat || null, data: { verdict }, cause, text: `${lordOf(state, house)?.name || `House ${me.name}`} passes judgement on ${c.name}: ${{ release: 'freedom', ransom: 'ransom', wall: 'the Wall', execute: 'death' }[verdict]}.` });
+  emit(state, 'judgement', { actors: [me.lord, c.id], houses: [house, c.house], place: me.seat || null, data: { verdict }, cause, text: `${speakerFor(state, house)?.name || `House ${me.name}`} passes judgement on ${c.name}: ${{ release: 'freedom', ransom: 'ransom', wall: 'the Wall', execute: 'death' }[verdict]}.` });
   applyChanges(state, ch, { source: 'Your judgement', protectPlayer: true, cause });
   return { text: `JUDGEMENT: I ${VERDICT[verdict]} ${c.name}.`, note: `[Already done: ${summary} Narrate how it is done and how the realm hears of it.]`, summary };
 }
@@ -314,7 +315,7 @@ export const COURT = [
       const d = state.decisions.find((x) => x.id === i.params.decision); const me = state.houses[i.house];
       const opt = String(i.params.custom || '').trim() ? null : d.options[Number(i.params.option)];
       d.status = 'decided'; d.choice = opt ? opt.label : String(i.params.custom).slice(0, 500); d.note = i.params.note ? String(i.params.note).slice(0, 500) : ''; d.decidedTurn = state.meta.turn;
-      emit(state, 'judgement', { actors: [me.lord, d.from], houses: [i.house], place: d.where || me.seat || null, data: { matter: d.id, choice: d.choice }, cause: i.source, text: `${lordOf(state, i.house)?.name || `House ${me.name}`} decides: ${d.title} — ${d.choice}.` });
+      emit(state, 'judgement', { actors: [me.lord, d.from], houses: [i.house], place: d.where || me.seat || null, data: { matter: d.id, choice: d.choice }, cause: i.source, text: `${speakerFor(state, i.house)?.name || `House ${me.name}`} decides: ${d.title} — ${d.choice}.` });
       let settled = [];
       if (opt?.fx) { settled = applyPetitionFx(state, opt.fx, dateStr(state.meta.date)); d.effects = settled; }
       return { title: d.title, choice: d.choice, note: d.note, effects: settled };

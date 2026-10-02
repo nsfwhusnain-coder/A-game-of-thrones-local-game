@@ -68,6 +68,91 @@ In a 24-moon game as House Tyrell (seed 23) the realm view read House Brax at "s
 **Repro:** `WC_PROVIDER=mock node scripts/realm-dump.js --soak --json --house tyrell --seed 23 --turns 24` on the world branch before the fix.
 **FIXED** (`tests/bugfix-world.test.js`): a taught census stands as far as the lands now held (a tenth over); a house with no hold has no people the viewer can see.
 
+### N-008 · S3 · "The Tullys seizes Stoney Sept"
+
+A house told as a people ("the Tullys", "the Free Folk") led a verb written for one: the chronicle strip read "The Tullys seizes Stoney Sept". Siege heads had a one-off plural rule that also made "The royal house besiege" of the Crown.
+**Where:** `engine/facts/heads.js` (about a hundred templates with a house as their subject), `facts/headline.js`.
+**Repro:** a mock game as House Stark, advance a dozen moons, read the Chronicle strip when a Riverlands holding falls.
+**FIXED** (`tests/bugfix-found.test.js`): the context records the names it gave to houses as a people, and the finished headline, summary and details are conjugated after them (`agree`); the siege special case is gone.
+
+### N-009 · S2 · A wife with child in the player's own house is "Rumour spreads at Winterfell. It is only talk."
+The pregnancy and stillbirth cards of the family module (WD1) were `happening` facts with no template, which the writer told as the generic rumour of their place.
+**Where:** `engine/facts/heads.js` (`happeningHead`, `SUM.happening`), `engine/people/family.js`.
+**Repro:** play a house whose lord's wife conceives (a few moons); read the Chronicle.
+**FIXED** (`tests/bugfix-found.test.js`): `data.family` gives them their own headline and summary ("Catelyn Stark is with child. The child is looked for in about nine moons."), told as news of the court.
+
+### N-010 · S3 · A host loses men at the pass its own house holds
+A Lefford host crossing the Golden Tooth under Lefford's own walls paid the same men and days as a stranger's.
+**Where:** `shared/chokepoints.js` `chokepointToll`.
+**Repro:** `chokepointToll` for a host of Lefford across the line of the Golden Tooth, before the fix.
+**FIXED** (`tests/bugfix-found.test.js`): a host of the house that holds the gate passes untaxed.
+
+### N-011 · S3 · Every lord's strain "keeps his own counsel", and is told again as the band flips
+The `behaviour` card was headlined "keeps his own counsel" for all four bands, and told each time a lord's stress crossed a line either way.
+**Where:** `shared/psyche.js` (`bandNews`), `engine/facts/heads.js`.
+**Repro:** a long war as any house; a lord who hovers about a stress line is told every week.
+**FIXED** (`tests/bugfix-found.test.js`): told only as a man gets worse, once at each pitch for four turns; a headline and a summary for each band (what the household sees, never a number).
+
+### N-012 · S3 · "Prince Joffrey" is whipping stableboys after he is King
+Happenings with the title of a claimant in their text were still drawn after he was crowned (Joffrey; Renly and Stannis as "Lord").
+**Where:** `data/happenings.js`, `data/happenings/people.js`, `shared/happenings.js` (`fits`).
+**FIXED** (`tests/bugfix-found.test.js`): a new condition `uncrowned:id` on those five.
+
+### N-013 · S2 · The Northern Host marches on without Robb, who sits at Winterfell
+In a game as House Baratheon the host the "North calls its banners" beat makes, 18,000 men with Robb as its commander, marched for Castamere with `members: []`: Robb stayed where he was, and every letter to him, every card about him, said Winterfell.
+**Where:** `shared/world.js` `army_create` (a commander was named, never put aboard); the muster verbs and the King's progress already put theirs aboard.
+**Repro:** `node scripts/bughunt/probe-simul.mjs baratheon 100 20` before the fix: `commander-not-with-host`.
+**FIXED** (`tests/bugfix-found.test.js`): the story's host is made with its commander in it (a free man not already on the road with a party).
+
+### N-014 · S3 · A feast is held "by" the prisoner whose wife rules the house
+The facts of a feast, a judgement and a decision were worded with the lord's own name while a regent ruled for a captive lord (the card was right, the fact text, which the narrator is given, named the prisoner).
+**Where:** `engine/actions/court.js`.
+**FIXED** (`tests/bugfix-found.test.js`): the text names the speaker of the house (`speakerFor`).
+
+### N-015 · S3 · "At least 2,600" of a house whose host has joined its liege's
+In the realm view a report of a vassal's host was noted afresh each week for four, whether or not the host was still there: Blackwood's 2,993 joined the Tully banners and the ledger went on saying "at least 2,600" for a moon against a truth of 1,432. Found by the realm soak (Tyrell, seed 23) once the game's path moved.
+**Where:** `engine/realm/estimate.js` `observe`; `bench/lib/realm-audit.js` (the "at least" bound did not count a house's men serving in its liege's host).
+**Repro:** `WC_PROVIDER=mock node scripts/realm-dump.js --soak --json --house tyrell --seed 23 --turns 24` with N-013 in.
+**FIXED** (`tests/bugfix-world.test.js`): word of a host stands only while it is still the house's; the audit counts a house's contingent in another's host as its own.
+
+### N-016 · S2 · The Father's feast at Oldtown is "Rumour spreads at the Hightower. It is only talk."
+The days of the realm's calendar (the turning of the year, the Maiden's Day, the harvest fires, the old gods' night, the small council's moon) were told as the generic rumour of their place, and the card's real name and words were thrown away. Found reading a mock game's cards by eye (Stark, moon 12: "Rumour spreads at King's Landing" for the Stranger's eve).
+**Where:** `server/turn/day.js` (the calendar's `happening` fact carried no slot for its name), `engine/facts/heads.js` (`happeningHead`, `SUM.happening`).
+**Repro:** play any house twelve moons; read the Chronicle for the Stranger's eve (12/21) or the Father's feast (6/14).
+**FIXED** (`tests/bugfix-found.test.js`): the fact carries `data.head` and `data.sum`, the writer tells them.
+
+### N-017 · S2 · Seven victories in seven days over the same host
+In a Stark game the Lannister and Tully hosts met on the same ground seven days running (and in the same game four times more, in runs of four, four and five): a routed host stays in contact and is fought again at every day's end, until it is destroyed. Each day was a card ("The Lannister host beats the Tully host", "defeats", "crushes", "breaks"…), each with the same summary.
+**Where:** `engine/facts/cluster.js`, `engine/facts/headline.js` (`rollOf`), `engine/facts/heads.js` (`RUN`). The engine itself is untouched: it is a pursuit, and Q9's battles are as they were.
+**Repro:** `node scripts/bughunt/probe-simul.mjs stark 101 14`, then read turns 13 and 14 (or any game of a long war).
+**FIXED** (`tests/bugfix-found.test.js`): battles of the same two hosts within two days of each other are one story, told as one card ("The Lannister host destroys the Tully host near Wayfarer's Rest. Seven battles in seven days. …"), with its first day's losses and its last.
+
+### N-018 · S3 · "The Tullys lose about as many men than the Lannisters"
+The battle summary's comparison of losses had no form for equal losses that read.
+**Where:** `engine/facts/heads.js` (`lossLine`).
+**FIXED** (`tests/bugfix-found.test.js`): "The Tullys and the Lannisters lose about as many men".
+
+### N-019 · S2 · Euron rides with the Greyjoy muster while his fleet sails without him
+`probe-simul` on a Lannister game found hosts and fleets whose commander was not aboard: "The Silence" (Euron Greyjoy's fleet, at sea) and "Edmure Tully's company" (on the road for Deddings) had both lost their captain to the muster of his house, which took every kinsman at hand to ride with its host, including men who command a host or a fleet of their own.
+**Where:** `engine/military/muster.js` `answer` (the lords who ride with the host).
+**Repro:** `node scripts/bughunt/probe-simul.mjs lannister 102 12` before the fix: `commander-not-with-host`.
+**FIXED** (`tests/bugfix-found.test.js`): a man who commands a party stays with it.
+
+### N-020 · S2 · A lord rides off to feast while the tourney he called waits for its lists
+(The user's own example, found by the probe: Yohn Royce on the road with the lists at Runestone five days off; Renly Baratheon at Storm's End twice.) The King's own calling of a tourney is already refused while he is away (`awayFromSeat`), but a lord who had called one was free to ride out the next day, so the lists were run in his absence.
+**Where:** `shared/retinues.js` `sendOut` (a household's ride), `engine/actions/movement.js` `send_person`.
+**FIXED** (`tests/bugfix-found.test.js`): the lord (or regent) of a house whose lists are pending is not sent out, and a mind may not send him; the player's own lord goes where the player says.
+
+### N-021 · S2 · Harlaw's heir is wed into Merlyn, and his company stays Harlaw's
+In a Greyjoy game Urragon Harlaw ("Heir to Harlaw of Grey Garden") was betrothed to the Lady of Merlyn, and when they wed the groom changed house, since she was the lord of hers. He was Merlyn's from then on, his title still said Harlaw's heir, and he commanded "Urragon Harlaw's company" of Harlaw for another six moons. Found by `probe-simul` ("foreign-commander").
+**Where:** `engine/people/family.js` (`whoGoes`, `suitability`, `refusal`: my own WD1 code).
+**FIXED** (`tests/bugfix-found.test.js`): the lord or the heir of a house does not go to another's hall; when one of the two is such a one the other goes (if he is not); when both are, the match is not made (and the player's own order is refused in words).
+
+### N-022 · S3 · "Rumour runs at King's Landing" in every week of the Meanwhile
+A turn's Meanwhile is a sentence for each week, and the same small clause ("rumour runs at King's Landing", "the households of Winterfell have small news") was said again in each of them: four times in a moon.
+**Where:** `server/game.js` (the weeks joined as they came), `engine/facts/headline.js`.
+**FIXED** (`tests/bugfix-found.test.js`): `foldMeanwhile` leaves out a clause an earlier week of the turn has said.
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
@@ -75,3 +160,9 @@ In a 24-moon game as House Tyrell (seed 23) the realm view read House Brax at "s
 - Cards that "name the dead" in the analysis are the dead *at the end of the game*, named when they lived.
 - Pronoun mismatches in the analysis ("Syrio Forel … She learned"): the pupil's.
 
+- `probe-simul`'s "foreign-commander" for Jon Snow: the rider party that takes him to the Wall is Stark's, and he is the Watch's the day he is sent. A boy riding to take the black under his father's escort, not a man commanding another house's host.
+- `probe-simul`'s "acts-on-the-road" for a vassal's lord whose host was beaten and joined another host: the road was ended by the join, which the probe did not read until it learned `host_joined`.
+
+## Seen, and left alone
+
+- S4. A neighbour riding to pay his respects at the player's seat is a `[war]` card (a set out is a march in the clusterer's archetypes, and the small rides of other houses are typed `court` only when they are background). Retyping them means changing the roll-up of rides ("Six lords ride for Winterfell"); left for the owner to judge.

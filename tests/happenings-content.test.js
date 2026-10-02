@@ -41,7 +41,7 @@ test('every happening is well formed: a unique id, a known kind and place, condi
     if (!h.t || !h.x || /undefined|null|\[object/.test(h.t + h.x)) tag('words');
     const w = h.where;
     if (w === 'any') { /* anywhere in the realm's heartland */ } else if (w.startsWith('r:')) { for (const r of w.slice(2).split('|')) if (!REGIONS.includes(r)) tag(`region ${r}`); } else if (w.startsWith('h:')) { for (const id of w.slice(2).split('|')) if (!holdIds.has(id)) tag(`holding ${id}`); } else if (w.startsWith('c:')) { if (!charIds.has(w.slice(2))) tag(`character ${w.slice(2)}`); } else tag(`where ${w}`);
-    for (const c of h.when || []) { if (c.startsWith('alive:')) { for (const id of c.slice(6).split('+')) if (!charIds.has(id)) tag(`alive ${id}`); } else if (c.startsWith('flag:') || c.startsWith('noflag:')) { /* a story flag */ } else if (!WHEN.has(c)) tag(`condition ${c}`); }
+    for (const c of h.when || []) { if (c.startsWith('alive:')) { for (const id of c.slice(6).split('+')) if (!charIds.has(id)) tag(`alive ${id}`); } else if (c.startsWith('uncrowned:')) { for (const id of c.slice(10).split('+')) if (!charIds.has(id)) tag(`uncrowned ${id}`); } else if (c.startsWith('flag:') || c.startsWith('noflag:')) { /* a story flag */ } else if (!WHEN.has(c)) tag(`condition ${c}`); }
     for (const [k, v] of Object.entries(h.fx || {})) { if (!FX.has(k)) tag(`effect ${k}`); else if (k !== 'note' && (!Number.isFinite(v) || Math.abs(v) > 10)) tag(`effect size ${k}=${v}`); }
     for (const k of ['cd', 'w']) if (h[k] != null && !(h[k] > 0 && Number.isFinite(h[k]))) tag(`${k}`);
     for (const t of [h.t, h.x]) for (const m of t.matchAll(/\{(\w+)(?::[\d-]+)?\}/g)) if (!SLOTS.has(m[1])) tag(`slot {${m[1]}}`);

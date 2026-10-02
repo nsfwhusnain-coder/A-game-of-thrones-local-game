@@ -158,7 +158,8 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
     if (sent.men > first) a.muster = { remaining: sent.men - first, daily: Math.max(50, Math.ceil((sent.men - first) / Math.max(1, call.gather - 1))), house: v.id, quiet: true };
     // the lord rides with his men — and his grown sons, brothers and sworn knights, as lords do
     if (lead) joinParty(state, lead, a);
-    const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && c.id !== lead?.id && (!isFemale(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !rideOf(state, c) && (c.loc === v.seat || isRef(c.loc)) && !(c.roles || []).includes('maester'));
+    const leading = new Set(Object.values(state.parties).map((p) => p.commander).filter(Boolean)); // (a man who commands a host or a fleet of his own rides with that, not with the muster: Euron left his ship and Edmure his company)
+    const kin = Object.values(state.characters).filter((c) => c.alive && c.house === v.id && c.id !== v.lord && c.id !== lead?.id && !leading.has(c.id) && (!isFemale(c) || /warrior|fighter|shield/i.test(c.traits || '')) && c.age >= 16 && c.age <= 50 && c.status === 'free' && !rideOf(state, c) && (c.loc === v.seat || isRef(c.loc)) && !(c.roles || []).includes('maester'));
     riding = kin.filter(() => random() < 0.55).slice(0, 2);
     for (const c of riding) joinParty(state, c, a);
   }
