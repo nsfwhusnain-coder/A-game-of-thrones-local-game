@@ -13,7 +13,10 @@ import { alive } from './beatkit.js';
 
 const monthEnd = (at) => dayNumber({ year: Math.floor(at / 12), month: (at % 12) + 1, day: 30 });
 const monthStart = (at) => dayNumber({ year: Math.floor(at / 12), month: (at % 12) + 1, day: 1 });
-const record = (s, e, more = {}) => { const { kind = 'canon_beat', actors, data, ...card } = e; return fact(s, kind, card, { ...more, actors, data: { ...data, ...more.data } }); };
+// The card's own headline, subtitle and telling travel in the fact's data (`head`, `sum`, `tale`): the writer builds from a fact's slots and never from
+// its text (headline.js), so a great matter that is told in its own words (ST1) gives it them as slots.
+export const recordBeat = (s, e, more = {}) => { const { kind = 'canon_beat', actors, data, head, sum, ...card } = e; return fact(s, kind, card, { ...more, actors, data: { ...data, ...(head ? { head } : {}), ...(sum ? { sum } : {}), ...(head && card.text ? { tale: card.text } : {}), ...more.data } }); };
+const record = recordBeat;
 
 /** The beats of the threads, in the v2 shape: window, trigger, pillar, names, alternates, lapse (meta by `thread.stage`). */
 export function beatsOf(threads, meta = {}) {

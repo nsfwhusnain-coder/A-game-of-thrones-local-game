@@ -3,6 +3,13 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — Bug hunt fix ST1: the great matters of the story are told as news
+
+- **Bran's fall, Drogo's wedding, the assassin's knife, Jon taking the black, Catelyn's seizure of Tyrion** and every other great matter of the story now say what happened. Before, 28 of the 30 cards of a game read "Grave news reaches Castle Black — The ravens carry the word across the realm", the same for all of them. Now the card says "Bran Stark is found broken beneath the old tower — He lives, but sleeps and does not wake. Maester Luwin sits by his bed.", "An assassin enters Bran Stark's chamber with a Valyrian blade", "Jon Snow is chosen Lord Commander of the Night's Watch", "King Robert dies of a boar's tusk in the kingswood", and so on for all sixty-nine events of the canon; the line under the headline is the story's own telling, with the sentence that repeats the headline left out. The turn's digest no longer says "Grave news reaches Winterfell" twice for two different events, and the King's ride no longer says "The royal progress is on the road" under the boy's fall.
+- **Old saves** keep working: a great matter recorded before this is told as it was (its card has no headline of its own to read); the beats still to come in an old save are fired by the code and carry theirs.
+- **Five small cards of the realm's life that the headline check refused are mended** (found while reading what the soak plays): "A ranger of the Watch tells of empty villages" now says where, "Two villages feud" is "Two villages quarrel", the boundary stone no longer moves "a hundred acres", the reconciliation feast no longer broaches "Arbor gold", and the granary at Winterfell no longer "burns" (a phrase the game keeps for a later chapter): "Fire takes the granary at Winterfell".
+- Tests: `tests/bugfix-headlines.test.js` (5): every beat has a headline, and every card of every beat and alternate, in eight houses' worlds, passes the headline scorer and never says "Grave news"; the writer reads a beat's slots, never its title or text.
+
 ## 2026-10-02 — The first bug hunt (report and harnesses; no game change)
 
 - **`docs/BUG-HUNT-2026-10-02.md`**: 57 findings from playing the finished game on the mock and on Maester-12B (story, world, orders, text, interface, server, tests), each with an ID, a severity, evidence, leads in the code and a repro; two were fixed on the spot in H7 (carts that sailed, the King's feast on day one). `docs/BUG-FIX-AGENT-PROMPT.md` is the prompt for the agent that fixes them.
