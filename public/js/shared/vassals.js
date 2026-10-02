@@ -164,6 +164,8 @@ export function answerRebel(state, [vid, how]) {
  *  A call to the banners names the host the lords are to join (`obligations.join`). Late banners join THAT host wherever
  *  it has gone — marched on, or arrived somewhere else — so a muster never leaves an orphan host behind at the muster
  *  point (the "they all muster up and stay there" bug). */
+/** The kinds of party that never give battle (battle.js: they withdraw) or sit in a castle: no lord's levy joins them as "the great host". */
+const NOT_A_FIELD_HOST = new Set(['fleet', 'garrison', 'progress', 'retinue', 'caravan', 'envoy', 'rider']);
 export function gatherMusters(state) {
   const events = [];
   const dist = (x, y) => Math.hypot(x.pos[0] - y.pos[0], x.pos[1] - y.pos[1]);
@@ -175,7 +177,7 @@ export function gatherMusters(state) {
     // a lord's levies still gathering at his seat stay there until they set out (engine/military/muster.js)
     if (gathering(state, v) && v.obligations.host === a.id) continue;
     const ob = v.obligations || {};
-    const field = (x) => x.owner === liegeId && isForce(x) && !['fleet', 'garrison'].includes(x.kind) && x.id !== a.id;
+    const field = (x) => x.owner === liegeId && isForce(x) && !NOT_A_FIELD_HOST.has(x.kind) && x.id !== a.id; // (the King's progress is his court on the road, which never gives battle: the banners of the Crown joined it, 56,000 men in a household that stands at King's Landing and withdraws before any foe, N-036)
     let host = null;
     // the host this lord was called to join, wherever it is now
     const grand = ob.join && state.parties[ob.join] && field(state.parties[ob.join]) ? state.parties[ob.join] : null;

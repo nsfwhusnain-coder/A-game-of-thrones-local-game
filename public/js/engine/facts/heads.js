@@ -1309,7 +1309,7 @@ export const ALSO = {
 export const DETAIL = {
   set_out: (f, s, c) => {
     const d = f.data || {}; const days = d.eta && d.eta > f.day ? d.eta - f.day : d.days; const to = c.dest(d.to); const o = c.owner(f); const label = cap1(c.pty(d.party, o) || c.subj(f));
-    const bits = [to ? `bound for ${to}` : '', days ? `about ${Math.round(days)} days on the road` : '', d.men ? `${c.n(d.men, o)} men` : ''].filter(Boolean);
+    const bits = [to ? `bound for ${to}` : '', days ? `about ${Math.round(days) === 1 ? 'a day' : `${Math.round(days)} days`} on the road` : '', d.men ? `${c.n(d.men, o)} men` : ''].filter(Boolean);
     return bits.length ? [`${label}: ${bits.join(', ')}.`] : [];
   },
   arrived: (f, s, c) => (f.data?.men ? [`${cap1(c.pty(f.data.party, c.owner(f)) || c.subj(f))} arrives with ${c.n(f.data.men, c.owner(f))} men.`] : []),

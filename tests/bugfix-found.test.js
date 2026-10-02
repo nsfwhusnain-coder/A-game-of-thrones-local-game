@@ -351,3 +351,46 @@ test('N-030: a castle that has fallen is not also "shut in"', () => {
   const st = clusterFacts(s, s.facts).stories.find((x) => x.facts.length === 2) || { facts: s.facts };
   const card = cardOf(s, st); assert.doesNotMatch(card.summary, /shut in/, `${card.headline} / ${card.summary}`);
 });
+
+test('N-033: the realm\'s ambient feasts and name-day tourneys read the house\'s speaker: a child lord at home does not hold them while his regent marches', async () => {
+  const { worldTick } = await import('../public/js/shared/plots.js');
+  const holds = (s, rounds) => { let n = 0; for (let i = 0; i < rounds; i++) n += withRng(s, () => worldTick(s, 30)).events.filter((e) => /calls a tourney for a name-day|feasts .* for a fortnight/.test(`${e.title || ''} ${e.text || ''}`)).length; return n; };
+  const prep = (regentAway) => {
+    const s = world('stark', 13); s.wars = [];
+    for (const h of Object.values(s.houses)) if (h.lord && s.characters[h.lord]) s.characters[h.lord].loc = h.id === 'arryn' ? s.houses.arryn.seat : 'party:nowhere';
+    const lysa = s.characters.lysa_arryn; s.houses.arryn.regent = lysa.id; lysa.loc = regentAway ? 'party:nowhere' : s.houses.arryn.seat; s.houses.arryn.lord && (s.characters[s.houses.arryn.lord].age = 8);
+    return s;
+  };
+  assert.ok(holds(prep(false), 120) >= 1, 'with the regent at the Eyrie the Vale holds its feasts and its name-day lists');
+  assert.equal(holds(prep(true), 120), 0, 'with her on the road with the host, no one holds them');
+});
+
+test('N-034: the Trident beat names Joffrey as he is: a prince while his father lives, the King when he has died', async () => {
+  const { THREADS } = await import('../public/data/beats.js');
+  const stage = THREADS.find((t) => t.id === 'kings_ride').stages.find((x) => x.id === 'trident');
+  const s = world('stark'); let r = stage.fire(s); const text = (x) => `${x.events[0].title} ${x.events[0].text} ${x.events[0].head || ''} ${JSON.stringify(x.events[0])}`;
+  assert.match(text(r), /Prince Joffrey/); assert.doesNotMatch(text(r), /King Joffrey/);
+  applyChanges(s, [{ op: 'character', id: 'joffrey_baratheon', title: 'King of the Andals and the First Men' }]);
+  r = stage.fire(s); assert.match(text(r), /King Joffrey/); assert.doesNotMatch(text(r), /Prince Joffrey/);
+});
+
+test('N-035: "about a day on the road", not "1 days"; a party of a man whose name ends in s is "Boggs\' party"', () => {
+  const s = world('stark'); today(s); s.facts = [];
+  emit(s, 'set_out', { actors: ['robb_stark'], houses: ['stark'], place: 'stark', importance: 2, data: { days: 1, to: 'tully', party: 'nowhere' }, text: 'x' });
+  const card = cardOf(s, storyOf(s)); assert.ok(card.details.every((d) => !/\b1 days\b/.test(d)), JSON.stringify(card.details));
+  assert.ok(card.details.some((d) => /about a day on the road/.test(d)), JSON.stringify(card.details));
+});
+
+test('N-036: the banners the Crown calls do not join the King\'s progress, which is his court and never gives battle', async () => {
+  const { gatherMusters } = await import('../public/js/shared/vassals.js');
+  const s = world('lannister');
+  applyChanges(s, [{ op: 'army_create', id: 'royal_progress', owner: 'baratheon', name: 'The King\'s progress', at: 'baratheon', men: 1400, commander: null },
+    { op: 'army_create', id: 'stormlords', owner: 'baratheon_ds', name: 'The Dragonstone host', at: 'baratheon', men: 800, commander: null }]);
+  s.parties.royal_progress.kind = 'progress'; // (as the story makes it: engine/world/beats.js, kings_ride)
+  const lords = s.parties.stormlords; lords.serving = 'baratheon'; lords.arriveDay = 1;
+  const v = s.houses.baratheon_ds; v.obligations = { muster: 'baratheon', call: { men: 800 } };
+  assert.equal(s.parties.royal_progress.kind, 'progress');
+  withRng(s, () => gatherMusters(s));
+  assert.equal(s.parties.royal_progress.men, 1400, 'the court is as it was');
+  assert.ok(Object.values(s.parties).some((p) => p.owner === 'baratheon' && p.kind === 'host' && p.men >= 800), 'the Crown\'s banners are a host of their own');
+});

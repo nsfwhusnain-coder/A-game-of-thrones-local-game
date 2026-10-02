@@ -113,7 +113,7 @@ The facts of a feast, a judgement and a decision were worded with the lord's own
 In the realm view a report of a vassal's host was noted afresh each week for four, whether or not the host was still there: Blackwood's 2,993 joined the Tully banners and the ledger went on saying "at least 2,600" for a moon against a truth of 1,432. Found by the realm soak (Tyrell, seed 23) once the game's path moved.
 **Where:** `engine/realm/estimate.js` `observe`; `bench/lib/realm-audit.js` (the "at least" bound did not count a house's men serving in its liege's host).
 **Repro:** `WC_PROVIDER=mock node scripts/realm-dump.js --soak --json --house tyrell --seed 23 --turns 24` with N-013 in.
-**FIXED** (`tests/bugfix-world.test.js`): word of a host is noted with its own age (`news`); the audit holds an "at least" to the most the truth was since the word came (`peakSince`: a host broken up, merged or lost in a battle that turn), with room for a report's hundred-man floor.
+**FIXED** (`tests/bugfix-world.test.js`): word of a host is noted with its own age (`news`); the audit holds an "at least" to the most the truth was since the word came (`peakSince`: a host broken up, merged or lost in a battle that turn), with room for a report's hundred-man floor; and every estimate to the truth of the days since it was made (`seriesSince`: a holding may change hands the day after the word).
 
 ### N-016 · S2 · The Father's feast at Oldtown is "Rumour spreads at the Hightower. It is only talk."
 The days of the realm's calendar (the turning of the year, the Maiden's Day, the harvest fires, the old gods' night, the small council's moon) were told as the generic rumour of their place, and the card's real name and words were thrown away. Found reading a mock game's cards by eye (Stark, moon 12: "Rumour spreads at King's Landing" for the Stranger's eve).
@@ -204,6 +204,24 @@ The realm view added to what the viewer sees of a house's hosts the old word of 
 **Where:** `engine/realm/estimate.js` `observe`.
 **FIXED** (`tests/bugfix-world.test.js`): word of a host that no longer exists is not added when a host of the house is in sight.
 
+### N-033 · S2 · "Lysa Arryn calls a tourney at the Eyrie" while she marches with the Host of the Vale
+The gossip's feast and name-day tourney asked whether the *lord* was in his hall, and a child lord is: his regent, who is told to hold it, was on the road. They now ask the speaker of the house.
+**Where:** `shared/plots.js` `churn`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-034 · S3 · "Arya Stark's direwolf wounds Prince Joffrey" in a game where Robert has died and Joffrey is King
+The Trident beat's words were fixed; a game whose path had killed Robert before the tenth moon told of the prince. Found by the sweep's coherence check (`coherence-B`, "a title a character does not hold", in three of three games).
+**Where:** `data/beats.js` (`kings_ride.trident`). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-035 · S4 · "about 1 days on the road", and "Oldflowers's party"
+**Where:** `engine/facts/heads.js` (`DETAIL.set_out`), `shared/retinues.js`, `shared/world.js` (the names a household's party and a lord's company are given). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-036 · S1 · The Crown's army is "The King's progress", 56,000 strong, and it never fights
+When the Crown called its banners, every vassal's host "joined the liege's great host", and the Crown's largest force at King's Landing was the King's progress: his court on the road, which gives no battle (`battle.js`: a progress "withdraws") and is drawn on the map as 40 riders and a wheelhouse. In five of six games played for sixteen moons the Crown's whole levy, 55,898 men with Queen Cersei, the royal children and Stannis among its "members" and no commander, sat in it at King's Landing. The Crown never took the field.
+**Where:** `shared/vassals.js` (`gatherMusters`: the liege's field forces).
+**Repro:** play any house sixteen moons with Robert dead (`keep-run.mjs braavos 303 16 …`, then `insp.mjs … party royal_progress`).
+**FIXED** (`tests/bugfix-found.test.js`): the progress is not a host a lord's levy joins; the Crown's banners are a host of their own ("The Banners of the Crown").
+**Owner check:** the Crown's war now has an army: the war's course in the Riverlands will differ from before (a real Crown host against the Tullys and the Starks).
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
@@ -215,6 +233,8 @@ The realm view added to what the viewer sees of a house's hosts the old word of 
 - `probe-simul`'s "acts-on-the-road" for a vassal's lord whose host was beaten and joined another host: the road was ended by the join, which the probe did not read until it learned `host_joined`.
 
 ## Seen, and left alone
+
+- The sweep's "act-on-the-road" for levies called (Tywin at Casterly Rock while his host is on the road): a lord at war sends his steward word to raise levies at his seat; it is a letter, not a feast he sits at. Left.
 
 - `probe-simul`'s "acts-on-the-road" for a bride whose company halts at a hall (Jeyne Westerling at Crane): the company is camped there, so she is in the hall, and the road fact has no arrival to read. A wedding in the hall of the one who stays is the rule.
 - S4: the Targaryen start has two canon-data oddities `probe`s print: Obara Sand born twelve years after her father Oberyn, and Cassana Estermont too young to be Robert's mother by the start's own birth years. Both are the data's, from the books' loose ages; left.

@@ -77,10 +77,14 @@ export const THREADS = [
       {
         // K8: the wolf and the lion on the Trident — only if the girls ride south with the court
         id: 'trident', at: YM(298, 10), grace: 1, needs: (s) => flag(s, 'hand_daughters') && alive(s, 'arya_stark', 'sansa_stark', 'joffrey_baratheon') && !at(s, 'arya_stark', 'stark'),
-        fire: () => ({
-          events: [ev('The wolf and the lion', 'On the Trident, near the inn at Darry, Prince Joffrey draws steel on a butcher\'s boy who crossed swords of wood with Arya Stark; her direwolf savages the prince\'s arm. The Hound rides the boy down. The Queen demands a wolf\'s life, and Lord Eddard kills Sansa\'s Lady with his own hand. Arya\'s wolf is driven off into the woods.', 'darry', 3, 'court', ['stark', 'lannister', 'baratheon'], 'Arya Stark\'s direwolf wounds Prince Joffrey on the Trident')],
+        fire: (s) => {
+          // a boy is a prince only while his father lives: a game in which Robert has already died tells of the King
+          const king = /^King\b/.test(s.characters.joffrey_baratheon?.title || '') || s.houses.baratheon?.lord === 'joffrey_baratheon'; const who = king ? 'King Joffrey' : 'Prince Joffrey'; const whose = king ? 'king' : 'prince';
+          return {
+          events: [ev('The wolf and the lion', 'On the Trident, near the inn at Darry, ' + who + ' draws steel on a butcher\'s boy who crossed swords of wood with Arya Stark; her direwolf savages the ' + whose + '\'s arm. The Hound rides the boy down. The Queen demands a wolf\'s life, and Lord Eddard kills Sansa\'s Lady with his own hand. Arya\'s wolf is driven off into the woods.', 'darry', 3, 'court', ['stark', 'lannister', 'baratheon'], 'Arya Stark\'s direwolf wounds ' + who + ' on the Trident')],
           changes: [{ op: 'relation', a: 'stark', b: 'lannister', delta: -8 }],
-        }),
+          };
+        },
       },
       {
         // K9: the Hand in King's Landing — and the Crown's debt laid before him
