@@ -83,11 +83,13 @@ export function knownTo(state, viewer, id, ctx = null) {
  * Power the viewer could work out). Only what the viewer *knows* goes in: coffers are the rank's reputation unless a spy
  * has counted them, and the mines are their public base, never the Rock's decline.
  */
-function faceOf(state, viewer, subject, ctx, { turn, via, men = null, gold = null, people = null }) {
+export function faceOf(state, viewer, subject, ctx, { turn, via, men = null, gold = null, people = null }) {
   const h = state.houses[subject]; const holds = ctx.held.get(subject) || [];
   const truePeople = holds.reduce((n, x) => n + (x.population || 0), 0);
   // the people as the viewer reckons them (a census taught by a spy stands as it is told), and what such lands could raise
-  const souls = people ?? truePeople * (1 + noise(state, viewer, subject, 'people', turn, PEOPLE_BLUR[via] ?? PEOPLE_BLUR.rumour));
+  // (a census taught by a spy stands, but not past the lands it counted: a house that has lost its holdings has no more people than the lands left it hold, and the figure was read as 150,000 "seen" of House Brax
+  // with no land at all, N-007)
+  const souls = people != null ? Math.min(people, truePeople * 1.1) : truePeople * (1 + noise(state, viewer, subject, 'people', turn, PEOPLE_BLUR[via] ?? PEOPLE_BLUR.rumour));
   const raise = souls * (MUSTER_SHARE[h.rank] ?? 0.01);
   const swords = Math.max(men ?? 0, raise);
   const coin = gold ?? WEALTH[h.rank] ?? 5000;

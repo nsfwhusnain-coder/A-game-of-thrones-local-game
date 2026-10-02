@@ -61,6 +61,13 @@ A feast with one guest at the table said "sit". And the engine's crossing note s
 **Where:** `engine/facts/heads.js` the `feast` summary; `shared/marches.js` the `chokepoint` note.
 **FIXED.**
 
+### N-007 · S3 · A spy's old census outlives the lands it counted
+
+In a 24-moon game as House Tyrell (seed 23) the realm view read House Brax at "seen people 150,000" with no land at all: its seat had been taken and its lord was a captive. A census taught by a spy "stands as it is told", and a fresh sighting of the house carried it forward, however much of the land had gone since. (The realm soak holds a figure marked *seen* to ±10 % of the truth, and caught it; the same game passes on other dice, so it was latent.)
+**Where:** `engine/realm/estimate.js` `faceOf` (the taught `people`).
+**Repro:** `WC_PROVIDER=mock node scripts/realm-dump.js --soak --json --house tyrell --seed 23 --turns 24` on the world branch before the fix.
+**FIXED** (`tests/bugfix-world.test.js`): a taught census stands as far as the lands now held (a tenth over); a house with no hold has no people the viewer can see.
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

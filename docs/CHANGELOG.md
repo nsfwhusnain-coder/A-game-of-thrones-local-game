@@ -85,6 +85,7 @@ for the player, and what the owner should verify.
 - **Old people live as old people do** (WD2): five in a hundred die of their years at seventy, eleven at eighty, twenty-two at ninety (it was forty-two at seventy-five and eighty-seven at ninety-four; two of forty over seventy lived four years). The ailing and winter's chill still take their share.
 - **The books' income figures agree with the coin** (WD3): a turn that ended on a two-day stretch showed a quarter of the true income, so the figures fell and the cash did not; the Golden Company is no longer "losing 39,866 a moon" it never lost. With that mended, houses in deficit after two years are 100 of 290, not 153.
 - **The same card, again and again, is told once** (WD5): a camp that sits is told sick once a moon with its moon's sick; a steward's note of hunger or of grain bought is told once a moon, and says what it is ("House Karstark goes hungry", not "inspects its accounts"); a lord who has called his banners waits five moons, one who has raised his levies two.
+- **A spy's old census no longer outlives the lands it counted** (N-007): a house that had lost every hold was read as having 150,000 people.
 - **Two Brandon Starks** (WD6): the boy is Bran Stark; the ruin on the Wall is Old Oakenshield.
 - Tests: `tests/bugfix-family.test.js` (13), `tests/bugfix-world.test.js` (5), a case for `betroth` in `tests/verbs.test.js`. *Not done:* WD4 (holdings changing hands) and the rest of WD6 (houses with no named heir, no house words, six one-person city states): see the issue.
 

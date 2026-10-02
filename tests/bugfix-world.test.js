@@ -15,6 +15,7 @@ const { RESTING } = await import('../public/js/engine/minds/options.js');
 const { freshNotes, ledgerNote } = await import('../server/game.js');
 const { dateOfDay, dayNumber } = await import('../public/js/engine/time.js');
 const { emit } = await import('../public/js/engine/facts/log.js');
+const { faceOf, realmContext } = await import('../public/js/engine/realm/estimate.js');
 const { clusterFacts } = await import('../public/js/engine/facts/cluster.js');
 const { cardOf } = await import('../public/js/engine/facts/headline.js');
 const { scoreCard } = await import('../server/ai/validate/headline.js');
@@ -81,4 +82,15 @@ test('WD5: the same steward\'s note is told once a moon, and a card says what th
   const plain = world('stark', 5); plain.meta.clock = { turn: 1, from: 107700, to: 107700 }; setDay(plain, 107700);
   emit(plain, 'ledger', { houses: ['stark'], importance: 1, text: 'x' });
   assert.match(cardOf(plain, clusterFacts(plain, plain.facts).stories[0] || { facts: plain.facts, actors: [], houses: ['stark'], place: null, days: [1, 1], importance: 1 }).headline, /inspects its accounts/, 'a note that says nothing in particular is still the steward at his books');
+});
+
+test('N-007: a census a spy taught stands only as far as the lands it counted: a house that lost every hold is not "seen" with 150,000 people', () => {
+  const s = world('tyrell', 23); const subject = 'brax';
+  const truth = Object.values(s.holdings).filter((h) => h.owner === subject).reduce((n, h) => n + (h.population || 0), 0);
+  assert.ok(truth > 0);
+  const told = (people) => faceOf(s, 'tyrell', subject, realmContext(s, 'tyrell'), { turn: 5, via: 'seen', people }).people;
+  assert.ok(Math.abs(told(truth) - truth) <= truth * 0.05, 'while the lands are the lands it counted, the census stands');
+  assert.ok(told(truth * 40) <= truth * 1.15, 'it is not larger than the lands now hold (a census of 150,000 over lands of a few thousand)');
+  for (const h of Object.values(s.holdings)) if (h.owner === subject) h.owner = 'lannister';
+  assert.equal(told(150000), 0, 'a house with no hold has no people the viewer can see');
 });
