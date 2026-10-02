@@ -216,7 +216,8 @@ export const MILITARY = [
     },
     cost: (state, i) => ({ men: Math.min(Math.round(Number(state.houses[i.house].figures.levies?.v) || 0), Math.round(Number(i.params.men) || Infinity)) }),
     start: (state, i) => raiseLevies(state, { house: i.house, ...i.params, cause: i.source }),
-    receipt: (state, i, done) => lines(done),
+    // (more men asked for than the lands have: it is said, not silently cut to everything)
+    receipt: (state, i, done) => [...lines(done), ...(Math.round(Number(i.params.men) || 0) > done.men ? [{ ok: 'warn', text: `You asked for ${Math.round(Number(i.params.men)).toLocaleString('en-GB')}; your lands could give ${done.men.toLocaleString('en-GB')}, and all of them are called.` }] : [])],
     said: (state, i) => ({ status: 'done', text: `Raise ${Math.round(Number(i.params.men) || 0) || 'all'} of my own levies at ${placeName(state, i.params.at || state.houses[i.house].seat)}${i.params.name ? ` as "${i.params.name}"` : ''}.` }),
     facts: ['levies_called', 'set_out'], mind: { allowed: true },
   },

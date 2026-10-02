@@ -49,6 +49,8 @@ export function heirOf(state, houseId, deceasedId) {
     return dorne ? legit.sort(byAge) : [...legit.filter((c) => !isFemale(c)).sort(byAge), ...legit.filter((c) => isFemale(c)).sort(byAge)];
   };
   const dead = state.characters[deceasedId];
+  // 0. the heir the lord named (the verb `name_heir`): his word is the succession's first rule
+  const named = h.designated && state.characters[h.designated]; if (named && named.id !== deceasedId && canInherit(named, houseId)) return named;
   // 1. children (and their lines) of the late lord
   const kids = order(chars.filter((c) => (c.father === deceasedId || c.mother === deceasedId)));
   for (const k of kids) {

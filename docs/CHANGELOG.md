@@ -14,6 +14,19 @@ for the player, and what the owner should verify.
 - **The realm briefing counts "21st", "22nd", "31st"**, never "21th".
 - Tests: `tests/bugfix-text.test.js` (9).
 
+## 2026-10-02 — Bug hunt fixes OR2–OR11: the steward reads more of what you say, and says what it could not
+
+- **A summons to a council is a raven to each lord named.** "Summon Lord Bolton and Lord Umber to a council at Winterfell" used to be read as a call to arms and raised the banners. It now sends a letter to every lord named (the same words, each in his own temper); "to arms" and "call the banners" are still a call to arms.
+- **Numbers are read as the lord means them.** "Raise 0 men", "raise -5 men" and "hire sellswords with 5 gold" ask how many men; "a hundred thousand" is a hundred thousand (it was a hundred); gold in an order is no longer counted as men. When you ask for more levies than your lands can give, the receipt says so ("You asked for 5,000; your lands could give 1,900, and all of them are called").
+- **"My son Bran" is Bran**, not all your sons; "my ward's captain" is the captain, not the ward.
+- **"Robert" asks which Robert**, with the Roberts to pick from, and your answer becomes the name in the order. Before, the name was dropped and the steward asked where a host should march. "Declare war on House Stark" from House Stark is refused in words.
+- **You can tell the lord to travel**: "Go to King's Landing", "I will ride to King's Landing myself with my daughters" (the daughters go with him). A man named in the order is the man who goes.
+- **New orders**: *Dismiss* an officer (he keeps his place in the household, not his office; "Dismiss Maester Luwin" used to send a host home), and *name an heir* ("Make Jon Snow my heir"; the succession reads the named heir before the order of birth). "Disinherit Robb" asks whom to name in his place. "Fortify Winterfell" is walls; "feed the poor" is an almshouse; an execution or a pardon of a man who is not your prisoner is refused in words.
+- **What the steward could not read is said** ("Left to the story: ..."), and a man in the same hall is told aloud: no raven flies across the table. When a model reads the order, a price is no tax (its reading is refused if the order says nothing of taxes).
+- A spy who has placed eyes is one man, and the verb agrees.
+- **Old saves** play on.
+- Tests: `tests/bugfix-orders.test.js` (10), cases for the two new verbs in `tests/verbs.test.js`.
+
 ## 2026-10-02 — Bug hunt fixes ST2, ST3, ST4, ST9, ST15: tourneys with days in them, lords at home, a beat that looks at the army
 
 - **A tourney is called, the lords ride in, and the lists are run three weeks on.** Before, ordering a tourney won it on the spot, its champion was any knight in the world (Rakharo, Drogo's bloodrider, won at Starfall; Ser Barristan won the lists at Winterfell in week one), and the lords of the region set out for it after it was over. Now the order is a call ("The tourney is called: 28 houses are asked to send knights, and the lists will be run at Riverrun in three weeks"); the lords of the region set out in the ten days that follow and stay for the lists; on the day, the champion is chosen among the knights who are at the hall and the guests who have arrived, and the result is told on that day.

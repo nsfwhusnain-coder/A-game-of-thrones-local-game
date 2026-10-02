@@ -66,12 +66,18 @@ export function carryOut(world, o, reading = o.parsed) {
     lines.push(...r.receipt);
     if (r.ok) intents.push(r.intent);
   }
-  // a letter flies with the order's own words (answered, when it comes to it, in the lord's temper: resolveEnvoys)
+  // a letter flies with the order's own words (answered, when it comes to it, in the lord's temper: resolveEnvoys); a summons to several lords sends one to each (OR2)
   if (reading?.letter?.to && !o.post) {
-    const r = perform(world, 'send_letter', { params: { to: reading.letter.to, text: o.text }, source });
-    lines.push(...r.receipt); if (r.ok) { intents.push(r.intent); o.post = r.done.post; }
+    for (const [k, to] of [reading.letter.to, ...(reading.letter.also || [])].entries()) {
+      const r = perform(world, 'send_letter', { params: { to, text: o.text }, source });
+      lines.push(...r.receipt); if (r.ok) { intents.push(r.intent); if (k === 0) o.post = r.done.post; }
+    }
   }
+  // one in the same hall is told aloud; and what the steward could not read is said, not dropped (OR8, OR10)
+  for (const x of reading?.said || []) lines.push({ ok: 'story', text: `${world.characters[x.to]?.name || 'They'} ${world.characters[x.to]?.name ? 'is' : 'are'} here and told in person: no raven flies.` });
+  const unread = reading?.unread || [];
   if (!lines.length) lines.push({ ok: 'story', text: 'Left to the story: no one moves and no gold is spent.' });
+  else for (const clause of unread) lines.push({ ok: 'story', text: `Left to the story: “${clause}”.` });
   return { lines, intents };
 }
 
@@ -101,6 +107,8 @@ export function answerOrder(o, k) {
     o.parsed = { ...o.parsed, actions: [...o.parsed.actions, { verb: q.pending.verb, params: { ...q.pending.params, ...opt.patch } }], clarify: null, story: false };
     o.chosen = opt.label; return true;
   }
+  // "Which Robert?": the answer is the name in the order, said in full, and the order is read again
+  if (Array.isArray(opt.replace)) { const [from, to] = opt.replace; o.text = String(o.text).replace(new RegExp(`\\b${String(from).replace(/[^\w ]/g, '.')}\\b`, 'i'), to); delete o.parsed; delete o.parsedFor; return true; }
   // an answer the rules cannot fold in is added to the order, which is then read again
   o.text = `${String(o.text).replace(/\s+$/, '')} — ${opt.label}`; delete o.parsed; delete o.parsedFor; return true;
 }

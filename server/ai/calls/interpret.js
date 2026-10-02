@@ -43,7 +43,7 @@ const NEEDS = {
   set_secrecy: ['subject', 'choice'], send_person: ['who', 'to'], recall_rider: ['who'], set_tax: ['choice'],
   set_dues: ['choice'], fund_works: ['choice'], cancel_works: ['choice'], hire_men: ['men'], hire_officer: ['choice'],
   send_gift: ['gold', 'person|houses'], appoint_office: ['who', 'choice'], grant_holding: ['at', 'houses'],
-  judge_prisoner: ['person', 'choice'], declare_war: ['houses'], plant_spy: ['houses'], gather_secrets: ['houses'],
+  dismiss_office: ['who'], name_heir: ['who'], judge_prisoner: ['person', 'choice'], declare_war: ['houses'], plant_spy: ['houses'], gather_secrets: ['houses'],
   send_letter: ['person'],
   borrow: ['gold', 'choice|houses'], repay: ['choice|houses'], call_debt: ['houses'], buy_grain: [], bribe: ['person', 'gold'], embargo: ['houses'], pay_ransom: ['person'],
 };
@@ -72,6 +72,8 @@ const MEANS = {
   recall_rider: 'one of your people on the road [who] turns back',
   set_tax: 'the taxes on your smallfolk [choice: low|normal|high|crushing]',
   set_dues: 'the dues you owe your liege [choice: paying|late|withholding]',
+  dismiss_office: 'dismiss one of your officers [who] from his office (he stays in the household)',
+  name_heir: 'name one of your people [who] as the heir of your house',
   fund_works: 'build at your holding [at] [choice: a kind of works]',
   cancel_works: 'stop works under way [choice: their kind]',
   hire_men: 'hire [men] fighting men at [at] [choice: men-at-arms|sellswords]',
@@ -249,9 +251,10 @@ export default {
       }
       if (a.choice !== 'none' && CHOICE_OF[a.verb] && !CHOICE_OF[a.verb].includes(a.choice)) out.push(`${at}: "${a.choice}" is not one of ${CHOICE_OF[a.verb].join('|')}`);
       if (String(a.to).startsWith('party:') !== (a.verb === 'attack_host') && a.to !== 'none' && (a.verb === 'attack_host' || String(a.to).startsWith('party:'))) out.push(`${at}: only attack_host goes to an enemy host`);
-      if (['send_person', 'recall_rider', 'appoint_office'].includes(a.verb) && a.who !== 'none' && !found.has(a.who) && a.who !== ctx.addressee && !namedIn(a.who, text, ctx)) out.push(`${at}: the order does not name ${a.who}`);
+      if (['send_person', 'recall_rider', 'appoint_office', 'dismiss_office', 'name_heir'].includes(a.verb) && a.who !== 'none' && !found.has(a.who) && a.who !== ctx.addressee && !namedIn(a.who, text, ctx)) out.push(`${at}: the order does not name ${a.who}`);
       if (a.verb === 'send_person' && a.men > 0 && !/\d|\b(men|riders|swords|guards?|escort|company|spears|knights|soldiers|retinue|household|a few|dozen|score|hundred|thousand|rangers|archers|horsemen|crossbowmen|lancers|scouts|brothers|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b/.test(about(a.who))) out.push(`${at}: the order asks for no men`);
       if (a.verb === 'send_person' && /\b(raven|letter|write|send word)\b/.test(about(a.who)) && !/\b(ride|go|travel|in person|himself|herself|by hand|escort)\b/.test(about(a.who))) out.push(`${at}: that is a letter — it goes by raven, and no one rides`);
+      if (a.verb === 'set_tax' && !/\b(tax|taxes|taxation|tithe|tithes|tribute|levy on|levies on|rates?)\b/.test(text)) out.push(`${at}: the order says nothing of taxes`);
       if (a.verb === 'hire_men' && !/\b(recruit|hire|enlist|sign on|take on|buy|sellswords?|free company|mercenar\w*|more men|new men|men-at-arms)\b/.test(text)) out.push(`${at}: the order does not ask for men to be hired`);
     });
     if (v.clarify.needed && !v.clarify.question.trim()) out.push('clarify: a question is needed');
@@ -309,6 +312,7 @@ export function valueOf(parse, ctx) {
       case 'hire_officer': a.choice = q.role || 'none'; a.at = place(q.at); break;
       case 'send_gift': a.gold = q.gold || 0; if (ctx.persons.canon.has(q.to) || [...ctx.persons.canon.values()].includes(q.to)) a.person = memberOf(ctx.persons, q.to); else a.houses = [memberOf(ctx.houses, q.to)].filter((m) => m !== 'none'); break;
       case 'appoint_office': a.who = memberOf(ctx.own, q.character); a.choice = q.role || 'none'; break;
+      case 'dismiss_office': case 'name_heir': a.who = memberOf(ctx.own, q.character); break;
       case 'grant_holding': a.at = place(q.holding); a.houses = [memberOf(ctx.houses, q.house)].filter((m) => m !== 'none'); break;
       case 'judge_prisoner': a.person = memberOf(ctx.persons, q.character); a.choice = q.verdict === 'wall' ? 'take_the_black' : q.verdict; break;
       case 'declare_war': case 'plant_spy': case 'gather_secrets': a.houses = [memberOf(ctx.houses, q.house)].filter((m) => m !== 'none'); a.note = String(q.reason || '').slice(0, 120); break;
@@ -364,6 +368,7 @@ export function readingOf(value, state, { house = state.meta.player } = {}) {
         case 'hire_officer': return { role: id(a.choice), ...(id(a.at) ? { at: a.at } : {}) };
         case 'send_gift': return { to: id(a.person) || hs[0] || null, gold: a.gold };
         case 'appoint_office': return { character: id(a.who), role: id(a.choice) };
+        case 'dismiss_office': case 'name_heir': return { character: id(a.who) };
         case 'grant_holding': return { holding: id(a.at), house: hs[0] || null };
         case 'judge_prisoner': return { character: id(a.person), verdict: a.choice === 'take_the_black' ? 'wall' : id(a.choice) };
         case 'declare_war': return { house: hs[0] || null, ...(a.note ? { reason: a.note } : {}) };

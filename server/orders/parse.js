@@ -15,7 +15,7 @@
 //   }
 import { slug, placeAliases, personAliases, houseAliases } from '../../public/js/engine/ids.js';
 import { resolvePlaceId } from '../../public/js/shared/world.js';
-import { partyOf, isForce } from '../../public/js/engine/parties.js';
+import { partyOf, isForce, together } from '../../public/js/engine/parties.js';
 import { commands, destination } from '../../public/js/engine/actions/military.js';
 import { PROJECT_TEMPLATES, TAX_LEVELS } from '../../public/js/shared/economy.js';
 
@@ -25,11 +25,12 @@ const SCALE = { hundred: 100, thousand: 1000 };
 const FUZZY = { 'a handful of': 5, 'a handful': 5, 'a few': 10, 'a small escort': 10, 'an escort': 20, 'a small company of': 30, 'a strong escort': 50, 'a company of': 100, 'some': 20 };
 /** The numbers in a clause, in order: 2,000 · two thousand · a score · a dozen · a few. */
 export function numbersIn(text) {
-  const t = String(text).toLowerCase().replace(/(\d),(\d)/g, '$1$2');
+  // "a hundred thousand" is one hundred thousand; "a hundred" and "a thousand" are the same with one before them
+  const t = String(text).toLowerCase().replace(/(\d),(\d)/g, '$1$2').replace(/\ba\s+(hundred|thousand)\b/g, (m) => 'one' + m.slice(1).replace(/^a/, ''));
   const out = [];
-  for (const m of t.matchAll(/\b(\d{1,7})\b/g)) out.push({ n: Number(m[1]), at: m.index });
+  // a number with a minus before it is below nought ("raise -5 men"): kept as such, so that nothing reads it as five (a range, "10-20", is no minus)
+  for (const m of t.matchAll(/(?<![\w])(-\s*)?(\d{1,9})\b/g)) out.push({ n: m[1] ? -Number(m[2]) : Number(m[2]), at: m.index });
   for (const m of t.matchAll(/\b(?:a|one)\s+(dozen|score)\b/g)) out.push({ n: m[1] === 'dozen' ? 12 : 20, at: m.index });
-  for (const m of t.matchAll(/\ba\s+(hundred|thousand)\b/g)) out.push({ n: SCALE[m[1]], at: m.index });
   const words = [...t.matchAll(/[a-z]+/g)];
   for (let i = 0; i < words.length; i++) {
     if (!(words[i][0] in UNITS)) continue;
@@ -46,6 +47,10 @@ export function numbersIn(text) {
   for (const [k, v] of Object.entries(FUZZY)) { const at = t.indexOf(k + ' '); if (at >= 0 && !out.some((o) => Math.abs(o.at - at) <= k.length + 1)) out.push({ n: v, at, fuzzy: true }); }
   return out.sort((a, b) => a.at - b.at);
 }
+// the money in a clause is not men: "hire sellswords with 5 gold" asks for no men, and "send two thousand dragons" none either
+const MONEY = /((?:\d[\d,]*|(?:(?:a|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|hundred|thousand|and|score|dozen)[\s-]+)+))\s*(?:gold|dragons?|coins?|stags|silver)\b/gi;
+/** The numbers of men a clause asks for, in order: the numbers that are not money. A number of nought or less is there to be refused ("raise 0 men", "raise -5 men"). */
+export const menIn = (text) => numbersIn(String(text).replace(MONEY, ' ')).map((x) => x.n);
 /** A span of days: "within a fortnight", "in ten days", "by the next moon". */
 export function daysIn(text) {
   const t = String(text).toLowerCase();
@@ -110,7 +115,7 @@ const RE = {
   hire: /\b(hire|recruit|enlist|sign on|buy the service of|take on)\b[^.]*\b(men|men-at-arms|swords|soldiers|sellswords?|free company|mercenar\w+|guards?|spears|crossbowmen|archers)\b/,
   officer: /\b(hire|find|seek|engage|take into (?:my )?service|get (?:me )?|bring in)\b[^.]*\b(spymaster|master of whisperers|steward|maester|captain|master[- ]at[- ]arms|sworn sword|envoy|commander)\b/,
   appoint: /\b(appoint|name|make|choose|set)\b[^.]*\b(my |the |our |as )?(spymaster|master of whisperers|steward|maester|captain(?: of the guard)?|master[- ]at[- ]arms|castellan|commander|envoy|sworn sword)\b/,
-  works: /\b(fund|build|expand|found|begin|repair|strengthen|endow|open|dig|fill|deepen|train|raise|construct|improve|rebuild)\b/,
+  works: /\b(fund|build|expand|found|begin|repair|strengthen|endow|open|dig|fill|deepen|train|raise|construct|improve|rebuild|fortify|heighten|feed|clothe|shelter)\b/,
   unworks: /\b(stop|cancel|halt|abandon|end)\b[^.]*\b(works|building|construction|masons)\b/,
   feast: /\b(hold|throw|host|give|call|proclaim|announce|have|prepare|plan)\b[^.]*\b(feast|banquet)\b/,
   tourney: /\b(hold|throw|host|give|call|proclaim|announce|have|prepare|plan)\b[^.]*\b(tourney|tournament|joust)\b/,
@@ -141,9 +146,21 @@ const RE = {
   inPerson: /\b(ride|rides|go|goes|travel|journey|in person|himself|herself|themselves|escort|carry it|deliver it by hand|by hand)\b/,
   menWords: /\b(men|riders|swords|guards?|escort|company|spears|knights|soldiers|retinue|household|outriders)\b/,
 };
-const WORKS = [['granaries', /granar/], ['walls', /\bwalls?\b|curtain wall|ramparts/], ['rookery', /rookery|maester'?s tower/], ['harbour', /harbou?r|wharf|wharves|docks?\b/], ['barracks', /barracks/], ['smithy', /smith|armou?ry|forge\b/], ['stables', /stables?|studs?\b/], ['inn', /\binns?\b|toll bridge/], ['almshouse', /almshouse|hospice|poor/], ['sept', /\bsept\b|godswood/], ['market', /market|fair\b/], ['roads', /\broads?\b|bridges?/], ['mines', /\bmines?\b|shafts/], ['warships', /warships|galleys|longships|a fleet/], ['men_at_arms', /train (?:more )?men-at-arms/]];
+const WORKS = [['almshouse', /\b(?:feed|clothe|shelter|house|help|relieve|succour)\b[^.]*\b(?:poor|hungry|beggars|destitute)\b/], ['granaries', /granar/], ['walls', /\bwalls?\b|curtain wall|ramparts/], ['rookery', /rookery|maester'?s tower/], ['harbour', /harbou?r|wharf|wharves|docks?\b/], ['barracks', /barracks/], ['smithy', /smith|armou?ry|forge\b/], ['stables', /stables?|studs?\b/], ['inn', /\binns?\b|toll bridge/], ['almshouse', /almshouse|hospice|poor/], ['sept', /\bsept\b|godswood/], ['market', /market|fair\b/], ['roads', /\broads?\b|bridges?/], ['mines', /\bmines?\b|shafts/], ['warships', /warships|galleys|longships|a fleet/], ['men_at_arms', /train (?:more )?men-at-arms/]];
 const OFFICE_OF = (t) => (/spymaster|master of whisperers/.test(t) ? 'spymaster' : /master[- ]at[- ]arms/.test(t) ? 'master_at_arms' : /castellan/.test(t) ? 'castellan' : /steward/.test(t) ? 'steward' : /maester/.test(t) ? 'maester' : /captain/.test(t) ? 'captain' : /commander/.test(t) ? 'commander' : /envoy/.test(t) ? 'envoy' : /sworn sword/.test(t) ? 'knight' : null);
 
+/** The first names that more than one living person has ("Robert": Baratheon and Arryn), with those who have them. */
+function sharedFirstNames(state) {
+  const by = new Map();
+  for (const c of Object.values(state.characters)) {
+    if (!c.alive) continue;
+    const first = slug(String(c.name).replace(/^(?:(?:ser|lord|lady|maester|grand maester|septon|septa|prince|princess|king|queen|khal)\s+)+/i, '').split(' ')[0]);
+    if (first.length < 3) continue;
+    if (!by.has(first)) by.set(first, []); by.get(first).push(c);
+  }
+  for (const [k, v] of by) if (v.length < 2) by.delete(k);
+  return by;
+}
 /** The world as the parser sees it for one house (built once per order). */
 function lexicon(state, house) {
   const lord = state.characters[state.houses[house]?.lord];
@@ -155,7 +172,7 @@ function lexicon(state, house) {
 
 // clauses: sentences, and "and"/"then" joining two commands — but "raise the levies and march them to Moat Cailin" is
 // one command (the host raised is the host that marches)
-const NEXT_COMMAND = '(?:send|call|write|hire|recruit|build|fund|hold|declare|appoint|grant|summon|dispatch|order|tell|march|raise|make|find|plant|have)';
+const NEXT_COMMAND = '(?:send|call|write|hire|recruit|build|fund|hold|declare|appoint|grant|summon|dispatch|order|tell|march|raise|make|find|plant|have|ask(?!\\s+(?:for|him|her|them|it)\\b))';
 export function clausesOf(text) {
   const out = [];
   for (const sentence of String(text).split(/(?<=[.!?;])\s+|\n+/)) {
@@ -177,7 +194,8 @@ const rulerOf = (state, hid) => { const h = state.houses[hid]; return state.char
  */
 export function parseOrder(state, text, { house = state.meta.player, addressee = null } = {}) {
   const L = lexicon(state, house); const me = state.houses[house];
-  const res = { actions: [], complete: true, clarify: null, letter: null, story: false, found: { verbs: [], people: [], places: [], houses: [], hosts: [], numbers: [], days: daysIn(text) } };
+  const SHARED = sharedFirstNames(state);
+  const res = { actions: [], complete: true, clarify: null, letter: null, story: false, unread: [], said: [], found: { verbs: [], people: [], places: [], houses: [], hosts: [], numbers: [], days: daysIn(text) } };
   // one question for the lord; its answers (chips) patch the action left open (`pending`) — or, with no patch, are
   // added to the order's words and read again
   const need = (question, options = [], pending = null) => { res.complete = false; res.clarify = res.clarify || { question, options, ...(pending ? { pending } : {}) }; };
@@ -187,6 +205,13 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
   const hands = () => Object.values(state.characters).filter((c) => c.alive && c.house === house && c.id !== L.lord?.id && (c.age ?? 20) >= 14 && !/imprisoned|captive|hostage/.test(c.status || '')).sort((a, b) => fit(b) - fit(a)).slice(0, 4);
   const pick = (key) => hands().map((c) => ({ label: c.name, patch: { [key]: c.id } }));
   const hostPick = () => forces().slice(0, 4).map((a) => ({ label: a.name, patch: { army: a.id } }));
+  // "Where?": the courts a lord goes to — his liege's seat, the King's, and his own other holdings (a question with no answers to pick is no question: OR5)
+  const placeChips = () => {
+    const crown = Object.values(state.houses).find((h) => h.rank === 'crown')?.seat; const liege = state.houses[me.liege]?.seat;
+    const here = resolvePlaceId(L.lord?.loc);
+    const ids = [...new Set([liege, crown, ...Object.values(state.holdings).filter((x) => x.owner === house && x.id !== me.seat).map((x) => x.id).slice(0, 2)])].filter((id) => id && state.holdings[id] && id !== here);
+    return ids.slice(0, 4).map((id) => ({ label: state.holdings[id].name, patch: { to: id } }));
+  };
   const act = (verb, params, clause) => {
     if (res.actions.some((a) => a.verb === verb && JSON.stringify(a.params) === JSON.stringify(params))) return; // said twice, done once
     res.actions.push({ verb, params, clause }); res.found.verbs.push(verb);
@@ -203,6 +228,10 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     const named = pm.map((m) => ({ c: state.characters[m.id], i: m.i })).filter((x) => x.c);
     const kinAt = new Map();
     const kin = KIN.filter(([re]) => re.test(t)).flatMap(([re, is]) => {
+      const phrase = re.exec(t); const after = t.slice(phrase.index + phrase[0].length);
+      // "my ward's captain": a possession, not the ward; "my son Bran": the son the order names, not every son the lord has (OR4)
+      if (/^['’]s\b/.test(after)) return [];
+      if (!/s\b/.test(re.source.split('|')[0]) && named.some((x) => x.c.id !== L.lord?.id && is(state, x.c, L.lord))) return [];
       const all = Object.values(state.characters).filter((c) => c.alive && c.id !== L.lord?.id && is(state, c, L.lord));
       const mine = all.filter((c) => c.house === house);
       const got = (/s\b/.test(re.source.split('|')[0]) ? mine : mine.slice(0, 1)).concat(mine.length ? [] : all.slice(0, 1));
@@ -210,6 +239,15 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       return got;
     });
     const people = [...new Map([...named.map((x) => x.c), ...kin].map((c) => [c.id, c])).values()];
+    // "Send 100000 dragons to Robert": a first name that two people have is not a name until the lord says which (OR5: it was dropped, and the steward asked where a host should march)
+    const INTRO = new Set(['to', 'for', 'with', 'from', 'tell', 'ask', 'name', 'make', 'lord', 'lady', 'ser', 'prince', 'princess', 'king', 'queen', 'maester']);
+    const ambiguous = tok.findIndex((w, i) => SHARED.has(w) && !STOP.has(w) && INTRO.has(tok[i - 1]) && !pm.some((p) => i >= p.i && i < p.i + p.n));
+    if (ambiguous >= 0 && !people.some((c) => c.house !== house)) {
+      const word = tok[ambiguous]; const rank = (c) => ['crown', 'paramount', 'major', 'minor'].indexOf(state.houses[c.house]?.rank) + (state.houses[c.house]?.lord === c.id ? -10 : 0);
+      const who = [...SHARED.get(word)].sort((a, b) => rank(a) - rank(b)).slice(0, 4);
+      need(`Which ${word.charAt(0).toUpperCase() + word.slice(1)}?`, who.map((c) => ({ label: c.name, replace: [word, c.name] })));
+      return;
+    }
     const self = /\b(i|myself|i shall|i will|we shall)\b/.test(t) && L.lord;
     // "Kevan, march on the Twins": the one addressed does it — and if he leads a host, it is the host that goes
     const hailed = named.find((x) => x.i <= 1 && new RegExp(`^${given(x.c)}\\s*,`, 'i').test(clause.replace(/^(?:ser|lord|lady|maester|uncle|cousin|brother|sister)\s+/i, '')))?.c;
@@ -224,6 +262,8 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     // a host by its banner — but "six rangers" is a number of men, not the host called the Rangers
     const hosts = [...new Set(mentions(tok, L.hostNames).filter((m) => !/^\d+$|^(one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|hundred|thousand|few|dozen|score)$/.test(tok[m.i - 1] || '')).map((m) => m.id))];
     const nums = numbersIn(clause).map((x) => x.n);
+    const menNums = menIn(clause); const noMen = menNums.length > 0 && menNums[0] <= 0; // (an order for nought men, or for a number below it, is a question, not a levy of everything)
+    const howMany = (verb, params) => need('How many men?', [100, 500, 1000].map((n) => ({ label: `${n} men`, patch: { men: n } })), { verb, params });
     const firstPlaceAt = placeM[0]?.i ?? Infinity;
     const dest = () => places.at(-1) || (/\bhome\b/.test(t) ? me.seat : /\bhere\b/.test(t) ? resolvePlaceId(L.lord?.loc) : null);
     res.found.people.push(...people.map((c) => c.id)); res.found.places.push(...places); res.found.houses.push(...housesNamed); res.found.hosts.push(...hosts); res.found.numbers.push(...nums);
@@ -241,12 +281,14 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       const addressed = toldTo?.c || named.find((x) => /\b(to|tell)(?: (?:my|our|the|good|dear|lord|lady|ser|king|queen|prince|princess|maester|son|daughter|brother|sister|uncle|aunt|cousin|nephew|niece|wife|husband|father|mother|kinsman|bannerman))*$/.test(tok.slice(0, x.i).join(' ')))?.c;
       const to = addressed || others[0] || ruled || own.find((c) => !new RegExp(`^${given(c)}\\b`).test(t)) || own[0] || null;
       if (to && to.house === house && to.id === L.lord?.id) { need('To whom should the raven fly?'); return; }
+      // one in the same hall is told aloud: no raven flies a day to a man across the table (OR10: "Tell Maester Luwin to write to the Citadel" wrote to Luwin)
+      if (to && L.lord && to.id !== L.lord.id && together(state, to, L.lord)) { res.said.push({ clause, to: to.id }); return; }
       res.letter = res.letter || { to: to?.id || null };
       if (!to) need('To whom should the raven fly?');
       return;
     }
     if (RE.war.test(t)) {
-      const target = housesNamed[0] || others[0]?.house;
+      const target = housesNamed[0] || others[0]?.house || (mentions(tok, L.houses).some((m) => m.id === house) ? house : null);
       if (target) A('declare_war', { house: target, reason: clause.replace(/^.*?\bwar\b\s+(?:on|upon|against|with)\s+(?:house\s+)?(?:the\s+)?[\w']+[,:;]?\s*(?:for|because of|because|over)?\s*/i, '').slice(0, 200) });
       else need('Declare war on whom?');
       return;
@@ -254,13 +296,18 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     const realmWide = /\b(men|lords|houses|swords|strength|levies) of (the )?(north|realm|vale|west|westerlands|reach|riverlands|stormlands|dorne|iron islands|isles|crownlands)\b|\b(north|realm|west(?:erlands)?|vale|reach|riverlands|stormlands|isles)['’]?s (levies|men|lords|bannermen|strength|swords)\b|\bnorthmen\b|\ball (the |my )?(lords|vassals|bannermen)\b/.test(t);
     // "call the Harlaws, the Drumms and the Goodbrothers to Pyke": some of the banners, by name
     // …or by their lords ("summon Lord Harlaw to Pyke")
+    // "Summon Lord Bolton and Lord Umber to a council at Winterfell": a call to talk, not to arms: a raven to each lord named (OR2: it called their banners, 4,500 men from the fields)
+    if (/\b(summon|call|bid|invite|ask|send for|command)\b/.test(t) && /\b(council|counsel|parley|audience|meeting|conference|talks?|feast|wedding|funeral|tourney|hunt)\b/.test(t) && !/\b(banners?|host|army|men|levies|to arms|troops|war)\b/.test(t)) {
+      const lords = [...new Set([...others.map((c) => c.id), ...housesNamed.map((h) => rulerOf(state, h)?.id)].filter(Boolean))];
+      if (lords.length) { res.letter = res.letter || { to: lords[0], ...(lords.length > 1 ? { also: lords.slice(1) } : {}) }; return; }
+    }
     const sworn = [...new Set([...housesNamed, ...others.filter((c) => state.houses[c.house]?.lord === c.id).map((c) => c.house)])].filter((id) => state.houses[id]?.liege === house);
     if (sworn.length && housesNamed.every((id) => sworn.includes(id)) && /\b(call|summon|muster|bid|bring|gather|order|command|send for)\b/.test(t) && !RE.war.test(t)) { A('call_banners', { vassals: sworn, at: dest() || me.seat }); return; }
     if (RE.banners.test(t) || (realmWide && RE.raise.test(t) && !/\blevies of the isles\b/.test(t))) {
       const at = dest() || me.seat;
       A('call_banners', { vassals: 'all', at });
       // "call the banners and raise my own levies", "gather all the men of the North into one host"
-      if (/\b(own|my) levies\b|\braise\w*\s+(?:\w+\s+){0,3}levies\b|\ball\b[^.]*\bmen\b|able[- ]?bod|\bhost\b|\barmy\b/.test(t)) A('raise_levies', { at, ...(nums[0] ? { men: nums[0] } : {}), ...hostName(clause) });
+      if (/\b(own|my) levies\b|\braise\w*\s+(?:\w+\s+){0,3}levies\b|\ball\b[^.]*\bmen\b|able[- ]?bod|\bhost\b|\barmy\b/.test(t)) { if (noMen) howMany('raise_levies', { at, ...hostName(clause) }); else A('raise_levies', { at, ...(menNums[0] > 0 ? { men: menNums[0] } : {}), ...hostName(clause) }); }
       return;
     }
     // lenders, grain, bribes, ransoms and embargoes (06 §9; WP C1b)
@@ -306,9 +353,10 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     // and "to the Wall" (a place the order goes to) is never the walls of a castle
     const raisesMen = RE.raise.test(t) && !/\b(fund|build|expand|found|begin|repair|strengthen|endow|open|dig|fill|deepen|train|construct|improve|rebuild)\b/.test(t);
     const worksT = clause.replace(/\bthe Wall\b/g, ' the Watch ').toLowerCase().replace(/\b(?:to|towards?|for|at|on|beyond|past|from|reach|reaches|guard|man|reinforce|relieve|garrison)\s+the\s+wall\b/g, ' the watch ');
-    const work = RE.works.test(t) && !raisesMen && WORKS.find(([, re]) => re.test(worksT));
+    const work = RE.works.test(t) && !raisesMen && (WORKS.find(([, re]) => re.test(worksT)) || (/\bfortif\w*|\bheighten\b/.test(t) ? WORKS.find(([key]) => key === 'walls') : null)); // (to fortify is to build walls)
     if (work && !/\b(levies|host|army|banners)\b/.test(t)) {
-      const holding = places.find((id) => state.holdings[id]?.owner === house) || me.seat;
+      // (a place the order names is the place, even if it is not one's own: the verb says why it cannot be done, rather than the works going up elsewhere)
+      const holding = places.find((id) => state.holdings[id]?.owner === house) || places[0] || me.seat;
       if (PROJECT_TEMPLATES.find((x) => x.key === work[0])) A('fund_works', { template: work[0], holding }); else need('What should be built?');
       return;
     }
@@ -319,7 +367,7 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       return;
     }
     if (RE.hire.test(t) && !/\blevies\b/.test(t)) {
-      const men = nums[0]; const at = places[0] || (/\bhere\b|this city|the city/.test(t) ? resolvePlaceId(L.lord?.loc) : null);
+      const men = menNums[0] > 0 ? menNums[0] : 0; const at = places[0] || (/\bhere\b|this city|the city/.test(t) ? resolvePlaceId(L.lord?.loc) : null);
       if (men) A('hire_men', { ...(at ? { at } : { at: resolvePlaceId(L.lord?.loc) || me.seat }), men, kind: /sellsword|free company|merc/.test(t) ? 'sellswords' : 'men-at-arms' }); else need('How many men?', [50, 200, 500].map((n) => ({ label: `${n} men`, patch: { men: n } })), { verb: 'hire_men', params: { at: at || resolvePlaceId(L.lord?.loc) || me.seat, kind: /sellsword|free company|merc/.test(t) ? 'sellswords' : 'men-at-arms' } });
       return;
     }
@@ -339,10 +387,25 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       A('judge_prisoner', { character: prisoner.id, verdict });
       return;
     }
+    if (!prisoner && /\b(execute|behead|hang|pardon|release|ransom|set (?:\w+ )?free|put (?:\w+ ){0,3}to death)\b/.test(t) && people.length && !/\b(men|host|army|levies)\b/.test(t)) {
+      const who = people.find((c) => c.id !== L.lord?.id) || people[0]; const verdict = /\bransom\b/.test(t) ? 'ransom' : /\b(behead|execute|hang|put (?:\w+ ){0,3}to death)\b/.test(t) ? 'execute' : 'release';
+      A('judge_prisoner', { character: who.id, verdict }); return;
+    }
     const secretsWords = RE.secrets.test(t) || /\bwhat\b[^.]*\b(is hiding|hides|conceals)\b/.test(t);
     if ((RE.spies.test(t.replace(/\bspymaster\b/, '')) || secretsWords) && !RE.letter.test(t)) {
       const target = housesNamed[0] || others[0]?.house || (places[0] && state.holdings[places[0]]?.owner !== house ? state.holdings[places[0]]?.owner : null);
       if (target) { A(secretsWords && !RE.spies.test(t.replace(/\bspymaster\b/, '')) ? 'gather_secrets' : 'plant_spy', { house: target }); return; }
+    }
+    if (/\b(?:dismiss|sack|discharge)\b/.test(t) && own.length && !hosts.length && !MY_HOST.test(t) && !/\b(men|host|army|levies|troops|soldiers|banners)\b/.test(t)) { A('dismiss_office', { character: own[0].id }); return; }
+    if (/\b(?:my|the|his|her) heir\b/.test(t) && /\b(name|make|declare|proclaim|appoint|choose|set up|recognis\w+|recogniz\w+)\b/.test(t)) {
+      const chosen = named.map((x) => x.c).find((c) => c.house === house && c.id !== L.lord?.id);
+      if (chosen) A('name_heir', { character: chosen.id }); else need('Whom should be named your heir?', pick('character'), { verb: 'name_heir', params: {} });
+      return;
+    }
+    if (/\b(disinherit|cut off|disown|set aside|bar)\b/.test(t) && /\b(heir|inherit\w*|succession|lands|claim)\b|\bdisinherit\b|\bdisown\b/.test(t) && people.some((c) => c.house === house)) {
+      const out = people.find((c) => c.house === house && c.id !== L.lord?.id);
+      need(`Whom should be named heir in ${out ? `${out.name}'s` : 'his'} place?`, hands().filter((c) => c.id !== out?.id).map((c) => ({ label: c.name, patch: { character: c.id } })), { verb: 'name_heir', params: {} });
+      return;
     }
     if (RE.disband.test(t)) {
       const a = hostMeant() || bigHost();
@@ -372,7 +435,8 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
       const at = places.find((id) => state.holdings[id]?.owner === house || state.houses[state.holdings[id]?.owner]?.liege === house) || me.seat;
       const to = places.find((id) => id !== at && /\b(march|send|take|lead|bring)\b/.test(t));
       const lead = own.find((c) => new RegExp(`\\b(under|led by|commanded by|with)\\b[^.]*\\b${given(c)}\\b`).test(t));
-      A('raise_levies', { at, ...(nums[0] ? { men: nums[0] } : {}), ...(lead ? { commander: lead.id } : {}), ...(to ? { to } : {}), ...hostName(clause) });
+      if (noMen) { howMany('raise_levies', { at, ...(lead ? { commander: lead.id } : {}), ...(to ? { to } : {}), ...hostName(clause) }); return; }
+      A('raise_levies', { at, ...(menNums[0] > 0 ? { men: menNums[0] } : {}), ...(lead ? { commander: lead.id } : {}), ...(to ? { to } : {}), ...hostName(clause) });
       return;
     }
     if (RE.secrecy.test(t) && (hosts.length || MY_HOST.test(t))) {
@@ -408,7 +472,8 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     if (RE.recall.test(t) && (own.length || others.length)) { for (const c of own.length ? own : others) A('recall_rider', { character: c.id }); return; }
     // who goes: the house's people the order names (or the one it is said to, or the lord himself), else whoever is sent
     const goers = own.filter((c) => !sought(c));
-    const movers = goers.length ? goers : self && RE.travel.test(t) ? [L.lord] : addressee && state.characters[addressee]?.house === house ? [state.characters[addressee]]
+    const lordGoes = !!L.lord && ((self && RE.travel.test(t)) || (!goers.length && !hosts.length && !hailedHost && !MY_HOST.test(t) && !RE.menWords.test(t) && /^(?:go|travel|ride|journey|sail|hasten|hurry|head|set out|leave|depart|return|come|proceed)\b/.test(t.replace(/^(?:please|then|now|and)\s+/, ''))));
+    const movers = lordGoes ? [L.lord, ...goers.filter((c) => c.id !== L.lord.id)] : goers.length ? goers : addressee && state.characters[addressee]?.house === house ? [state.characters[addressee]]
       : /\b(send|have|order|bid)\b/.test(t) ? named.filter((x) => x.i < firstPlaceAt && !/\b(to|for|with)$/.test(tok.slice(0, x.i).join(' '))).map((x) => x.c).filter((c) => c.house !== house) : [];
     // a host against a host: "attack the Lannister host", "bring Lord Tywin's army to battle"
     // (a castle's garrison is fought by marching on the castle, not as a host in the field)
@@ -439,7 +504,7 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
         if (guessed) res.complete = false; // nothing in the words said which host: the biggest was a guess, and a model may look
         // "bring three thousand spears to White Harbor" with a host of four thousand: part of it, or new levies? The
         // model decides (a split is a verb of phase C); the whole host is only the rule's best guess
-        if (nums[0] && !hosts.length && nums[0] < host.men * 0.9) res.complete = false;
+        if (menNums[0] > 0 && !hosts.length && menNums[0] < host.men * 0.9) res.complete = false;
         return;
       }
       // no host in the field: the order is still read, and its receipt says why it cannot be done (04 §4.4)
@@ -447,10 +512,11 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
     }
     // someone to a place ("Send Jon to the Wall with a few men", "Ser Rodrik should ride for White Harbor")
     if (movers.length && (RE.travel.test(t) || RE.march.test(t) || /\breinforce|relieve|join|guard|go to the aid\b/.test(t))) {
-      if (!to) { need(`Where should ${movers[0].name} go?`); return; }
-      const men = RE.menWords.test(t) || /\b(rangers|brothers|longships|riders)\b/.test(t) ? nums.find((n) => n > 0) ?? 50 : 0;
-      // the first named leads the men; the rest ride with them ("Jory is to take ten men and escort my daughters")
-      movers.forEach((c, k) => A('send_person', { character: c.id, to, men: k === 0 ? men : 0 }));
+      const men = RE.menWords.test(t) || /\b(rangers|brothers|longships|riders)\b/.test(t) ? menNums.find((n) => n > 0) ?? 50 : 0;
+      if (!to) { need(lordGoes ? 'Where do you go?' : `Where should ${movers[0].name} go?`, placeChips(), { verb: 'send_person', params: { character: movers[0].id, men, ...(lordGoes && movers.length > 1 ? { companions: movers.slice(1).map((c) => c.id) } : {}) } }); return; }
+      // the lord who goes takes those he names with him, as one company (a rider party carries them); otherwise the first named leads the men and the rest ride with them ("Jory is to take ten men and escort my daughters")
+      if (lordGoes) A('send_person', { character: movers[0].id, to, men, ...(movers.length > 1 ? { companions: movers.slice(1).map((c) => c.id) } : {}) });
+      else movers.forEach((c, k) => A('send_person', { character: c.id, to, men: k === 0 ? men : 0 }));
       return;
     }
     const verbAsked = RE.march.test(t) || RE.travel.test(t) || RE.attack.test(t);
@@ -464,9 +530,9 @@ export function parseOrder(state, text, { house = state.meta.player, addressee =
   for (const clause of clausesOf(text)) {
     const was = res.actions.length + !!res.letter + !!res.clarify;
     readClause(clause);
-    if (res.actions.length + !!res.letter + !!res.clarify === was && !PRAYER.test(clause.toLowerCase())) res.complete = false;
+    if (res.actions.length + !!res.letter + !!res.clarify === was && !PRAYER.test(clause.toLowerCase()) && !res.said.some((x) => x.clause === clause)) { res.complete = false; res.unread.push(clause); }
   }
-  if (!res.actions.length && !res.letter && !res.clarify) res.story = true;
+  if (!res.actions.length && !res.letter && !res.clarify) res.story = !res.said.length;
   res.found = Object.fromEntries(Object.entries(res.found).map(([k, v]) => [k, Array.isArray(v) ? [...new Set(v)] : v]));
   return res;
 }
