@@ -9,8 +9,10 @@ import { unitsOf } from '../../shared/units.js';
 import { temperament } from '../../shared/temperament.js';
 import { difficultyOf } from '../../../data/balance.js';
 import { keptByStory } from '../people/life.js';
+import { CANON_DEATHS } from '../../../data/fates.js';
 import { groundAt, paceOf, planRoute } from '../movement.js';
 import { idOf, settle } from '../parties.js';
+import { emit } from '../facts/log.js';
 import { landmassOf } from '../geo.js';
 import { supplyOf, fedByRations, feeds, trainOf, capacityOf } from './supply.js';
 
@@ -132,8 +134,11 @@ export function refugeOf(state, p) {
 export function fallBack(state, p) {
   const to = refugeOf(state, p); if (!to || !state.holdings[to]) return null;
   if (p.at === to) return to;
-  delete p.besieging; p.march = { to, since: state.meta.turn }; p.at = null; p.wait = undefined; delete p.wait;
+  const from = p.at; delete p.besieging; p.march = { to, since: state.meta.turn }; p.at = null; p.wait = undefined; delete p.wait;
   planRoute(state, p, state.holdings[to].pos, to, { toName: state.holdings[to].name }); settle(state, p);
+  // a party that arrives has set out (the coherence check looks): the siege's or the battle's own card tells why it left, this is the road, quietly (ST8)
+  const days = Math.max(1, Math.ceil(p.route?.days || 1));
+  emit(state, 'set_out', { actors: p.commander ? [p.commander] : [], houses: [p.owner], place: from || null, pos: p.pos, importance: 1, data: { party: p.id, to, days, fallback: true }, cause: { type: 'rule', ref: 'fall_back' }, text: `${p.name} falls back to ${state.holdings[to].name} (~${days} days).` });
   return to;
 }
 
@@ -156,7 +161,12 @@ export function fatesOf(state, p, side, { broken = false, playerBattle = false, 
     const k = broken ? 1.5 : 1;
     const [take, slay] = side === 'lost' ? (cmd ? [0.25, 0.08] : fighter ? [0.15, 0.05] : [0.1, 0.01]).map((x) => x * k) : side === 'drew' ? (fighter ? [0.05, 0.03] : [0, 0]) : [0, fighter ? 0.02 : 0];
     const roll = r(); let fate = roll < slay ? 'slain' : roll < slay + take ? 'captured' : fighter && roll < slay + take + 0.1 ? 'wounded' : null;
-    if (fate === 'slain' && keptByStory(state, c, { playerBattle })) fate = side === 'lost' ? 'captured' : 'wounded';
+    const kept = keptByStory(state, c, { playerBattle });
+    // a pillar of the story whose end is still to come (Robb before the Red Wedding, Tywin, Joffrey) is hurt, not taken: every beat between needs him free and in command, and a captive
+    // king in the north lapses six of them (the canon run lost Robb to a lost field at the Casterly Rock and the books went off the rails); the others are taken instead of killed
+    const pillar = kept === 'canon' && CANON_DEATHS[c.id]?.pillar;
+    if (fate === 'slain' && kept) fate = side === 'lost' && !pillar ? 'captured' : 'wounded';
+    else if (fate === 'captured' && pillar) fate = 'wounded';
     if (fate) out.push({ c, fate });
   }
   return out;
