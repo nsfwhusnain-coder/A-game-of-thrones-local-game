@@ -110,8 +110,8 @@ export function regencyTick(state, days = 30) {
     const reg = chooseRegent(state, h.id);
     if (!reg) continue; // nobody fit: the house drifts, and its vassals notice (below)
     h.regent = reg.id;
-    // a minority the scenario starts with (Edric Dayne's, Robert Arryn's) is a condition of the tale, not news of its first week (ST10): no one "takes the regency" on turn one
-    if ((state.meta.turn ?? 0) === 0 && why.kind === 'minority') { applied.push({ op: 'regency', text: `${h.name}: ${reg.name} rules as regent (${why.kind})` }); continue; }
+    // a minority the scenario starts with (Edric Dayne's, Robert Arryn's) is a condition of the tale, not news of its first week (ST10): no one "takes the regency" in the first turn (the counter reads 1 while it is played)
+    if ((state.meta.turn ?? 0) <= 1 && why.kind === 'minority') { applied.push({ op: 'regency', text: `${h.name}: ${reg.name} rules as regent (${why.kind})` }); continue; }
     const lord = state.characters[h.lord];
     const mine = h.id === p;
     events.push(fact(state, 'regency_begun', {

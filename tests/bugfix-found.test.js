@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 process.env.WC_PROVIDER = 'mock';
+process.env.WC_SAVES = (await import('node:fs')).mkdtempSync((await import('node:path')).join((await import('node:os')).tmpdir(), 'wc-found-'));
 const { createInitialState, applyChanges } = await import('../public/js/shared/world.js');
 const { tollAlong } = await import('../public/js/shared/marches.js');
 const { withRng } = await import('../public/js/engine/rng.js');
@@ -24,6 +25,7 @@ const { suitability, refusal } = await import('../public/js/engine/people/family
 const { HAPPENINGS } = await import('../public/data/happenings.js');
 const { raiseLevies } = await import('../public/js/engine/actions/military.js');
 const { regencyTick, speakerFor } = await import('../public/js/shared/regency.js');
+const game = await import('../server/game.js');
 
 const world = (house = 'stark', seed = 7) => createInitialState('agot_298', house, { seed });
 
@@ -576,4 +578,12 @@ test('N-054: a regent who is seized or dies gives up the seal: another takes it,
   regencyTick(s, 30); assert.ok(h.regent && h.regent !== first && s.characters[h.regent].alive && !/imprison|captive/.test(s.characters[h.regent].status || ''), `another, free, takes the seal (${h.regent})`);
   const second = h.regent; s.characters[second].alive = false;
   regencyTick(s, 30); assert.ok(!h.regent || (h.regent !== second && s.characters[h.regent].alive), 'a dead regent is not kept as the regent');
+});
+
+test('N-055: the first turn of a real game tells no one "takes the regency" for a boy the tale starts with (ST10 was tested with a turn counter at 0 that the game does not have)', async () => {
+  const { id } = game.newGame('agot_298', 'stark', { seed: 3 });
+  const r = await game.advance(id, { span: '1d' }); await game.settled(id);
+  assert.deepEqual((r.turn.events || []).map((e) => e.headline).filter((h) => /regency/i.test(h)), [], 'no card of a regency in the first turn');
+  const s = game.loadState(id); assert.ok(s.houses.dayne.regent, 'and the boy\'s regent rules');
+  assert.ok(!game.readFacts(id, {}).some((f) => f.kind === 'regency_begun'), 'and no fact of one begun');
 });

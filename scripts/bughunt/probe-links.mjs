@@ -31,6 +31,12 @@ for (let n = 1; n <= Number(turns); n++) {
     for (const [rel, key] of [['father', 'father'], ['mother', 'mother']]) { const p = C[c[key]]; if (!p || c.born == null || p.born == null) continue; if (c.born > 298 && c.born - p.born < 12) add('parent-too-young', `${p.name} (born ${p.born}) is ${rel} of ${c.name} (born ${c.born}) ${at}`); if (c.born > 298 && !p.alive && p.died != null && c.born > p.died + (key === 'father' ? 1 : 0)) add('born-after-death', `${c.name} born ${c.born}, after ${rel} ${p.name} died in ${p.died} ${at}`); }
     if (c.alive && c.age != null && c.born != null && Math.abs((year - c.born) - c.age) > 1) add('age-born-disagree', `${c.name} is ${c.age} and born ${c.born} in ${year} ${at}`);
   }
+  for (const c of Object.values(C)) {
+    if (c.betrothed) { const b = C[c.betrothed]; if (!b) add('betrothed-missing', `${c.name} is promised to ${c.betrothed}, who is nobody ${at}`); else if (c.alive && !b.alive) add('betrothed-dead', `${c.name} is promised to ${b.name}, who is dead ${at}`); else if (c.alive && b.betrothed !== c.id) add('betrothed-one-sided', `${c.name} is promised to ${b.name}, who is promised to ${nm(b.betrothed)} ${at}`); }
+    if (c.alive && (c.roles || []).includes('heir') && H[c.house]?.lord === c.id) add('lord-still-heir', `${c.name} is lord of ${c.house} and still its heir ${at}`);
+  }
+  for (const p of s.pacts || []) for (const k of ['a', 'b']) if (p[k] && !H[p[k]]) add('pact-house-gone', `a ${p.type} pact names ${p[k]}, which is no house ${at}`);
+  for (const r of Array.isArray(s.ravens) ? s.ravens : []) for (const k of ['from', 'to']) if (typeof r[k] === 'string' && !C[r[k]] && !H[r[k]]) add('raven-nobody', `a raven ${k} ${r[k]}, who is nobody ${at}`);
   for (const w of s.wars || []) { if (w.status !== 'ongoing') continue; for (const side of [...(w.attackers || []), ...(w.defenders || [])]) if (!H[side]) add('war-side-gone', `war ${w.id} has ${side}, which is no house ${at}`); const both = (w.attackers || []).filter((a) => (w.defenders || []).includes(a)); if (both.length) add('war-same-side-both', `${both.join(',')} fight both sides of ${w.id} ${at}`); }
 }
 const res = Object.fromEntries(Object.entries(out).map(([r, v]) => [r, [...v]]));

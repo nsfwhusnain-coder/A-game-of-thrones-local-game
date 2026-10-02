@@ -100,7 +100,7 @@ const { regencyTick } = await import('../public/js/shared/regency.js');
 
 test('ST10: the regents of the boys the tale starts with are in place and told of no one, in week one; a regency that begins later is told', () => {
   const s = createInitialState('agot_298', 'stark', { seed: 7 }); s.facts = []; const day = dayNumber(s.meta.date); s.meta.clock = { turn: 1, from: day, to: day };
-  assert.equal(s.meta.turn, 0, 'the first turn is played with the turn counter at 0');
+  s.meta.turn = 1; // (the first turn is played with the counter at 1: advance sets it before the day loop; N-055)
   const boys = Object.values(s.houses).filter((h) => h.lord && s.characters[h.lord] && (s.characters[h.lord].age ?? 30) < 16 && h.id !== 'stark');
   assert.ok(boys.length >= 2, 'the scenario has houses under a boy');
   const r = regencyTick(s, 7);
