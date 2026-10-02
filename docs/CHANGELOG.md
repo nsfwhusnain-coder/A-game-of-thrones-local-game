@@ -3,6 +3,25 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-02 — Bug hunt fixes ST5, ST6, ST7, ST8, ST11: prisoners, who leads, bands that change their mind, garrisons
+
+- **A prisoner is not freed by accident.** Asha Greyjoy, taken in battle, "set out for Pyke" and "marched 3,397 men home" 575 days later with no release, ransom or escape: when her house's men left the host that held her, she was sent home with them. A prisoner is now held where he is until he is released, ransomed or escapes, however his house's men or his captors' host move; and the card of a house going home names the one who rules it (its regent while the lord is a captive or a child), not the prisoner.
+- **A ward by blood inherits his own house.** Theon Greyjoy, Lord Eddard's ward at Winterfell and Balon's only living son, was passed over because he was "a ward": Asha was made head of the Iron Islands over him. A ward of another house's hall (Jeyne Poole at Winterfell) still inherits nothing there.
+- **A maester does not lead an army.** Maester Luwin, regent of Winterfell for a boy, led the Stark host and was named the man who took Asha prisoner. The regent still rules; the host goes under the lord if he is free and grown, else the house's best fighter, else under its banner.
+- **A band on the road is not sent somewhere else each week.** Asha's company set out for Moat Cailin, then Winter Town, then Moat Cailin again in three weeks. A host that is marching goes on to where it was sent (it may be halted, or turned on a foe in reach).
+- **A garrison does not arrive where it never left for, nor camp before its own walls.** "Winterfell Household has arrived at Winter Town" came after a lifted siege with no departure; a household of a hall taken by force is now overcome there (and its end is told), and a host that falls back sets out first (a quiet card), so every arrival has its departure.
+- **A boy does not lead a party.** Robert Arryn, six, no longer "leaves the Eyrie with 180 knights and riders to hunt in the country".
+- Tests: `tests/bugfix-prisoners.test.js` (8).
+
+## 2026-10-02 — Bug hunt fixes SV2, SV3, SV4, SV5, CI1: one thing at a time on a save, and no bad input
+
+- **Two End turns are one.** While a turn is being written, a second End turn, an undo, a conversation, a council, an order, an edit or a delete is refused at once ("The chronicle is busy: a turn is being written. Wait for it to finish.") instead of running on a stale copy and losing, or undoing, the turn. The quiet ones asked in passing (the ravens read, a page of news) are refused the same way; the page already does without them.
+- **A damaged chronicle says so.** A save whose file cannot be read is listed on the title screen as damaged, says why in words when you click it, and can be burned with the ✕. A folder with no save in it is not listed.
+- **Spans and sizes are checked.** `abc`, `-5d`, `0d`, `9999d` and `999999999d` are refused ("use auto, or from 1d to 360d") instead of being played for a minute and more; an order of more than 2,000 characters, more than 60 orders, a message of more than 4,000 characters and a chronicle of more than a million are refused in words rather than cut off in silence.
+- **The page is not sent the dice.** The position of the save's random generator, which would let a page foretell the next roll, stays on the server.
+- **The soak says which game failed.** `tests/soak.test.js` prints the seed and the command that plays that game again, and a card of a rolled-up story is scored against the houses of all its facts (the likeliest cause of the one red run on CI: "Norrey men join the host" failed for want of Norrey).
+- Tests: `tests/bugfix-saves.test.js` (5).
+
 ## 2026-10-02 — Bug hunt fixes TX1, TX2, TX3, TX6, TX7, TX8, TX10: letters, audiences and the advisor
 
 - **A letter's card quotes what it says.** "A raven from Riverrun: “Eddard.”" and "A raven from Dragonstone: “Lord Targaryen.”" are gone: the card skips the greeting ("Eddard. My dear Ned, …") and the signature and quotes the first thing the letter says.
