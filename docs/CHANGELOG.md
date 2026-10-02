@@ -3,6 +3,11 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-03 — What the eighth look found: the lists wait for their host
+
+- **The lists wait for the lord who called them.** The Hand rode south and the lists at Winterfell were still to be run a fortnight later; lords marched with their muster the week before their own lists. They are put off a week at a time while the host is away, run when he is home, and dropped after two moons (N-045).
+- Tests: `tests/bugfix-found.test.js` (N-045). The findings are in `docs/bughunt/FOUND.md`.
+
 ## 2026-10-03 — What the seventh look found: seven-day turns and the call to the Crown's banners
 
 The probes again, at the game's own seven-day turns and at ninety days.

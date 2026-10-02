@@ -13,11 +13,15 @@ import { emit } from '../engine/facts/log.js';
 import { random } from '../engine/rng.js';
 import { dayNumber } from '../engine/time.js';
 import { keptByStory } from '../engine/people/life.js';
+import { speakerFor } from './regency.js';
 
 /** Days from the call to the lists: the lords of the region have time to ride in. */
 export const LISTS_AFTER = 21;
 /** The lords are sent in the first days after the call: one who set out later could not be there when the lists are run. */
 export const GUESTS_RIDE = 10;
+/** The lists are put off a week at a time while their host is away, up to this many times (about two moons), and then are not run. */
+export const POSTPONE_DAYS = 7;
+export const POSTPONE_MAX = 8;
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const today = (state) => dayNumber(state.meta.date);
@@ -75,6 +79,9 @@ export function listsTick(state) {
   const now = today(state);
   for (const [seatId, L] of Object.entries(lists)) {
     if (L.on > now) continue;
+    // the lists wait for their host: a lord who is away on the day (the Hand rode south the week before, the King on his progress) has them put off a week at a time, and no lists at all after two moons
+    const host = speakerFor(state, L.house);
+    if (host?.alive && placeOf(state, host) !== seatId && (L.postponed || 0) < POSTPONE_MAX) { L.on = now + POSTPONE_DAYS; L.postponed = (L.postponed || 0) + 1; continue; }
     delete lists[seatId];
     const me = state.houses[L.house]; const hall = state.holdings[seatId];
     if (!me || !hall || hall.owner !== L.house || hall.status === 'besieged') continue;

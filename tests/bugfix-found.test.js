@@ -475,3 +475,16 @@ test('N-044: only a host in the field or a fleet is "on campaign" for the mind: 
   applyChanges(s, [{ op: 'army_create', id: 'field_host', owner: 'stark', name: 'The field host', at: 'stark', men: 5000, commander: 'robb_stark' }]);
   assert.ok(why('robb_stark').includes('on campaign'), 'a host in the field is a campaign');
 });
+
+test('N-045: the lists wait for their host: put off a week at a time while he is away, run when he is home, dropped after two moons', async () => {
+  const { scheduleLists, listsTick, POSTPONE_DAYS, POSTPONE_MAX } = await import('../public/js/shared/tourney.js');
+  const s = world('lannister'); today(s); const seat = s.houses.tully.seat; const lord = s.characters[s.houses.tully.lord];
+  scheduleLists(s, seat, 'tully'); const on = s.plots.lists[seat].on; const run = (d) => { s.meta.date = { ...s.meta.date, ...dateOfDay(d) }; s.meta.clock = { turn: 1, from: d, to: d }; listsTick(s); };
+  applyChanges(s, [{ op: 'army_create', id: 'riders_x', owner: 'tully', name: 'Riders', at: null, men: 10, commander: lord.id }]); // the lord has ridden out with his own
+  const away = s.parties.riders_x; away.at = null; away.pos = [0, 0]; setLoc(s, lord, 'party:riders_x');
+  run(on); assert.ok(s.plots.lists[seat], 'his lists are still to be run'); assert.equal(s.plots.lists[seat].on, on + POSTPONE_DAYS, 'a week later');
+  setLoc(s, lord, seat); run(on + POSTPONE_DAYS); assert.equal(s.plots.lists[seat], undefined, 'home, he has them run');
+  scheduleLists(s, seat, 'tully'); setLoc(s, lord, 'party:riders_x'); let d = s.plots.lists[seat].on;
+  for (let i = 0; i <= POSTPONE_MAX; i++) { run(d); d += POSTPONE_DAYS; }
+  assert.equal(s.plots.lists[seat], undefined, 'two moons of his absence and there are no lists');
+});

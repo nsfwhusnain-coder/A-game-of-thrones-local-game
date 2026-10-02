@@ -256,6 +256,11 @@ Every party but a rider's counted as a campaign for the mind (the cold, the wet 
 **Where:** `shared/psyche.js` (`campaigning`).
 **FIXED** (`tests/bugfix-found.test.js`): only a host, a fleet or a band in the field is a campaign. A 30-turn Stark game: 55 of 993 at the top (it was 77, and 144 before N-028), 100 behaviour cards (174; 421), 91 collapses (144; 366). A lord at war, and the Watch in a starved winter, still climb: the war's load is unchanged (D-118).
 
+### N-045 · S2 · The Hand rides south and the lists at Winterfell wait for day 14 (the King's tourney, again)
+At the game's own seven-day turns, in two of six games, the lists called at Winterfell were still to be run a fortnight after the story had sent the Hand south, and in three more games a lord who had called lists marched with his muster the week before them (Tyrell, Lefford, Umber). N-020 and N-038 keep a house from calling lists for a lord who is about to go; a lord the story had not named, or a war's summons, still took him away.
+**Where:** `shared/tourney.js` (`listsTick`).
+**FIXED** (`tests/bugfix-found.test.js`): the lists wait for their host: put off a week at a time while he (or his regent) is away on their day (`POSTPONE_DAYS`, up to `POSTPONE_MAX` times, about two moons), run when he is home, and not run at all after two moons of his absence.
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
@@ -268,7 +273,7 @@ Every party but a rider's counted as a campaign for the mind (the cold, the wet 
 
 ## Seen, and left alone
 
-- `probe-simul`'s "tourney-host-away" for a lord marching with his muster a fortnight after calling lists (Crakehall, Umber): the call to arms outranks the tourney; the lists run without him. A house at war could be refused a tourney (`dutyBound`); left for the owner.
+- A house at war could be refused a tourney (`dutyBound`); left for the owner. (The lists now wait for a host who marched, N-045.)
 - Strain: after thirty turns of the Stark game 74 of 1,005 are still at the top of the strain scale (the lords and children of the great houses at war; the Watch). The war's own load is untouched (D-118's question).
 
 - The sweep's "act-on-the-road" for levies called (Tywin at Casterly Rock while his host is on the road): a lord at war sends his steward word to raise levies at his seat; it is a letter, not a feast he sits at. Left.
