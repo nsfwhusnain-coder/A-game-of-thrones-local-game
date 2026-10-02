@@ -194,9 +194,9 @@ test('N-016: a day of the realm\'s calendar is told by its own name and words, n
   for (const c of [...CALENDAR, ...COURTS]) {
     const where = c.where === 'baratheon' ? 'baratheon' : Object.keys(s.holdings).includes(c.where) ? c.where : 'baratheon';
     s.facts = [];
-    fact(s, 'happening', { title: c.title, text: c.text, where, importance: 1, houses: [s.holdings[where].owner] }, { data: { head: c.title, sum: c.text } });
+    fact(s, 'happening', { title: c.title, text: c.text, where, importance: 1, houses: [s.holdings[where].owner] }, { data: { head: c.head || c.title, sum: c.text } });
     const card = cardOf(s, { facts: [s.facts.at(-1)] }); // (a small fact is a card of its own: the clusterer tells only the news)
-    assert.equal(card.headline, c.title.replace(/^./, (x) => x.toUpperCase()).replace(/[.;,\s]+$/, '')); assert.ok(card.summary.startsWith(c.text.slice(0, 30)), card.summary);
+    assert.equal(card.headline, (c.head || c.title).replace(/^./, (x) => x.toUpperCase()).replace(/[.;,\s]+$/, '')); assert.ok(card.summary.startsWith(c.text.slice(0, 30)), card.summary);
     assert.doesNotMatch(`${card.headline} ${card.summary}`, /Rumour spreads|only talk/);
   }
 });
@@ -508,4 +508,21 @@ test('N-047: a neighbour riding to pay his respects is a card of the court, not 
   assert.equal(clusterFacts(s, s.facts).stories[0].type, 'court');
   s.facts = []; emit(s, 'set_out', { actors: ['rodrik_cassel'], houses: ['stark'], place: 'stark', importance: 3, data: { party: 'p2', to: 'stark', against: 'p3' }, text: 'x' });
   assert.equal(clusterFacts(s, s.facts).stories[0].type, 'war');
+});
+
+test('N-048: the cards the writer makes of the calendar, a strained lord and the floating market pass the scorer the soak holds every card to', async () => {
+  const { CALENDAR, COURTS } = await import('../public/data/calendar.js');
+  for (const c of [...CALENDAR, ...COURTS]) {
+    const s = world('stark'); today(s); s.facts = [];
+    const where = Object.keys(s.holdings).includes(c.where) ? c.where : 'baratheon';
+    fact(s, 'happening', { title: c.title, text: c.text, where, importance: 1, houses: [s.holdings[where].owner] }, { data: { head: c.head || c.title, sum: c.text } });
+    const f = s.facts.at(-1); const st = { facts: [f], actors: [], houses: f.houses, place: where, days: [1, 1], importance: 1 }; const card = cardOf(s, st);
+    const r = scoreCard({ headline: card.headline, summary: card.summary }, st, s); assert.ok(r.pass, `${c.title}: "${card.headline}" ${JSON.stringify(r.detail)}`);
+  }
+  for (const pin of [0, 1]) {
+    const s = world('stark'); today(s); s.facts = []; emit(s, 'behaviour', { actors: ['eddard_stark'], houses: ['stark'], place: 'stark', importance: 3, data: { band: 'strained' }, text: 'x' });
+    const st = storyOf(s); const card = cardOf(s, st, { pin }); assert.ok(scoreCard({ headline: card.headline, summary: card.summary }, st, s).pass, card.headline);
+  }
+  const s = world('stark'); today(s); s.facts = []; emit(s, 'happening', { actors: [], houses: ['stark'], place: 'stark', importance: 2, data: { tpl: 'd_rhoyne' }, text: 'x' });
+  for (const pin of [0, 1]) { const st = storyOf(s); const card = cardOf(s, st, { pin }); assert.ok(scoreCard({ headline: card.headline, summary: card.summary }, st, s).pass, card.headline); }
 });

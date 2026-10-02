@@ -919,10 +919,10 @@ const FAMILY_SUM = {
 };
 /** How a man's strain shows, by its band (data.band): what the household sees, never a number. */
 const BEHAVIOUR_HEAD = {
-  weary: ['{A} looks worn', '{A} has not been sleeping'],
-  strained: ['{A} is short with the household', '{A} is on edge'],
-  fraying: ['{A} snaps at all who come near', '{A} is fraying'],
-  breaking: ['{A} is spoken of in low voices', '{A} is close to breaking'],
+  weary: ['{A} looks worn', '{A} sleeps badly'],
+  strained: ['{A} grows short with the household', '{A} loses patience with the servants'],
+  fraying: ['{A} snaps at all who come near', '{A} frays under the strain'],
+  breaking: ['{A} is spoken of in low voices', '{A} comes close to breaking'],
 };
 const BEHAVIOUR_SUM = {
   weary: 'It is a long time since a night of proper rest',

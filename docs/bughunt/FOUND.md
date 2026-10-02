@@ -270,6 +270,11 @@ When a vassal answered the call, the host that gathered at his seat was given hi
 The story's type came from its lead fact's kind, and a march is war; the small rides of other houses were `court` only as background. A household riding to feast, hunt or pay respects (a `why` on a ride that is no campaign) is the court's now.
 **Where:** `engine/facts/cluster.js` (`typeOf`). **FIXED** (`tests/bugfix-found.test.js`).
 
+### N-048 · S4 · The engine's own cards fail the scorer it holds the model's to
+Every card of three 30-turn games run through `scoreCard`: about 1 % failed, and the largest classes were the writer's own: "X is on edge" and "X has not been sleeping" (no verb: N-011's heads), the calendar days ("The small council sits", "The harvest fires": no place and no verb, N-016's raw titles) and "A thousand boats sell goods" (a number the story does not hold).
+**Where:** `engine/facts/heads.js` (`BEHAVIOUR_HEAD`), `data/calendar.js` (a `head` for each day, with a verb and a place), `data/happening-heads.js`.
+**FIXED** (`tests/bugfix-found.test.js`). Left: heads that name a house by its short name when the fact's slots lack the house (`sends the Darry host home`), "Five battles in fourteen days" (a count the slots do not hold) and static happening texts naming the King: the floor card is still the writer's, the scorer is strict.
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

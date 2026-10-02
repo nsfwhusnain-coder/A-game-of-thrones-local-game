@@ -101,7 +101,7 @@ export async function engineDay(state, ctx) {
   for (const c of [...CALENDAR.filter((x) => x.month === state.meta.date.month && x.day === state.meta.date.day), ...COURTS.filter((x) => x.day === state.meta.date.day)]) {
     if (c.when && !c.when(state)) continue; const where = resolvePlaceId(c.where);
     if (!state.holdings[where]) continue;
-    cards.push(fact(state, 'happening', { title: c.title, text: c.text, where, importance: 1, houses: [state.holdings[where].owner], bg: true }, { cause: { type: 'rule', ref: 'calendar' }, data: { head: c.title, sum: c.text } })); // (the writer reads slots: the day's own name and words, or it is "Rumour spreads at King's Landing. It is only talk.")
+    cards.push(fact(state, 'happening', { title: c.title, text: c.text, where, importance: 1, houses: [state.holdings[where].owner], bg: true }, { cause: { type: 'rule', ref: 'calendar' }, data: { head: c.head || c.title, sum: c.text } })); // (the writer reads slots: the day's own name and words, or it is "Rumour spreads at King's Landing. It is only talk.")
   }
   cards.push(...await ctx.deliver(state));
   // promises kept or broken today, judged after the day's marches (a host that reached Moat Cailin has kept its word)

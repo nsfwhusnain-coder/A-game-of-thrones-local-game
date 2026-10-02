@@ -167,7 +167,7 @@ const BASE_HEADS = {
   d_desert: [['A sandstorm takes a caravan near {P}', 'A caravan loses its camels in the sand near {P}'], 'Half were lost to the storm and half to the thieves.'],
   d_poison: [['A knight collapses at table at {P}', 'A poisoned cup is suspected at {P}'], 'The Dornish blame the food; no one believes them.'],
   d_starfall: [['A boy shows a swordsman\'s eye at {P}', 'Whispers of a young swordsman rise at {P}'], 'They say he may one day carry the ancestral blade.'],
-  d_rhoyne: [['A thousand boats sell goods at {P}', 'The floating market at {P} is crowded'], 'The boats are lashed together and sell from the water.'],
+  d_rhoyne: [['Lashed boats sell goods at {P}', 'The floating market at {P} is crowded'], 'The boats are lashed together and sell from the water.'],
   d_yronwood: [['Knights ride the Boneway from {P}', '{hs} remembers it once ruled Dorne'], 'The lord has not forgotten what his house used to be.'],
   // ── the crownlands and King's Landing ──
   kl_flea_bottom: [['A cook sells bowls of brown at {P}', 'The stalls of the poor are busy at {P}'], 'No one asks what the meat is.'],
