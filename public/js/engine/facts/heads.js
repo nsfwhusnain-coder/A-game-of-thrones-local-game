@@ -702,7 +702,9 @@ export const HEAD = {
   ledger: (f, s, c) => {
     const h = (f.houses || []).find((x) => c.known.house(x)); const who = h ? cap1(c.hs(h)) : c.subj(f);
     const said = { hunger: `${who} goes hungry`, famine: `${who} faces famine`, grain: `${who} buys grain against the hunger`, dues: `${who} withholds its dues`, works: `${who} finishes its works` }[f.data?.note];
-    return said ? `${said}${c.at(f.place)}` : `${who} inspects its accounts${c.at(f.place)}`;
+    if (said) return `${said}${c.at(f.place)}`;
+    const event = LEDGER_EVENT[f.data?.note];
+    return event ? `${event}${c.at(f.place) || ` in the lands of ${who}`}` : `${who} inspects its accounts${c.at(f.place)}`;
   },
   unrest_rising: (f, s, c) => {
     const d = f.data || {}; const P = c.pl(f.place); const h = (f.houses || []).find((x) => c.known.house(x)); const where = P || (h ? c.hs(h) : 'the realm');
@@ -928,6 +930,9 @@ const BEHAVIOUR_SUM = {
   fraying: 'The household has learned not to bring news at all',
   breaking: 'The shaking hands, the wine at breakfast and the long silences are marked by all',
 };
+/** The small events of a house's lands, by the steward's note (data.note): the head, and a line that adds no claim the engine does not make. */
+const LEDGER_EVENT = { sickness: 'Sickness spreads among the smallfolk', outlaws: 'Outlaws gather on the roads', blight: 'Blight takes the fields', fire: 'Fire takes the granary', shoals: 'Fat shoals fill the nets', fair: 'A great fair draws merchants', vein: 'A new vein is found in the mines', storm: 'A storm wrecks the fishing boats', harvest: 'A bumper harvest is brought in' };
+const LEDGER_SUM = { sickness: 'It is the poor who suffer it', outlaws: 'Travellers go armed, or do not go', blight: 'The harvest will be thin', fire: 'The stores are short for it', shoals: 'The boats come home heavy', fair: 'The town is full, and the lord\'s tolls with it', vein: 'The miners say it is rich', storm: 'The fleet will be a season mending', harvest: 'The barns are full' };
 function happeningHead(f, s, c) {
   const own = String(f.data?.head || '').trim(); if (own) return own; // a day of the realm's calendar names itself
   if (FAMILY_HEAD[f.data?.family]) return FAMILY_HEAD[f.data.family](f, c);
@@ -1006,7 +1011,7 @@ function lossLine(W, L, won, lost) {
  */
 export const RUN = {
   head(g, s, c) {
-    const last = g[g.length - 1]; const v = sides(c, last); const near = c.near(last.place); const steady = g.every((f) => f.data?.winner === last.data?.winner);
+    const last = g[g.length - 1]; const v = sides(c, last); const near = c.near(last.place); const steady = g.every((f) => sideWon(f) === sideWon(last));
     if (!steady || v.drawn || !v.win || !v.lose) { const a = v.win || c.subj(last); const b = v.lose; return b ? c.pick(last, [`${a} and ${b} fight on${near}`, `${a} and ${b} fight a running battle${near}`]) : `A running fight${near}`; }
     return last.data?.wiped
       ? c.pick(last, [`${v.win} destroys ${v.lose}${near}`, `${v.win} hunts down ${v.lose}${near}`, `${v.lose} cut down by ${v.win}${near}`])
@@ -1015,14 +1020,19 @@ export const RUN = {
   sum(g, s, c) {
     const last = g[g.length - 1]; const v = sides(c, last); const days = last.day - g[0].day + 1;
     const first = `${cap1(say(g.length))} battles in ${days === 1 ? 'a day' : `${say(days)} days`}`;
-    const steady = g.every((f) => f.data?.winner === last.data?.winner);
-    const fell = (key) => g.reduce((n, f) => n + (f.data?.lost?.[key] || 0), 0);
-    const won = fell(last.data?.winner); const lost = fell(last.data?.loser);
+    const steady = g.every((f) => sideWon(f) === sideWon(last));
+    // each side's dead over all of them: by the house, for the hosts of a house are one side whichever of them fought
+    const fell = (side) => g.reduce((n, f) => n + (f.data?.lost?.[side === 'win' ? f.data.winner : f.data.loser] || 0), 0);
+    const won = fell('win'); const lost = fell('lose');
     const W = v.winHouse ? c.folk(v.winHouse) : 'the victors'; const L = v.loseHouse ? c.folk(v.loseHouse) : 'the vanquished';
     const second = steady && !v.drawn && last.data?.winner && last.data?.loser && (won || lost) ? lossLine(W, L, won, lost) : '';
     return sentences(first, second, steady && last.data?.wiped && v.lose ? `${cap1(v.lose)} is no more` : '');
   },
 };
+/** The side that won a battle, as the house its victor belongs to (the hosts of one house are one side), else the host itself. */
+const sideWon = (f) => f.data?.winnerHouse || f.data?.winner || '';
+/** Which two sides fought: a battle's houses (or, where it names none, its hosts), in no order. Battles with one key, close in days, are one running fight (cluster.js). */
+export const fightKey = (f) => { const d = f.data || {}; const hs = [d.winnerHouse, d.loserHouse].filter(Boolean); return (hs.length === 2 ? hs : [d.attacker, d.defender].filter(Boolean)).sort().join('|'); };
 /** Sentences in a row: each ends with a full stop; empty ones are left out. */
 const sentences = (...ts) => ts.filter(Boolean).map((t) => { const x = String(t).trim(); return /[.!?]$/.test(x) ? x : `${x}.`; }).join(' ');
 const FACTORS = {
@@ -1178,7 +1188,12 @@ export const SUM = {
     const role = { maester: 'a maester', knight: 'a knight', lord: 'a lord', lady: 'a lady', priest: 'a septon', steward: 'a steward', captain: 'a captain', commander: 'a commander', master_at_arms: 'a master-at-arms', heir: 'an heir', ward: 'a ward of the house', servant: 'a servant of the house', family: 'of the house' }[(s.characters?.[f.actors?.[0]]?.roles || [])[0]];
     return sentences(age ? `${P.He} was ${age}` : '', shown ? `${P.He} died of ${shown}` : '') || (role ? sentences(`${P.He} was ${role}`) : '');
   },
-  birth: () => '',
+  birth: (f, s, c) => {
+    const d = f.data || {}; const m = d.mother && c.known.person(d.mother) ? c.nm(d.mother) : ''; const fa = d.father && c.known.person(d.father) ? c.nm(d.father) : '';
+    if (!m && !fa) return '';
+    const kind = d.sex === 'f' ? 'daughter' : d.sex === 'm' ? 'son' : 'child'; const parents = fa && m ? `${d.posthumous ? 'the late ' : ''}${fa} and ${m}` : `${d.posthumous && fa ? 'the late ' : ''}${fa || m}`;
+    return sentences(`A ${kind} of ${parents}`);
+  },
   betrothal: (f, s, c) => { const [a, b] = houseSides(c, f); return a && b ? sentences(`The match joins ${a} and ${b}`) : sentences('The match is made between two houses'); },
   wedding: (f, s, c) => { const [a, b] = houseSides(c, f); return a && b ? sentences(`The marriage joins ${a} and ${b}`) : sentences('The two are married before their houses'); },
   captured: (f, s, c) => { const P = pro(c, f); return sentences(`${P.He} is held as a prisoner`); },
@@ -1245,7 +1260,7 @@ export const SUM = {
   },
   works_begun: (f) => { const d = f.data || {}; return d.months ? sentences(`It will take ${span(d.months * 30)}`) : ''; },
   works_done: () => '',
-  ledger: () => '',
+  ledger: (f) => sentences(LEDGER_SUM[f.data?.note] || ''),
   unrest_rising: (f) => sentences(f.data?.outlaws ? 'Broken men have taken to the woods, and travellers go armed' : 'The smallfolk are restless and the roads are less safe'),
   rising: (f, s, c) => { const h = (f.houses || []).find((x) => c.known.house(x)); return sentences(h ? `They are up in arms against ${c.hs(h)}` : 'They are up in arms'); },
   famine: () => sentences('Harvests have failed and bread is short'),
@@ -1283,7 +1298,7 @@ export const ALSO = {
   call_refused: (f, s, c) => { const a = (f.actors || []).find((id) => c.known.person(id)); return a ? sentences(`${c.lordly(a)} alone refused`) : ''; },
   holding_fell: (f, s, c) => { const T = holdingOf(c, f); return T ? sentences(`${T} has fallen`) : ''; },
   relief_near: (f, s, c) => { const T = holdingOf(c, f); return T ? sentences(`A relieving host is close to ${T}`) : ''; },
-  siege_begun: (f, s, c) => { const T = holdingOf(c, f); return T ? sentences(`${T} is shut in`) : ''; },
+  siege_begun: (f, s, c, lead) => { if (lead?.kind === 'holding_fell' || lead?.kind === 'storm_assault') return ''; const T = holdingOf(c, f); return T ? sentences(`${T} is shut in`) : ''; }, // (a castle that has fallen is not shut in)
   rout: () => sentences('The beaten host broke and fled'),
   death: (f, s, c) => { const id = f.actors?.[0]; return c.known.person(id) ? sentences(`${c.nm(id)} is dead`) : ''; },
   wedding: (f, s, c) => { const [a, b] = houseSides(c, f); return a && b ? sentences(`The marriage joins ${a} and ${b}`) : ''; },

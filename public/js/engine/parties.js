@@ -51,6 +51,7 @@ export function setLoc(state, c, where) {
   if (idOf(to) != null && !next) throw new Error(`no party ${idOf(to)} for ${c.name || c.id} to join`);
   const prev = partyOf(state, c);
   if (prev && prev !== next) {
+    if (prev.commander === c.id && (next || prev.at !== to)) prev.commander = null; // a man who goes to another party, or from a host on the road to a hall, leaves his command: what he led goes on without him, not under a name that is elsewhere (Rodrik Cassel led a company from the muster's host; Renly was sent to Highgarden)
     prev.members = (prev.members || []).filter((id) => id !== c.id);
     if (TRAVELLERS.has(prev.kind) && !prev.members.length) delete state.parties[prev.id]; // a ride with no one on it is over
   }
@@ -58,6 +59,20 @@ export function setLoc(state, c, where) {
   if (next && !(next.members || []).includes(c.id)) next.members = [...(next.members || []), c.id];
 }
 export const joinParty = (state, c, p) => setLoc(state, c, ref(p.id));
+const BOARD_RANGE = 20; // map units (~36 miles): how near a commander stands to a host or fleet that has just set out for it to be his
+/**
+ * A host or fleet that has set out takes its commander with it: he boards from the hall he stood in if he is free and near, and one who is held, or nowhere near, leads it no more.
+ * (The Iron Fleet reaved the Flint coast for a year with Victarion at Pyke; Renly's host marched to Highgarden without him.) Pure: no dice.
+ */
+export function boardCommanders(state) {
+  for (const p of forces(state)) {
+    if (!p.commander || p.at != null || !p.pos) continue;
+    const c = state.characters?.[p.commander]; if (!c || !c.alive || partyOf(state, c)) continue; // (aboard this host or another: setLoc has dealt with that)
+    const held = /imprisoned|captive|hostage/.test(c.status || ''); const home = state.holdings?.[c.loc]?.pos;
+    if (home && !held && Math.hypot(home[0] - p.pos[0], home[1] - p.pos[1]) <= BOARD_RANGE) joinParty(state, c, p);
+    else if (held || home) p.commander = null;
+  }
+}
 /** Take a character out of their party, to `where` (default: the party's ground). */
 export function leaveParty(state, c, where = null) {
   const p = partyOf(state, c); if (!p) return;

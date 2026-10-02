@@ -80,10 +80,10 @@ function churn(s, days) {
       if (h) out.changes.push({ op: 'holding', id: h.id, unrest: Math.min(100, (h.unrest || 0) + 6) });
     },
     () => { // a feast and a match
-      const cands = great.filter((h) => h.rank !== 'minor');
+      const cands = great.filter((h) => h.rank !== 'minor' && s.characters[h.lord]?.loc === h.seat); // (the host is in his hall: Walder Frey "feasted Jonos Bracken for a fortnight" at the Twins with his muster on the road to Riverrun)
       const a = pick(cands); if (!a) return;
       const friends = Object.entries(s.relations || {}).filter(([k, r]) => r.v >= 20 && k.split('|').includes(a.id)).map(([k]) => k.split('|').find((x) => x !== a.id)).filter((x) => s.houses[x] && x !== player(s));
-      const b = s.houses[pick(friends.length ? friends : great.filter((h) => h.region === a.region && h.id !== a.id).map((h) => h.id))]; if (!b) return;
+      const b = s.houses[pick(friends.length ? friends : great.filter((h) => h.region === a.region && h.id !== a.id).map((h) => h.id))]; if (!b || String(s.characters[b.lord]?.loc || '').startsWith('party:')) return; // (nor is his guest on the road with a host)
       out.events.push({ ...ev(`${lordName(a)} feasts ${lordName(b)}`, `At ${s.holdings[a.seat]?.name || a.name}, ${lordName(a)} feasts ${lordName(b)} for a fortnight. There is talk of a match between their children, and more wine than wisdom.`, a.seat, 1, 'court', [a.id, b.id]), kind: 'feast', actors: [a.lord, b.lord] });
       out.changes.push({ op: 'relation', a: a.id, b: b.id, delta: 5 });
     },

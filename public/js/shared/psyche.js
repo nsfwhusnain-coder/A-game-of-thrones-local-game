@@ -38,6 +38,15 @@ export function resilience(c) {
   return clamp(r, 0.5, 1.8);
 }
 
+/** What one death is to one person: a wife, a child, a parent, any other of the house; null for a stranger. */
+function griefOf(c, d) {
+  if (d.id === c.spouse) return { v: 28, why: 'his wife dead' };
+  if (d.father === c.id || d.mother === c.id) return { v: 34, why: 'a child buried' };
+  if (c.father === d.id || c.mother === d.id) return { v: 16, why: 'a parent buried' };
+  if (d.house === c.house) return { v: 5, why: 'another of his blood gone' };
+  return null;
+}
+const GRIEVED_KEPT = 24; // the deaths a person remembers having mourned
 /** The pressures on one person this period, each with the reason it is there. */
 export function stressors(state, c, days, ix = null) { // `ix`: the tick's one reckoning of who holds what, who leads which host and who died lately (psycheTick), not asked of every person again
   const out = [];
@@ -79,10 +88,8 @@ export function stressors(state, c, days, ix = null) { // `ix`: the tick's one r
   const turn = state.meta?.turn ?? 0;
   const recent = ix ? ix.recent : Object.values(state.characters || {}).filter((d) => !d.alive && d.diedTurn != null && turn - d.diedTurn <= 2);
   for (const d of recent) {
-    if (d.id === c.spouse) add(28, 'his wife dead' );
-    else if (d.father === c.id || d.mother === c.id) add(34, 'a child buried');
-    else if (c.father === d.id || c.mother === d.id) add(16, 'a parent buried');
-    else if (d.house === c.house) add(5, 'another of his blood gone');
+    if (c.grieved?.includes(d.id)) continue; // a death is a blow once: it was struck every week of its three moons, and a house after a battle was at a hundred
+    const g = griefOf(c, d); if (g) add(g.v, g.why);
   }
 
   // a regency, a minority, a claim contested: the seat itself is heavy
@@ -147,6 +154,7 @@ export function psycheTick(state, days) {
     const load = stressors(state, c, days, ix).reduce((a, x) => a + x.v, 0) * resilience(c);
     const ease = reliefs(state, c, days, ix);
     const stress = clamp(before + load - ease, 0, 100);
+    for (const d of ix.recent) if (!c.grieved?.includes(d.id) && griefOf(c, d)) c.grieved = [...(c.grieved || []), d.id].slice(-GRIEVED_KEPT);
 
     // Paranoia is slower than stress, and it never quite goes away. It is fed by being lied to,
     // by plots against one's house, and by long stress with no relief.
@@ -162,7 +170,7 @@ export function psycheTick(state, days) {
     const band = stressBand(c);
     const wasBand = bandOf(before);
     // told when a man gets worse, and not again at the same pitch for a while: a lord who hovers about a line is not a new story each week
-    if (bandNews(c, band, wasBand, turnNow) && (c.house === player || c.id === state.houses?.[player]?.lord || isKnownTo(state, c, player))) {
+    if (bandNews(c, band, wasBand, turnNow) && strainShown(state, c, band)) {
       const line = BAND_TEXT[band]?.(c);
       if (line) {
         c.toldBand = { band, turn: turnNow };
@@ -196,7 +204,13 @@ export function psycheTick(state, days) {
 }
 
 const BAND_RANK = { steady: 0, weary: 1, strained: 2, fraying: 3, breaking: 4 };
-const TOLD_AGAIN_TURNS = 4; // turns before a man's strain at the same pitch is told again
+const TOLD_AGAIN_TURNS = 12; // turns (about a year) before a man's strain at the same pitch is told again: a lord who stays at the breaking point is not news each season
+/** Whether the player is told of a man's strain: always of his own house and his own lord; of others who are known to him only once it is past weariness (a lord glimpsed at court who sleeps badly is not news: it was fifty cards in fourteen moons). */
+export function strainShown(state, c, band) {
+  const player = state.meta?.player;
+  if (c.house === player || c.id === state.houses?.[player]?.lord) return true;
+  return BAND_RANK[band] >= BAND_RANK.strained && isKnownTo(state, c, player);
+}
 /** Is a change of band news: a man getting worse, and not at a pitch already told within the last few turns. */
 export function bandNews(c, band, wasBand, turn) {
   const told = c.toldBand;

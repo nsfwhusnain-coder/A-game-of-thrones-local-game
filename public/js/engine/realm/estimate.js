@@ -142,6 +142,7 @@ export function observe(state, viewer = state.meta.player) {
   const weeks = new Map();
   for (const [id, rep] of Object.entries(k.parties)) {
     if (eyed.has(id) || !rep.owner || friends.has(rep.owner) || t - rep.turn > 4) continue;
+    if (!state.parties?.[id] && (hosts.get(rep.owner)?.seen || 0) > 0) continue; // (the pieces of a host that has since joined one the viewer now sees are in what it sees: they were counted twice, "at least 8,200" of a house of 3,400, N-032)
     let w = weeks.get(rep.owner); if (!w) weeks.set(rep.owner, w = new Map());
     w.set(rep.turn, (w.get(rep.turn) || 0) + (rep.men || 0));
   }

@@ -10,7 +10,7 @@
 // state.meta.player (whose friends' numbers are told exactly and everyone else's to two figures, in `details` only).
 // A story from cluster.js and a bare list of facts (an old save, N6) get the same card: nothing here needs the clusterer's
 // own fields — the lead, the archetype and the roll-up are worked out again from the facts.
-import { HEAD, SUM, ALSO, DETAIL, ARCHETYPE, LEDE, RUN, ctxFor, say } from './heads.js';
+import { HEAD, SUM, ALSO, DETAIL, ARCHETYPE, LEDE, RUN, fightKey, ctxFor, say } from './heads.js';
 import { dateOfDay, longDate } from '../time.js';
 import { list } from './label.js';
 
@@ -37,7 +37,7 @@ const ROLLABLE = new Set(['set_out', 'call_answered', 'arrived', 'host_joined'])
 function rollOf(facts, story) {
   // a running fight (cluster.js): two or more battles of the same two hosts are one card
   const fights = facts.filter((f) => f.kind === 'battle' && f.data?.attacker && f.data?.defender && !f.data?.against);
-  if (fights.length >= 2 && new Set(fights.map((f) => [f.data.attacker, f.data.defender].sort().join('|'))).size === 1) {
+  if (fights.length >= 2 && new Set(fights.map(fightKey)).size === 1) {
     const group = fights.sort((a, b) => a.day - b.day || (a.id < b.id ? -1 : 1));
     return { kind: 'battle', group, rest: facts.filter((f) => !group.includes(f)) };
   }

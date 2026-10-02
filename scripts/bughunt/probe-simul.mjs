@@ -24,7 +24,8 @@ for (let n = 1; n <= Number(turns); n++) {
     if (c.alive && !(p.members || []).includes(c.id) && p.at == null) add('commander-not-with-host', `${c.name} commands ${p.name} on the road but is not among its members (turn ${n})`);
   }
   for (const [seat, L] of Object.entries(s.plots?.lists || {})) {
-    const lord = C[s.houses[L.house]?.lord]; const p = lord && s.parties[partyOf.get(lord.id)];
+    const hs = s.houses[L.house]; const reg = hs?.regent && C[hs.regent]?.alive ? C[hs.regent] : null; const lord = reg || C[hs?.lord]; // (the regent holds the lists while the lord is a prisoner or a child)
+    const p = lord && !/imprisoned|captive|hostage/.test(lord.status || '') && s.parties[partyOf.get(lord.id)];
     if (p && p.at == null && L.on > now) add('tourney-host-away', `${lord.name} is ${p.kind === 'progress' ? 'on a progress' : 'on the road'} (${p.name}) while the lists at ${s.holdings[seat]?.name || seat} wait for day ${L.on - now} from now (turn ${n})`);
     if (lord && !lord.alive && L.on > now) add('tourney-host-dead', `${lord.name} is dead and the lists at ${seat} are pending (turn ${n})`);
   }
