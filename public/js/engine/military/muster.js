@@ -17,6 +17,7 @@ import { needsShips } from '../../shared/sea.js';
 import { rideOf } from '../../shared/world.js';
 import { random } from '../rng.js';
 import { fact, shown } from '../facts/log.js';
+import { tidyHouseNames } from '../facts/tidy.js';
 import { dayNumber } from '../time.js';
 import { MUSTER } from '../../../data/balance.js';
 
@@ -137,7 +138,8 @@ export function answer(state, v, { today = dayNumber(state.meta.date), late = fa
     { op: 'figure', house: v.id, field: 'levies', delta: -sent.levies, source: 'Muster rolls' },
     { op: 'figure', house: v.id, field: 'menAtArms', delta: -sent.arms, source: 'Muster rolls' },
   ], { cause });
-  const a = Object.values(state.parties).find((x) => x.owner === v.id && x.name === name && !x.serving);
+  const told = tidyHouseNames(state, name); // (army_create tells a party's name as a herald would, so it is looked for as told)
+  const a = Object.values(state.parties).find((x) => x.owner === v.id && x.name === told && !x.serving);
   let riding = [];
   if (a) {
     a.serving = v.liege; ob.host = a.id;
