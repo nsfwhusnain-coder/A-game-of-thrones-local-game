@@ -1609,3 +1609,12 @@ the mock is unchanged at 99 %. Tests: `tests/bugs-sb.test.js`.
 - **SV5.** `playerView` drops `meta.rngState`. **Not done:** the whole state is still sent with every answer; the server is on the owner's own machine, the cost is a few milliseconds, and a patch protocol would be a rewrite of the page's state handling.
 - **CI1.** The seed of the CI soak is in the failure message with the command to play it again (`WC_SOAK_SEED` fixes it); the soak builds a card's story with the houses of all its facts, as `clusterFacts` does.
 
+## D-113 · 2026-10-02 · A card quotes what a letter says; an audience's dossier states its setting (bug hunt TX1, TX2, TX3, TX6, TX7, TX8, TX10)
+
+- **TX1, TX2.** `engine/facts/quote.js` (`quoteOf`, `isGreeting`) takes the first sentence of a letter that is not a greeting (a few words that only address someone, as "Eddard." or "My dear Ned,"), without its signature, and without the salutation that opens a sentence ("My dear Prince, my lord—"). Both places that make a `letter_arrived` fact (`server/letters.js`, `server/game.js` deliverReplies) use it, and neither puts the engine's notes (`applied`) on the card: the notes stay in the post and the chat, where the player reads them as chips. A card is the place and the words.
+- **TX3.** `garbledIn` (`server/ai/validate/narration.js`) is a rule of the audience, council and narration checks: a figure glued to a word, an ellipsis broken in two, a stray chat token. A reply that fails is asked for again, then falls back to the mock's plain line, as every refused reply does.
+- **TX6.** The same-day, same-place rule of clustering (C5) bound a fact that names no one to any fact of the same house. It now binds only facts of the same archetype: a grievance (court) is not part of the muster (war); a village burned (war) still is part of the battle.
+- **TX7.** The audience dossier carries `THE PLACE` (the holding's kind and what may be seen in it), the exile's landlessness and `HOW YOU ADDRESS THE LORD` (kinship from the people's parents and spouses, honour from the lord's title). The setting is a fact of the world, so the engine states it; the model writes the words. Only the model can show whether it obeys: an owner check.
+- **TX8.** The advisor is told how many things the lord asked for (`askedCount`), and the mock lists no more. `suggestionsOf` turns a model's objects into lines.
+- **TX10.** Not a fix of the model's speed: the wait says beforehand that a long stretch can take minutes (`LONG_TURN_DAYS`, 14). The timings on the 12B are an owner check.
+
