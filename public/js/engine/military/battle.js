@@ -9,6 +9,7 @@ import { unitsOf } from '../../shared/units.js';
 import { temperament } from '../../shared/temperament.js';
 import { difficultyOf } from '../../../data/balance.js';
 import { keptByStory } from '../people/life.js';
+import { CANON_DEATHS } from '../../../data/fates.js';
 import { groundAt, paceOf, planRoute } from '../movement.js';
 import { idOf, settle } from '../parties.js';
 import { emit } from '../facts/log.js';
@@ -160,7 +161,12 @@ export function fatesOf(state, p, side, { broken = false, playerBattle = false, 
     const k = broken ? 1.5 : 1;
     const [take, slay] = side === 'lost' ? (cmd ? [0.25, 0.08] : fighter ? [0.15, 0.05] : [0.1, 0.01]).map((x) => x * k) : side === 'drew' ? (fighter ? [0.05, 0.03] : [0, 0]) : [0, fighter ? 0.02 : 0];
     const roll = r(); let fate = roll < slay ? 'slain' : roll < slay + take ? 'captured' : fighter && roll < slay + take + 0.1 ? 'wounded' : null;
-    if (fate === 'slain' && keptByStory(state, c, { playerBattle })) fate = side === 'lost' ? 'captured' : 'wounded';
+    const kept = keptByStory(state, c, { playerBattle });
+    // a pillar of the story whose end is still to come (Robb before the Red Wedding, Tywin, Joffrey) is hurt, not taken: every beat between needs him free and in command, and a captive
+    // king in the north lapses six of them (the canon run lost Robb to a lost field at the Casterly Rock and the books went off the rails); the others are taken instead of killed
+    const pillar = kept === 'canon' && CANON_DEATHS[c.id]?.pillar;
+    if (fate === 'slain' && kept) fate = side === 'lost' && !pillar ? 'captured' : 'wounded';
+    else if (fate === 'captured' && pillar) fate = 'wounded';
     if (fate) out.push({ c, fate });
   }
   return out;
