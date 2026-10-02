@@ -51,7 +51,8 @@ for (const x of co.B) add('coherence-B', x.turn ?? 0, `${x.rule}: ${x.text}`);
     const party = f.data?.party;
     if (f.kind === 'set_out' && party) open.set(party, { from: f.day, who: new Set(f.actors || []), leader: f.actors?.[0] });
     else if ((f.kind === 'arrived' || f.kind === 'turned_back' || f.kind === 'host_disbanded') && party) open.delete(party);
-    else if (ACT.has(f.kind) && f.actors?.[0]) { for (const [p, o] of open) if (o.who.has(f.actors[0]) && f.day > o.from) { const nm = g.state.characters[f.actors[0]]?.name || f.actors[0]; add('act-on-the-road', f.turn ?? 0, nm + ' ' + f.kind + ' on day ' + f.day + ' (' + String(f.text || '').slice(0, 90) + ') while party ' + p + ' set out on day ' + o.from + ' is on the road'); break; } }
+    // (a decision of the lord's own mind, not what befalls him on the road: a vassal's late dues, the petitioner who rides to you, a beat's new title)
+    else if (ACT.has(f.kind) && f.actors?.[0] && f.cause?.type === 'intent') { for (const [p, o] of open) if (o.who.has(f.actors[0]) && f.day > o.from) { const nm = g.state.characters[f.actors[0]]?.name || f.actors[0]; add('act-on-the-road', f.turn ?? 0, nm + ' ' + f.kind + ' on day ' + f.day + ' (' + String(f.text || '').slice(0, 90) + ') while party ' + p + ' set out on day ' + o.from + ' is on the road'); break; } }
   } }
 const cs = {}; for (const x of co.C) cs[x.rule] = (cs[x.rule] || 0) + 1;
 const heads = {}; for (const t of g.turns) for (const e of t.events || []) if (!e.bg) { const h = String(e.headline || e.title || ''); heads[h] = (heads[h] || 0) + 1; }

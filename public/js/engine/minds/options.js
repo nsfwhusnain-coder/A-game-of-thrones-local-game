@@ -4,6 +4,7 @@
 // one's counsel and let the days pass. Nothing here changes the world.
 import { VERBS, intentFor, check } from '../actions/registry.js';
 import { commands } from '../actions/military.js';
+import { awayFromSeat } from '../actions/court.js';
 import { atWar } from '../../shared/warfare.js';
 import { getRelation, placeName, resolvePlaceId, realmOf } from '../../shared/world.js';
 import { PROJECT_TEMPLATES } from '../../shared/economy.js';
@@ -16,6 +17,11 @@ import { realmSummary } from '../realm/brief.js';
 // How long a house lets pass before doing the same thing again (days): a tourney is an event of the year, a feast of
 // the season; taxes are not changed every week, nor gifts sent, nor a son sent riding off each Monday.
 export const RESTING = { hold_tourney: 300, hold_feast: 90, send_gift: 120, set_tax: 120, set_dues: 90, send_person: 45, fund_works: 60, hire_men: 60, call_banners: 60, disband_host: 30 };
+// What a lord decides in his own hall: the taxes of his lands, the works at his castle, a household's offices, a prisoner's fate, the feast and the lists, the purse and the
+// grain. A lord on the road with his party (or a guest at another castle) decrees none of it: it was a lord who set out on the road and a day or ten later proclaimed heavy
+// taxes at his own castle, begun works there, sent a gift (ST4). The weekly minds decide on its first day and the engine dates the decision there, so the answer is not a later
+// date but the lord's whereabouts. The player's own orders are his own to give wherever he is.
+export const HOME_VERBS = new Set(['set_tax', 'set_dues', 'fund_works', 'cancel_works', 'hire_men', 'hire_officer', 'appoint_office', 'grant_holding', 'judge_prisoner', 'send_gift', 'buy_grain', 'hold_feast', 'hold_tourney']);
 /** A house did this lately (its mind's memory, `state.minds.done`). */
 export const rested = (state, house, verb) => { const d = state.minds?.done?.[house]?.[verb]; return d == null || dayNumber(state.meta.date) - d >= (RESTING[verb] || 0); };
 /** Remember that a house did this today. */
@@ -159,6 +165,7 @@ export function optionsFor(state, actorId, { except = [] } = {}) {
   for (const verb of MIND_VERBS) {
     const gen = CANDIDATES[verb]; if (!gen || !rested(state, w.house, verb)) continue;
     if (w.role !== 'head' && !COMMANDER_VERBS.has(verb)) continue; // a commander moves his host; the house's affairs are its lord's
+    if (HOME_VERBS.has(verb) && awayFromSeat(state, w.house)) continue; // and a lord on the road is not in his hall to decide them
     const picks = gen(w).filter((p) => !except.some((x) => x.verb === verb && (x.target == null || x.target === p.target) && (x.host == null || x.host === p.host)))
       .filter((p) => !check(state, intentFor(state, verb, { actor: actorId, house: w.house, params: p.params })));
     if (picks.length) out.push({ verb, label: VERBS[verb].label, picks });
