@@ -261,6 +261,11 @@ At the game's own seven-day turns, in two of six games, the lists called at Wint
 **Where:** `shared/tourney.js` (`listsTick`).
 **FIXED** (`tests/bugfix-found.test.js`): the lists wait for their host: put off a week at a time while he (or his regent) is away on their day (`POSTPONE_DAYS`, up to `POSTPONE_MAX` times, about two moons), run when he is home, and not run at all after two moons of his absence.
 
+### N-046 · S2 · "Renly Baratheon feasts 29 sworn lords at Storm's End" a fortnight into his ride to Highgarden
+When a vassal answered the call, the host that gathered at his seat was given his lord (or regent) as its commander and he was put in it, wherever he was: Renly, riding to Highgarden, stepped from the road into the host mustering at Storm's End and held a feast and a tourney there; the Hand at King's Landing would have been put into the host at Winterfell. (`probe-simul stark 901 52 7d`, `acts-on-the-road`.)
+**Where:** `engine/military/muster.js` (`answer`, `leaderAt`).
+**FIXED** (`tests/bugfix-found.test.js`): the host is led by the first of the house's leaders who is at the seat (its regent, its lord, then its best fighters), and by none if none is there.
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

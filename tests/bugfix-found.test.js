@@ -488,3 +488,16 @@ test('N-045: the lists wait for their host: put off a week at a time while he is
   for (let i = 0; i <= POSTPONE_MAX; i++) { run(d); d += POSTPONE_DAYS; }
   assert.equal(s.plots.lists[seat], undefined, 'two moons of his absence and there are no lists');
 });
+
+test('N-046: a lord who is on a ride of his own does not step from the road into the host that gathers at his seat', async () => {
+  const { answer } = await import('../public/js/engine/military/muster.js');
+  const s = world('stark', 4); const v = s.houses.blackwood; const lord = s.characters[v.lord];
+  s.parties.lord_ride = { id: 'lord_ride', kind: 'rider', owner: 'blackwood', name: 'Ride', commander: lord.id, at: null, pos: [0, 0], men: 0, members: [], morale: 70, supply: 80 };
+  setLoc(s, lord, 'party:lord_ride'); assert.equal(partyOf(s, lord)?.id, 'lord_ride');
+  withRng(s, () => answer(s, v, {}));
+  assert.equal(partyOf(s, lord)?.id, 'lord_ride', 'he is still on his road');
+  const host = Object.values(s.parties).find((p) => p.owner === 'blackwood' && p.kind === 'host'); assert.ok(host, 'the house\'s host gathers at its seat all the same');
+  assert.notEqual(host.commander, lord.id, 'under another, or under none, while he is away');
+  setLoc(s, lord, v.seat); // home, the lord leads it
+  const t = world('stark', 4); const w = t.houses.blackwood; withRng(t, () => answer(t, w, {})); assert.equal(Object.values(t.parties).find((p) => p.owner === 'blackwood' && p.kind === 'host').commander, w.lord, 'at home, he commands his own host');
+});
