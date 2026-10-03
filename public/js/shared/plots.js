@@ -101,6 +101,7 @@ function churn(s, days) {
     () => { // a good harvest or a bad one somewhere
       const h = pick(Object.values(s.holdings).filter((x) => x.owner !== player(s) && !['wall', 'beyond', 'essos'].includes(x.region))); if (!h) return;
       const good = random() < 0.55;
+      if (['winter', 'spring'].includes(s.world?.season || 'summer')) return; // (no harvest is brought in, or blighted, in the cold months; the dice above are drawn all the same)
       out.events.push({ ...ev(good ? `Full granaries at ${h.name}` : `Blight at ${h.name}`, good ? `The harvest around ${h.name} is the best in memory; the lord's granaries are full to the rafters.` : `A blight has taken the wheat around ${h.name}. The smallfolk are already eating their seed corn.`, h.id, 1, 'economy', [h.owner]), kind: 'happening', data: { harvest: good ? 'good' : 'blight' } });
       out.changes.push({ op: 'holding', id: h.id, prosperity: Math.max(0, Math.min(100, (h.prosperity || 50) + (good ? 6 : -8))) });
     },

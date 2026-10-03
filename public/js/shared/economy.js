@@ -12,6 +12,8 @@ import { distributePopulation, holdingRevenue, householdCost, wagesOf, crownLoan
 
 const MINES = new Set(['gold', 'silver', 'iron']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+/** The windfalls and misfortunes of the ledger, in words that fit the cold months (no harvest is brought in or blighted in winter). */
+const COLD_LUCK = { 'a bumper harvest': 'full storehouses', 'blight in the fields': 'rot in the stores' };
 const rnd = (a, b) => a + random() * (b - a);
 const gauss = () => (random() + random() + random() - 1.5) / 1.5; // ~[-1,1]
 
@@ -209,6 +211,7 @@ export function settle(state, days) {
     let why = '';
     if (roll < 0.03 * months) { luck *= 0.45; why = pick(['blight in the fields', 'a fire in the granary', 'outlaws on the roads', 'a sickness among the smallfolk', 'a storm wrecked the fishing boats']); }
     else if (roll > 1 - 0.03 * months) { luck *= 1.5; why = pick(['a bumper harvest', 'a rich market season', 'a new vein in the mines', 'fat herring shoals', 'a great fair drew merchants']); }
+    if (why && ['winter', 'spring'].includes(state.world?.season || 'summer')) why = COLD_LUCK[why] || why; // (the same luck, in words the season allows)
     const v = y.total * luck * months;
     gross[h.owner] += v;
     detail[h.owner].push({ label: h.name, amount: Math.round(v), note: why });

@@ -686,3 +686,18 @@ test('N-065: the silence line of a matter says what the story does without you (
   const line = M.silenceOf(s, { options: [], lapse: [{ ops: [{ op: 'character', id: 'eddard_stark', alive: false }] }] });
   assert.match(line.line, /Eddard Stark will die/); assert.equal(line.tone, 'bad');
 });
+
+test('N-066: no harvest is brought in, blighted or feasted in the cold months: the gossip is not drawn, the ledger\'s luck has other words, the raid carries off stores', async () => {
+  const { worldTick } = await import('../public/js/shared/plots.js');
+  const s = world('stark', 11); s.world = { ...(s.world || {}), season: 'winter' };
+  for (let i = 0; i < 60; i++) for (const e of withRng(s, () => worldTick(s, 30)).events) assert.doesNotMatch(`${e.title} ${e.text}`, /best in memory|blight at|full granaries at|blight has taken the wheat/i, `${e.title}: ${e.text}`);
+  const { HAPPENINGS } = await import('../public/data/happenings.js'); assert.deepEqual(HAPPENINGS.find((h) => h.id === 'rc_highgarden').when, ['warm']);
+});
+
+test('N-067: a reply with an extra field named like an inherited one (toString, constructor) is refused by the strict schema, not accepted as the model\'s', async () => {
+  const { validate } = await import('../server/ai/schema.js');
+  const schema = { type: 'object', additionalProperties: false, required: ['a'], properties: { a: { type: 'number' } } };
+  assert.deepEqual(validate({ a: 1 }, schema), []);
+  for (const k of ['toString', 'constructor', 'valueOf', 'hasOwnProperty']) assert.ok(validate({ a: 1, [k]: 1 }, schema).some((p) => p.includes(`${k}: not allowed`)), k);
+  assert.ok(validate({}, schema).some((p) => /\.a: missing/.test(p)));
+});
