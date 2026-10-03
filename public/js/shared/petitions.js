@@ -5,8 +5,10 @@ import { isFemale } from './people.js';
 import { answerCall, answerRising, answerRebel } from './vassals.js';
 import { random, shuffle } from '../engine/rng.js';
 import { MATTERS } from '../../data/matters.js';
+import { borrow } from '../engine/economy/lenders.js';
 
 const pick = (a) => a[Math.floor(random() * a.length)];
+const MATTER_WRITER_AGE = 16; // the age at which a lord is held fit to rule, and so to write (shared/regency.js MAJORITY)
 
 /**
  * What the matters' templates are raised with (data/matters.js): the lord's house, vassals, lands, friends and foes,
@@ -52,7 +54,9 @@ export function realmPetition(state) {
   const ids = shuffle(Object.keys(MATTERS).filter((id) => MATTERS[id].raise && state.meta.turn - (seen[id] ?? -99) >= 6));
   for (const id of ids) {
     const m = MATTERS[id].raise(ctx);
-    if (m) return { ...m, matter: id };
+    // a boy of six, or a lord in a cell, writes to no one: the matter is not raised in his name ("Robert Arryn (6) writes...")
+    const writer = m?.from && state.characters[m.from];
+    if (m && !(writer && (!writer.alive || (writer.age ?? 30) < MATTER_WRITER_AGE || /imprisoned|captive|hostage/.test(writer.status || '')))) return { ...m, matter: id };
   }
   return null;
 }
@@ -83,6 +87,9 @@ export function applyPetitionFx(state, fx, date = '') {
     if (e.rising) out.push(...answerRising(state, e.rising));
     if (e.rebel) out.push(...answerRebel(state, e.rebel));
     if (e.debt) { me.loans = [...(me.loans || []), { to: e.debt[0], amount: e.debt[1], turn: state.meta.turn }]; }
+    // a real loan, in the books the economy keeps (engine/economy/lenders.js): you lend to a house, or you borrow from a bank; interest, a day and a default follow
+    if (e.lend && state.houses[e.lend[0]]) { borrow(state, { house: e.lend[0], lender: p, amount: e.lend[1], months: e.lend[2] || 12, cause: { type: 'decision', ref: 'matter' } }); out.push(`${e.lend[1].toLocaleString('en-GB')} dragons lent to House ${state.houses[e.lend[0]].name}`); }
+    if (e.borrow) { borrow(state, { house: p, lender: e.borrow[0], amount: e.borrow[1], months: e.borrow[2] || 24, cause: { type: 'decision', ref: 'matter' } }); out.push(`${e.borrow[1].toLocaleString('en-GB')} dragons borrowed`); }
     if (e.ops) out.push(...applyChanges(state, e.ops, { source: 'Your decision' }).applied.map((x) => x.text));
     if (e.plot) { state.plots = state.plots || {}; state.plots.flags = { ...(state.plots.flags || {}), [e.plot[0]]: e.plot[1] }; }
     if (e.prestige) { me.prestige = (me.prestige || 0) + e.prestige; out.push(`prestige ${e.prestige > 0 ? '+' : ''}${e.prestige}`); }

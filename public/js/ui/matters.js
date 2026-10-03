@@ -46,6 +46,12 @@ export function silenceOf(s, d) {
     if (e.prosperity && e.prosperity[1] < 0) { const h = s.holdings?.[e.prosperity[0]]; pushWord(out, h ? `${placeName(s, h.id)} grows poorer` : 'the land grows poorer'); bad = true; }
     if (e.loyalty && e.loyalty[1] < 0) { const c = s.characters?.[e.loyalty[0]]; pushWord(out, c ? `${shortName(c)}'s loyalty wanes` : 'a lord\'s loyalty wanes'); bad = true; }
     if (e.gold && e.gold < 0) { pushWord(out, 'it will cost you gold'); bad = true; }
+    // what the story does while the lord says nothing (a man put to death, a plot that moves on): the line used to read "Nothing comes of it"
+    for (const o of e.ops || []) {
+      if (o.op === 'character' && o.alive === false) { const c = s.characters?.[o.id]; pushWord(out, c ? `${shortName(c)} will die` : 'a man will die'); bad = true; }
+      else { pushWord(out, 'events will take their own course'); bad = true; }
+    }
+    if (e.plot) { pushWord(out, 'the story moves on without you'); bad = true; }
   }
   if (!out.length) return { line: 'Nothing comes of it, and the matter passes', tone: 'quiet' };
   return { line: cap(out.join('; ')), tone: bad ? 'bad' : 'quiet' };

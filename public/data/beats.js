@@ -337,7 +337,7 @@ export const THREADS = [
                 id: 'ned_fate', title: 'What becomes of Eddard Stark?', from: 'varys',
                 text: 'Varys has persuaded him to confess before the Great Sept of Baelor. Pycelle says a live Stark is a hostage worth an army; the King says a dead one is a lesson. The North is watching.',
                 options: [
-                  { label: 'Let him confess and take the black', hint: 'Mercy; the North may yet be kept at the table', fx: [{ ops: [{ op: 'character', id: 'eddard_stark', status: 'free', house: 'nights_watch', title: 'Brother of the Night\'s Watch', loc: 'nights_watch' }] }, { rel: ['stark', 20] }] },
+                  { label: 'Let him confess and take the black', hint: 'Mercy; the North may yet be kept at the table', fx: [{ ops: [{ op: 'character', id: 'eddard_stark', status: 'free', house: 'nights_watch', title: 'Brother of the Night\'s Watch', loc: 'nights_watch' }, { op: 'house', house: 'stark', lord: 'robb_stark' }] }, { rel: ['stark', 20] }] },
                   { label: 'Keep him in the black cells as a hostage', hint: 'The wolves cannot attack while you hold their lord', fx: [{ rel: ['stark', -5] }] },
                   { label: 'Give the King his head', hint: 'A lesson to the realm. The North will never forgive it', fx: [{ ops: [{ op: 'character', id: 'eddard_stark', alive: false, cause: 'beheaded on the steps of the Great Sept of Baelor' }] }, { rel: ['stark', -60] }, { rel: ['tully', -30] }] },
                 ],
@@ -442,7 +442,7 @@ export const THREADS = [
         }),
       },
       {
-        id: 'red_wedding', at: YM(299, 11), grace: 3, needs: (s) => flag(s, 'frey_pact') && flag(s, 'frey_slight') && !plays(s, 'stark') && alive(s, 'walder_frey', 'roose_bolton') && s.houses.stark?.lord && alive(s, s.houses.stark.lord) && inWar(s, 'stark', 'lannister') && random() < 0.7,
+        id: 'red_wedding', at: YM(299, 11), grace: 3, needs: (s) => flag(s, 'frey_pact') && flag(s, 'frey_slight') && !plays(s, 'stark') && free(s, 'walder_frey') && free(s, 'roose_bolton') && s.houses.stark?.lord && free(s, s.houses.stark.lord) && inWar(s, 'stark', 'lannister') && random() < 0.7,
         fire: (s) => {
           const lord = s.houses.stark.lord;
           return {
@@ -536,7 +536,7 @@ export const THREADS = [
         // W17: Hoster Tully dies abed, as he has long been dying
         id: 'hoster', at: YM(299, 7), grace: 4, needs: (s) => alive(s, 'hoster_tully') && !plays(s, 'tully'),
         fire: (s) => ({
-          events: [ev('The lord of Riverrun is dead', 'Lord Hoster Tully, long abed, dies at Riverrun with his daughter at his side. His funeral boat is set adrift on the Red Fork; his son Edmure\'s burning arrows miss it three times before his uncle takes the bow.', 'tully', 3, 'court', ['tully'], 'Hoster Tully\'s funeral boat is set adrift on the Red Fork')],
+          events: [ev('The lord of Riverrun is dead', free(s, 'hoster_tully') ? 'Lord Hoster Tully, long abed, dies at Riverrun with his daughter at his side. His funeral boat is set adrift on the Red Fork; his son Edmure\'s burning arrows miss it three times before his uncle takes the bow.' : 'Lord Hoster Tully, long ailing, dies in his captors\' hands, and his body is sent home to Riverrun. His son Edmure\'s burning arrows miss the funeral boat three times on the Red Fork before his uncle takes the bow.', 'tully', 3, 'court', ['tully'], free(s, 'hoster_tully') ? 'Hoster Tully\'s funeral boat is set adrift on the Red Fork' : 'Hoster Tully dies in captivity')],
           changes: [{ op: 'character', id: 'hoster_tully', alive: false, cause: 'a long illness' }, ...(alive(s, 'edmure_tully') && s.houses.tully?.lord === 'hoster_tully' ? [{ op: 'house', house: 'tully', lord: 'edmure_tully' }] : [])],
         }),
       },

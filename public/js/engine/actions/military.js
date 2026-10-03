@@ -105,7 +105,7 @@ export function raiseLevies(state, { house = state.meta.player, at, men, command
     host = state.parties[id] = { id, owner: house, name: String(name || `The Host of ${hold.name}`).slice(0, 80), commander: cmd?.id || null, at: place, pos: [...hold.pos], men: first, kind: 'host', members: [], composition: `Levies of House ${me.name}${n >= 3000 ? ', with household knights' : ''}`, morale: 65, supply: 80, asOf: dateStr(state.meta.date), ...(n > first ? { muster: { remaining: n - first, daily: Math.max(50, Math.ceil(n / 14)), house } } : {}) };
     if (cmd) joinParty(state, cmd, host);
     settle(state, host);
-    out.push(`${fmtN(first)} levies muster at ${hold.name} as ${host.name}${n > first ? `; ${fmtN(n - first)} more are mustering from the fields` : ''}${cmd ? ` under ${cmd.name}` : ''} (${unitsText(state, host)})`);
+    out.push(`${fmtN(first)} levies muster at ${hold.name} as ${host.name}${cmd ? ` under ${cmd.name}` : ''} (${unitsText(state, host)})${n > first ? `; ${fmtN(n - first)} more are mustering from the fields` : ''}`);
   }
   for (const v of Object.values(state.houses)) if (v.liege === house && v.obligations?.muster === place && ['called', 'delayed', 'answered'].includes(v.obligations.levies) && !(v.obligations.join && state.parties[v.obligations.join])) v.obligations.join = host.id;
   if (n < Math.round(Number(men) || 0)) out.push(`only ${fmtN(n)} could be found of the ${fmtN(Math.round(Number(men)))} asked for`);
@@ -480,11 +480,12 @@ export const MILITARY = [
     id: 'merge_hosts', family: 'military', label: 'Join hosts together',
     params: { armies: 'party:own[]?', name: 'text?', commander: 'character:own?' },
     legal: (state, i) => {
-      const mine = Object.values(state.parties).filter((a) => commands(state, i.house, a) && a.kind !== 'fleet' && (!i.params.armies?.length ? a.kind !== 'garrison' : i.params.armies.includes(a.id) || i.params.armies.some((x) => slug(x) === slug(a.name))));
+      const named = Array.isArray(i.params.armies) ? i.params.armies : i.params.armies ? [i.params.armies] : []; // (one host named in a word, not a list, is a list of one)
+      const mine = Object.values(state.parties).filter((a) => commands(state, i.house, a) && a.kind !== 'fleet' && (!named.length ? a.kind !== 'garrison' : named.includes(a.id) || named.some((x) => slug(x) === slug(a.name))));
       const at = new Map(); for (const a of mine) { const k = a.at || `${Math.round(a.pos[0] / 6)},${Math.round(a.pos[1] / 6)}`; at.set(k, (at.get(k) || 0) + 1); }
       return [...at.values()].some((n) => n >= 2) ? null : { code: 'apart', text: 'There are no two hosts in the same place to join — they must first march to one place.' };
     },
-    start: (state, i) => mergeHosts(state, { house: i.house, ...i.params, cause: i.source }),
+    start: (state, i) => mergeHosts(state, { house: i.house, ...i.params, armies: Array.isArray(i.params.armies) ? i.params.armies : i.params.armies ? [i.params.armies] : undefined, cause: i.source }),
     receipt: (state, i, done) => lines(done),
     facts: ['host_joined'], mind: { allowed: true },
   },

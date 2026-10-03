@@ -102,9 +102,9 @@ export function validate(value, schema, path = '$') {
   if (schema.enum && !schema.enum.includes(value)) out.push(`${path}: ${JSON.stringify(value)} is not one of the ${schema.enum.length} allowed values`);
   if (t === 'object') {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return [...out, `${path}: expected an object`];
-    for (const k of schema.required || []) if (!(k in value)) out.push(`${path}.${k}: missing`);
-    if (schema.additionalProperties === false) for (const k of Object.keys(value)) if (!(k in (schema.properties || {}))) out.push(`${path}.${k}: not allowed`);
-    for (const [k, s] of Object.entries(schema.properties || {})) if (k in value) out.push(...validate(value[k], s, `${path}.${k}`));
+    for (const k of schema.required || []) if (!Object.hasOwn(value, k)) out.push(`${path}.${k}: missing`);
+    if (schema.additionalProperties === false) for (const k of Object.keys(value)) if (!Object.hasOwn(schema.properties || {}, k)) out.push(`${path}.${k}: not allowed`);
+    for (const [k, s] of Object.entries(schema.properties || {})) if (Object.hasOwn(value, k)) out.push(...validate(value[k], s, `${path}.${k}`));
   } else if (t === 'array') {
     if (!Array.isArray(value)) return [...out, `${path}: expected an array`];
     if (schema.minItems != null && value.length < schema.minItems) out.push(`${path}: fewer than ${schema.minItems} items`);

@@ -214,8 +214,8 @@ export const MATTERS = {
     return { title: `A request from House ${f.name}`, from: f.lord,
       text: `${state.characters[f.lord].name} asks for a loan of 5,000 dragons "between friends", to be repaid within the year.`,
       options: [
-        { label: 'Lend the gold', hint: 'Friendship deepens; the coin may not return', fx: [{ gold: -5000 }, { rel: [f.id, 18] }, { debt: [f.id, 5000] }] },
-        { label: 'Lend half', hint: 'A cautious friend', fx: [{ gold: -2500 }, { rel: [f.id, 6] }, { debt: [f.id, 2500] }] },
+        { label: 'Lend the gold', hint: 'Friendship deepens; the coin may not return', fx: [{ lend: [f.id, 5000, 12] }, { rel: [f.id, 18] }] },
+        { label: 'Lend half', hint: 'A cautious friend', fx: [{ lend: [f.id, 2500, 12] }, { rel: [f.id, 6] }] },
         { label: 'Refuse politely', hint: 'Keeps your gold; cools the friendship', fx: [{ rel: [f.id, -8] }] }],
       lapse: [{ rel: [f.id, -4] }] };
   } },
@@ -251,11 +251,15 @@ export const MATTERS = {
       lapse: [] };
   } },
   demand_submission: { group: 'lords', gist: 'a stronger enemy demands the lord bend the knee', raise: ({ state, p, foes, pick }) => {
-    if (!foes.length) return null; const h = pick(foes);
+    // one who is your own vassal, or sits in your cells, does not demand that you kneel (a liege loop is no house at all)
+    const sworn = (id) => { for (let x = state.houses[id]?.liege, n = 0; x && n < 60; x = state.houses[x]?.liege, n++) if (x === p) return true; return false; };
+    const pool = foes.filter((h) => !sworn(h.id) && h.lord && state.characters[h.lord]?.alive && !/imprisoned|captive|hostage/.test(state.characters[h.lord].status || ''));
+    if (!pool.length) return null; const h = pick(pool);
+    const war = (state.wars || []).find((w) => w.status !== 'ended' && [...w.attackers, ...w.defenders].includes(p) && [...w.attackers, ...w.defenders].includes(h.id));
     return { title: `House ${h.name} demands your submission`, from: h.lord,
       text: `${state.characters[h.lord].name} writes that the war can end today if you bend the knee: swear fealty, and keep your lands and your life.`,
       options: [
-        { label: 'Bend the knee', hint: `The war ends; you are House ${h.name}'s man`, fx: [{ ops: [{ op: 'liege', house: p, liege: h.id }] }, { rel: [h.id, 25] }, { prestige: -15 }] },
+        { label: 'Bend the knee', hint: `The war ends; you are House ${h.name}'s man`, fx: [{ ops: [{ op: 'liege', house: p, liege: h.id }, ...(war ? [{ op: 'war', status: 'end', id: war.id, outcome: `House ${state.houses[p].name} bends the knee to House ${h.name}` }] : [])] }, { rel: [h.id, 25] }, { prestige: -15 }] },
         { label: 'Refuse, with courtesy', hint: 'The war goes on', fx: [] },
         { label: 'Send back the messenger\'s head', hint: 'The war goes on, and hotter', fx: [{ rel: [h.id, -20] }, { prestige: 5 }] }],
       lapse: [] };

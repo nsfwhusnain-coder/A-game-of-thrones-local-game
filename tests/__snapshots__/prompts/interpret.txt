@@ -239,7 +239,7 @@ Turn the order into actions.
        "alannys_tawney",
        "alannys_weaver",
        "alaric_hornwood",
-       "… 1702 members"
+       "… 1707 members"
       ]
      },
      "houses": {

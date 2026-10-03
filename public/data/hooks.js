@@ -157,7 +157,7 @@ export const HOOKS = [
     when: ['lord'], tags: ['family', 'bastards'],
     matter: { title: 'A bastard claims your blood', text: 'A young man at {place} claims to be a natural son of your house, with a ring to prove it.',
       options: [{ label: 'Acknowledge him quietly', hint: 'A sword for your house; whispers at court', fx: [{ menAtArms: 1 }, { prestige: -1 }] }, { label: 'Give him coin and send him away', hint: 'Coin', fx: [{ gold: -100 }] }, { label: 'Deny him', hint: 'He may go to your enemies', fx: [{ rel: ['$rival', -2] }] }] } }),
-  K('wedding_invitation', 'any', 2, 'court', '{house} invites the realm to a wedding', '{lord} has sent ravens bidding the lords of the {region} to a wedding at {place} before the season turns.', {
+  K('wedding_invitation', 'any', 2, 'court', '{house} invites the realm to a wedding', '{lord} has sent ravens bidding the lords of {region} to a wedding at {place} before the season turns.', {
     when: ['lord', 'peace'], fx: { relf: 4 }, tags: ['family', 'court'], cd: 120 }),
   K('ward_homesick', 'any', 1, 'court', 'A ward at {place} longs for home', 'A ward fostered at {place} writes home that {lord} treats him coldly; his father is not pleased.', {
     when: ['lord'], fx: { relf: -2 }, tags: ['family'] }),

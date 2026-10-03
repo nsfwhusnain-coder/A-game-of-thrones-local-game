@@ -103,7 +103,9 @@ export function applyHook(state, id, place, { day = 1, r = random, why = '' } = 
   if (fx.threat && s.plots?.threats) { const [k, d] = fx.threat; s.plots.threats[k] = clamp((s.plots.threats[k] || 0) + d, 0, 100); }
   // in the lord's own lands, the matter comes before him (and waits its days: 10 §6)
   let matter = null;
-  if (mine && tpl.matter) {
+  // (a quarrel between the lord's own house and a rival is not his to judge: "Stark-Stark +8"; the card is told, the matter is not raised)
+  const judgesOwn = owner.id === s.meta.player && tpl.matter?.options.some((o) => (o.fx || []).some((e) => Array.isArray(e.rel) && e.rel[0] === '$owner'));
+  if (mine && tpl.matter && !judgesOwn) {
     const ids = { owner: owner.id, place: h.id, lord: lord?.id || null, rival: rival || null };
     const m = tpl.matter;
     const options = m.options.map((o) => ({ label: say(o.label), hint: say(o.hint || ''), fx: bind(o.fx, ids) }));

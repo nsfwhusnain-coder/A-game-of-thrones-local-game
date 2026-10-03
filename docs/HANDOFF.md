@@ -148,7 +148,7 @@ Never train on book text, on anything from after 298, or to clone a voice.
 
 ### The bug hunt of 2026-10-02 (`docs/BUG-HUNT-2026-10-02.md`, `docs/bughunt/FOUND.md`): what the owner should check
 
-Fifty-seven findings in the report and forty-four the hunt added (N-003 to N-046), all on the mock provider; every merge had all eight CI checks green. The harnesses are in `scripts/bughunt/` (README there); `probe-simul.mjs` is the one for a person doing two things that cannot both be true. The hunt stopped when two passes over different houses (fifteen houses, at thirty-day and seven-day turns) found nothing new at S1 or S2.
+Fifty-seven findings in the report and fifty-nine the hunt added (N-003 to N-061), all on the mock provider; every merge had all eight CI checks green. The harnesses are in `scripts/bughunt/` (README there); `probe-simul.mjs` is the one for a person doing two things that cannot both be true. The hunt stopped when two passes over different houses (fifteen houses, at thirty-day and seven-day turns) found nothing new at S1 or S2.
 
 **Needs the live model (nothing here could be seen on the mock):**
 - **TX10, long turns:** the wait now says a long stretch can take minutes; measure a 30-day jump on Maester-12B and say whether the number is what the wait promises.
@@ -158,12 +158,15 @@ Fifty-seven findings in the report and forty-four the hunt added (N-003 to N-046
 - **OR2 to OR11, the order reader:** it now asks which, or says what it left; try a long compound order with the interpreter on (a summons, a march, a dismissal, an heir) and see that the clarifying chips are the right ones.
 - **ST1, great matters:** the headline a beat gives its card (`data.head`) is what the narrator is told to tell; read three beats narrated.
 
+**What the audit of a lying model server found (mock-checked, so a model is needed to judge the fixes):** a hung model has no per-turn breaker (each week asks every mind again, so a 30-day turn can wait most of an hour; after two timeouts in a jump the jump should finish on the writer and the rule trees, and say so); the memory consolidation holds End turn with no progress shown (cap its deadline near 30 s, or let the turn go on without it); "Stop here" replays differently when the minds fell back; the default narrator mode does not check that a scene says no man died and no war was won (the headline scorer does); an unreadable order can be read as any verb by a lying model, though the preview receipt shows it first; `suggest` has no deadline; the log takes a reply of any size and a `finish_reason: length` is ignored. Every kind of bad reply still ended in a finished turn, a valid save and a released lock, and no reply changed state.
+
 **Design questions the hunt left to you:**
 - **WD1:** births (monthly 6 / 4.5 / 2.5 / 0.8 % by age, 51 % sons), matches (a year at 10 / 7 / 3 / 1 %), the marriage age (16) and no dowry are my numbers; a house's lord or heir is never married away (N-021). Do the families of the realm grow at a pace you like?
 - **WD4, WD6:** holdings changing hands (left: the war working), and houses with no named heir, no house words, six one-person city states.
 - **N-028, strain:** a lord at war climbs to the top of the strain scale in a year or two (7 a moon for each war against a relief of about 7 at home). Should a long war wear the nobility down that far, or should the load fall as a war settles into routine?
 - **N-017, a pursuit:** a routed host that cannot get away is fought again every day it stays in contact (told as one card now); should it break contact after a defeat?
 - **N-036, the Crown's army:** the Crown's banners were joining the King's progress, which gives no battle, so the Crown never took the field; they are a host of their own now and the war in the Riverlands is harder on the Starks and the Tullys. Play a war and say whether it is right.
+- **Prisoners:** in a year of war (a Greyjoy game, fourteen moons) forty-six people were held, a dozen of them lords, and six had been ransomed, released or put to death: the held wait weeks to months for a judgement, and a house whose lord and regent are both held drifts. Should captives be ransomed or exchanged faster, or is a war that fills the cells what you want?
 - **UI7:** frame cost in a war grows with the armies; I found no leak and have no profile of your GPU.
 
 ## 6. What comes next

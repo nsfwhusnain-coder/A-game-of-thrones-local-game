@@ -3,9 +3,29 @@
 Newest first. One entry per merged work package ([docs/gdd/16-roadmap.md](gdd/16-roadmap.md)): the WP id, what changed
 for the player, and what the owner should verify.
 
+## 2026-10-03 — What the ninth look found: a visit is the court's, and one run of the tests a branch
+
+- A neighbour riding to your seat to pay his respects, to feast or to hunt is a card of the court, not of war (N-047).
+- The writer's own cards pass its own scorer more often: the strain of a lord, the days of the calendar and the floating market of Planky Town have a verb and a place in their headlines (N-048).
+- A lord's call forgets a host that is gone (N-049); a running fight is told over "a fortnight" (N-050); a hired company is settled when it is made (N-051); a verb given one host in a word for a list refuses in words instead of throwing (N-052). Two fuzzers join the harnesses (`fuzz-ops.mjs`, `fuzz-verbs.mjs`).
+- **A house whose regent was taken prisoner or died is no longer ruled in the prisoner's or the dead man's name** (N-054): the seal passes to the next in the order of kin, castellan and captain, and a prisoner never speaks for the house, writes its letters or holds its audience.
+- **No one "takes the regency" in the first week for a boy the tale starts with** (N-055; ST10 had been fixed only in a test that built the first turn by hand): Edric Dayne's regent rules from the first day, untold, as Robert Arryn's does.
+- **A lord no longer "feasts" a guest who is a month's ride away, or a child at home** (N-056; "Eddard Stark feasts Robert Arryn for a fortnight" at Winterfell, with Robert six years old at the Eyrie): the realm's ambient feast between two lords seats the guest house's envoys, and the card says so.
+- A party named for a lord whose name ends in s is no longer given an article ("The Ardrian Sunglass' party") (N-057).
+- The news says "a great host goes home" (not "go"), and a score of men are a score, not "a few dozen" (N-058). The chiefs of the hill clans are no longer "Mya The Moon Brothers": they have a nickname of their own, and are titled "Lady of the Burned Men" (N-059).
+- **Hoster Tully, "bedridden and dying", no longer rides to a tourney with a hundred and eighty knights** (N-060): an ailing lord is not sent out, and the beat of his death waits for him to be at Riverrun, where the story has him die. A lordship granted by the story or an order takes the heir's role and title away from the new lord, as a succession does: Edmure is Lord of Riverrun, not "Heir to Riverrun".
+- A recovery or an illness card has a second line ("She is on her feet again", "He keeps to his bed"), and the strain line says "her" of a woman; the Crown's side of a battle is "the royal host" in the losses, not "royal" (N-061).
+- **Bending the knee can no longer make two houses each other's liege** (N-062; the House window and the narrator's prompts overflowed the stack): a free lord who is no vassal of yours demands it, and when you bow the war ends.
+- **Loans are real** (N-063): lending a friend coin makes him your debtor, with interest and a day; the Iron Bank's loan is a debt in the books, not free gold; and an answer that costs more than the treasury holds is refused in words.
+- A quarrel in your own lands is told but not put to you to judge, no matter is written in the name of a boy of six or a prisoner, and the silence line of a matter says what the story does without you (N-064, N-065). Beric's ride waits for a living King and a free Hand, the Red Wedding for free men, and Ned taking the black makes Robb the lord of Stark.
+- No harvest is brought in, blighted or feasted in the cold months: the gossip of one is not told in winter, the ledger's luck and a coast raid say "stores", and Highgarden's harvest festival is for the warm months (N-066). The strict schema refuses an extra field named like an inherited one, and a jump that fails shows the player a plain sentence, not the server's own words (N-067).
+- The muster receipt tells what the first men are made of straight after those men, not after the ones still on the road (N-053).
+- Four harnesses join the others: `fuzz-orders`, `seed-sweep`, `probe-links` (the relations between people, houses and holdings after every turn) and `play-orders` (a house played with plausible orders in its own words).
+- The tests run once for a work branch (as its pull request) and not twice (a push and a pull request were two identical runs of an hour on two machines).
+
 ## 2026-10-03 — The bug hunt closes: the report marked, the owner's checks listed
 
-No game change. `docs/BUG-HUNT-2026-10-02.md` marks each of its fifty-seven findings with the pull request that fixed it (fifty-one fixed, two partly, two left on purpose: WD4 and UI7; TX10 and WD6 are partial); `docs/HANDOFF.md` §5 lists what only the live model can show and the design questions the hunt left to the owner; the tracker issue carries the forty-four findings of the hunt itself (`docs/bughunt/FOUND.md`, N-003 to N-046). The hunt stopped when two passes over twelve different houses at the game's own seven-day turns found nothing at S1 or S2.
+No game change. `docs/BUG-HUNT-2026-10-02.md` marks each of its fifty-seven findings with the pull request that fixed it (fifty-one fixed, two partly, two left on purpose: WD4 and UI7; TX10 and WD6 are partial); `docs/HANDOFF.md` §5 lists what only the live model can show and the design questions the hunt left to the owner; the tracker issue carries the findings of the hunt itself (`docs/bughunt/FOUND.md`, N-003 to N-061). The hunt stopped when two passes over twelve different houses at the game's own seven-day turns found nothing at S1 or S2.
 
 ## 2026-10-03 — What the eighth look found: the lists wait for their host
 

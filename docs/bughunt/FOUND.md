@@ -266,6 +266,73 @@ When a vassal answered the call, the host that gathered at his seat was given hi
 **Where:** `engine/military/muster.js` (`answer`, `leaderAt`).
 **FIXED** (`tests/bugfix-found.test.js`): the host is led by the first of the house's leaders who is at the seat (its regent, its lord, then its best fighters), and by none if none is there.
 
+### N-047 · S4 · A neighbour riding to pay his respects at your seat is a `[war]` card
+The story's type came from its lead fact's kind, and a march is war; the small rides of other houses were `court` only as background. A household riding to feast, hunt or pay respects (a `why` on a ride that is no campaign) is the court's now.
+**Where:** `engine/facts/cluster.js` (`typeOf`). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-048 · S4 · The engine's own cards fail the scorer it holds the model's to
+Every card of three 30-turn games run through `scoreCard`: about 1 % failed, and the largest classes were the writer's own: "X is on edge" and "X has not been sleeping" (no verb: N-011's heads), the calendar days ("The small council sits", "The harvest fires": no place and no verb, N-016's raw titles) and "A thousand boats sell goods" (a number the story does not hold).
+**Where:** `engine/facts/heads.js` (`BEHAVIOUR_HEAD`), `data/calendar.js` (a `head` for each day, with a verb and a place), `data/happening-heads.js`.
+**FIXED** (`tests/bugfix-found.test.js`). Left: heads that name a house by its short name when the fact's slots lack the house (`sends the Darry host home`), "Five battles in fourteen days" (a count the slots do not hold) and static happening texts naming the King: the floor card is still the writer's, the scorer is strict.
+
+### N-049 · S4 · A lord's call remembers hosts that are gone
+After a battle or a merge a house's `obligations.host` and `join` still named the host (97 such words in one game): a new host given its name was taken for it. Read by `static2` over the kept games.
+**Where:** `engine/parties.js` (`tidyObligations`, each day before the march). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-050 · S4 · "Five battles in fourteen days"
+A running fight's length is a count of days the card's slots do not hold: it is told as a span ("in a fortnight") now. **Where:** `engine/facts/heads.js` (`RUN`). **FIXED**.
+
+### N-051 · S3 · A hired company with no state (found by `fuzz-ops`)
+The `recruit` op made a company where no host stood and never settled it: a party with no `state` until the next load. **Where:** `shared/world.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-052 · S3 · `merge_hosts` throws on one host named in a word (found by `fuzz-verbs`)
+`i.params.armies.some is not a function`: a model that names one host in a string, not a list, made the verb throw instead of refuse. **Where:** `engine/actions/military.js`. **FIXED** (`tests/bugfix-found.test.js`). Eight seeds of 2,500 verb calls and eight of 3,000 ops since: no other throw, no NaN.
+
+### N-053 · S4 · The muster receipt lists the first men's make-up after the men still to come (found playing in the browser)
+"1,143 levies muster at Winterfell as The Host of Winterfell; 14,857 more are mustering from the fields (23 knights, 137 riders, 823 foot, 160 archers)": the bracket described the 1,143 and read as the make-up of the 14,857. It now follows the host it describes. **Where:** `engine/actions/military.js` `raiseLevies`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-054 · S2 · A regent in a cell, or in the grave, still held the seal (found by `probe-links`)
+Greyjoy seed 14, moon 11 to 14: Broom's regent Humfrey Broom and Lefford's regent Marla Lefford were prisoners and Marbrand's regent Ser Addam Marbrand was dead, and each house was still ruled in their name: `regencyTick` kept any regent who was alive, and `speakerFor` spoke for the house with whoever `regent` named. A held regent is now replaced by the next in the order of `chooseRegent`, a dead one is struck out even when nobody fit is left, and a prisoner never speaks for the house. **Where:** `shared/regency.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-055 · S3 · "Allyria Dayne takes the regency for Edric Dayne" was still news in the first week (ST10 not fixed in play; found in the browser)
+ST10 was marked fixed, with a test, but the test played the first turn with the turn counter at 0, and `advance` sets the counter to the turn it plays (1) before the day loop, so in a real game the regency of every boy the tale starts with was told on turn one as before. The rule now reads "the first turn" as a counter of 1 or less, and a test plays a real game's first day through `server/game.js`. **Where:** `shared/regency.js`. **FIXED** (`tests/bugfix-found.test.js`, `tests/bugfix-text.test.js`). Lesson kept: a test of a first-turn rule must play the first turn through the server, not build the state by hand.
+
+### N-056 · S2 · "Eddard Stark feasts Robert Arryn for a fortnight" at Winterfell: a six-year-old lord, a month's ride away (found reading the first weeks of cards)
+The realm's ambient "a feast and a match" put a guest lord at the host's table for a fortnight without moving him: guests 170 to 400 map units from the hall, in one case a boy of six at the Eyrie, all the while "at" their own seats. The guest house now sends its envoys: the fact has one actor (the host) and `data.envoys`, the card reads "Envoys of House Frey sit at the table", and the relation between the houses moves as before. **Where:** `shared/plots.js` (the feast-and-a-match churn), `engine/facts/heads.js` (`SUM.feast`). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-057 · S4 · "The Ardrian Sunglass' party: bound for Dragonstone" (found reading the first weeks of cards)
+A party named for a lord whose name ends in s ("Ardrian Sunglass' party") was given an article, because the label's rule for a person's name wanted `'s`. **Where:** `engine/facts/label.js` `partyName`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-058 · S4 · "A great host go home", and twenty men "a few dozen" (found reading the cards of a year)
+`host_disbanded` and five other summaries put the size of a party ("a great host") as a subject with a plural verb; and anything from thirteen to fifty-nine men was "a few dozen". A great host is one thing and takes the singular ("goes home"); thirteen to thirty men are "a score". **Where:** `engine/facts/heads.js` (`body`, `bodyDo`). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-059 · S4 · "Mya The Moon Brothers gather the Moon Brothers", "Lady of The Burned Men"
+The generated chiefs of the five hill clans took the house's name as their surname. They are now named for a nickname chosen by the house's id (no dice drawn, ids unchanged) and titled "Lady of the Burned Men". **Where:** `shared/world.js`. **FIXED** (`tests/bugfix-found.test.js`). Games begun before keep their chiefs' old names.
+
+### N-060 · S2 · Hoster Tully, "bedridden and dying", rode to a tourney with 180 knights, and Edmure stayed "Heir to Riverrun" when he became lord (found reading the cards of a year)
+Three faults on one man: `retinues` sent out any free lord, so the one the data calls "Bedridden and dying" rode to Raventree; the beat that kills him says he "dies at Riverrun with his daughter at his side" whether or not he was there (his body lay at Brindlewood); and a lordship given by an op (`house … lord`, as the beat does) left the new lord with the role and title of an heir, where the succession rule had always taken them away. An ailing lord is not sent out (`ailing` in `shared/people.js`: retinues skip him and `send_person` refuses in words), the beat waits for him to be at Riverrun, and both ways of taking a seat share `takeSeat`. **Where:** `shared/retinues.js`, `engine/actions/movement.js`, `shared/world.js`, `data/beats.js`. **FIXED** (`tests/bugfix-found.test.js`; N-020's test now uses a healthy lord).
+
+### N-061 · S3 · Cards with nothing under the headline: "Daenerys Targaryen rises from her sickbed —" (found reading the cards of a year); "royal lost about 1,500"
+The cards of a recovery had an empty second line (TX5's fix left `recovered` out, and the other kinds of illness), the illness-from-strain line said "told on him" of anyone, and a battle's detail called the Crown's side "royal". They say now "She is on her feet again", "The strain has told on her…", "She keeps to her bed", and "The royal host lost about 1,500". **Where:** `engine/facts/heads.js` (`SUM.recovered`, `SUM.illness`, `DETAIL.battle`). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-062 · S1 · "Bend the knee" made two houses each other's liege, and the House window and the prompts then threw (found by the canon audit)
+A vassal who defied his liege, or a foe held in the cells, could "demand your submission"; accepting set `stark.liege = bolton` while `bolton.liege = stark`, and `realmTotals` and the prompt's `playerSheet` overflowed the stack. The `liege` op refuses a loop; the matter is raised only by a free lord who is no vassal of yours, and bowing ends the war it was about. **Where:** `shared/world.js`, `data/matters.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-063 · S2 · Loans that ran backward, free bank money, and answers the treasury could not pay (canon audit)
+Lending a friend 5,000 wrote a debt of yours of 5,000 (and the friend later "reminded you of the 5,000 lent"); the Iron Bank's 20,000 was added to the treasury and its debt written where nothing ever read it; an answer that cost 20,000 was given with 300 in the chest, and the receipt said "-20000". Both loans are real loans in the economy's books now (interest, a day, a default), and an answer is refused in words when the treasury cannot pay what it costs. **Where:** `shared/petitions.js`, `data/matters.js`, `shared/plots.js`, `engine/actions/court.js`. **FIXED**.
+
+### N-064 · S2 · Matters put to a lord who is a party or a child (canon audit)
+"Men of House Stark and House Dustin fight over a mill... Both appeal to you" (receipt "Stark-Stark +8"), and "Robert Arryn (6) writes...". The card of a quarrel in the lord's own land is told, the matter is not; no matter is raised in the name of a person under sixteen, held, or dead. **Where:** `engine/director.js`, `shared/petitions.js`. **FIXED**.
+
+### N-065 · S2 · The silence line said "Nothing comes of it" for Ned's trial (canon audit)
+`silenceOf` read only the lapse's numbers; it now says "Eddard Stark will die" and "events will take their own course". Also: Beric's ride waits for a living King and a free Hand, the Red Wedding for free men at the Twins' table, Hoster's death for him to be free, Ned taking the black makes Robb lord of Stark, and a wedding invitation no longer says "the the North". **Where:** `ui/matters.js`, `data/beats.js`, `data/hooks.js`. **FIXED**.
+
+### N-066 · S2 · "A bumper harvest", "the harvest carried off", a harvest festival: all in winter (found by the winter audit)
+Six sources told harvest news without asking the season. The gossip of a good or a blighted harvest is not drawn in winter and spring, the ledger's luck says "full storehouses" and "rot in the stores" in the cold months, a coastal raid carries off "the stores", and the Highgarden harvest festival is for the warm months. Left: the vassals' excuse "the harvest is not yet in" and a few ambient lines that say "harvest" in passing. **Where:** `shared/plots.js`, `shared/economy.js`, `engine/military/naval.js`, `data/happenings.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-067 · S3 · Two small faults of the server (found by the lying-server audit)
+The strict schema accepted an extra field named like an inherited property (`toString`, `constructor`) because it asked `in`, not own-property; and the stream of a jump sent a server fault's own words ("orders.map is not a function") to the page where every other route sends a plain sentence. **Where:** `server/ai/schema.js`, `server/index.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
@@ -275,6 +342,10 @@ When a vassal answered the call, the host that gathered at his seat was given hi
 
 - `probe-simul`'s "foreign-commander" for Jon Snow: the rider party that takes him to the Wall is Stark's, and he is the Watch's the day he is sent. A boy riding to take the black under his father's escort, not a man commanding another house's host.
 - `probe-simul`'s "acts-on-the-road" for a vassal's lord whose host was beaten and joined another host: the road was ended by the join, which the probe did not read until it learned `host_joined`.
+
+- `probe-links` (liege loops, a hold with no house, spouses, ages, sieges, wars with a side gone) over six houses for fourteen moons: nothing the game did. Its "widow not told" and "born after a parent's death" are the starting data (Tywin's Joanna, Edmure's mother, Daenerys's father); a siege with no host in its walls is the day it is lifted, the next.
+- Cards at Essos, the Wall, the Iron Islands and beyond the Wall, scanned for the words of another country ("lord", "castle", "harvest", "tourney", "road", "septon") over a game of two years: none that is not the place's own. (A synthetic card for every fact kind at those places does show "raven", "castle" and "lord" where no such fact is ever made.)
+- The Crown played as Baratheon: banners called, "The Banners of the Crown" forms at King's Landing and grows to forty thousand over ten weeks, the progress and the Gold Cloaks stay what they are, and no invariant breaks.
 
 ## Seen, and left alone
 
@@ -286,4 +357,7 @@ When a vassal answered the call, the host that gathered at his seat was given hi
 - `probe-simul`'s "acts-on-the-road" for a bride whose company halts at a hall (Jeyne Westerling at Crane): the company is camped there, so she is in the hall, and the road fact has no arrival to read. A wedding in the hall of the one who stays is the rule.
 - S4: the Targaryen start has two canon-data oddities `probe`s print: Obara Sand born twelve years after her father Oberyn, and Cassana Estermont too young to be Robert's mother by the start's own birth years. Both are the data's, from the books' loose ages; left.
 
-- S4. A neighbour riding to pay his respects at the player's seat is a `[war]` card (a set out is a march in the clusterer's archetypes, and the small rides of other houses are typed `court` only when they are background). Retyping them means changing the roll-up of rides ("Six lords ride for Winterfell"); left for the owner to judge.
+- From the canon audit, left for the owner (the story's own scenes with nobody at them; each needs a rewrite of the beat, not a rule): `seized`, `trident`, `trial`, `golden_crown`, `wine_seller`, `brothers`, `shadow`, `kingslayer_freed`, `viper`, `tywin_dies` and `winterfell_burns` fire with the people they name elsewhere (the text says "at Highgarden" and Renly is in King's Landing); `ransom_offer` and `demand_release` free a captive where he sits; the catspaw and boar texts speak of Ned as absent or Protector while he is in the room. The Red Wedding now needs Walder Frey, Roose Bolton and the Stark lord free, not that they are at the Twins.
+- From the canon audit, S3: the Iron Bank's and some hooks' texts (`his household` told of a lady lord, "wolfswood" told at the Eyrie, `heir_fever` calling a man of twenty-five a child), a few figures in the beats' hints (Tommen's age, "4,000 men" for 1,000, 40,000 for a loss of 90,000), and four lines the audit thought close to the books' own (`beats.js` Dany's "Fire cannot kill a dragon", Greatjon's "dragons we married", the summer's length): they need a rewrite by the owner, who has the books.
+- From the lying-server audit (model-only; they need the owner's model to judge and each is a design change, so none was made): no breaker per turn when the model hangs (a 30-day turn against a silent server can wait most of an hour; after two timeouts the jump should finish on the writer and the rule trees, and say so); the memory consolidation holds End turn with nothing on the screen; "Stop here" replays differently when the minds fell back (the fallback draws dice in completion order); the default narrator mode has no check that a scene does not say a man died or a war was won (the headline scorer has one); an order the interpreter cannot read can become any verb, `declare_war` and a 20,000-dragon gift included, though the preview receipt shows it first; `extractJson` reads the last `{"story":…}` of a fenced reply; `suggest` has no deadline; a reply of 8 MB is written whole to `llm-log.jsonl`, and `finish_reason: length` is ignored. The audit also found that every kind of bad reply (hang, half a body, non-JSON, wrong shape, 429/500/503/401, engine-shaped fields) ended in a finished turn, a valid save and a released lock, and that no model reply changed state. Its scripts are in the audit's scratch folder, and the findings are in `docs/HANDOFF.md` §5.
+- From the winter audit: spring is as fast as summer for hosts; riders, envoys, retinues, the progress and caravans are not slowed by winter at all; a few lines are in the wrong season ("Spring floods" in summer, "before the first snows" at midwinter); winter is nearly toothless for the first eight months (realm stores average fifteen moons). Design questions, not faults.

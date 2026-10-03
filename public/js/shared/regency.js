@@ -26,6 +26,7 @@ export function incapacity(state, houseId) {
 }
 
 const adult = (c) => c && c.alive && (c.age ?? 30) >= 18 && !/imprison|captive|dead|exiled|missing/i.test(c.status || '') && !NOT_REGENT[c.id] && !c.outlaw;
+const held = (c) => /imprison|captive|hostage|missing/i.test(c?.status || ''); // a regent in a cell is a regent no longer: the seal passes (regencyTick)
 const skill = (c) => (c.skills || []).slice(0, 3).reduce((a, b) => a + b, 0);
 
 /**
@@ -63,7 +64,7 @@ export function chooseRegent(state, houseId) {
 export function speakerFor(state, houseId) {
   const h = state.houses[houseId]; if (!h) return null;
   const reg = h.regent && state.characters[h.regent];
-  return reg?.alive ? reg : (h.lord && state.characters[h.lord]) || null;
+  return reg?.alive && !held(reg) ? reg : (h.lord && state.characters[h.lord]) || null;
 }
 
 /** True while someone else rules in the head's name. */
@@ -104,12 +105,13 @@ export function regencyTick(state, days = 30) {
       }
       continue;
     }
-    if (cur?.alive) continue; // the regency stands
+    if (cur?.alive && !held(cur)) continue; // the regency stands
+    if (cur && !cur.alive) delete h.regent; // the dead hold no seal
     const reg = chooseRegent(state, h.id);
     if (!reg) continue; // nobody fit: the house drifts, and its vassals notice (below)
     h.regent = reg.id;
-    // a minority the scenario starts with (Edric Dayne's, Robert Arryn's) is a condition of the tale, not news of its first week (ST10): no one "takes the regency" on turn one
-    if ((state.meta.turn ?? 0) === 0 && why.kind === 'minority') { applied.push({ op: 'regency', text: `${h.name}: ${reg.name} rules as regent (${why.kind})` }); continue; }
+    // a minority the scenario starts with (Edric Dayne's, Robert Arryn's) is a condition of the tale, not news of its first week (ST10): no one "takes the regency" in the first turn (the counter reads 1 while it is played)
+    if ((state.meta.turn ?? 0) <= 1 && why.kind === 'minority') { applied.push({ op: 'regency', text: `${h.name}: ${reg.name} rules as regent (${why.kind})` }); continue; }
     const lord = state.characters[h.lord];
     const mine = h.id === p;
     events.push(fact(state, 'regency_begun', {

@@ -230,6 +230,8 @@ export function migrateState(state) {
   return state;
 }
 
+/** What the hill clans call their chiefs, where the house is "The Moon Brothers" and a name of the house would not do ("Mya The Moon Brothers"). Chosen by the house's id: no dice. */
+const HILL_EPITHETS = ['Ironhand', 'Redfeather', 'Stonefoot', 'Greyeyes', 'Longspear', 'Blackhair', 'Swiftfoot', 'Hornblower'];
 const NAME_POOLS = {
   north: ['Brandon', 'Rickard', 'Torrhen', 'Cregan', 'Edwyle', 'Harrion', 'Artos', 'Donnor', 'Wyllis', 'Jonnel', 'Medger', 'Rodwell', 'Lyessa', 'Alys', 'Sarra', 'Wynafryd'],
   wall: ['Othell', 'Donal', 'Bowen', 'Jarmen'], beyond: ['Harma', 'Varamyr', 'Rattleshirt', 'Soren', 'Morna'],
@@ -262,10 +264,10 @@ function generateLord(h, year, salt = '') {
   for (let k = 0; k < 6 && picked.length < 3; k++) { const t = TRAIT_POOL[Math.floor(rnd() * TRAIT_POOL.length)]; if (!picked.includes(t) && !picked.includes(OPP[t])) picked.push(t); }
   const traits = picked.join(', ');
   const seatName = (HOUSES.find((x) => x.id === h.id)?.seat || h.name).replace(/,.*$/, '');
-  const title = essos ? (h.title || `First Magister of ${h.name}`) : `${female ? 'Lady' : 'Lord'} of ${seatName}`;
+  const title = essos ? (h.title || `First Magister of ${h.name}`) : `${female ? 'Lady' : 'Lord'} of ${seatName.replace(/^The /, 'the ')}`;
   const id = slug(`${first}_${essos ? h.id : surname}`);
   return {
-    id, name: essos ? `${first} of ${h.name}` : `${first} ${surname}`, house: h.id, title, age, born: year - age, loc: resolvePlaceId(h.id) || h.id,
+    id, name: essos ? `${first} of ${h.name}` : /^The /.test(surname) ? `${first} ${HILL_EPITHETS[(h.id.length * 7 + first.length) % HILL_EPITHETS.length]}` : `${first} ${surname}`, house: h.id, title, age, born: year - age, loc: resolvePlaceId(h.id) || h.id,
     roles: essos ? ['ruler'] : [female ? 'lady' : 'lord'], traits, bio: `Head of House ${h.name}.`, alive: true, status: 'free', opinion: 0, loyalty: 50 + Math.floor(rnd() * 40), memories: [], generated: true, sex: female ? 'f' : 'm',
     skills: deriveSkills({ roles: ['lord'], traits, age }),
   };
@@ -525,6 +527,14 @@ export function applyChanges(state, changes, ctx = {}) {
   return { applied, rejected };
 }
 
+/** A person becomes the head of a house: the house's title is theirs (a king keeps the king's), and they are its heir no more. */
+function takeSeat(state, h, c) {
+  const female = isFemale(c); const seat = h.seat && state.holdings[h.seat] ? state.holdings[h.seat].name : h.name;
+  if (h.rank === 'crown') c.title = `${female ? 'Queen' : 'King'} of the Andals and the First Men, ${female ? 'Lady' : 'Lord'} of the Seven Kingdoms`;
+  else if (!/king|queen/i.test(c.title || '')) c.title = `${female ? 'Lady' : 'Lord'} of ${seat}`;
+  c.roles = [...new Set([...(c.roles || []).filter((r) => r !== 'heir'), female ? 'lady' : 'lord'])];
+}
+
 /** When a house's head dies (or vanishes), the heir takes the seat. The player plays on as the heir. */
 export function resolveSuccessions(state) {
   const out = [];
@@ -539,11 +549,7 @@ export function resolveSuccessions(state) {
       const prev = lord?.name || 'the late lord';
       h.lord = heir.id;
       if (heir.house !== h.id) heir.house = h.id;
-      const seat = h.seat && state.holdings[h.seat] ? state.holdings[h.seat].name : h.name;
-      const female = isFemale(heir);
-      if (h.rank === 'crown') heir.title = `${female ? 'Queen' : 'King'} of the Andals and the First Men, ${female ? 'Lady' : 'Lord'} of the Seven Kingdoms`;
-      else if (!/king|queen/i.test(heir.title || '')) heir.title = `${female ? 'Lady' : 'Lord'} of ${seat}`;
-      heir.roles = [...new Set([...(heir.roles || []).filter((r) => r !== 'heir'), female ? 'lady' : 'lord'])];
+      takeSeat(state, h, heir);
       const chosen = { order: `the brothers choose ${heir.name} to succeed ${prev}`, company: `the company names ${heir.name} its captain after ${prev}`, tribe: `the free folk follow ${heir.name} now that ${prev} is gone` }[h.rank];
       text = chosen ? `SUCCESSION: ${chosen}` : `SUCCESSION: ${heir.name} succeeds ${prev} as head of House ${h.name}${(heir.age ?? 20) < 16 ? ` — a child of ${heir.age}; a regent will rule in all but name` : ''}`;
     } else {
@@ -755,7 +761,7 @@ function applyOne(state, ch, ctx) {
       else {
         let id = slug(`${state.houses[hid].name}_${placeName(state, place)}_company`); while (state.parties[id]) id += '_2';
         const lord = Object.values(state.characters).find((c) => c.alive && c.house === hid && (c.loc === place));
-        host = state.parties[id] = { id, owner: hid, name: `The ${state.houses[hid].name} company at ${placeName(state, place)}`, commander: lord?.id || null, at: place, pos: [...pos], men, kind: 'garrison', members: [], composition: `${kind} hired at ${placeName(state, place)}`, morale: 65, supply: 80, asOf: date };
+        host = state.parties[id] = { id, owner: hid, name: `The ${state.houses[hid].name} company at ${placeName(state, place)}`, commander: lord?.id || null, at: place, pos: [...pos], men, kind: 'garrison', members: [], composition: `${kind} hired at ${placeName(state, place)}`, morale: 65, supply: 80, asOf: date }; settle(state, host); // (a company with no state: the validator, and the day's work, read it)
       }
       note(kind === 'sellswords' ? 'sellswords_hired' : 'men_hired', { actors: [host.commander], houses: [hid], place, pos, data: { party: host.id, men, cost: men * price }, text: `${fmt(men)} ${kind} are hired at ${placeName(state, place)} for House ${state.houses[hid].name}.` });
       return { op, text: `${fmt(men)} ${kind} hired at ${placeName(state, place)} for ${fmt(men * price)} dragons${men < (num(ch.men) ?? 200) ? ' (all that could be found or paid for)' : ''}; ${host.name} now ${fmt(host.men)}` };
@@ -973,6 +979,7 @@ function applyOne(state, ch, ctx) {
       const lg = ch.liege ? findHouse(state, ch.liege) : null;
       if (ch.liege && !lg) throw new Error('unknown liege');
       if (lg === hid) throw new Error('self liege');
+      for (let x = lg, n = 0; x && n < 60; x = state.houses[x]?.liege, n++) if (x === hid) throw new Error(`${state.houses[lg].name} is sworn to ${state.houses[hid].name}: a house cannot be its own vassal's vassal`);
       const old = state.houses[hid].liege; state.houses[hid].liege = lg;
       if (ch.independent !== undefined) state.houses[hid].independent = !!ch.independent;
       if (!lg) state.houses[hid].independent = true;
@@ -982,7 +989,7 @@ function applyOne(state, ch, ctx) {
     case 'house_update': case 'house': {
       const hid = findHouse(state, ch.house || ch.id); if (!hid) throw new Error('unknown house');
       const h = state.houses[hid]; const out = [];
-      if (ch.lord) { const c = findChar(state, ch.lord); if (c) { h.lord = c; out.push('new lord ' + state.characters[c].name); } }
+      if (ch.lord) { const c = findChar(state, ch.lord); if (c) { h.lord = c; takeSeat(state, h, state.characters[c]); out.push('new lord ' + state.characters[c].name); } }
       if (ch.title) { h.title = ch.title; out.push('title ' + ch.title); }
       if (ch.realmName) { h.realmName = ch.realmName; out.push('realm ' + ch.realmName); }
       if (ch.status) { h.status = ch.status; out.push(ch.status); }

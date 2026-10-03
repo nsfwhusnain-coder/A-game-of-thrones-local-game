@@ -90,7 +90,9 @@ const fmt = (n) => Math.round(n).toLocaleString('en-GB');
 /** A count for a headline: a word up to twelve (the scorer lets those stand), then "more than a dozen", then "scores of". */
 const count = (n) => (n <= 12 ? say(n) : n <= 24 ? 'more than a dozen' : 'scores of');
 /** How many men, in words a herald has: exact and small, or a scale. */
-const body = (n) => (n <= 12 ? `${say(n)} men` : n < 60 ? 'a few dozen men' : n < 150 ? 'some scores of men' : n < 1500 ? 'hundreds of men' : n < 6000 ? 'thousands of men' : 'a great host');
+const body = (n) => (n <= 12 ? `${say(n)} men` : n < 31 ? 'a score of men' : n < 60 ? 'a few dozen men' : n < 150 ? 'some scores of men' : n < 1500 ? 'hundreds of men' : n < 6000 ? 'thousands of men' : 'a great host');
+/** A party's size as the subject of a sentence: "a great host" is one thing and takes the singular verb, the rest take the plural ("a score of men go home", "a great host goes home"). */
+const bodyDo = (n, plural, singular) => { const b = body(n); return `${cap1(b)} ${b === 'a great host' ? singular : plural}`; };
 /** A span of days in words a herald has ("a week", "near two months"); '' for no days. */
 function span(days) {
   const n = Math.round(days);
@@ -919,10 +921,10 @@ const FAMILY_SUM = {
 };
 /** How a man's strain shows, by its band (data.band): what the household sees, never a number. */
 const BEHAVIOUR_HEAD = {
-  weary: ['{A} looks worn', '{A} has not been sleeping'],
-  strained: ['{A} is short with the household', '{A} is on edge'],
-  fraying: ['{A} snaps at all who come near', '{A} is fraying'],
-  breaking: ['{A} is spoken of in low voices', '{A} is close to breaking'],
+  weary: ['{A} looks worn', '{A} sleeps badly'],
+  strained: ['{A} grows short with the household', '{A} loses patience with the servants'],
+  fraying: ['{A} snaps at all who come near', '{A} frays under the strain'],
+  breaking: ['{A} is spoken of in low voices', '{A} comes close to breaking'],
 };
 const BEHAVIOUR_SUM = {
   weary: 'It is a long time since a night of proper rest',
@@ -1023,7 +1025,7 @@ export const RUN = {
   },
   sum(g, s, c) {
     const last = g[g.length - 1]; const v = sides(c, last); const days = last.day - g[0].day + 1;
-    const first = `${cap1(say(g.length))} battles in ${days === 1 ? 'a day' : `${say(days)} days`}`;
+    const first = `${cap1(say(g.length))} battles in ${span(days)}`;
     const steady = g.every((f) => sideWon(f) === sideWon(last));
     // each side's dead over all of them: by the house, for the hosts of a house are one side whichever of them fought
     const fell = (side) => g.reduce((n, f) => n + (f.data?.lost?.[side === 'win' ? f.data.winner : f.data.loser] || 0), 0);
@@ -1087,8 +1089,8 @@ export const SUM = {
     return d.why === 'ships' ? sentences(`It waits ${span(d.wait) || 'a while'} for ships${l ? ` lent by ${l}` : ''}`) : d.why ? sentences('There are no ships to carry the men over') : '';
   },
   embarked: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return sentences(d.men ? `${P.He} takes ${body(d.men)}${d.ships ? ` in ${say(d.ships) || 'many'} ships` : ''}` : '', d.days ? `The crossing is ${span(d.days)}` : ''); },
-  landed: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return d.men ? sentences(`${cap1(body(d.men))} land with ${P.him}`) : sentences(`${P.He} lands with what ${P.he} brought`); },
-  lost_at_sea: (f) => { const d = f.data || {}; return sentences(d.drowned ? `${cap1(body(d.drowned))} drown with them` : 'Little is known beyond the loss'); },
+  landed: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return d.men ? sentences(`${bodyDo(d.men, 'land', 'lands')} with ${P.him}`) : sentences(`${P.He} lands with what ${P.he} brought`); },
+  lost_at_sea: (f) => { const d = f.data || {}; return sentences(d.drowned ? `${bodyDo(d.drowned, 'drown', 'drowns')} with them` : 'Little is known beyond the loss'); },
   levies_called: (f, s, c) => {
     const d = f.data || {}; const to = c.dest(d.muster); const n = (d.vassals || []).length;
     if (n) return sentences(`${cap1(count(n))} sworn houses are told to bring their men${to ? ` to ${to}` : ''}`);
@@ -1110,8 +1112,8 @@ export const SUM = {
   muster_grew: (f, s, c) => { const d = f.data || {}; return d.total ? sentences(d.total >= 6000 ? 'The host has grown into a great one' : `There are now ${body(d.total)} in the host`) : ''; },
   host_formed: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return d.men ? sentences(`${P.He} has ${body(d.men)} under ${P.him}`) : sentences(`Men gather under ${P.his} banner`); },
   host_joined: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`The host grows by ${body(d.men)}`) : ''; },
-  host_split: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} are split off`) : ''; },
-  host_disbanded: (f, s, c) => { const d = f.data || {}; if (/overcome/.test(d.why || '')) return sentences('The men are cut down or driven out'); return d.men ? sentences(`${cap1(body(d.men))} go home`) : ''; },
+  host_split: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`${bodyDo(d.men, 'are', 'is')} split off`) : ''; },
+  host_disbanded: (f, s, c) => { const d = f.data || {}; if (/overcome/.test(d.why || '')) return sentences('The men are cut down or driven out'); return d.men ? sentences(`${bodyDo(d.men, 'go', 'goes')} home`) : ''; },
   desertion: (f, s, c) => { const d = f.data || {}; return sentences(`Men slip away from the ranks${d.why ? `: ${d.why}` : ''}`); },
   host_hungry: () => sentences('Its wagons and the fields about it are both empty'),
   land_stripped: () => sentences('The foragers have left the province nothing, and the next host through it will starve'),
@@ -1158,9 +1160,9 @@ export const SUM = {
   sea_battle: (f) => { const d = f.data || {}; return sentences(d.prizes ? `${cap1(say(d.prizes) || 'Many')} ships are taken as prizes` : 'The fleets fought until one broke'); },
   sellswords_hired: (f) => { const d = f.data || {}; return sentences(d.price ? `They come at a price of ${gold(d.price)} dragons` : 'They serve whoever pays'); },
   sellswords_turned: (f) => { const d = f.data || {}; return sentences(d.price ? `They go to the higher bidder, at ${gold(d.price)} dragons` : 'They go to the higher bidder'); },
-  outlaws_rise: (f) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} hold the roads where war laid the land waste`) : ''; },
+  outlaws_rise: (f) => { const d = f.data || {}; return d.men ? sentences(`${bodyDo(d.men, 'hold', 'holds')} the roads where war laid the land waste`) : ''; },
   outlaws_scattered: () => '',
-  men_hired: (f) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} enter the pay of the house`) : ''; },
+  men_hired: (f) => { const d = f.data || {}; return d.men ? sentences(`${bodyDo(d.men, 'enter', 'enters')} the pay of the house`) : ''; },
   ambush: (f) => { const d = f.data || {}; return d.men ? sentences(`It is a company of ${body(d.men)}`) : ''; },
   war_declared: (f, s, c) => { const d = f.data || {}; const r = String(d.reason || '').trim(); return sentences(r ? `The cause is ${lower1(r)}` : 'Two houses that were at odds are now at war'); },
   war_joined: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return sentences(`${P.He} takes the side of the ${d.side === 'attackers' ? 'attackers' : 'defenders'}`); },
@@ -1211,8 +1213,8 @@ export const SUM = {
     const note = String(f.data?.note || '').trim(); const P = pro(c, f);
     return sentences(note && !/^(?:wounded|taken|hurt)/i.test(note) && /^[A-Z][a-z]+ /.test(note) ? `${P.He} ${lower1(note.replace(/\.$/, ''))}` : `${P.He} is hurt but lives`);
   },
-  illness: (f) => sentences(f.data?.why === 'strain' ? 'The strain has told on him, and the rest he needs will not be taken' : ''),
-  recovered: () => '',
+  illness: (f, s, c) => { const P = pro(c, f); if (!P.id) return ''; return sentences(f.data?.why === 'strain' ? `The strain has told on ${P.him}, and the rest ${P.he} needs will not be taken` : `${P.He} keeps to ${P.his} bed`); },
+  recovered: (f, s, c) => { const P = pro(c, f); return P.id ? sentences(`${P.He} is on ${P.his} feet again`) : ''; },
   came_of_age: (f, s, c) => { const P = pro(c, f); return sentences(`${P.He} answers for ${P.self} now`); },
   succession: (f, s, c) => { const P = pro(c, f); const h = (f.houses || []).find((x) => c.known.house(x)); return sentences(h ? `${P.He} is now head of ${c.hs(h)}` : `${P.He} is now head of the house`); },
   regency_begun: (f, s, c) => {
@@ -1248,6 +1250,7 @@ export const SUM = {
   feast: (f, s, c) => {
     const d = f.data || {}; const guests = (f.actors || []).slice(1).filter((id) => c.known.person(id)).slice(0, 3).map((id) => c.nm(id));
     if (d.brawl) { const [x, y] = (d.brawlers || []).filter((id) => c.known.person(id)); return sentences(x && y ? `${c.lordly(x)} and ${c.lordly(y)} come to blows${d.over ? ` over ${d.over}` : ''}` : 'Guests come to blows before the night is over'); }
+    if (!guests.length && c.known.house(d.envoys)) return sentences(`Envoys of ${c.hs(d.envoys)} sit at the table`);
     return guests.length ? sentences(`${list(guests)} ${guests.length === 1 ? 'sits' : 'sit'} at the table`) : sentences('It is a feast for the household, with no great guests');
   },
   tourney: (f) => { const d = f.data || {}; const n = say(d.guests); return sentences(n ? `${cap1(n)} houses are asked to send knights` : 'Knights are called to the lists'); },
@@ -1343,7 +1346,7 @@ export const DETAIL = {
     const d = f.data || {}; const out = []; const lost = d.lost && typeof d.lost === 'object' ? d.lost : null;
     if (lost) {
       const houseOf = (key) => (key === d.winner ? d.winnerHouse : key === d.loser ? d.loserHouse : c.known.party(key)?.owner);
-      const parts = Object.entries(lost).map(([k, n]) => { const h = houseOf(k); return `${h && c.known.house(h) ? c.short(h) : c.known.party(k) ? cap1(c.pty(k)) : 'One side'} lost ${c.n(n, h)}`; });
+      const parts = Object.entries(lost).map(([k, n]) => { const h = houseOf(k); const who = h && c.known.house(h) ? (c.short(h) === 'royal' ? 'The royal host' : c.short(h)) : c.known.party(k) ? cap1(c.pty(k)) : 'One side'; return `${who} lost ${c.n(n, h)}`; });
       if (parts.length) out.push(`${parts.join('; ')}.`);
     }
     if (Array.isArray(d.decided) && d.decided.length) out.push(`Decided by ${d.decided.join(' and ')}.`);

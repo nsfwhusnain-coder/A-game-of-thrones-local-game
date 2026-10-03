@@ -61,6 +61,17 @@ export function setLoc(state, c, where) {
   if (next && !(next.members || []).includes(c.id)) next.members = [...(next.members || []), c.id];
 }
 export const joinParty = (state, c, p) => setLoc(state, c, ref(p.id));
+/**
+ * A lord's call remembers the host his levies are in (`obligations.host`) and the host he was told to join (`join`); a host that is broken up, lost in a battle or merged leaves
+ * those words pointing at nothing, and the next host given its name is taken for it. Forgotten, with the host. Pure: no dice.
+ */
+export function tidyObligations(state) {
+  for (const h of Object.values(state.houses || {})) {
+    const ob = h.obligations; if (!ob) continue;
+    if (ob.host && !state.parties?.[ob.host]) delete ob.host;
+    if (ob.join && !state.parties?.[ob.join]) ob.join = null;
+  }
+}
 const BOARD_RANGE = 20; // map units (~36 miles): how near a commander stands to a host or fleet that has just set out for it to be his
 /**
  * A host or fleet that has set out takes its commander with it: he boards from the hall he stood in if he is free and near, and one who is held, or nowhere near, leads it no more.

@@ -124,7 +124,12 @@ function startJump(id, body) {
   const emit = (event, data) => { const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`; job.sent.push(msg); for (const res of job.listeners) res.write(msg); };
   jobs.set(job.id, job);
   game.advance(id, { span: body.span, orders: body.orders, onSegment: (s) => emit('segment', s), stopWanted: () => job.stopDay })
-    .then((r) => emit('done', viewOf(r)), (e) => emit('error', { error: e.message, status: e.status || 500 }))
+    .then((r) => emit('done', viewOf(r)), (e) => {
+      // the same rule as the other routes: an error of the server's own is told in the console, not to the page
+      const status = e.status || 500; const own = status < 500 || status === 502 || status === 503 || status === 504;
+      if (!own) console.error(e);
+      emit('error', { error: own ? e.message : 'The game could not do that. (The details are in the server\'s console.)', status });
+    })
     .finally(() => { job.over = true; for (const res of job.listeners) res.end(); job.listeners.clear(); setTimeout(() => jobs.delete(job.id), 10 * 60e3).unref?.(); });
   return { job: job.id };
 }

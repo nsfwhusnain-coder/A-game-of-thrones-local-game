@@ -3,9 +3,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 process.env.WC_PROVIDER = 'mock';
+process.env.WC_SAVES = (await import('node:fs')).mkdtempSync((await import('node:path')).join((await import('node:os')).tmpdir(), 'wc-found-'));
 const { createInitialState, applyChanges } = await import('../public/js/shared/world.js');
 const { tollAlong } = await import('../public/js/shared/marches.js');
-const { withRng } = await import('../public/js/engine/rng.js');
+const { withRng, seedState } = await import('../public/js/engine/rng.js');
 const { BRIEFS } = await import('../public/data/briefs.js');
 const { setLoc } = await import('../public/js/engine/parties.js');
 const { emit } = await import('../public/js/engine/facts/log.js');
@@ -22,6 +23,9 @@ const { perform, check, intentFor } = await import('../public/js/engine/actions/
 const { partyOf } = await import('../public/js/engine/parties.js');
 const { suitability, refusal } = await import('../public/js/engine/people/family.js');
 const { HAPPENINGS } = await import('../public/data/happenings.js');
+const { raiseLevies } = await import('../public/js/engine/actions/military.js');
+const { regencyTick, speakerFor } = await import('../public/js/shared/regency.js');
+const game = await import('../server/game.js');
 
 const world = (house = 'stark', seed = 7) => createInitialState('agot_298', house, { seed });
 
@@ -194,9 +198,9 @@ test('N-016: a day of the realm\'s calendar is told by its own name and words, n
   for (const c of [...CALENDAR, ...COURTS]) {
     const where = c.where === 'baratheon' ? 'baratheon' : Object.keys(s.holdings).includes(c.where) ? c.where : 'baratheon';
     s.facts = [];
-    fact(s, 'happening', { title: c.title, text: c.text, where, importance: 1, houses: [s.holdings[where].owner] }, { data: { head: c.title, sum: c.text } });
+    fact(s, 'happening', { title: c.title, text: c.text, where, importance: 1, houses: [s.holdings[where].owner] }, { data: { head: c.head || c.title, sum: c.text } });
     const card = cardOf(s, { facts: [s.facts.at(-1)] }); // (a small fact is a card of its own: the clusterer tells only the news)
-    assert.equal(card.headline, c.title.replace(/^./, (x) => x.toUpperCase()).replace(/[.;,\s]+$/, '')); assert.ok(card.summary.startsWith(c.text.slice(0, 30)), card.summary);
+    assert.equal(card.headline, (c.head || c.title).replace(/^./, (x) => x.toUpperCase()).replace(/[.;,\s]+$/, '')); assert.ok(card.summary.startsWith(c.text.slice(0, 30)), card.summary);
     assert.doesNotMatch(`${card.headline} ${card.summary}`, /Rumour spreads|only talk/);
   }
 });
@@ -243,12 +247,12 @@ test('N-019: a man who commands a host of his own rides with it, not away with h
 });
 
 test('N-020: the lord whose lists are to be run is not sent off to hunt before they are', () => {
-  const s = world('lannister'); const v = s.houses.tully; const lord = s.characters[v.lord];
-  const send = (to) => check(s, intentFor(s, 'send_person', { house: 'tully', params: { character: lord.id, to }, source: { type: 'intent', ref: lord.id, by: 'mock' } }));
+  const s = world('lannister'); const v = s.houses.tyrell; const lord = s.characters[v.lord];
+  const send = (to) => check(s, intentFor(s, 'send_person', { house: 'tyrell', params: { character: lord.id, to }, source: { type: 'intent', ref: lord.id, by: 'mock' } }));
   assert.equal(send('lannister'), null, 'free to go before he calls a tourney');
-  s.plots = s.plots || {}; s.plots.lists = { [v.seat]: { house: 'tully', called: dayNumber(s.meta.date), on: dayNumber(s.meta.date) + 21 } };
+  s.plots = s.plots || {}; s.plots.lists = { [v.seat]: { house: 'tyrell', called: dayNumber(s.meta.date), on: dayNumber(s.meta.date) + 21 } };
   assert.equal(send('lannister')?.code, 'hosting', 'not while his lists are to be run');
-  assert.notEqual(send(v.seat)?.code, 'hosting', 'and his own seat is no leaving'); s.meta.player = 'tully';
+  assert.notEqual(send(v.seat)?.code, 'hosting', 'and his own seat is no leaving'); s.meta.player = 'tyrell';
   assert.equal(send('lannister'), null, 'the player\'s own lord goes where the player says');
 });
 
@@ -500,4 +504,200 @@ test('N-046: a lord who is on a ride of his own does not step from the road into
   assert.notEqual(host.commander, lord.id, 'under another, or under none, while he is away');
   setLoc(s, lord, v.seat); // home, the lord leads it
   const t = world('stark', 4); const w = t.houses.blackwood; withRng(t, () => answer(t, w, {})); assert.equal(Object.values(t.parties).find((p) => p.owner === 'blackwood' && p.kind === 'host').commander, w.lord, 'at home, he commands his own host');
+});
+
+test('N-047: a neighbour riding to pay his respects is a card of the court, not of war; a host marching against a foe still is', () => {
+  const s = world('stark'); today(s); s.facts = [];
+  emit(s, 'set_out', { actors: ['rodrik_cassel'], houses: ['stark'], place: 'stark', importance: 3, data: { party: 'p1', to: 'stark', why: 'to pay his respects to Eddard Stark at Winterfell' }, text: 'x' });
+  assert.equal(clusterFacts(s, s.facts).stories[0].type, 'court');
+  s.facts = []; emit(s, 'set_out', { actors: ['rodrik_cassel'], houses: ['stark'], place: 'stark', importance: 3, data: { party: 'p2', to: 'stark', against: 'p3' }, text: 'x' });
+  assert.equal(clusterFacts(s, s.facts).stories[0].type, 'war');
+});
+
+test('N-048: the cards the writer makes of the calendar, a strained lord and the floating market pass the scorer the soak holds every card to', async () => {
+  const { CALENDAR, COURTS } = await import('../public/data/calendar.js');
+  for (const c of [...CALENDAR, ...COURTS]) {
+    const s = world('stark'); today(s); s.facts = [];
+    const where = Object.keys(s.holdings).includes(c.where) ? c.where : 'baratheon';
+    fact(s, 'happening', { title: c.title, text: c.text, where, importance: 1, houses: [s.holdings[where].owner] }, { data: { head: c.head || c.title, sum: c.text } });
+    const f = s.facts.at(-1); const st = { facts: [f], actors: [], houses: f.houses, place: where, days: [1, 1], importance: 1 }; const card = cardOf(s, st);
+    const r = scoreCard({ headline: card.headline, summary: card.summary }, st, s); assert.ok(r.pass, `${c.title}: "${card.headline}" ${JSON.stringify(r.detail)}`);
+  }
+  for (const pin of [0, 1]) {
+    const s = world('stark'); today(s); s.facts = []; emit(s, 'behaviour', { actors: ['eddard_stark'], houses: ['stark'], place: 'stark', importance: 3, data: { band: 'strained' }, text: 'x' });
+    const st = storyOf(s); const card = cardOf(s, st, { pin }); assert.ok(scoreCard({ headline: card.headline, summary: card.summary }, st, s).pass, card.headline);
+  }
+  const s = world('stark'); today(s); s.facts = []; emit(s, 'happening', { actors: [], houses: ['stark'], place: 'stark', importance: 2, data: { tpl: 'd_rhoyne' }, text: 'x' });
+  for (const pin of [0, 1]) { const st = storyOf(s); const card = cardOf(s, st, { pin }); assert.ok(scoreCard({ headline: card.headline, summary: card.summary }, st, s).pass, card.headline); }
+});
+
+test('N-049: a call forgets the host that is gone, so the next host given its name is not taken for it', async () => {
+  const { tidyObligations } = await import('../public/js/engine/parties.js');
+  const s = world('lannister'); const v = s.houses.blackwood;
+  applyChanges(s, [{ op: 'army_create', id: 'host_of_house_blackwood', owner: 'blackwood', name: 'Host of House Blackwood', at: 'blackwood', men: 500, commander: null }]);
+  v.obligations = { muster: 'tully', host: 'host_of_house_blackwood', join: 'tully_banners_tully' };
+  tidyObligations(s); assert.equal(v.obligations.host, 'host_of_house_blackwood', 'a host that is there is remembered'); assert.equal(v.obligations.join, null, 'one that was never there is not');
+  delete s.parties.host_of_house_blackwood; tidyObligations(s);
+  assert.equal(v.obligations.host, undefined, 'a host that is gone is forgotten'); assert.equal(v.obligations.muster, 'tully', 'and the rest of the call stands');
+});
+
+test('N-050: a running fight is told over "a fortnight", not "fourteen days" (a number the slots do not hold)', () => {
+  const s = world('stark'); const day = dayNumber(s.meta.date); s.meta.clock = { turn: 1, from: day, to: day + 29 };
+  for (const on of [1, 3, 5, 7, 9, 11, 13]) emit(s, 'battle', { actors: [], houses: ['lannister', 'tully'], place: Object.values(s.holdings).find((h) => h.owner === 'tully').id, importance: 4, on, text: 'x', data: { attacker: 'a', defender: 'b', winner: 'a', loser: 'b', winnerHouse: 'lannister', loserHouse: 'tully', lost: { a: 100, b: 300 } } });
+  const st = clusterFacts(s, s.facts).stories.find((x) => x.facts.length === 7); assert.ok(st, 'one story of thirteen days of fighting, a battle every other day');
+  const card = cardOf(s, st); assert.match(card.summary, /^Seven battles in a fortnight\./, card.summary);
+});
+
+test('N-051: a company hired where there is no host is settled at once, with a state, as every other party is', () => {
+  const s = world('stark', 3); const t = s.houses.moreland || s.houses.stark; const hid = t.id; const place = t.seat;
+  t.figures.treasury = { ...(t.figures.treasury || {}), v: 1e6 }; for (const p of Object.values(s.parties)) if (p.owner === hid) delete s.parties[p.id];
+  withRng(s, () => applyChanges(s, [{ op: 'recruit', house: hid, at: place, men: 100 }]));
+  const co = Object.values(s.parties).find((p) => p.owner === hid && /company/.test(p.name)); assert.ok(co, 'the company is made');
+  assert.ok(typeof co.state === 'string' && co.state.length, `it has a state (${co.state})`);
+});
+
+test('N-052: a verb refuses in words a parameter of the wrong shape: one host named in a word for merge_hosts is a list of one', () => {
+  const s = world('stark');
+  applyChanges(s, [{ op: 'army_create', id: 'h1', owner: 'stark', name: 'H1', at: 'stark', men: 500, commander: null }, { op: 'army_create', id: 'h2', owner: 'stark', name: 'H2', at: 'stark', men: 300, commander: null }]);
+  for (const armies of ['h1', ['h1', 'h2'], '', null, 7]) {
+    assert.doesNotThrow(() => check(s, intentFor(s, 'merge_hosts', { house: 'stark', params: { armies }, source: { type: 'intent', ref: 'robb_stark', by: 'mock' } })), JSON.stringify(armies));
+  }
+});
+
+test('N-053: the muster receipt says what the first men are made of straight after the men, not after the ones still on the road', () => {
+  const s = world('stark', 3); s.houses.stark.figures.levies = { ...(s.houses.stark.figures.levies || {}), v: 9000 };
+  const r = withRng(s, () => raiseLevies(s, { house: 'stark', at: 'stark', men: 9000, immediate: false }));
+  const line = r.lines.find((l) => /levies muster at/.test(l)); assert.ok(line, r.lines.join(' | '));
+  assert.match(line, /^[\d,]+ levies muster at Winterfell as [^;(]+ \([^)]*(?:foot|archers|riders|knights)[^)]*\); [\d,]+ more are mustering from the fields$/, line);
+});
+
+test('N-054: a regent who is seized or dies gives up the seal: another takes it, and a prisoner never speaks for the house', () => {
+  const s = world('stark', 3); const h = s.houses.stark; s.characters.eddard_stark.status = 'imprisoned';
+  regencyTick(s, 30); const first = h.regent; assert.ok(first, 'a regent is named for the lord in the cells');
+  s.characters[first].status = 'imprisoned'; assert.notEqual(speakerFor(s, 'stark')?.id, first, 'a prisoner is not the one who speaks, even before the tick');
+  regencyTick(s, 30); assert.ok(h.regent && h.regent !== first && s.characters[h.regent].alive && !/imprison|captive/.test(s.characters[h.regent].status || ''), `another, free, takes the seal (${h.regent})`);
+  const second = h.regent; s.characters[second].alive = false;
+  regencyTick(s, 30); assert.ok(!h.regent || (h.regent !== second && s.characters[h.regent].alive), 'a dead regent is not kept as the regent');
+});
+
+test('N-055: the first turn of a real game tells no one "takes the regency" for a boy the tale starts with (ST10 was tested with a turn counter at 0 that the game does not have)', async () => {
+  const { id } = game.newGame('agot_298', 'stark', { seed: 3 });
+  const r = await game.advance(id, { span: '1d' }); await game.settled(id);
+  assert.deepEqual((r.turn.events || []).map((e) => e.headline).filter((h) => /regency/i.test(h)), [], 'no card of a regency in the first turn');
+  const s = game.loadState(id); assert.ok(s.houses.dayne.regent, 'and the boy\'s regent rules');
+  assert.ok(!game.readFacts(id, {}).some((f) => f.kind === 'regency_begun'), 'and no fact of one begun');
+});
+
+test('N-056: the realm\'s ambient feast between lords seats the guest house\'s envoys, not its lord (a child at the Eyrie was "feasted for a fortnight" at Winterfell, a month\'s ride from his hall)', async () => {
+  const { worldTick } = await import('../public/js/shared/plots.js');
+  const s = world('stark', 11); let ev = null;
+  for (let i = 0; i < 80 && !ev; i++) ev = withRng(s, () => worldTick(s, 30)).events.find((e) => /for a fortnight/.test(e.text || ''));
+  assert.ok(ev, 'the realm feasts'); const f = s.facts.find((x) => x.id === ev.fact); assert.equal(f.kind, 'feast'); assert.equal(f.actors.length, 1, 'one lord, the host'); assert.ok(f.data.envoys, 'and the guest house sends envoys'); assert.match(ev.text, /feasts the envoys of House \w/);
+  const t = world('stark', 5); t.facts = []; const day = dayNumber(t.meta.date); t.meta.clock = { turn: 1, from: day, to: day };
+  emit(t, 'feast', { actors: [t.houses.tully.lord], houses: ['tully', 'frey'], place: 'tully', importance: 3, text: 'x', data: { envoys: 'frey' } });
+  const card = cardOf(t, clusterFacts(t, t.facts).stories[0]); assert.match(card.summary, /^Envoys of House Frey sit at the table\.?$/, card.summary);
+});
+
+test('N-057: a party named for a man whose name ends in s is told by its own name ("Ardrian Sunglass\' party"), with no article', async () => {
+  const { partyLabel } = await import('../public/js/engine/facts/label.js'); const s = world('stark');
+  for (const name of ['Ardrian Sunglass\' party', 'Dagon Volmark\'s party', 'Sunglass\' party']) assert.equal(partyLabel(s, { name, owner: 'stark', kind: 'host' }), name);
+});
+
+test('N-058: "a great host" goes home (one thing, one verb), a score of men go home, and twenty men are not "a few dozen"', () => {
+  const say = (men) => { const t = world('stark', 5); t.facts = []; const day = dayNumber(t.meta.date); t.meta.clock = { turn: 1, from: day, to: day };
+    emit(t, 'host_disbanded', { actors: [t.houses.lannister.lord], houses: ['lannister'], place: 'lannister', importance: 3, text: 'x', data: { men } }); return cardOf(t, clusterFacts(t, t.facts).stories[0]).summary; };
+  assert.match(say(12000), /^A great host goes home\./); assert.match(say(20), /^A score of men go home\./); assert.match(say(300), /^Hundreds of men go home\./);
+});
+
+test('N-059: the chief of a hill clan is not "Mya The Moon Brothers", and no generated lord is "Lord of The" anything', () => {
+  const s = world('stark', 3);
+  for (const id of ['burned_men', 'black_ears', 'moon_brothers', 'painted_dogs', 'thenns']) { const c = s.characters[s.houses[id].lord]; assert.doesNotMatch(c.name, /\bThe\b/, c.name); assert.match(c.title, /^(Lord|Lady) of the /, c.title); }
+  assert.doesNotMatch(Object.values(s.characters).map((c) => c.title || '').join('\n'), /\b(Lord|Lady) of The /);
+});
+
+test('N-060: Hoster Tully, "bedridden and dying", rides to no tourney and is sent nowhere; when he dies Edmure is lord and no longer "Heir to Riverrun"', async () => {
+  const { retinueTick } = await import('../public/js/shared/retinues.js');
+  const led = new Set(); const day = dayNumber(world('stark', 7).meta.date);
+  for (let seed = 1; seed <= 4; seed++) {
+    const s = world('stark', 7); s.meta.rngState = seedState(seed); s.facts = [];
+    withRng(s, () => { for (let d = 0; d < 60; d++) { s.meta.date = dateOfDay(day + d); s.meta.clock = { turn: 1, from: day + d, to: day + d }; retinueTick(s, 7); for (const [id, p] of Object.entries(s.parties)) if (p.kind === 'retinue') { led.add(p.commander); delete s.parties[id]; } } });
+  }
+  assert.ok(led.size >= 100, `a good many lords ride out (${led.size})`); assert.ok(!led.has('hoster_tully'), 'the bedridden lord leads no retinue');
+  const t = world('stark', 7); const verdict = check(t, intentFor(t, 'send_person', { house: 'tully', params: { character: 'hoster_tully', to: 'baratheon' }, source: { type: 'intent', ref: 'hoster_tully', by: 'mock' } }));
+  assert.equal(verdict?.code ?? verdict?.reason?.code, 'ailing', JSON.stringify(verdict));
+  applyChanges(t, [{ op: 'character', id: 'hoster_tully', alive: false, cause: 'a long illness' }, { op: 'house', house: 'tully', lord: 'edmure_tully' }]);
+  const e = t.characters.edmure_tully; assert.ok(!(e.roles || []).includes('heir') && (e.roles || []).includes('lord'), `Edmure's roles: ${e.roles}`); assert.match(e.title, /^Lord of /, e.title);
+});
+
+test('N-061: a card of a recovery or an illness has a second line, with the right pronoun, that the scorer passes; a royal loss is "The royal host lost", not "royal lost"', () => {
+  for (const [who, re] of [['daenerys_targaryen', /^She is on her feet again\.?$/], ['robb_stark', /^He is on his feet again\.?$/]]) {
+    const t = world('stark', 5); t.facts = []; const day = dayNumber(t.meta.date); t.meta.clock = { turn: 1, from: day, to: day };
+    emit(t, 'recovered', { actors: [who], houses: [t.characters[who].house], place: t.characters[who].loc, importance: 3, text: 'x' });
+    const st = clusterFacts(t, t.facts).stories[0]; const card = cardOf(t, st); assert.match(card.summary, re, card.summary);
+    const r = scoreCard({ headline: card.headline, summary: card.summary }, st, t); assert.ok(r.pass, JSON.stringify(r.detail));
+  }
+  const t = world('stark', 5); t.facts = []; const day = dayNumber(t.meta.date); t.meta.clock = { turn: 1, from: day, to: day };
+  emit(t, 'illness', { actors: ['daenerys_targaryen'], houses: ['targaryen'], place: 'targaryen', importance: 3, text: 'x', data: { why: 'strain' } });
+  const card = cardOf(t, clusterFacts(t, t.facts).stories[0]); assert.match(card.summary, /told on her, and the rest she needs/, card.summary);
+  const b = world('stark', 5); b.facts = []; b.meta.clock = { turn: 1, from: day, to: day };
+  emit(b, 'battle', { actors: [], houses: ['baratheon', 'stark'], place: 'tully', importance: 4, text: 'x', data: { attacker: 'a', defender: 'b', winner: 'a', loser: 'b', winnerHouse: 'baratheon', loserHouse: 'stark', lost: { a: 100, b: 300 } } });
+  const bc = cardOf(b, clusterFacts(b, b.facts).stories[0]); assert.match(bc.details.join(' '), /The royal host lost about/, bc.details.join(' | '));
+});
+
+test('N-062: no house is made its own vassal\'s vassal: a vassal or a prisoner does not demand your submission, and a liege who is bowed to ends the war (a loop made the House window and the prompts overflow the stack)', async () => {
+  const { MATTERS } = await import('../public/data/matters.js'); const P = await import('../public/js/shared/petitions.js'); const { realmTotals } = await import('../public/js/shared/world.js');
+  const s = world('stark', 5);
+  applyChanges(s, [{ op: 'liege', house: 'stark', liege: 'bolton' }], { source: 'GM' }); assert.notEqual(s.houses.stark.liege, 'bolton', 'the op is refused: Bolton is sworn to Stark');
+  assert.doesNotThrow(() => realmTotals(s, 'stark'));
+  applyChanges(s, [{ op: 'war', status: 'start', name: 'The Defiance of House Bolton', attackers: ['stark'], defenders: ['bolton'] }]);
+  assert.equal(MATTERS.demand_submission.raise({ ...P.matterContext(s), pick: (a) => a[0], shuffle: (a) => a }), null, 'a rebel vassal is not a liege to bow to');
+  applyChanges(s, [{ op: 'war', status: 'start', name: 'The Lion\'s War', attackers: ['lannister'], defenders: ['stark'] }]);
+  const m = MATTERS.demand_submission.raise({ ...P.matterContext(s), pick: (a) => a.find((h) => h.id === 'lannister') || a[0], shuffle: (a) => a });
+  assert.ok(m && /Lannister/.test(m.title), m?.title); applyChanges(s, m.options[0].fx[0].ops, { source: 'GM' });
+  assert.equal(s.houses.stark.liege, 'lannister'); assert.equal(s.wars.find((w) => /Lion/.test(w.name)).status, 'ended'); assert.doesNotThrow(() => realmTotals(s, 'stark'));
+});
+
+test('N-063: a loan the matters make is a loan in the economy\'s books (lending is lending, a bank\'s coin is owed), and an answer the treasury cannot pay is refused in words', async () => {
+  const { applyPetitionFx } = await import('../public/js/shared/petitions.js'); const { MATTERS } = await import('../public/data/matters.js'); const P = await import('../public/js/shared/petitions.js');
+  const s = world('stark', 5); const gold = (h) => s.houses[h].figures.treasury.v; const [a0, t0] = [gold('stark'), gold('tully')];
+  applyPetitionFx(s, [{ lend: ['tully', 5000, 12] }]);
+  const l = s.economy.loans.find((x) => x.lender === 'stark' && x.debtor === 'tully'); assert.ok(l && l.amount === 5000, 'Stark is the lender, Tully the debtor');
+  assert.equal(gold('stark'), a0 - 5000); assert.equal(gold('tully'), t0 + 5000); assert.ok(!(s.houses.stark.loans || []).length, 'and nothing is written as a debt of Stark\'s own');
+  const b0 = gold('stark'); applyPetitionFx(s, [{ borrow: ['iron_bank', 20000, 24] }]);
+  assert.ok(s.economy.loans.some((x) => x.debtor === 'stark' && x.lender === 'iron_bank' && x.amount === 20000), 'a debt to the bank, in the books'); assert.equal(gold('stark'), b0 + 20000);
+  assert.ok(!MATTERS.loan_request.raise({ ...P.matterContext(s), treasury: 100 }), 'no loan is asked of an empty treasury');
+  const t = world('stark', 5); t.houses.stark.figures.treasury = { ...t.houses.stark.figures.treasury, v: 300 };
+  applyChanges(t, [{ op: 'decision', matter: 'loan_request', title: 'A price', text: 't', from: 'robb_stark', options: [{ label: 'Buy him back', hint: '20,000', fx: [{ gold: -20000 }] }, { label: 'Wait', hint: '', fx: [] }], lapse: [] }]);
+  const d = t.decisions.at(-1); const verdict = (option) => check(t, intentFor(t, 'answer_matter', { house: 'stark', params: { decision: d.id, option }, source: { type: 'intent', ref: 'eddard_stark', by: 'player' } }));
+  assert.equal(verdict(0)?.code, 'gold', JSON.stringify(verdict(0))); assert.equal(verdict(1), null, 'an answer that costs nothing is free to give');
+});
+
+test('N-064: a quarrel between the lord\'s own house and a rival is told but not put to him to judge ("Stark-Stark +8"), and a matter is not raised in the name of a boy of six', async () => {
+  const D = await import('../public/js/engine/director.js'); const P = await import('../public/js/shared/petitions.js');
+  const s = world('stark', 5);
+  const r = D.applyHook(s, 'mill_dispute', 'stark', { r: () => 0.3 }); assert.ok(r.cards.length, 'the card is told'); assert.equal(r.matter, null, 'but the lord is not asked to judge his own men');
+  const vassal = Object.values(s.houses).find((h) => h.liege === 'stark' && h.lord); s.characters[vassal.lord].age = 6;
+  let raised = 0; for (let i = 0; i < 80; i++) { s.plots = { ...(s.plots || {}), petitioned: {} }; const m = P.realmPetition(s); if (m?.from === vassal.lord) raised++; }
+  assert.equal(raised, 0, 'no matter comes from the boy');
+});
+
+test('N-065: the silence line of a matter says what the story does without you (a man put to death), not "Nothing comes of it"', async () => {
+  const M = await import('../public/js/ui/matters.js'); const s = world('stark', 5);
+  const line = M.silenceOf(s, { options: [], lapse: [{ ops: [{ op: 'character', id: 'eddard_stark', alive: false }] }] });
+  assert.match(line.line, /Eddard Stark will die/); assert.equal(line.tone, 'bad');
+});
+
+test('N-066: no harvest is brought in, blighted or feasted in the cold months: the gossip is not drawn, the ledger\'s luck has other words, the raid carries off stores', async () => {
+  const { worldTick } = await import('../public/js/shared/plots.js');
+  const s = world('stark', 11); s.world = { ...(s.world || {}), season: 'winter' };
+  for (let i = 0; i < 60; i++) for (const e of withRng(s, () => worldTick(s, 30)).events) assert.doesNotMatch(`${e.title} ${e.text}`, /best in memory|blight at|full granaries at|blight has taken the wheat/i, `${e.title}: ${e.text}`);
+  const { HAPPENINGS } = await import('../public/data/happenings.js'); assert.deepEqual(HAPPENINGS.find((h) => h.id === 'rc_highgarden').when, ['warm']);
+});
+
+test('N-067: a reply with an extra field named like an inherited one (toString, constructor) is refused by the strict schema, not accepted as the model\'s', async () => {
+  const { validate } = await import('../server/ai/schema.js');
+  const schema = { type: 'object', additionalProperties: false, required: ['a'], properties: { a: { type: 'number' } } };
+  assert.deepEqual(validate({ a: 1 }, schema), []);
+  for (const k of ['toString', 'constructor', 'valueOf', 'hasOwnProperty']) assert.ok(validate({ a: 1, [k]: 1 }, schema).some((p) => p.includes(`${k}: not allowed`)), k);
+  assert.ok(validate({}, schema).some((p) => /\.a: missing/.test(p)));
 });
