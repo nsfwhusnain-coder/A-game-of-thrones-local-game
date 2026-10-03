@@ -1213,8 +1213,8 @@ export const SUM = {
     const note = String(f.data?.note || '').trim(); const P = pro(c, f);
     return sentences(note && !/^(?:wounded|taken|hurt)/i.test(note) && /^[A-Z][a-z]+ /.test(note) ? `${P.He} ${lower1(note.replace(/\.$/, ''))}` : `${P.He} is hurt but lives`);
   },
-  illness: (f, s, c) => { const P = pro(c, f); return sentences(f.data?.why === 'strain' ? `The strain has told on ${P.him}, and the rest ${P.he} needs will not be taken` : `${P.He} keeps to ${P.his} bed`); },
-  recovered: (f, s, c) => { const P = pro(c, f); return sentences(`${P.He} is on ${P.his} feet again`); },
+  illness: (f, s, c) => { const P = pro(c, f); if (!P.id) return ''; return sentences(f.data?.why === 'strain' ? `The strain has told on ${P.him}, and the rest ${P.he} needs will not be taken` : `${P.He} keeps to ${P.his} bed`); },
+  recovered: (f, s, c) => { const P = pro(c, f); return P.id ? sentences(`${P.He} is on ${P.his} feet again`) : ''; },
   came_of_age: (f, s, c) => { const P = pro(c, f); return sentences(`${P.He} answers for ${P.self} now`); },
   succession: (f, s, c) => { const P = pro(c, f); const h = (f.houses || []).find((x) => c.known.house(x)); return sentences(h ? `${P.He} is now head of ${c.hs(h)}` : `${P.He} is now head of the house`); },
   regency_begun: (f, s, c) => {
