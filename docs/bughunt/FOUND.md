@@ -315,6 +315,18 @@ Three faults on one man: `retinues` sent out any free lord, so the one the data 
 ### N-061 · S3 · Cards with nothing under the headline: "Daenerys Targaryen rises from her sickbed —" (found reading the cards of a year); "royal lost about 1,500"
 The cards of a recovery had an empty second line (TX5's fix left `recovered` out, and the other kinds of illness), the illness-from-strain line said "told on him" of anyone, and a battle's detail called the Crown's side "royal". They say now "She is on her feet again", "The strain has told on her…", "She keeps to her bed", and "The royal host lost about 1,500". **Where:** `engine/facts/heads.js` (`SUM.recovered`, `SUM.illness`, `DETAIL.battle`). **FIXED** (`tests/bugfix-found.test.js`).
 
+### N-062 · S1 · "Bend the knee" made two houses each other's liege, and the House window and the prompts then threw (found by the canon audit)
+A vassal who defied his liege, or a foe held in the cells, could "demand your submission"; accepting set `stark.liege = bolton` while `bolton.liege = stark`, and `realmTotals` and the prompt's `playerSheet` overflowed the stack. The `liege` op refuses a loop; the matter is raised only by a free lord who is no vassal of yours, and bowing ends the war it was about. **Where:** `shared/world.js`, `data/matters.js`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-063 · S2 · Loans that ran backward, free bank money, and answers the treasury could not pay (canon audit)
+Lending a friend 5,000 wrote a debt of yours of 5,000 (and the friend later "reminded you of the 5,000 lent"); the Iron Bank's 20,000 was added to the treasury and its debt written where nothing ever read it; an answer that cost 20,000 was given with 300 in the chest, and the receipt said "-20000". Both loans are real loans in the economy's books now (interest, a day, a default), and an answer is refused in words when the treasury cannot pay what it costs. **Where:** `shared/petitions.js`, `data/matters.js`, `shared/plots.js`, `engine/actions/court.js`. **FIXED**.
+
+### N-064 · S2 · Matters put to a lord who is a party or a child (canon audit)
+"Men of House Stark and House Dustin fight over a mill... Both appeal to you" (receipt "Stark-Stark +8"), and "Robert Arryn (6) writes...". The card of a quarrel in the lord's own land is told, the matter is not; no matter is raised in the name of a person under sixteen, held, or dead. **Where:** `engine/director.js`, `shared/petitions.js`. **FIXED**.
+
+### N-065 · S2 · The silence line said "Nothing comes of it" for Ned's trial (canon audit)
+`silenceOf` read only the lapse's numbers; it now says "Eddard Stark will die" and "events will take their own course". Also: Beric's ride waits for a living King and a free Hand, the Red Wedding for free men at the Twins' table, Hoster's death for him to be free, Ned taking the black makes Robb lord of Stark, and a wedding invitation no longer says "the the North". **Where:** `ui/matters.js`, `data/beats.js`, `data/hooks.js`. **FIXED**.
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.
@@ -338,3 +350,6 @@ The cards of a recovery had an empty second line (TX5's fix left `recovered` out
 
 - `probe-simul`'s "acts-on-the-road" for a bride whose company halts at a hall (Jeyne Westerling at Crane): the company is camped there, so she is in the hall, and the road fact has no arrival to read. A wedding in the hall of the one who stays is the rule.
 - S4: the Targaryen start has two canon-data oddities `probe`s print: Obara Sand born twelve years after her father Oberyn, and Cassana Estermont too young to be Robert's mother by the start's own birth years. Both are the data's, from the books' loose ages; left.
+
+- From the canon audit, left for the owner (the story's own scenes with nobody at them; each needs a rewrite of the beat, not a rule): `seized`, `trident`, `trial`, `golden_crown`, `wine_seller`, `brothers`, `shadow`, `kingslayer_freed`, `viper`, `tywin_dies` and `winterfell_burns` fire with the people they name elsewhere (the text says "at Highgarden" and Renly is in King's Landing); `ransom_offer` and `demand_release` free a captive where he sits; the catspaw and boar texts speak of Ned as absent or Protector while he is in the room. The Red Wedding now needs Walder Frey, Roose Bolton and the Stark lord free, not that they are at the Twins.
+- From the canon audit, S3: the Iron Bank's and some hooks' texts (`his household` told of a lady lord, "wolfswood" told at the Eyrie, `heir_fever` calling a man of twenty-five a child), a few figures in the beats' hints (Tommen's age, "4,000 men" for 1,000, 40,000 for a loss of 90,000), and four lines the audit thought close to the books' own (`beats.js` Dany's "Fire cannot kill a dragon", Greatjon's "dragons we married", the summer's length): they need a rewrite by the owner, who has the books.

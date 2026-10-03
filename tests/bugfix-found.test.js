@@ -643,3 +643,46 @@ test('N-061: a card of a recovery or an illness has a second line, with the righ
   emit(b, 'battle', { actors: [], houses: ['baratheon', 'stark'], place: 'tully', importance: 4, text: 'x', data: { attacker: 'a', defender: 'b', winner: 'a', loser: 'b', winnerHouse: 'baratheon', loserHouse: 'stark', lost: { a: 100, b: 300 } } });
   const bc = cardOf(b, clusterFacts(b, b.facts).stories[0]); assert.match(bc.details.join(' '), /The royal host lost about/, bc.details.join(' | '));
 });
+
+test('N-062: no house is made its own vassal\'s vassal: a vassal or a prisoner does not demand your submission, and a liege who is bowed to ends the war (a loop made the House window and the prompts overflow the stack)', async () => {
+  const { MATTERS } = await import('../public/data/matters.js'); const P = await import('../public/js/shared/petitions.js'); const { realmTotals } = await import('../public/js/shared/world.js');
+  const s = world('stark', 5);
+  applyChanges(s, [{ op: 'liege', house: 'stark', liege: 'bolton' }], { source: 'GM' }); assert.notEqual(s.houses.stark.liege, 'bolton', 'the op is refused: Bolton is sworn to Stark');
+  assert.doesNotThrow(() => realmTotals(s, 'stark'));
+  applyChanges(s, [{ op: 'war', status: 'start', name: 'The Defiance of House Bolton', attackers: ['stark'], defenders: ['bolton'] }]);
+  assert.equal(MATTERS.demand_submission.raise({ ...P.matterContext(s), pick: (a) => a[0], shuffle: (a) => a }), null, 'a rebel vassal is not a liege to bow to');
+  applyChanges(s, [{ op: 'war', status: 'start', name: 'The Lion\'s War', attackers: ['lannister'], defenders: ['stark'] }]);
+  const m = MATTERS.demand_submission.raise({ ...P.matterContext(s), pick: (a) => a.find((h) => h.id === 'lannister') || a[0], shuffle: (a) => a });
+  assert.ok(m && /Lannister/.test(m.title), m?.title); applyChanges(s, m.options[0].fx[0].ops, { source: 'GM' });
+  assert.equal(s.houses.stark.liege, 'lannister'); assert.equal(s.wars.find((w) => /Lion/.test(w.name)).status, 'ended'); assert.doesNotThrow(() => realmTotals(s, 'stark'));
+});
+
+test('N-063: a loan the matters make is a loan in the economy\'s books (lending is lending, a bank\'s coin is owed), and an answer the treasury cannot pay is refused in words', async () => {
+  const { applyPetitionFx } = await import('../public/js/shared/petitions.js'); const { MATTERS } = await import('../public/data/matters.js'); const P = await import('../public/js/shared/petitions.js');
+  const s = world('stark', 5); const gold = (h) => s.houses[h].figures.treasury.v; const [a0, t0] = [gold('stark'), gold('tully')];
+  applyPetitionFx(s, [{ lend: ['tully', 5000, 12] }]);
+  const l = s.economy.loans.find((x) => x.lender === 'stark' && x.debtor === 'tully'); assert.ok(l && l.amount === 5000, 'Stark is the lender, Tully the debtor');
+  assert.equal(gold('stark'), a0 - 5000); assert.equal(gold('tully'), t0 + 5000); assert.ok(!(s.houses.stark.loans || []).length, 'and nothing is written as a debt of Stark\'s own');
+  const b0 = gold('stark'); applyPetitionFx(s, [{ borrow: ['iron_bank', 20000, 24] }]);
+  assert.ok(s.economy.loans.some((x) => x.debtor === 'stark' && x.lender === 'iron_bank' && x.amount === 20000), 'a debt to the bank, in the books'); assert.equal(gold('stark'), b0 + 20000);
+  assert.ok(!MATTERS.loan_request.raise({ ...P.matterContext(s), treasury: 100 }), 'no loan is asked of an empty treasury');
+  const t = world('stark', 5); t.houses.stark.figures.treasury = { ...t.houses.stark.figures.treasury, v: 300 };
+  applyChanges(t, [{ op: 'decision', matter: 'loan_request', title: 'A price', text: 't', from: 'robb_stark', options: [{ label: 'Buy him back', hint: '20,000', fx: [{ gold: -20000 }] }, { label: 'Wait', hint: '', fx: [] }], lapse: [] }]);
+  const d = t.decisions.at(-1); const verdict = (option) => check(t, intentFor(t, 'answer_matter', { house: 'stark', params: { decision: d.id, option }, source: { type: 'intent', ref: 'eddard_stark', by: 'player' } }));
+  assert.equal(verdict(0)?.code, 'gold', JSON.stringify(verdict(0))); assert.equal(verdict(1), null, 'an answer that costs nothing is free to give');
+});
+
+test('N-064: a quarrel between the lord\'s own house and a rival is told but not put to him to judge ("Stark-Stark +8"), and a matter is not raised in the name of a boy of six', async () => {
+  const D = await import('../public/js/engine/director.js'); const P = await import('../public/js/shared/petitions.js');
+  const s = world('stark', 5);
+  const r = D.applyHook(s, 'mill_dispute', 'stark', { r: () => 0.3 }); assert.ok(r.cards.length, 'the card is told'); assert.equal(r.matter, null, 'but the lord is not asked to judge his own men');
+  const vassal = Object.values(s.houses).find((h) => h.liege === 'stark' && h.lord); s.characters[vassal.lord].age = 6;
+  let raised = 0; for (let i = 0; i < 80; i++) { s.plots = { ...(s.plots || {}), petitioned: {} }; const m = P.realmPetition(s); if (m?.from === vassal.lord) raised++; }
+  assert.equal(raised, 0, 'no matter comes from the boy');
+});
+
+test('N-065: the silence line of a matter says what the story does without you (a man put to death), not "Nothing comes of it"', async () => {
+  const M = await import('../public/js/ui/matters.js'); const s = world('stark', 5);
+  const line = M.silenceOf(s, { options: [], lapse: [{ ops: [{ op: 'character', id: 'eddard_stark', alive: false }] }] });
+  assert.match(line.line, /Eddard Stark will die/); assert.equal(line.tone, 'bad');
+});

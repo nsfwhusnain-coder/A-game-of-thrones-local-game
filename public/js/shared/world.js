@@ -979,6 +979,7 @@ function applyOne(state, ch, ctx) {
       const lg = ch.liege ? findHouse(state, ch.liege) : null;
       if (ch.liege && !lg) throw new Error('unknown liege');
       if (lg === hid) throw new Error('self liege');
+      for (let x = lg, n = 0; x && n < 60; x = state.houses[x]?.liege, n++) if (x === hid) throw new Error(`${state.houses[lg].name} is sworn to ${state.houses[hid].name}: a house cannot be its own vassal's vassal`);
       const old = state.houses[hid].liege; state.houses[hid].liege = lg;
       if (ch.independent !== undefined) state.houses[hid].independent = !!ch.independent;
       if (!lg) state.houses[hid].independent = true;

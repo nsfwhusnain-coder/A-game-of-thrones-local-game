@@ -316,6 +316,10 @@ export const COURT = [
       const d = (state.decisions || []).find((x) => x.id === i.params.decision && x.status === 'pending');
       if (!d) return { code: 'no_matter', text: 'That matter is settled, or was never brought.' };
       if (!d.options[Number(i.params.option)] && !String(i.params.custom || '').trim()) return { code: 'option', text: 'Choose an answer, or give your own.' };
+      // an answer that costs coin is not offered to a treasury that cannot pay it (the receipt said "-20,000" and the Hand's ransom was paid with 300)
+      const cost = String(i.params.custom || '').trim() ? 0 : (d.options[Number(i.params.option)].fx || []).reduce((n, e) => n + (e.gold < 0 ? -e.gold : 0) + (e.lend ? e.lend[1] : 0), 0);
+      const have = Math.round(Number(state.houses[i.house]?.figures?.treasury?.v) || 0);
+      if (cost > have) return { code: 'gold', text: `That costs ${cost.toLocaleString('en-GB')} dragons, and the treasury holds ${have.toLocaleString('en-GB')}.` };
       return null;
     },
     start: (state, i) => {

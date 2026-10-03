@@ -130,8 +130,8 @@ function opportunity(s, raidAt) {
       id: 'lender', title: 'A Braavosi keyholder calls', from: null,
       text: `A soft-spoken man in black from the Iron Bank of Braavos has heard House ${me.name}'s coffers are low. The Bank would be pleased to lend — at interest, and the Bank always gets its due.`,
       options: [
-        { label: 'Borrow 20,000 dragons', hint: 'Coin now; a debt to Braavos', fx: [{ gold: 20000 }, { debt: ['Iron Bank of Braavos', 26000] }] },
-        { label: 'Borrow 5,000 dragons', hint: 'A modest loan', fx: [{ gold: 5000 }, { debt: ['Iron Bank of Braavos', 6500] }] },
+        { label: 'Borrow 20,000 dragons', hint: 'Coin now; a debt to Braavos', fx: [{ borrow: ['iron_bank', 20000, 24] }] },
+        { label: 'Borrow 5,000 dragons', hint: 'A modest loan', fx: [{ borrow: ['iron_bank', 5000, 24] }] },
         { label: 'Send him away', hint: 'Keep your freedom', fx: [] },
       ],
     });
