@@ -587,3 +587,13 @@ test('N-055: the first turn of a real game tells no one "takes the regency" for 
   const s = game.loadState(id); assert.ok(s.houses.dayne.regent, 'and the boy\'s regent rules');
   assert.ok(!game.readFacts(id, {}).some((f) => f.kind === 'regency_begun'), 'and no fact of one begun');
 });
+
+test('N-056: the realm\'s ambient feast between lords seats the guest house\'s envoys, not its lord (a child at the Eyrie was "feasted for a fortnight" at Winterfell, a month\'s ride from his hall)', async () => {
+  const { worldTick } = await import('../public/js/shared/plots.js');
+  const s = world('stark', 11); let ev = null;
+  for (let i = 0; i < 80 && !ev; i++) ev = withRng(s, () => worldTick(s, 30)).events.find((e) => /for a fortnight/.test(e.text || ''));
+  assert.ok(ev, 'the realm feasts'); const f = s.facts.find((x) => x.id === ev.fact); assert.equal(f.kind, 'feast'); assert.equal(f.actors.length, 1, 'one lord, the host'); assert.ok(f.data.envoys, 'and the guest house sends envoys'); assert.match(ev.text, /feasts the envoys of House \w/);
+  const t = world('stark', 5); t.facts = []; const day = dayNumber(t.meta.date); t.meta.clock = { turn: 1, from: day, to: day };
+  emit(t, 'feast', { actors: [t.houses.tully.lord], houses: ['tully', 'frey'], place: 'tully', importance: 3, text: 'x', data: { envoys: 'frey' } });
+  const card = cardOf(t, clusterFacts(t, t.facts).stories[0]); assert.match(card.summary, /^Envoys of House Frey sit at the table\.?$/, card.summary);
+});

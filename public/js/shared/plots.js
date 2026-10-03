@@ -85,7 +85,7 @@ function churn(s, days) {
       const a = pick(cands); if (!a) return;
       const friends = Object.entries(s.relations || {}).filter(([k, r]) => r.v >= 20 && k.split('|').includes(a.id)).map(([k]) => k.split('|').find((x) => x !== a.id)).filter((x) => s.houses[x] && x !== player(s));
       const b = s.houses[pick(friends.length ? friends : great.filter((h) => h.region === a.region && h.id !== a.id).map((h) => h.id))]; if (!b || String(speakerFor(s, b.id)?.loc || '').startsWith('party:')) return; // (nor is his guest on the road with a host)
-      out.events.push({ ...ev(`${lordName(a)} feasts ${lordName(b)}`, `At ${s.holdings[a.seat]?.name || a.name}, ${lordName(a)} feasts ${lordName(b)} for a fortnight. There is talk of a match between their children, and more wine than wisdom.`, a.seat, 1, 'court', [a.id, b.id]), kind: 'feast', actors: [a.lord, b.lord] });
+      out.events.push({ ...ev(`${lordName(a)} feasts the envoys of House ${b.name}`, `At ${s.holdings[a.seat]?.name || a.name}, ${lordName(a)} feasts the envoys of House ${b.name} for a fortnight. There is talk of a match between their children, and more wine than wisdom.`, a.seat, 1, 'court', [a.id, b.id]), kind: 'feast', actors: [a.lord], data: { envoys: b.id } }); // (the guest's lord stays in his own hall, a child or a month's ride away: his envoys sit at the table)
       out.changes.push({ op: 'relation', a: a.id, b: b.id, delta: 5 });
     },
     () => { // outlaws where the land is restless

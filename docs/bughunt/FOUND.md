@@ -297,6 +297,9 @@ Greyjoy seed 14, moon 11 to 14: Broom's regent Humfrey Broom and Lefford's regen
 ### N-055 · S3 · "Allyria Dayne takes the regency for Edric Dayne" was still news in the first week (ST10 not fixed in play; found in the browser)
 ST10 was marked fixed, with a test, but the test played the first turn with the turn counter at 0, and `advance` sets the counter to the turn it plays (1) before the day loop, so in a real game the regency of every boy the tale starts with was told on turn one as before. The rule now reads "the first turn" as a counter of 1 or less, and a test plays a real game's first day through `server/game.js`. **Where:** `shared/regency.js`. **FIXED** (`tests/bugfix-found.test.js`, `tests/bugfix-text.test.js`). Lesson kept: a test of a first-turn rule must play the first turn through the server, not build the state by hand.
 
+### N-056 · S2 · "Eddard Stark feasts Robert Arryn for a fortnight" at Winterfell: a six-year-old lord, a month's ride away (found reading the first weeks of cards)
+The realm's ambient "a feast and a match" put a guest lord at the host's table for a fortnight without moving him: guests 170 to 400 map units from the hall, in one case a boy of six at the Eyrie, all the while "at" their own seats. The guest house now sends its envoys: the fact has one actor (the host) and `data.envoys`, the card reads "Envoys of House Frey sit at the table", and the relation between the houses moves as before. **Where:** `shared/plots.js` (the feast-and-a-match churn), `engine/facts/heads.js` (`SUM.feast`). **FIXED** (`tests/bugfix-found.test.js`).
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

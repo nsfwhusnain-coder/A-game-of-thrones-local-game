@@ -1248,6 +1248,7 @@ export const SUM = {
   feast: (f, s, c) => {
     const d = f.data || {}; const guests = (f.actors || []).slice(1).filter((id) => c.known.person(id)).slice(0, 3).map((id) => c.nm(id));
     if (d.brawl) { const [x, y] = (d.brawlers || []).filter((id) => c.known.person(id)); return sentences(x && y ? `${c.lordly(x)} and ${c.lordly(y)} come to blows${d.over ? ` over ${d.over}` : ''}` : 'Guests come to blows before the night is over'); }
+    if (!guests.length && c.known.house(d.envoys)) return sentences(`Envoys of ${c.hs(d.envoys)} sit at the table`);
     return guests.length ? sentences(`${list(guests)} ${guests.length === 1 ? 'sits' : 'sit'} at the table`) : sentences('It is a feast for the household, with no great guests');
   },
   tourney: (f) => { const d = f.data || {}; const n = say(d.guests); return sentences(n ? `${cap1(n)} houses are asked to send knights` : 'Knights are called to the lists'); },
