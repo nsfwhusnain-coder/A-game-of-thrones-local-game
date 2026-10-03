@@ -19,7 +19,8 @@ for (let n = 1; n <= Number(turns); n++) {
     const seen = new Set([h.id]); let l = h.liege; while (l && H[l]) { if (seen.has(l)) { add('liege-loop', `${h.id} is its own liege through ${[...seen].join(' > ')} ${at}`); break; } seen.add(l); l = H[l].liege; }
     const seat = s.holdings[h.seat]; if (seat && seat.owner !== h.id && !h.landless && h.status === 'active' && !['company', 'tribe'].includes(h.rank) && seat.owner && !(H[seat.owner]?.liege === h.id)) add('seat-held-by-another', `${h.id}'s seat ${seat.name} is held by ${seat.owner} and the house is not landless ${at}`);
     if (h.status === 'extinct' && Object.values(C).some((c) => c.alive && c.house === h.id)) add('extinct-with-living', `${h.id} is extinct and ${Object.values(C).filter((c) => c.alive && c.house === h.id).map((c) => c.name).slice(0, 2).join(', ')} live ${at}`);
-    if (h.regent && C[h.regent] && (!C[h.regent].alive || HELD.test(C[h.regent].status || ''))) add('regent-unfit', `${h.id}'s regent ${nm(h.regent)} is ${C[h.regent].alive ? C[h.regent].status : 'dead'} ${at}`);
+    const freeAdult = Object.values(C).some((x) => x.alive && x.house === h.id && x.id !== h.lord && x.id !== h.regent && (x.age ?? 30) >= 18 && !HELD.test(x.status || '') && !x.outlaw);
+    if (h.regent && C[h.regent] && (!C[h.regent].alive || (HELD.test(C[h.regent].status || '') && freeAdult))) add('regent-unfit', `${h.id}'s regent ${nm(h.regent)} is ${C[h.regent].alive ? C[h.regent].status : 'dead'} ${at}`);
     if (h.lord && C[h.lord]?.alive && C[h.lord].house !== h.id && !['company', 'tribe'].includes(h.rank) && !C[h.lord].house?.startsWith?.(h.id)) add('lord-of-another-house', `${nm(h.lord)} (${C[h.lord].house}) is lord of ${h.id} ${at}`);
   }
   for (const k of Object.values(s.holdings)) {
