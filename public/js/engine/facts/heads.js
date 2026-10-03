@@ -1213,8 +1213,8 @@ export const SUM = {
     const note = String(f.data?.note || '').trim(); const P = pro(c, f);
     return sentences(note && !/^(?:wounded|taken|hurt)/i.test(note) && /^[A-Z][a-z]+ /.test(note) ? `${P.He} ${lower1(note.replace(/\.$/, ''))}` : `${P.He} is hurt but lives`);
   },
-  illness: (f) => sentences(f.data?.why === 'strain' ? 'The strain has told on him, and the rest he needs will not be taken' : ''),
-  recovered: () => '',
+  illness: (f, s, c) => { const P = pro(c, f); return sentences(f.data?.why === 'strain' ? `The strain has told on ${P.him}, and the rest ${P.he} needs will not be taken` : `${P.He} keeps to ${P.his} bed`); },
+  recovered: (f, s, c) => { const P = pro(c, f); return sentences(`${P.He} is on ${P.his} feet again`); },
   came_of_age: (f, s, c) => { const P = pro(c, f); return sentences(`${P.He} answers for ${P.self} now`); },
   succession: (f, s, c) => { const P = pro(c, f); const h = (f.houses || []).find((x) => c.known.house(x)); return sentences(h ? `${P.He} is now head of ${c.hs(h)}` : `${P.He} is now head of the house`); },
   regency_begun: (f, s, c) => {
@@ -1346,7 +1346,7 @@ export const DETAIL = {
     const d = f.data || {}; const out = []; const lost = d.lost && typeof d.lost === 'object' ? d.lost : null;
     if (lost) {
       const houseOf = (key) => (key === d.winner ? d.winnerHouse : key === d.loser ? d.loserHouse : c.known.party(key)?.owner);
-      const parts = Object.entries(lost).map(([k, n]) => { const h = houseOf(k); return `${h && c.known.house(h) ? c.short(h) : c.known.party(k) ? cap1(c.pty(k)) : 'One side'} lost ${c.n(n, h)}`; });
+      const parts = Object.entries(lost).map(([k, n]) => { const h = houseOf(k); const who = h && c.known.house(h) ? (c.short(h) === 'royal' ? 'The royal host' : c.short(h)) : c.known.party(k) ? cap1(c.pty(k)) : 'One side'; return `${who} lost ${c.n(n, h)}`; });
       if (parts.length) out.push(`${parts.join('; ')}.`);
     }
     if (Array.isArray(d.decided) && d.decided.length) out.push(`Decided by ${d.decided.join(' and ')}.`);

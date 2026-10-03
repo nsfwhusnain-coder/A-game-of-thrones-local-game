@@ -312,6 +312,9 @@ The generated chiefs of the five hill clans took the house's name as their surna
 ### N-060 · S2 · Hoster Tully, "bedridden and dying", rode to a tourney with 180 knights, and Edmure stayed "Heir to Riverrun" when he became lord (found reading the cards of a year)
 Three faults on one man: `retinues` sent out any free lord, so the one the data calls "Bedridden and dying" rode to Raventree; the beat that kills him says he "dies at Riverrun with his daughter at his side" whether or not he was there (his body lay at Brindlewood); and a lordship given by an op (`house … lord`, as the beat does) left the new lord with the role and title of an heir, where the succession rule had always taken them away. An ailing lord is not sent out (`ailing` in `shared/people.js`: retinues skip him and `send_person` refuses in words), the beat waits for him to be at Riverrun, and both ways of taking a seat share `takeSeat`. **Where:** `shared/retinues.js`, `engine/actions/movement.js`, `shared/world.js`, `data/beats.js`. **FIXED** (`tests/bugfix-found.test.js`; N-020's test now uses a healthy lord).
 
+### N-061 · S3 · Cards with nothing under the headline: "Daenerys Targaryen rises from her sickbed —" (found reading the cards of a year); "royal lost about 1,500"
+The cards of a recovery had an empty second line (TX5's fix left `recovered` out, and the other kinds of illness), the illness-from-strain line said "told on him" of anyone, and a battle's detail called the Crown's side "royal". They say now "She is on her feet again", "The strain has told on her…", "She keeps to her bed", and "The royal host lost about 1,500". **Where:** `engine/facts/heads.js` (`SUM.recovered`, `SUM.illness`, `DETAIL.battle`). **FIXED** (`tests/bugfix-found.test.js`).
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

@@ -628,3 +628,18 @@ test('N-060: Hoster Tully, "bedridden and dying", rides to no tourney and is sen
   applyChanges(t, [{ op: 'character', id: 'hoster_tully', alive: false, cause: 'a long illness' }, { op: 'house', house: 'tully', lord: 'edmure_tully' }]);
   const e = t.characters.edmure_tully; assert.ok(!(e.roles || []).includes('heir') && (e.roles || []).includes('lord'), `Edmure's roles: ${e.roles}`); assert.match(e.title, /^Lord of /, e.title);
 });
+
+test('N-061: a card of a recovery or an illness has a second line, with the right pronoun, that the scorer passes; a royal loss is "The royal host lost", not "royal lost"', () => {
+  for (const [who, re] of [['daenerys_targaryen', /^She is on her feet again\.?$/], ['robb_stark', /^He is on his feet again\.?$/]]) {
+    const t = world('stark', 5); t.facts = []; const day = dayNumber(t.meta.date); t.meta.clock = { turn: 1, from: day, to: day };
+    emit(t, 'recovered', { actors: [who], houses: [t.characters[who].house], place: t.characters[who].loc, importance: 3, text: 'x' });
+    const st = clusterFacts(t, t.facts).stories[0]; const card = cardOf(t, st); assert.match(card.summary, re, card.summary);
+    const r = scoreCard({ headline: card.headline, summary: card.summary }, st, t); assert.ok(r.pass, JSON.stringify(r.detail));
+  }
+  const t = world('stark', 5); t.facts = []; const day = dayNumber(t.meta.date); t.meta.clock = { turn: 1, from: day, to: day };
+  emit(t, 'illness', { actors: ['daenerys_targaryen'], houses: ['targaryen'], place: 'targaryen', importance: 3, text: 'x', data: { why: 'strain' } });
+  const card = cardOf(t, clusterFacts(t, t.facts).stories[0]); assert.match(card.summary, /told on her, and the rest she needs/, card.summary);
+  const b = world('stark', 5); b.facts = []; b.meta.clock = { turn: 1, from: day, to: day };
+  emit(b, 'battle', { actors: [], houses: ['baratheon', 'stark'], place: 'tully', importance: 4, text: 'x', data: { attacker: 'a', defender: 'b', winner: 'a', loser: 'b', winnerHouse: 'baratheon', loserHouse: 'stark', lost: { a: 100, b: 300 } } });
+  const bc = cardOf(b, clusterFacts(b, b.facts).stories[0]); assert.match(bc.details.join(' '), /The royal host lost about/, bc.details.join(' | '));
+});
