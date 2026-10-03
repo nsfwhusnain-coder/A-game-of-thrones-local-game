@@ -216,7 +216,7 @@ export const THREADS = [
       },
       {
         // I5: the Hand sends the King's justice after the Mountain
-        id: 'berics_ride', at: YM(298, 12), grace: 1, needs: (s) => flag(s, 'ned_hand') && free(s, 'eddard_stark') && alive(s, 'robert_baratheon', 'beric_dondarrion') && at(s, 'eddard_stark', 'baratheon') && !plays(s, 'stark', 'dondarrion'),
+        id: 'berics_ride', at: YM(298, 12), grace: 1, needs: (s) => flag(s, 'ned_hand') && alive(s, 'eddard_stark', 'beric_dondarrion') && at(s, 'eddard_stark', 'baratheon') && !plays(s, 'stark', 'dondarrion'),
         fire: () => ({
           events: [ev('The King\'s justice rides', 'From the Iron Throne, in the King\'s name, the Hand sends Lord Beric Dondarrion with a hundred and twenty men to bring Ser Gregor Clegane to justice for the burning of the Riverlands. Thoros of Myr rides with him.', 'baratheon', 3, 'court', ['stark', 'dondarrion', 'clegane'], 'Beric Dondarrion rides to bring Gregor Clegane to the King\'s justice')],
           changes: [{ op: 'character', id: 'beric_dondarrion', note: 'Sent by the Hand to bring the Mountain to justice.' }, { op: 'relation', a: 'stark', b: 'clegane', delta: -20 }],
@@ -534,9 +534,9 @@ export const THREADS = [
     id: 'riverrun', name: 'The lord of Riverrun', stages: [
       {
         // W17: Hoster Tully dies abed, as he has long been dying
-        id: 'hoster', at: YM(299, 7), grace: 4, needs: (s) => free(s, 'hoster_tully') && !plays(s, 'tully') && s.characters.hoster_tully.loc === 'tully', // (he dies abed at Riverrun: the beat waits for him to be there)
+        id: 'hoster', at: YM(299, 7), grace: 4, needs: (s) => alive(s, 'hoster_tully') && !plays(s, 'tully'),
         fire: (s) => ({
-          events: [ev('The lord of Riverrun is dead', 'Lord Hoster Tully, long abed, dies at Riverrun with his daughter at his side. His funeral boat is set adrift on the Red Fork; his son Edmure\'s burning arrows miss it three times before his uncle takes the bow.', 'tully', 3, 'court', ['tully'], 'Hoster Tully\'s funeral boat is set adrift on the Red Fork')],
+          events: [ev('The lord of Riverrun is dead', free(s, 'hoster_tully') ? 'Lord Hoster Tully, long abed, dies at Riverrun with his daughter at his side. His funeral boat is set adrift on the Red Fork; his son Edmure\'s burning arrows miss it three times before his uncle takes the bow.' : 'Lord Hoster Tully, long ailing, dies in his captors\' hands, and his body is sent home to Riverrun. His son Edmure\'s burning arrows miss the funeral boat three times on the Red Fork before his uncle takes the bow.', 'tully', 3, 'court', ['tully'], free(s, 'hoster_tully') ? 'Hoster Tully\'s funeral boat is set adrift on the Red Fork' : 'Hoster Tully dies in captivity')],
           changes: [{ op: 'character', id: 'hoster_tully', alive: false, cause: 'a long illness' }, ...(alive(s, 'edmure_tully') && s.houses.tully?.lord === 'hoster_tully' ? [{ op: 'house', house: 'tully', lord: 'edmure_tully' }] : [])],
         }),
       },
