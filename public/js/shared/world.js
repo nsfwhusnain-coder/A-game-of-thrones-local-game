@@ -230,6 +230,8 @@ export function migrateState(state) {
   return state;
 }
 
+/** What the hill clans call their chiefs, where the house is "The Moon Brothers" and a name of the house would not do ("Mya The Moon Brothers"). Chosen by the house's id: no dice. */
+const HILL_EPITHETS = ['Ironhand', 'Redfeather', 'Stonefoot', 'Greyeyes', 'Longspear', 'Blackhair', 'Swiftfoot', 'Hornblower'];
 const NAME_POOLS = {
   north: ['Brandon', 'Rickard', 'Torrhen', 'Cregan', 'Edwyle', 'Harrion', 'Artos', 'Donnor', 'Wyllis', 'Jonnel', 'Medger', 'Rodwell', 'Lyessa', 'Alys', 'Sarra', 'Wynafryd'],
   wall: ['Othell', 'Donal', 'Bowen', 'Jarmen'], beyond: ['Harma', 'Varamyr', 'Rattleshirt', 'Soren', 'Morna'],
@@ -262,10 +264,10 @@ function generateLord(h, year, salt = '') {
   for (let k = 0; k < 6 && picked.length < 3; k++) { const t = TRAIT_POOL[Math.floor(rnd() * TRAIT_POOL.length)]; if (!picked.includes(t) && !picked.includes(OPP[t])) picked.push(t); }
   const traits = picked.join(', ');
   const seatName = (HOUSES.find((x) => x.id === h.id)?.seat || h.name).replace(/,.*$/, '');
-  const title = essos ? (h.title || `First Magister of ${h.name}`) : `${female ? 'Lady' : 'Lord'} of ${seatName}`;
+  const title = essos ? (h.title || `First Magister of ${h.name}`) : `${female ? 'Lady' : 'Lord'} of ${seatName.replace(/^The /, 'the ')}`;
   const id = slug(`${first}_${essos ? h.id : surname}`);
   return {
-    id, name: essos ? `${first} of ${h.name}` : `${first} ${surname}`, house: h.id, title, age, born: year - age, loc: resolvePlaceId(h.id) || h.id,
+    id, name: essos ? `${first} of ${h.name}` : /^The /.test(surname) ? `${first} ${HILL_EPITHETS[(h.id.length * 7 + first.length) % HILL_EPITHETS.length]}` : `${first} ${surname}`, house: h.id, title, age, born: year - age, loc: resolvePlaceId(h.id) || h.id,
     roles: essos ? ['ruler'] : [female ? 'lady' : 'lord'], traits, bio: `Head of House ${h.name}.`, alive: true, status: 'free', opinion: 0, loyalty: 50 + Math.floor(rnd() * 40), memories: [], generated: true, sex: female ? 'f' : 'm',
     skills: deriveSkills({ roles: ['lord'], traits, age }),
   };

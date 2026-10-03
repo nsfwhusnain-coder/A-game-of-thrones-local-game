@@ -300,6 +300,15 @@ ST10 was marked fixed, with a test, but the test played the first turn with the 
 ### N-056 · S2 · "Eddard Stark feasts Robert Arryn for a fortnight" at Winterfell: a six-year-old lord, a month's ride away (found reading the first weeks of cards)
 The realm's ambient "a feast and a match" put a guest lord at the host's table for a fortnight without moving him: guests 170 to 400 map units from the hall, in one case a boy of six at the Eyrie, all the while "at" their own seats. The guest house now sends its envoys: the fact has one actor (the host) and `data.envoys`, the card reads "Envoys of House Frey sit at the table", and the relation between the houses moves as before. **Where:** `shared/plots.js` (the feast-and-a-match churn), `engine/facts/heads.js` (`SUM.feast`). **FIXED** (`tests/bugfix-found.test.js`).
 
+### N-057 · S4 · "The Ardrian Sunglass' party: bound for Dragonstone" (found reading the first weeks of cards)
+A party named for a lord whose name ends in s ("Ardrian Sunglass' party") was given an article, because the label's rule for a person's name wanted `'s`. **Where:** `engine/facts/label.js` `partyName`. **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-058 · S4 · "A great host go home", and twenty men "a few dozen" (found reading the cards of a year)
+`host_disbanded` and five other summaries put the size of a party ("a great host") as a subject with a plural verb; and anything from thirteen to fifty-nine men was "a few dozen". A great host is one thing and takes the singular ("goes home"); thirteen to thirty men are "a score". **Where:** `engine/facts/heads.js` (`body`, `bodyDo`). **FIXED** (`tests/bugfix-found.test.js`).
+
+### N-059 · S4 · "Mya The Moon Brothers gather the Moon Brothers", "Lady of The Burned Men"
+The generated chiefs of the five hill clans took the house's name as their surname. They are now named for a nickname chosen by the house's id (no dice drawn, ids unchanged) and titled "Lady of the Burned Men". **Where:** `shared/world.js`. **FIXED** (`tests/bugfix-found.test.js`). Games begun before keep their chiefs' old names.
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

@@ -597,3 +597,20 @@ test('N-056: the realm\'s ambient feast between lords seats the guest house\'s e
   emit(t, 'feast', { actors: [t.houses.tully.lord], houses: ['tully', 'frey'], place: 'tully', importance: 3, text: 'x', data: { envoys: 'frey' } });
   const card = cardOf(t, clusterFacts(t, t.facts).stories[0]); assert.match(card.summary, /^Envoys of House Frey sit at the table\.?$/, card.summary);
 });
+
+test('N-057: a party named for a man whose name ends in s is told by its own name ("Ardrian Sunglass\' party"), with no article', async () => {
+  const { partyLabel } = await import('../public/js/engine/facts/label.js'); const s = world('stark');
+  for (const name of ['Ardrian Sunglass\' party', 'Dagon Volmark\'s party', 'Sunglass\' party']) assert.equal(partyLabel(s, { name, owner: 'stark', kind: 'host' }), name);
+});
+
+test('N-058: "a great host" goes home (one thing, one verb), a score of men go home, and twenty men are not "a few dozen"', () => {
+  const say = (men) => { const t = world('stark', 5); t.facts = []; const day = dayNumber(t.meta.date); t.meta.clock = { turn: 1, from: day, to: day };
+    emit(t, 'host_disbanded', { actors: [t.houses.lannister.lord], houses: ['lannister'], place: 'lannister', importance: 3, text: 'x', data: { men } }); return cardOf(t, clusterFacts(t, t.facts).stories[0]).summary; };
+  assert.match(say(12000), /^A great host goes home\./); assert.match(say(20), /^A score of men go home\./); assert.match(say(300), /^Hundreds of men go home\./);
+});
+
+test('N-059: the chief of a hill clan is not "Mya The Moon Brothers", and no generated lord is "Lord of The" anything', () => {
+  const s = world('stark', 3);
+  for (const id of ['burned_men', 'black_ears', 'moon_brothers', 'painted_dogs', 'thenns']) { const c = s.characters[s.houses[id].lord]; assert.doesNotMatch(c.name, /\bThe\b/, c.name); assert.match(c.title, /^(Lord|Lady) of the /, c.title); }
+  assert.doesNotMatch(Object.values(s.characters).map((c) => c.title || '').join('\n'), /\b(Lord|Lady) of The /);
+});

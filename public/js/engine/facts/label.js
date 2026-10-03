@@ -128,7 +128,7 @@ function partyName(state, party) {
   if (/^the\s+/i.test(name)) return `the ${noThe(name)}`;
   if (/^[A-Z][\w-]*['’]s?\s/.test(name)) return name;
   // "Benjen Stark's company", and a lone rider's party is named for the rider ("Jon Snow"): a person's name takes no article
-  if (/^(?:[A-Z][\w'’-]*\s+)+[A-Z][\w-]*['’]s\b/.test(name) || Object.values(state?.characters || {}).some((c) => c.name === name)) return name;
+  if (/^(?:[A-Z][\w'’-]*\s+)+[A-Z][\w-]*['’]s?(?=\s|$)/.test(name) || Object.values(state?.characters || {}).some((c) => c.name === name)) return name;
   return `the ${name}`;
 }
 

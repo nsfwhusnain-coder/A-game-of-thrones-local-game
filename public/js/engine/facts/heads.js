@@ -90,7 +90,9 @@ const fmt = (n) => Math.round(n).toLocaleString('en-GB');
 /** A count for a headline: a word up to twelve (the scorer lets those stand), then "more than a dozen", then "scores of". */
 const count = (n) => (n <= 12 ? say(n) : n <= 24 ? 'more than a dozen' : 'scores of');
 /** How many men, in words a herald has: exact and small, or a scale. */
-const body = (n) => (n <= 12 ? `${say(n)} men` : n < 60 ? 'a few dozen men' : n < 150 ? 'some scores of men' : n < 1500 ? 'hundreds of men' : n < 6000 ? 'thousands of men' : 'a great host');
+const body = (n) => (n <= 12 ? `${say(n)} men` : n < 31 ? 'a score of men' : n < 60 ? 'a few dozen men' : n < 150 ? 'some scores of men' : n < 1500 ? 'hundreds of men' : n < 6000 ? 'thousands of men' : 'a great host');
+/** A party's size as the subject of a sentence: "a great host" is one thing and takes the singular verb, the rest take the plural ("a score of men go home", "a great host goes home"). */
+const bodyDo = (n, plural, singular) => { const b = body(n); return `${cap1(b)} ${b === 'a great host' ? singular : plural}`; };
 /** A span of days in words a herald has ("a week", "near two months"); '' for no days. */
 function span(days) {
   const n = Math.round(days);
@@ -1087,8 +1089,8 @@ export const SUM = {
     return d.why === 'ships' ? sentences(`It waits ${span(d.wait) || 'a while'} for ships${l ? ` lent by ${l}` : ''}`) : d.why ? sentences('There are no ships to carry the men over') : '';
   },
   embarked: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return sentences(d.men ? `${P.He} takes ${body(d.men)}${d.ships ? ` in ${say(d.ships) || 'many'} ships` : ''}` : '', d.days ? `The crossing is ${span(d.days)}` : ''); },
-  landed: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return d.men ? sentences(`${cap1(body(d.men))} land with ${P.him}`) : sentences(`${P.He} lands with what ${P.he} brought`); },
-  lost_at_sea: (f) => { const d = f.data || {}; return sentences(d.drowned ? `${cap1(body(d.drowned))} drown with them` : 'Little is known beyond the loss'); },
+  landed: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return d.men ? sentences(`${bodyDo(d.men, 'land', 'lands')} with ${P.him}`) : sentences(`${P.He} lands with what ${P.he} brought`); },
+  lost_at_sea: (f) => { const d = f.data || {}; return sentences(d.drowned ? `${bodyDo(d.drowned, 'drown', 'drowns')} with them` : 'Little is known beyond the loss'); },
   levies_called: (f, s, c) => {
     const d = f.data || {}; const to = c.dest(d.muster); const n = (d.vassals || []).length;
     if (n) return sentences(`${cap1(count(n))} sworn houses are told to bring their men${to ? ` to ${to}` : ''}`);
@@ -1110,8 +1112,8 @@ export const SUM = {
   muster_grew: (f, s, c) => { const d = f.data || {}; return d.total ? sentences(d.total >= 6000 ? 'The host has grown into a great one' : `There are now ${body(d.total)} in the host`) : ''; },
   host_formed: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return d.men ? sentences(`${P.He} has ${body(d.men)} under ${P.him}`) : sentences(`Men gather under ${P.his} banner`); },
   host_joined: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`The host grows by ${body(d.men)}`) : ''; },
-  host_split: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} are split off`) : ''; },
-  host_disbanded: (f, s, c) => { const d = f.data || {}; if (/overcome/.test(d.why || '')) return sentences('The men are cut down or driven out'); return d.men ? sentences(`${cap1(body(d.men))} go home`) : ''; },
+  host_split: (f, s, c) => { const d = f.data || {}; return d.men ? sentences(`${bodyDo(d.men, 'are', 'is')} split off`) : ''; },
+  host_disbanded: (f, s, c) => { const d = f.data || {}; if (/overcome/.test(d.why || '')) return sentences('The men are cut down or driven out'); return d.men ? sentences(`${bodyDo(d.men, 'go', 'goes')} home`) : ''; },
   desertion: (f, s, c) => { const d = f.data || {}; return sentences(`Men slip away from the ranks${d.why ? `: ${d.why}` : ''}`); },
   host_hungry: () => sentences('Its wagons and the fields about it are both empty'),
   land_stripped: () => sentences('The foragers have left the province nothing, and the next host through it will starve'),
@@ -1158,9 +1160,9 @@ export const SUM = {
   sea_battle: (f) => { const d = f.data || {}; return sentences(d.prizes ? `${cap1(say(d.prizes) || 'Many')} ships are taken as prizes` : 'The fleets fought until one broke'); },
   sellswords_hired: (f) => { const d = f.data || {}; return sentences(d.price ? `They come at a price of ${gold(d.price)} dragons` : 'They serve whoever pays'); },
   sellswords_turned: (f) => { const d = f.data || {}; return sentences(d.price ? `They go to the higher bidder, at ${gold(d.price)} dragons` : 'They go to the higher bidder'); },
-  outlaws_rise: (f) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} hold the roads where war laid the land waste`) : ''; },
+  outlaws_rise: (f) => { const d = f.data || {}; return d.men ? sentences(`${bodyDo(d.men, 'hold', 'holds')} the roads where war laid the land waste`) : ''; },
   outlaws_scattered: () => '',
-  men_hired: (f) => { const d = f.data || {}; return d.men ? sentences(`${cap1(body(d.men))} enter the pay of the house`) : ''; },
+  men_hired: (f) => { const d = f.data || {}; return d.men ? sentences(`${bodyDo(d.men, 'enter', 'enters')} the pay of the house`) : ''; },
   ambush: (f) => { const d = f.data || {}; return d.men ? sentences(`It is a company of ${body(d.men)}`) : ''; },
   war_declared: (f, s, c) => { const d = f.data || {}; const r = String(d.reason || '').trim(); return sentences(r ? `The cause is ${lower1(r)}` : 'Two houses that were at odds are now at war'); },
   war_joined: (f, s, c) => { const d = f.data || {}; const P = pro(c, f); return sentences(`${P.He} takes the side of the ${d.side === 'attackers' ? 'attackers' : 'defenders'}`); },

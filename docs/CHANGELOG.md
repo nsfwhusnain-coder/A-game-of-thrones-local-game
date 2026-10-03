@@ -11,6 +11,8 @@ for the player, and what the owner should verify.
 - **A house whose regent was taken prisoner or died is no longer ruled in the prisoner's or the dead man's name** (N-054): the seal passes to the next in the order of kin, castellan and captain, and a prisoner never speaks for the house, writes its letters or holds its audience.
 - **No one "takes the regency" in the first week for a boy the tale starts with** (N-055; ST10 had been fixed only in a test that built the first turn by hand): Edric Dayne's regent rules from the first day, untold, as Robert Arryn's does.
 - **A lord no longer "feasts" a guest who is a month's ride away, or a child at home** (N-056; "Eddard Stark feasts Robert Arryn for a fortnight" at Winterfell, with Robert six years old at the Eyrie): the realm's ambient feast between two lords seats the guest house's envoys, and the card says so.
+- A party named for a lord whose name ends in s is no longer given an article ("The Ardrian Sunglass' party") (N-057).
+- The news says "a great host goes home" (not "go"), and a score of men are a score, not "a few dozen" (N-058). The chiefs of the hill clans are no longer "Mya The Moon Brothers": they have a nickname of their own, and are titled "Lady of the Burned Men" (N-059).
 - The muster receipt tells what the first men are made of straight after those men, not after the ones still on the road (N-053).
 - Four harnesses join the others: `fuzz-orders`, `seed-sweep`, `probe-links` (the relations between people, houses and holdings after every turn) and `play-orders` (a house played with plausible orders in its own words).
 - The tests run once for a work branch (as its pull request) and not twice (a push and a pull request were two identical runs of an hour on two machines).
