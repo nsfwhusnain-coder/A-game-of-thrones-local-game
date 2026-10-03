@@ -21,7 +21,7 @@ for the player, and what the owner should verify.
 
 ## 2026-10-03 — The bug hunt closes: the report marked, the owner's checks listed
 
-No game change. `docs/BUG-HUNT-2026-10-02.md` marks each of its fifty-seven findings with the pull request that fixed it (fifty-one fixed, two partly, two left on purpose: WD4 and UI7; TX10 and WD6 are partial); `docs/HANDOFF.md` §5 lists what only the live model can show and the design questions the hunt left to the owner; the tracker issue carries the forty-four findings of the hunt itself (`docs/bughunt/FOUND.md`, N-003 to N-046). The hunt stopped when two passes over twelve different houses at the game's own seven-day turns found nothing at S1 or S2.
+No game change. `docs/BUG-HUNT-2026-10-02.md` marks each of its fifty-seven findings with the pull request that fixed it (fifty-one fixed, two partly, two left on purpose: WD4 and UI7; TX10 and WD6 are partial); `docs/HANDOFF.md` §5 lists what only the live model can show and the design questions the hunt left to the owner; the tracker issue carries the findings of the hunt itself (`docs/bughunt/FOUND.md`, N-003 to N-061). The hunt stopped when two passes over twelve different houses at the game's own seven-day turns found nothing at S1 or S2.
 
 ## 2026-10-03 — What the eighth look found: the lists wait for their host
 

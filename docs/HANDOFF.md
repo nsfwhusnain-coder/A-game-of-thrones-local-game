@@ -148,7 +148,7 @@ Never train on book text, on anything from after 298, or to clone a voice.
 
 ### The bug hunt of 2026-10-02 (`docs/BUG-HUNT-2026-10-02.md`, `docs/bughunt/FOUND.md`): what the owner should check
 
-Fifty-seven findings in the report and forty-four the hunt added (N-003 to N-046), all on the mock provider; every merge had all eight CI checks green. The harnesses are in `scripts/bughunt/` (README there); `probe-simul.mjs` is the one for a person doing two things that cannot both be true. The hunt stopped when two passes over different houses (fifteen houses, at thirty-day and seven-day turns) found nothing new at S1 or S2.
+Fifty-seven findings in the report and fifty-nine the hunt added (N-003 to N-061), all on the mock provider; every merge had all eight CI checks green. The harnesses are in `scripts/bughunt/` (README there); `probe-simul.mjs` is the one for a person doing two things that cannot both be true. The hunt stopped when two passes over different houses (fifteen houses, at thirty-day and seven-day turns) found nothing new at S1 or S2.
 
 **Needs the live model (nothing here could be seen on the mock):**
 - **TX10, long turns:** the wait now says a long stretch can take minutes; measure a 30-day jump on Maester-12B and say whether the number is what the wait promises.
@@ -164,6 +164,7 @@ Fifty-seven findings in the report and forty-four the hunt added (N-003 to N-046
 - **N-028, strain:** a lord at war climbs to the top of the strain scale in a year or two (7 a moon for each war against a relief of about 7 at home). Should a long war wear the nobility down that far, or should the load fall as a war settles into routine?
 - **N-017, a pursuit:** a routed host that cannot get away is fought again every day it stays in contact (told as one card now); should it break contact after a defeat?
 - **N-036, the Crown's army:** the Crown's banners were joining the King's progress, which gives no battle, so the Crown never took the field; they are a host of their own now and the war in the Riverlands is harder on the Starks and the Tullys. Play a war and say whether it is right.
+- **Prisoners:** in a year of war (a Greyjoy game, fourteen moons) forty-six people were held, a dozen of them lords, and six had been ransomed, released or put to death: the held wait weeks to months for a judgement, and a house whose lord and regent are both held drifts. Should captives be ransomed or exchanged faster, or is a war that fills the cells what you want?
 - **UI7:** frame cost in a war grows with the armies; I found no leak and have no profile of your GPU.
 
 ## 6. What comes next
