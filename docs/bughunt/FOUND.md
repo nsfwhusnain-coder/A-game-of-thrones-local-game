@@ -309,6 +309,9 @@ A party named for a lord whose name ends in s ("Ardrian Sunglass' party") was gi
 ### N-059 · S4 · "Mya The Moon Brothers gather the Moon Brothers", "Lady of The Burned Men"
 The generated chiefs of the five hill clans took the house's name as their surname. They are now named for a nickname chosen by the house's id (no dice drawn, ids unchanged) and titled "Lady of the Burned Men". **Where:** `shared/world.js`. **FIXED** (`tests/bugfix-found.test.js`). Games begun before keep their chiefs' old names.
 
+### N-060 · S2 · Hoster Tully, "bedridden and dying", rode to a tourney with 180 knights, and Edmure stayed "Heir to Riverrun" when he became lord (found reading the cards of a year)
+Three faults on one man: `retinues` sent out any free lord, so the one the data calls "Bedridden and dying" rode to Raventree; the beat that kills him says he "dies at Riverrun with his daughter at his side" whether or not he was there (his body lay at Brindlewood); and a lordship given by an op (`house … lord`, as the beat does) left the new lord with the role and title of an heir, where the succession rule had always taken them away. An ailing lord is not sent out (`ailing` in `shared/people.js`: retinues skip him and `send_person` refuses in words), the beat waits for him to be at Riverrun, and both ways of taking a seat share `takeSeat`. **Where:** `shared/retinues.js`, `engine/actions/movement.js`, `shared/world.js`, `data/beats.js`. **FIXED** (`tests/bugfix-found.test.js`; N-020's test now uses a healthy lord).
+
 ## Checked, and not a bug
 
 - A host told "set out" in the same day as its captain's `released` (the analysis's "captive-acts"): the order of the day's facts, not a prisoner walking free.

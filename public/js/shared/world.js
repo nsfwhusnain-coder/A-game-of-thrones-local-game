@@ -527,6 +527,14 @@ export function applyChanges(state, changes, ctx = {}) {
   return { applied, rejected };
 }
 
+/** A person becomes the head of a house: the house's title is theirs (a king keeps the king's), and they are its heir no more. */
+function takeSeat(state, h, c) {
+  const female = isFemale(c); const seat = h.seat && state.holdings[h.seat] ? state.holdings[h.seat].name : h.name;
+  if (h.rank === 'crown') c.title = `${female ? 'Queen' : 'King'} of the Andals and the First Men, ${female ? 'Lady' : 'Lord'} of the Seven Kingdoms`;
+  else if (!/king|queen/i.test(c.title || '')) c.title = `${female ? 'Lady' : 'Lord'} of ${seat}`;
+  c.roles = [...new Set([...(c.roles || []).filter((r) => r !== 'heir'), female ? 'lady' : 'lord'])];
+}
+
 /** When a house's head dies (or vanishes), the heir takes the seat. The player plays on as the heir. */
 export function resolveSuccessions(state) {
   const out = [];
@@ -541,11 +549,7 @@ export function resolveSuccessions(state) {
       const prev = lord?.name || 'the late lord';
       h.lord = heir.id;
       if (heir.house !== h.id) heir.house = h.id;
-      const seat = h.seat && state.holdings[h.seat] ? state.holdings[h.seat].name : h.name;
-      const female = isFemale(heir);
-      if (h.rank === 'crown') heir.title = `${female ? 'Queen' : 'King'} of the Andals and the First Men, ${female ? 'Lady' : 'Lord'} of the Seven Kingdoms`;
-      else if (!/king|queen/i.test(heir.title || '')) heir.title = `${female ? 'Lady' : 'Lord'} of ${seat}`;
-      heir.roles = [...new Set([...(heir.roles || []).filter((r) => r !== 'heir'), female ? 'lady' : 'lord'])];
+      takeSeat(state, h, heir);
       const chosen = { order: `the brothers choose ${heir.name} to succeed ${prev}`, company: `the company names ${heir.name} its captain after ${prev}`, tribe: `the free folk follow ${heir.name} now that ${prev} is gone` }[h.rank];
       text = chosen ? `SUCCESSION: ${chosen}` : `SUCCESSION: ${heir.name} succeeds ${prev} as head of House ${h.name}${(heir.age ?? 20) < 16 ? ` — a child of ${heir.age}; a regent will rule in all but name` : ''}`;
     } else {
@@ -984,7 +988,7 @@ function applyOne(state, ch, ctx) {
     case 'house_update': case 'house': {
       const hid = findHouse(state, ch.house || ch.id); if (!hid) throw new Error('unknown house');
       const h = state.houses[hid]; const out = [];
-      if (ch.lord) { const c = findChar(state, ch.lord); if (c) { h.lord = c; out.push('new lord ' + state.characters[c].name); } }
+      if (ch.lord) { const c = findChar(state, ch.lord); if (c) { h.lord = c; takeSeat(state, h, state.characters[c]); out.push('new lord ' + state.characters[c].name); } }
       if (ch.title) { h.title = ch.title; out.push('title ' + ch.title); }
       if (ch.realmName) { h.realmName = ch.realmName; out.push('realm ' + ch.realmName); }
       if (ch.status) { h.status = ch.status; out.push(ch.status); }

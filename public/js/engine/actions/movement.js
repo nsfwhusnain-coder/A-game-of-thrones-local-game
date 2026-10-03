@@ -7,6 +7,7 @@ import { atSeaOn } from '../movement.js';
 import { destination } from './military.js';
 import { listsPending } from '../../shared/tourney.js';
 import { speakerFor } from '../../shared/regency.js';
+import { ailing } from '../../shared/people.js';
 
 const held = (c) => /imprisoned|captive/.test(c?.status || '');
 const sentence = (t) => t.replace(/^./, (x) => x.toUpperCase()).replace(/([^.!?…])$/, '$1.');
@@ -27,6 +28,7 @@ export const MOVEMENT = [
       if (!c || c.house !== i.house) return { code: 'not_yours', text: 'No one of yours by that name.' };
       if (!c.alive) return { code: 'dead', text: `${c.name} is dead.` };
       if (held(c)) return { code: 'captive', text: `${c.name} is a prisoner, and goes nowhere at your word.` };
+      if (ailing(c)) return { code: 'ailing', text: `${c.name} is too ill to ride.` };
       const to = resolvePlaceId(i.params.to) || destination(state, i.params.to);
       if (!to || !placePos(to, state.holdings)) return { code: 'no_place', text: `No one knows the way to ${i.params.to || 'nowhere'}.` };
       // the one who holds a tourney is there when its lists are run (a lord of another house is not sent off to hunt while his own lists wait; the player's own lord goes where the player says)

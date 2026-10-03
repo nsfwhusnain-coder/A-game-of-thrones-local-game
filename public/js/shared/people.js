@@ -9,6 +9,8 @@ export function isFemale(c) {
   return /\b(lady|queen|princess|spearwife|septa|maid|daughter|wife|mother|widow|khaleesi)\b/i.test(c.title || '');
 }
 export const sexOf = (c) => (isFemale(c) ? 'f' : 'm');
+/** A man too ill to ride (the data says so: Hoster Tully is "Bedridden and dying"): no one sends him out, and no one is told he went. */
+export const ailing = (c) => !!c && /\b(ailing|bedridden)\b/i.test(`${c.traits || ''} ${c.bio || ''}`);
 
 /** Pronouns for the engine's own text, so Lady Mormont is not written "he". */
 export function pronouns(c) {

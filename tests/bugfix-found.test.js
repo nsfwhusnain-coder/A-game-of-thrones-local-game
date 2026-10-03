@@ -6,7 +6,7 @@ process.env.WC_PROVIDER = 'mock';
 process.env.WC_SAVES = (await import('node:fs')).mkdtempSync((await import('node:path')).join((await import('node:os')).tmpdir(), 'wc-found-'));
 const { createInitialState, applyChanges } = await import('../public/js/shared/world.js');
 const { tollAlong } = await import('../public/js/shared/marches.js');
-const { withRng } = await import('../public/js/engine/rng.js');
+const { withRng, seedState } = await import('../public/js/engine/rng.js');
 const { BRIEFS } = await import('../public/data/briefs.js');
 const { setLoc } = await import('../public/js/engine/parties.js');
 const { emit } = await import('../public/js/engine/facts/log.js');
@@ -247,12 +247,12 @@ test('N-019: a man who commands a host of his own rides with it, not away with h
 });
 
 test('N-020: the lord whose lists are to be run is not sent off to hunt before they are', () => {
-  const s = world('lannister'); const v = s.houses.tully; const lord = s.characters[v.lord];
-  const send = (to) => check(s, intentFor(s, 'send_person', { house: 'tully', params: { character: lord.id, to }, source: { type: 'intent', ref: lord.id, by: 'mock' } }));
+  const s = world('lannister'); const v = s.houses.tyrell; const lord = s.characters[v.lord];
+  const send = (to) => check(s, intentFor(s, 'send_person', { house: 'tyrell', params: { character: lord.id, to }, source: { type: 'intent', ref: lord.id, by: 'mock' } }));
   assert.equal(send('lannister'), null, 'free to go before he calls a tourney');
-  s.plots = s.plots || {}; s.plots.lists = { [v.seat]: { house: 'tully', called: dayNumber(s.meta.date), on: dayNumber(s.meta.date) + 21 } };
+  s.plots = s.plots || {}; s.plots.lists = { [v.seat]: { house: 'tyrell', called: dayNumber(s.meta.date), on: dayNumber(s.meta.date) + 21 } };
   assert.equal(send('lannister')?.code, 'hosting', 'not while his lists are to be run');
-  assert.notEqual(send(v.seat)?.code, 'hosting', 'and his own seat is no leaving'); s.meta.player = 'tully';
+  assert.notEqual(send(v.seat)?.code, 'hosting', 'and his own seat is no leaving'); s.meta.player = 'tyrell';
   assert.equal(send('lannister'), null, 'the player\'s own lord goes where the player says');
 });
 
@@ -613,4 +613,18 @@ test('N-059: the chief of a hill clan is not "Mya The Moon Brothers", and no gen
   const s = world('stark', 3);
   for (const id of ['burned_men', 'black_ears', 'moon_brothers', 'painted_dogs', 'thenns']) { const c = s.characters[s.houses[id].lord]; assert.doesNotMatch(c.name, /\bThe\b/, c.name); assert.match(c.title, /^(Lord|Lady) of the /, c.title); }
   assert.doesNotMatch(Object.values(s.characters).map((c) => c.title || '').join('\n'), /\b(Lord|Lady) of The /);
+});
+
+test('N-060: Hoster Tully, "bedridden and dying", rides to no tourney and is sent nowhere; when he dies Edmure is lord and no longer "Heir to Riverrun"', async () => {
+  const { retinueTick } = await import('../public/js/shared/retinues.js');
+  const led = new Set(); const day = dayNumber(world('stark', 7).meta.date);
+  for (let seed = 1; seed <= 4; seed++) {
+    const s = world('stark', 7); s.meta.rngState = seedState(seed); s.facts = [];
+    withRng(s, () => { for (let d = 0; d < 60; d++) { s.meta.date = dateOfDay(day + d); s.meta.clock = { turn: 1, from: day + d, to: day + d }; retinueTick(s, 7); for (const [id, p] of Object.entries(s.parties)) if (p.kind === 'retinue') { led.add(p.commander); delete s.parties[id]; } } });
+  }
+  assert.ok(led.size >= 100, `a good many lords ride out (${led.size})`); assert.ok(!led.has('hoster_tully'), 'the bedridden lord leads no retinue');
+  const t = world('stark', 7); const verdict = check(t, intentFor(t, 'send_person', { house: 'tully', params: { character: 'hoster_tully', to: 'baratheon' }, source: { type: 'intent', ref: 'hoster_tully', by: 'mock' } }));
+  assert.equal(verdict?.code ?? verdict?.reason?.code, 'ailing', JSON.stringify(verdict));
+  applyChanges(t, [{ op: 'character', id: 'hoster_tully', alive: false, cause: 'a long illness' }, { op: 'house', house: 'tully', lord: 'edmure_tully' }]);
+  const e = t.characters.edmure_tully; assert.ok(!(e.roles || []).includes('heir') && (e.roles || []).includes('lord'), `Edmure's roles: ${e.roles}`); assert.match(e.title, /^Lord of /, e.title);
 });
